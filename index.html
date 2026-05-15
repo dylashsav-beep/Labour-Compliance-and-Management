@@ -1784,7 +1784,7 @@ function loadProjects(){
       'IJburg Phase 3','Zuidas Tower','Den Haag Metro',
       'Utrecht Central','Eindhoven Smart Hub'
     ];
-    projectStore = defaults.map((name,i)=>({id:'P'+String(i+1).padStart(3,'0'),name,desc:'',active:true}));
+    projectStore = defaults.map((name)=>({id:crypto.randomUUID(),name,desc:'',active:true}));
     saveProjects();
   }
 }
@@ -3382,6 +3382,10 @@ function toggleDocSetItemReq(setId,docId,checked){
   if(doc.archived){ alert('Archived questions cannot be made required. Restore the question first.'); renderDocSetCardInPlace(setId); return; }
   doc.req=checked;
   saveDocSets();
+  // Write required-flag immediately to Supabase (don't wait for deferred sync)
+  if(sbClient && sbSession && sbCanWriteTable('document_set_items')){
+    sbRemoteUpsertDocSetItem(setId, doc).catch(e=>console.warn('[TMC] required-flag sync failed:', e.message));
+  }
   // Update just this row's badge inline
   const row=document.getElementById(`dsr_${setId}_${docId}`);
   if(row){
@@ -3415,7 +3419,7 @@ function archiveDocSetItem(setId,docId){
     doc.req=false;
     try{ await sbRemoteArchiveDocSetItem(setId, docId, true); }
     catch(e){ doc.archived=false; delete doc.archivedAt; doc.req=oldReq; alert('Could not archive the question in Supabase: '+e.message); return; }
-    saveDocSets(); renderDocSetCardInPlace(setId); renderTable(); if(curW) rebuildModal(curW); sbQueueRemoteReload('document_set_items');
+    saveDocSets(); renderDocSetCardInPlace(setId); renderTable(); if(curW) rebuildModal(curW);
   }, {title:'TMC Compliance', subtitle:'Archive document question', okText:'Archive'});
 }
 function restoreArchivedDocSetItem(setId,docId){
@@ -3426,7 +3430,7 @@ function restoreArchivedDocSetItem(setId,docId){
     doc.archived=false; delete doc.archivedAt; doc.req=false;
     try{ await sbRemoteArchiveDocSetItem(setId, docId, false); }
     catch(e){ doc.archived=wasArchived; doc.archivedAt=oldArchivedAt; alert('Could not restore the question in Supabase: '+e.message); return; }
-    saveDocSets(); renderDocSetCardInPlace(setId); renderTable(); if(curW) rebuildModal(curW); sbQueueRemoteReload('document_set_items');
+    saveDocSets(); renderDocSetCardInPlace(setId); renderTable(); if(curW) rebuildModal(curW);
   }, {title:'TMC Compliance', subtitle:'Restore archived question', okText:'Restore'});
 }
 async function addDocSetItem(setId){
@@ -3515,7 +3519,7 @@ function saveDocSet(){
   const desc=document.getElementById('dsDesc').value.trim();
   const country=document.getElementById('dsCountry').value.trim();
   const copyFrom=document.getElementById('dsCopyFrom').value;
-  const newId='SET'+Date.now();
+  const newId=crypto.randomUUID();
   docSets.push({id:newId,name,description:desc,country,builtIn:false});
   // Copy items from selected set, stripping builtIn flag so they become editable
   if(copyFrom&&docSetItems[copyFrom]){
@@ -3576,11 +3580,11 @@ function loadResources(){
   // Migrate old single-assignment data if present
   try{
     const oldA = localStorage.getItem('tmc_accom_assign_v1');
-    if(oldA){ const m=JSON.parse(oldA); Object.keys(m).forEach(wid=>{ if(m[wid]?.propId && !accomHistory[wid]){ accomHistory[wid]=[{id:'m'+wid,propId:m[wid].propId,startDate:m[wid].startDate,endDate:m[wid].endDate,notes:m[wid].notes||''}]; } }); saveAccomHistory(); }
+    if(oldA){ const m=JSON.parse(oldA); Object.keys(m).forEach(wid=>{ if(m[wid]?.propId && !accomHistory[wid]){ accomHistory[wid]=[{id:crypto.randomUUID(),propId:m[wid].propId,startDate:m[wid].startDate,endDate:m[wid].endDate,notes:m[wid].notes||''}]; } }); saveAccomHistory(); }
   }catch(e){}
   try{
     const oldV = localStorage.getItem('tmc_veh_assign_v1');
-    if(oldV){ const m=JSON.parse(oldV); Object.keys(m).forEach(wid=>{ if(m[wid]?.vehicleId && !vehHistory[wid]){ vehHistory[wid]=[{id:'m'+wid,vehicleId:m[wid].vehicleId,startDate:m[wid].startDate,endDate:m[wid].endDate,notes:m[wid].notes||''}]; } }); saveVehHistory(); }
+    if(oldV){ const m=JSON.parse(oldV); Object.keys(m).forEach(wid=>{ if(m[wid]?.vehicleId && !vehHistory[wid]){ vehHistory[wid]=[{id:crypto.randomUUID(),vehicleId:m[wid].vehicleId,startDate:m[wid].startDate,endDate:m[wid].endDate,notes:m[wid].notes||''}]; } }); saveVehHistory(); }
   }catch(e){}
 }
 function saveProperties(){ try{localStorage.setItem(PROP_KEY,JSON.stringify(properties));}catch(e){} }
@@ -4330,7 +4334,7 @@ function sbStartRealtime(){
   }, 30000);
 }
 
-function sbScheduleSync(){ if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return; clearTimeout(sbSyncTimer); sbSyncTimer=setTimeout(()=>sbPersistAll().catch(e=>console.error('Supabase sync failed',e)),650); }
+function sbScheduleSync(){ if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return; clearTimeout(sbSyncTimer); sbSyncTimer=setTimeout(()=>sbPersistAll().catch(e=>{ console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message, false); }),650); }
 async function sbForceSync(){ try{ await sbPersistAll(true); alert('Synced to Supabase.'); }catch(e){ alert('Sync failed: '+e.message); } }
 
 async function sbUploadEmbeddedFiles(){
@@ -4423,7 +4427,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')) await sbClient.from('settings').upsert({id:'main',warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'compliance@tmconstruction.nl',updated_at:new Date().toISOString()});
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:'main',warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'compliance@tmconstruction.nl',updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true})));
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true}); }));
@@ -4658,7 +4662,7 @@ async function sbLoadAll(){
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
     }
 
-    if(settingsData) settings.warningDays=settingsData.warning_days||60;
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
