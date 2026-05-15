@@ -4754,8 +4754,10 @@ async function sbAfterAuth(){
   try { await sbLoadProfile(); } catch(e) {
     console.error('[TMC] sbLoadProfile threw in sbAfterAuth:', e);
     sbUserRole = 'viewer'; sbUserActive = false;
-    sbLastWorkerLoadProblem = 'Could not load your profile: ' + (e.message || e) + '. Check RLS on the profiles table.';
+    sbLastWorkerLoadProblem = 'Could not load your profile: ' + (e.message || e) + '. Run tmc_setup.sql in Supabase SQL Editor.';
   }
+  // Owner safety net — works even if profiles table is missing
+  if(user.email === 'dylan@tmconstruction.nl'){ sbUserRole = 'admin'; sbUserActive = true; }
   document.getElementById('sbUser').innerHTML=`Logged in as ${esc(user.email)} <span class="role-chip">${esc(sbRoleLabel())}</span><span class="role-chip" title="Profile active status">${sbUserActive?'Active':'Inactive'}</span>`;
   if(!sbUserActive || sbUserRole === 'no_access'){
     sbReady=false;
