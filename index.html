@@ -1580,6 +1580,21 @@ const DEFAULT_BLUE_DOCS = [
   {id:'payroll', name:'Payroll Registration',       icon:'💳',req:true, cat:'Payroll',     tip:'SNA/NBBU/ABU certified payroll'},
   {id:'greken',  name:'G-Account',                  icon:'🏦',req:false,cat:'Payroll',     tip:'Blocked account for payroll taxes'},
 ];
+const DEFAULT_BE_DOCS = [
+  {id:'id',          name:'Valid ID',                    icon:'🪪',req:true, cat:'Registration',tip:'Passport, national ID card or driving licence'},
+  {id:'niss',        name:'NISS Verification',           icon:'🔢',req:true, cat:'Registration',tip:'Belgian social security number (NISS/INSZ)'},
+  {id:'dimona',      name:'DIMONA Declaration',          icon:'📡',req:true, cat:'Registration',tip:'Electronic worker registration with ONSS – required before first day'},
+  {id:'contract',    name:'Employment Contract',         icon:'✍️',req:true, cat:'Employment',  tip:'Written contract required by Belgian labour law'},
+  {id:'pc_cao',      name:'Joint Committee (PC/CAO)',    icon:'📜',req:true, cat:'Employment',  tip:'Paritair Comité and sectoral collective agreement acknowledgement'},
+  {id:'min_wage',    name:'Minimum Wage Check',          icon:'💰',req:true, cat:'Employment',  tip:'AMISG / sectoral minimum wage compliance confirmed'},
+  {id:'onss',        name:'ONSS/RSZ Registration',       icon:'🏛️',req:true, cat:'Social',      tip:'National Social Security Office registration confirmation'},
+  {id:'limosa',      name:'LIMOSA Declaration',          icon:'🌍',req:false,cat:'Migration',   tip:'Required for posted workers from abroad (EU Posting Directive)'},
+  {id:'single_permit',name:'Single Permit',             icon:'📑',req:false,cat:'Migration',   tip:'Combined work & residence permit – required for non-EU workers'},
+  {id:'a1',          name:'A1 Certificate',              icon:'🇪🇺',req:false,cat:'Migration',   tip:'Social security coverage proof for EU posted workers'},
+  {id:'vca',         name:'VCA Certificate',             icon:'🦺',req:true, cat:'Safety',      tip:'VCA Basic or VCA VOL'},
+  {id:'first_aid',   name:'First Aid Certificate',       icon:'🚑',req:false,cat:'Safety',      tip:'EHBO / Premiers secours – emergency response certification'},
+  {id:'ra',          name:'Risk Analysis (RA)',           icon:'📊',req:true, cat:'Safety',      tip:'Workplace risk assessment (risicoanalyse / analyse des risques)'},
+];
 
 // ── Document Sets store ──
 // sets:      [{id, name, description, country, builtIn}]
@@ -1591,14 +1606,17 @@ let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstru
 // Built-in set IDs (cannot be deleted)
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
 const SET_NL_BLUE = '00000000-0000-0000-0000-000000000002';
+const SET_BE_EMP  = '00000000-0000-0000-0000-000000000003';
 
 function initDefaultSets(){
   docSets = [
     {id:SET_NL_ZZP,  name:'NL – ZZP (Self-employed)', description:'Netherlands self-employed / freelancer requirements', country:'NL', builtIn:true},
     {id:SET_NL_BLUE, name:'NL – Employed Worker',      description:'Netherlands employed (blue collar / direct labour)', country:'NL', builtIn:true},
+    {id:SET_BE_EMP,  name:'BE – Employed Worker',      description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true},
   ];
   docSetItems[SET_NL_ZZP]  = DEFAULT_ZZP_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
+  docSetItems[SET_BE_EMP]  = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
 }
 
 function loadSettings(){
@@ -1620,6 +1638,10 @@ function loadSettings(){
       if(!docSets.find(s=>s.id===SET_NL_BLUE)){
         docSets.splice(1,0,{id:SET_NL_BLUE, name:'NL – Employed Worker', description:'Netherlands employed worker', country:'NL', builtIn:true});
         docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
+      }
+      if(!docSets.find(s=>s.id===SET_BE_EMP)){
+        docSets.splice(2,0,{id:SET_BE_EMP, name:'BE – Employed Worker', description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true});
+        docSetItems[SET_BE_EMP] = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
       }
       return;
     }
