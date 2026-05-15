@@ -1766,7 +1766,7 @@ function mkDocs(t, hit=0.8){
   });
   return docs;
 }
-function avc(id){return AVATAR_COLORS[parseInt(id.replace('W',''))%AVATAR_COLORS.length];}
+function avc(id){const h=String(id).split('').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0);return AVATAR_COLORS[Math.abs(h)%AVATAR_COLORS.length];}
 function ini(n){return n.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 function tmpl(w){ return tmplForWorker(w); }
 // ─── Time-aware document status ───────────────────────────────────────────────
