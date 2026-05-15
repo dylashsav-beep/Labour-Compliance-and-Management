@@ -1595,6 +1595,22 @@ const DEFAULT_BE_DOCS = [
   {id:'first_aid',   name:'First Aid Certificate',       icon:'🚑',req:false,cat:'Safety',      tip:'EHBO / Premiers secours – emergency response certification'},
   {id:'ra',          name:'Risk Analysis (RA)',           icon:'📊',req:true, cat:'Safety',      tip:'Workplace risk assessment (risicoanalyse / analyse des risques)'},
 ];
+const DEFAULT_AT_DOCS = [
+  {id:'id',          name:'Valid ID',                    icon:'🪪',req:true, cat:'Registration',tip:'Passport, national ID card or driving licence'},
+  {id:'sv_nr',       name:'SV-Nummer Verification',      icon:'🔢',req:true, cat:'Registration',tip:'Austrian social security number (Sozialversicherungsnummer)'},
+  {id:'ogk',         name:'ÖGK Registration',            icon:'🏥',req:true, cat:'Registration',tip:'Österreichische Gesundheitskasse – health insurance registration'},
+  {id:'contract',    name:'Employment Contract',         icon:'✍️',req:true, cat:'Employment',  tip:'Written Arbeitsvertrag required by Austrian labour law'},
+  {id:'kv',          name:'Kollektivvertrag (KV)',        icon:'📜',req:true, cat:'Employment',  tip:'Sectoral collective agreement acknowledgement'},
+  {id:'min_wage',    name:'Minimum Wage Check',          icon:'💰',req:true, cat:'Employment',  tip:'KV-Mindestlohn / statutory minimum wage compliance confirmed'},
+  {id:'buak',        name:'BUAK Registration',           icon:'🏗️',req:true, cat:'Social',      tip:'Bauarbeiter-Urlaubs- und Abfertigungskasse – construction holiday & severance fund'},
+  {id:'zko',         name:'ZKO Declaration',             icon:'📡',req:false,cat:'Migration',   tip:'Zentrales Koordinationsstelle posting notification – required for posted workers'},
+  {id:'work_permit', name:'Work Permit (Beschäftigungsbewilligung)', icon:'📑',req:false,cat:'Migration',tip:'Required for non-EU/EEA workers'},
+  {id:'a1',          name:'A1 Certificate',              icon:'🇪🇺',req:false,cat:'Migration',   tip:'Social security coverage proof for EU posted workers'},
+  {id:'scc',         name:'SCC/VCA Certificate',         icon:'🦺',req:true, cat:'Safety',      tip:'Sicherheits Certifikat Contractoren – equivalent to VCA Basic or VOL'},
+  {id:'erste_hilfe', name:'First Aid (Erste Hilfe)',      icon:'🚑',req:false,cat:'Safety',      tip:'Valid first aid certification'},
+  {id:'sicherheit',  name:'Safety Induction',            icon:'⛑️',req:true, cat:'Safety',      tip:'Sicherheitsunterweisung – site-specific safety briefing documented'},
+  {id:'auva',        name:'AUVA Registration',           icon:'📊',req:true, cat:'Safety',      tip:'Allgemeine Unfallversicherungsanstalt – workplace accident insurance'},
+];
 
 // ── Document Sets store ──
 // sets:      [{id, name, description, country, builtIn}]
@@ -1607,16 +1623,19 @@ let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstru
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
 const SET_NL_BLUE = '00000000-0000-0000-0000-000000000002';
 const SET_BE_EMP  = '00000000-0000-0000-0000-000000000003';
+const SET_AT_EMP  = '00000000-0000-0000-0000-000000000004';
 
 function initDefaultSets(){
   docSets = [
     {id:SET_NL_ZZP,  name:'NL – ZZP (Self-employed)', description:'Netherlands self-employed / freelancer requirements', country:'NL', builtIn:true},
     {id:SET_NL_BLUE, name:'NL – Employed Worker',      description:'Netherlands employed (blue collar / direct labour)', country:'NL', builtIn:true},
     {id:SET_BE_EMP,  name:'BE – Employed Worker',      description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true},
+    {id:SET_AT_EMP,  name:'AT – Employed Worker',      description:'Austria employed worker labour compliance requirements', country:'AT', builtIn:true},
   ];
   docSetItems[SET_NL_ZZP]  = DEFAULT_ZZP_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_BE_EMP]  = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
+  docSetItems[SET_AT_EMP]  = DEFAULT_AT_DOCS.map(d=>({...d,builtIn:true}));
 }
 
 function loadSettings(){
@@ -1642,6 +1661,10 @@ function loadSettings(){
       if(!docSets.find(s=>s.id===SET_BE_EMP)){
         docSets.splice(2,0,{id:SET_BE_EMP, name:'BE – Employed Worker', description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true});
         docSetItems[SET_BE_EMP] = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
+      }
+      if(!docSets.find(s=>s.id===SET_AT_EMP)){
+        docSets.splice(3,0,{id:SET_AT_EMP, name:'AT – Employed Worker', description:'Austria employed worker labour compliance requirements', country:'AT', builtIn:true});
+        docSetItems[SET_AT_EMP] = DEFAULT_AT_DOCS.map(d=>({...d,builtIn:true}));
       }
       return;
     }
