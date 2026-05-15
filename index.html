@@ -1417,6 +1417,13 @@ function enrichDeletedPayload(type, payload){
     const affected = (p.workerIds||[]).map(wid=>workerNameById(wid)).filter(Boolean);
     meta.affectedWorkers = meta.affectedWorkers || affected.join(', ');
   }
+  if(type==='project'){
+    meta.projectName = meta.projectName || p.project?.name || '—';
+    meta.description = meta.description || p.project?.desc || '';
+    meta.assignmentCount = meta.assignmentCount ?? (p.assignments||[]).length;
+    const affected = (p.assignments||[]).map(a=>workerNameById(a.wid)).filter(Boolean);
+    meta.affectedWorkers = meta.affectedWorkers || affected.join(', ');
+  }
   if(type==='property'){
     meta.propertyName = meta.propertyName || p.property?.name || '—';
     meta.address = meta.address || p.property?.address || '';
@@ -3072,6 +3079,7 @@ function renderProjects(){
         ${p.active?`<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="openAddProjectAssignment(null,'${p.id}')">+ Assign Worker</button>`:''}
         <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="editProject('${p.id}')">Edit</button>
         <button class="btn ${p.active?'btn-cancel':'btn-save'}" style="font-size:11px;padding:4px 10px;" onclick="toggleProjectActive('${p.id}')">${p.active?'Set Inactive':'Set Active'}</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteProject('${p.id}')">Delete</button>
       </div></td>
     </tr>`;
   }).join('');
@@ -3125,6 +3133,20 @@ function toggleProjectActive(id){
   saveProjects();
   renderProjects();
   renderProjFilters();
+}
+function deleteProject(id){
+  const p = projectStore.find(x=>x.id===id); if(!p) return;
+  const linkedAssignments = projectAssignments.filter(a=>a.projectId===id);
+  const detail = linkedAssignments.length
+    ? `Project: ${p.name}\n\nThis project has ${linkedAssignments.length} worker assignment(s). The project and all its assignments will be moved to Deleted Items and can be restored by an authorised user.`
+    : `Project: ${p.name}\n\nThis will move the project to Deleted Items. It can be restored by an authorised user.`;
+  tmcConfirm('Delete this project?', detail, ()=>{
+    archiveDeletedItem('project', `Project: ${p.name}`, {project:p, assignments:linkedAssignments});
+    projectStore = projectStore.filter(x=>x.id!==id);
+    projectAssignments = projectAssignments.filter(a=>a.projectId!==id);
+    saveProjects(); savePA();
+    renderProjects(); renderProjFilters(); renderRoster(); renderTable(); renderDeletedItems();
+  }, {title:'TMC Compliance', subtitle:'Delete project', okText:'Delete'});
 }
 
 // ─── Settings View ────────────────────────────────────────────────────────────
@@ -4217,7 +4239,8 @@ function restoreDeletedItem(id){
   const it=deletedItems.find(x=>x.id===id); if(!it) return;
   tmcConfirm('Restore this archived item?', 'The item will be returned to the active dashboard where possible. The restore action will be recorded in Supabase.', async ()=>{
   const p=it.payload||{};
-  if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); }
+  if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters(); renderRoster(); renderTable(); }
+  else if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); }
   else if(it.type==='worker_document_file'){ if(!fileStore[p.wid])fileStore[p.wid]={}; if(!fileStore[p.wid][p.did])fileStore[p.wid][p.did]=[]; fileStore[p.wid][p.did].push(p.file); refreshFiles(p.wid,p.did); }
   else if(it.type==='worker_status_change'){ const wid=p.workerId||p.wid||p._meta?.workerId; const w=workers.find(x=>x.id===wid); if(w){ w.active = p.oldActive !== false; renderTable(); renderStats(); if(curW===wid) rebuildModal(wid); } }
   else if(it.type==='document_set' && p.set){ docSets.push(p.set); docSetItems[p.set.id]=p.items||[]; (p.workerIds||[]).forEach(wid=>{const w=workers.find(x=>x.id===wid); if(w) w.docSetId=p.set.id;}); saveDocSets(); renderDocSets(); renderTable(); }
@@ -4371,7 +4394,13 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
     if(!it || it.restored) continue;
     const p=it.payload||{}, m=p._meta||{};
     try{
-      if(it.type==='project_assignment'){
+      if(it.type==='project'){
+        const proj=it.payload?.project;
+        if(proj?.id && sbCanWriteTable('projects')) await sbClient.from('projects').update({active:false}).eq('id',proj.id);
+        for(const a of (it.payload?.assignments||[])){
+          if(a.id && sbCanWriteTable('project_assignments')) await sbClient.from('project_assignments').update({active:false}).eq('id',a.id);
+        }
+      } else if(it.type==='project_assignment'){
         // Contracted assignments are now allowed to be archived, but never physically deleted.
         // The Storage file and assignment file record are retained for restore/history.
         if(p.id && sbCanWriteTable('project_assignments')) await sbClient.from('project_assignments').update({active:false, archived_at:new Date().toISOString(), archived_by:sbSession?.user?.id||null}).eq('id',p.id);
@@ -4640,7 +4669,7 @@ async function sbLoadAll(){
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
-      q('projects', sbClient.from('projects').select('*').eq('active',true).order('name'), []),
+      q('projects', sbClient.from('projects').select('*').order('name'), []),
       q('workers', sbClient.from('workers').select('*').order('full_name'), null),
       q('worker_documents', sbClient.from('worker_documents').select('*').eq('active',true), []),
       q('worker_document_files', sbClient.from('worker_document_files').select('*').eq('active',true), []),
