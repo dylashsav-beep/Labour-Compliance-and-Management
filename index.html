@@ -2556,7 +2556,7 @@ function openAddProjectAssignment(presetWid, presetProjId){
   // Worker dropdown
   const ws = document.getElementById('paWorker');
   ws.innerHTML = '<option value="">— Select worker —</option>' +
-    workers.filter(w=>w.active!==false || w.id===presetWid).map(w=>`<option value="${w.id}"${w.id===presetWid?' selected':''}>${w.name} (${w.id})${w.active===false?' · inactive':''}</option>`).join('');
+    workers.filter(w=>w.active!==false || w.id===presetWid).map(w=>`<option value="${w.id}"${w.id===presetWid?' selected':''}>${esc(w.name)}${w.active===false?' · inactive':''}</option>`).join('');
   // Project dropdown — active only
   const ps = document.getElementById('paProject');
   ps.innerHTML = '<option value="">— Select project —</option>' +
@@ -2579,7 +2579,7 @@ function openEditPA(id){
   document.getElementById('paDeleteBtn').textContent = hasContractFile(a) ? 'Archive Assignment + Contract' : 'Archive Assignment';
   const ws = document.getElementById('paWorker');
   ws.innerHTML = '<option value="">— Select worker —</option>' +
-    workers.map(w=>`<option value="${w.id}"${w.id===a.wid?' selected':''}>${w.name} (${w.id})${w.active===false?' · inactive':''}</option>`).join('');
+    workers.map(w=>`<option value="${w.id}"${w.id===a.wid?' selected':''}>${esc(w.name)}${w.active===false?' · inactive':''}</option>`).join('');
   const ps = document.getElementById('paProject');
   ps.innerHTML = '<option value="">— Select project —</option>' +
     projectStore.map(p=>`<option value="${p.id}"${p.id===a.projectId?' selected':''}>${esc(p.name)}${!p.active?' (inactive)':''}</option>`).join('');
@@ -3847,7 +3847,7 @@ function openAssignWorkerToAccom(propId){
   document.getElementById('awAccomSub').textContent   = `${p.name}${p.address?' · '+p.address:''}`;
   const sel = document.getElementById('awAccomWorker');
   sel.innerHTML = '<option value="">— Select worker —</option>' +
-    workers.map(w=>`<option value="${w.id}">${w.name} (${w.id})</option>`).join('');
+    workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
   document.getElementById('awAccomStart').value = '';
   document.getElementById('awAccomEnd').value   = '';
   document.getElementById('awAccomNotes').value = '';
@@ -3878,7 +3878,7 @@ function openAssignWorkerToVehicle(vehicleId){
   document.getElementById('awVehicleSub').textContent   = `${v.desc}${v.reg?' · '+v.reg:''}${[v.make,v.model].filter(Boolean).length?' · '+[v.make,v.model].filter(Boolean).join(' '):''}`;
   const sel = document.getElementById('awVehicleWorker');
   sel.innerHTML = '<option value="">— Select worker —</option>' +
-    workers.map(w=>`<option value="${w.id}">${w.name} (${w.id})</option>`).join('');
+    workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
   document.getElementById('awVehicleStart').value = '';
   document.getElementById('awVehicleEnd').value   = '';
   document.getElementById('awVehicleNotes').value = '';
