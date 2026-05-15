@@ -1498,8 +1498,8 @@ async function sbArchiveDeletedItemImmediate(item){
       deleted_at: item.deletedAt || new Date().toISOString(),
       restored: false
     });
-    if(error) console.warn('[TMC] deleted_items save failed:', error.message);
-  } catch(e){ console.warn('[TMC] deleted_items save threw:', e.message); }
+    if(error){ console.warn('[TMC] deleted_items save failed:', error.message); sbSetStatus('Supabase: delete history save failed — '+error.message, false); }
+  } catch(e){ console.warn('[TMC] deleted_items save threw:', e.message); sbSetStatus('Supabase: delete history save failed — '+e.message, false); }
 }
 function archiveDeletedItem(type, label, payload){
   const enriched = enrichDeletedPayload(type, payload);
@@ -3019,7 +3019,7 @@ async function doAdd(){
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
   const dbDocSetId = isUuid ? docSetId : null;
-  const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('W_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+  const newId = crypto.randomUUID();
   try{
     sbSetStatus('Supabase: adding worker…', true);
     const {error}=await sbClient.from('workers').insert({
@@ -3384,7 +3384,7 @@ function toggleDocSetItemReq(setId,docId,checked){
   saveDocSets();
   // Write required-flag immediately to Supabase (don't wait for deferred sync)
   if(sbClient && sbSession && sbCanWriteTable('document_set_items')){
-    sbRemoteUpsertDocSetItem(setId, doc).catch(e=>console.warn('[TMC] required-flag sync failed:', e.message));
+    sbRemoteUpsertDocSetItem(setId, doc).catch(e=>{ console.warn('[TMC] required-flag sync failed:', e.message); sbSetStatus('Supabase: required-flag save failed — '+e.message, false); });
   }
   // Update just this row's badge inline
   const row=document.getElementById(`dsr_${setId}_${docId}`);
@@ -4362,7 +4362,7 @@ async function sbUploadEmbeddedFiles(){
 
 async function sbUpsertRows(table, rows){
   if(!sbClient) return;
-  if(!sbCanWriteTable(table)) return;
+  if(!sbCanWriteTable(table)){ console.debug('[TMC] sbUpsertRows: skipped', table, '— role:', sbUserRole); return; }
   if(rows.length){ const {error}=await sbClient.from(table).upsert(rows); if(error) throw error; }
 }
 async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
@@ -4437,7 +4437,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,active:activeVal,created_by:userId,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
