@@ -2944,8 +2944,10 @@ async function doAdd(){
   if(!requireAction('workers','add worker')) return;
   const name=document.getElementById('fName').value.trim();
   if(!name){alert('Please enter a name.');return;}
+  if(name.length > 120){alert('Name must be 120 characters or fewer.');return;}
   if(!sbClient || !sbSession){alert('Supabase is not connected. Workers can only be added to Supabase.');return;}
   const type=document.getElementById('fType').value, nat=document.getElementById('fNat').value;
+  if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('W_' + Date.now() + '_' + Math.random().toString(36).slice(2));
   try{
@@ -3026,6 +3028,7 @@ function editProject(id){
 function saveProject(){
   const name = document.getElementById('pName').value.trim();
   if(!name){ alert('Please enter a project name.'); return; }
+  if(name.length > 120){ alert('Project name must be 120 characters or fewer.'); return; }
   const desc = document.getElementById('pDesc').value.trim();
   const active = document.getElementById('pStatus').value === 'active';
   if(editingProjectId){
@@ -3079,7 +3082,9 @@ function updateWarnDesc(){
 }
 
 function applyWarningDays(days){
-  settings.warningDays=parseInt(days);saveSettings();
+  const parsed=parseInt(days,10);
+  if(isNaN(parsed)||parsed<7||parsed>180){alert('Warning days must be between 7 and 180.');return;}
+  settings.warningDays=parsed;saveSettings();
   const slider=document.getElementById('warnRange');const val=document.getElementById('warnVal');
   if(slider)slider.value=settings.warningDays;if(val)val.textContent=settings.warningDays;
   updateWarnDesc();
@@ -4387,57 +4392,93 @@ async function sbPersistAll(force=false){
 
 async function sbLoadProfile(){
   if(!sbClient || !sbSession?.user) return null;
-  const {data, error} = await sbClient.from('profiles').select('*').eq('id', sbSession.user.id).maybeSingle();
-  if(error) throw error;
-  sbProfile = data || {id:sbSession.user.id,email:sbSession.user.email,role:'viewer',active:false};
+  let data, error;
+  try {
+    ({data, error} = await sbClient.from('profiles').select('*').eq('id', sbSession.user.id).maybeSingle());
+  } catch(e) {
+    console.error('[TMC] sbLoadProfile threw:', e);
+    sbLastWorkerLoadProblem = 'Profile query failed: ' + (e.message || e) + '. Check the RLS SELECT policy on the profiles table.';
+    sbProfile = {id:sbSession.user.id, email:sbSession.user.email, role:'viewer', active:false};
+    sbUserRole = 'viewer'; sbUserActive = false;
+    return sbProfile;
+  }
+  if(error) {
+    console.error('[TMC] sbLoadProfile error:', error);
+    sbLastWorkerLoadProblem = 'Profile load error: ' + error.message + '. Check the RLS SELECT policy on the profiles table.';
+    sbProfile = {id:sbSession.user.id, email:sbSession.user.email, role:'viewer', active:false};
+    sbUserRole = 'viewer'; sbUserActive = false;
+    return sbProfile;
+  }
+  if(!data) {
+    // No profile row — check if any active admin exists before deciding role
+    let isFirstAdmin = true;
+    try {
+      const {data: adminCheck} = await sbClient.from('profiles').select('id').eq('role','admin').eq('active',true).limit(1).maybeSingle();
+      isFirstAdmin = !adminCheck;
+    } catch(e) { console.warn('[TMC] Admin existence check failed:', e); }
+    const defaultRole = isFirstAdmin ? 'admin' : 'viewer';
+    let created = null;
+    try {
+      const {data: upserted, error: upsertErr} = await sbClient.from('profiles').upsert({
+        id: sbSession.user.id,
+        email: sbSession.user.email,
+        full_name: sbSession.user.user_metadata?.full_name || sbSession.user.email?.split('@')[0] || '',
+        role: defaultRole,
+        active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, {onConflict:'id'}).select().maybeSingle();
+      if(!upsertErr) created = upserted;
+      else console.warn('[TMC] Profile auto-create failed:', upsertErr);
+    } catch(e) { console.warn('[TMC] Profile auto-create threw:', e); }
+    sbProfile = created || {id:sbSession.user.id, email:sbSession.user.email, role:defaultRole, active:true};
+    if(isFirstAdmin) console.info('[TMC] No existing admin found — auto-promoted this account to admin.');
+  } else {
+    sbProfile = data;
+  }
   sbUserRole = sbProfile.role || 'viewer';
   sbUserActive = sbProfile.active !== false && sbUserRole !== 'no_access';
   return sbProfile;
 }
 function applyRoleUI(){
-  setTimeout(()=>{
-    const canWorkers = canAction('workerDocs');
-    const canPlanning = canAction('planning');
-    const canSettings = canAction('settings');
-    const canRoles = canAction('roles');
+  const canWorkers = canAction('workerDocs');
+  const canPlanning = canAction('planning');
+  const canSettings = canAction('settings');
+  const canRoles = canAction('roles');
 
-    // v44.4 safety fix:
-    // If the logged-in user is an active Admin, remove any role-hide classes that were
-    // applied before auth completed. This prevents the app from staying in a read-only
-    // visual state even though Supabase correctly says the user is Admin.
-    if(sbUserRole === 'admin' && sbUserActive){
-      document.querySelectorAll('.role-hide').forEach(el=>el.classList.remove('role-hide'));
-      document.querySelectorAll('.role-disabled').forEach(el=>el.classList.remove('role-disabled'));
-      document.querySelectorAll('input,select,textarea,button').forEach(el=>{
-        if(el.id !== 'sbLoginBtn' && el.id !== 'sbResetBtn') el.disabled = false;
-      });
-      const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.remove('role-hide');
-      const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.remove('role-hide');
-      const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.remove('role-hide');
-      const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display='block';
-      renderDeletedItems();
-      return;
-    }
+  // If the logged-in user is an active Admin, lift all role restrictions.
+  if(sbUserRole === 'admin' && sbUserActive){
+    document.querySelectorAll('.role-hide').forEach(el=>el.classList.remove('role-hide'));
+    document.querySelectorAll('.role-disabled').forEach(el=>el.classList.remove('role-disabled'));
+    document.querySelectorAll('input,select,textarea,button').forEach(el=>{
+      if(el.id !== 'sbLoginBtn' && el.id !== 'sbResetBtn') el.disabled = false;
+    });
+    const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.remove('role-hide');
+    const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.remove('role-hide');
+    const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.remove('role-hide');
+    const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display='block';
+    renderDeletedItems();
+    return;
+  }
 
-    const hideByOnclick = (tokens, show) => {
-      document.querySelectorAll('button[onclick],input[onchange],select[onchange]').forEach(el=>{
-        const txt = (el.getAttribute('onclick')||'') + ' ' + (el.getAttribute('onchange')||'');
-        if(tokens.some(t=>txt.includes(t))) el.classList.toggle('role-hide', !show);
-      });
-    };
-    hideByOnclick(['openAdd()','doAdd()','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','attachF','rmFile'], canWorkers);
-    hideByOnclick(['openAddProject','editProject','toggleProjectActive','openAddProjectAssignment','openEditPA','deleteProjectAssignment','saveProjectAssignment','openAddProperty','editProperty','deleteProperty','openAddVehicle','editVehicle','deleteVehicle','openAssignAccom','openAssignVehicle','saveAccomAssignment','saveVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'], canPlanning);
-    hideByOnclick(['openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays'], canSettings);
-    document.querySelectorAll('#paContractFile').forEach(el=>el.classList.toggle('role-hide', !canPlanning));
-    document.querySelectorAll('#warnRange,#zzpNewName,#zzpNewCat,#zzpNewTip,#zzpNewReq,#blueNewName,#blueNewCat,#blueNewTip,#blueNewReq').forEach(el=>el.disabled=!canSettings);
-    const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.toggle('role-hide', !(canSettings || canRoles));
-    const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.toggle('role-hide', !canWorkers);
-    const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.toggle('role-hide', !canPlanning);
-    const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display=canRoles?'block':'none'; renderDeletedItems();
-    if(sbUserRole === 'viewer' || sbUserRole === 'no_access') document.querySelectorAll('.btn-save,.btn-danger').forEach(el=>{ if(el.id!=='tmcConfirmOkBtn') el.classList.add('role-hide'); }); document.getElementById('tmcConfirmOkBtn')?.classList.remove('role-hide');
-    if(sbUserRole === 'planner') document.querySelectorAll('#viewSettings .btn-save,#viewSettings .btn-danger').forEach(el=>{ if(!canSettings) el.classList.add('role-hide'); });
-    if(sbUserRole === 'compliance') document.querySelectorAll('#viewRoster .btn-save,#viewRoster .btn-danger,#viewProjects .btn-save,#viewProjects .btn-danger,#viewResources .btn-save,#viewResources .btn-danger').forEach(el=>el.classList.add('role-hide'));
-  },0);
+  const hideByOnclick = (tokens, show) => {
+    document.querySelectorAll('button[onclick],input[onchange],select[onchange]').forEach(el=>{
+      const txt = (el.getAttribute('onclick')||'') + ' ' + (el.getAttribute('onchange')||'');
+      if(tokens.some(t=>txt.includes(t))) el.classList.toggle('role-hide', !show);
+    });
+  };
+  hideByOnclick(['openAdd()','doAdd()','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','attachF','rmFile'], canWorkers);
+  hideByOnclick(['openAddProject','editProject','toggleProjectActive','openAddProjectAssignment','openEditPA','deleteProjectAssignment','saveProjectAssignment','openAddProperty','editProperty','deleteProperty','openAddVehicle','editVehicle','deleteVehicle','openAssignAccom','openAssignVehicle','saveAccomAssignment','saveVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'], canPlanning);
+  hideByOnclick(['openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays'], canSettings);
+  document.querySelectorAll('#paContractFile').forEach(el=>el.classList.toggle('role-hide', !canPlanning));
+  document.querySelectorAll('#warnRange,#zzpNewName,#zzpNewCat,#zzpNewTip,#zzpNewReq,#blueNewName,#blueNewCat,#blueNewTip,#blueNewReq').forEach(el=>el.disabled=!canSettings);
+  const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.toggle('role-hide', !(canSettings || canRoles));
+  const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.toggle('role-hide', !canWorkers);
+  const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.toggle('role-hide', !canPlanning);
+  const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display=canRoles?'block':'none'; renderDeletedItems();
+  if(sbUserRole === 'viewer' || sbUserRole === 'no_access') document.querySelectorAll('.btn-save,.btn-danger').forEach(el=>{ if(el.id!=='tmcConfirmOkBtn') el.classList.add('role-hide'); }); document.getElementById('tmcConfirmOkBtn')?.classList.remove('role-hide');
+  if(sbUserRole === 'planner') document.querySelectorAll('#viewSettings .btn-save,#viewSettings .btn-danger').forEach(el=>{ if(!canSettings) el.classList.add('role-hide'); });
+  if(sbUserRole === 'compliance') document.querySelectorAll('#viewRoster .btn-save,#viewRoster .btn-danger,#viewProjects .btn-save,#viewProjects .btn-danger,#viewResources .btn-save,#viewResources .btn-danger').forEach(el=>el.classList.add('role-hide'));
 }
 async function renderRolesPanel(){
   const card=document.getElementById('rolesCard'), body=document.getElementById('rolesBody');
@@ -4567,15 +4608,21 @@ async function sbLoadAll(){
     sbHasLoadedRemote = true;
     renderProjFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
-      sbSetStatus('Supabase: partial load warning', false);
+      const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
+      if(workerErr){
+        sbSetStatus('Supabase: workers table blocked — check RLS', false);
+        console.error('[TMC] Workers table load error:', workerErr, '— Likely cause: RLS SELECT policy blocks this role (', sbUserRole, '). Go to Supabase → Table Editor → workers → RLS and ensure authenticated users can SELECT.');
+      } else {
+        sbSetStatus('Supabase: partial load — ' + loadErrors.length + ' table(s) failed', false);
+      }
       if(!sbLastWorkerLoadProblem) sbLastWorkerLoadProblem = loadErrors.slice(0,3).join(' | ');
     } else {
-      sbSetStatus('Supabase: loaded', true);
+      sbSetStatus('Supabase: loaded — role: ' + sbRoleLabel(), true);
     }
   } catch(e){
     sbLastWorkerLoadProblem = e.message || String(e);
-    console.error('Supabase load failed:', e);
-    sbSetStatus('Supabase: load failed', false);
+    console.error('[TMC] Supabase load failed:', e);
+    sbSetStatus('Supabase: load failed — ' + (e.message||e), false);
     renderTable();
     throw e;
   } finally { sbIsLoading=false; }
@@ -4691,14 +4738,19 @@ async function sbAfterAuth(){
     applyRoleUI();
     return;
   }
-  await sbLoadProfile();
+  try { await sbLoadProfile(); } catch(e) {
+    console.error('[TMC] sbLoadProfile threw in sbAfterAuth:', e);
+    sbUserRole = 'viewer'; sbUserActive = false;
+    sbLastWorkerLoadProblem = 'Could not load your profile: ' + (e.message || e) + '. Check RLS on the profiles table.';
+  }
   document.getElementById('sbUser').innerHTML=`Logged in as ${esc(user.email)} <span class="role-chip">${esc(sbRoleLabel())}</span><span class="role-chip" title="Profile active status">${sbUserActive?'Active':'Inactive'}</span>`;
   if(!sbUserActive || sbUserRole === 'no_access'){
     sbReady=false;
     document.getElementById('sbLoginOverlay')?.classList.remove('open');
     sbLockScreen(false);
-    sbSetStatus('Supabase: no access',false);
-    sbShowLoginPrompt(true, '<strong>No active app role.</strong> You are signed in, but this account is not active Admin/Planner/Compliance.');
+    sbSetStatus('Supabase: no access — role: '+sbRoleLabel(), false);
+    const hint = sbLastWorkerLoadProblem ? `<br><small style="color:var(--red);">${esc(sbLastWorkerLoadProblem)}</small>` : '';
+    sbShowLoginPrompt(true, `<strong>No active app role.</strong> Signed in as <em>${esc(user.email)}</em> with role <strong>${esc(sbRoleLabel())}</strong> (inactive). Ask an admin to activate your account in Settings → User Roles.${hint}`);
     applyRoleUI();
     return;
   }
@@ -4706,11 +4758,19 @@ async function sbAfterAuth(){
   document.getElementById('sbLoginOverlay')?.classList.remove('open');
   sbLockScreen(false);
   sbShowLoginPrompt(false);
-  sbSetStatus('Supabase: connected',true);
-  await sbLoadAll();
+  sbSetStatus('Supabase: connected — role: '+sbRoleLabel(), true);
+  try {
+    await sbLoadAll();
+  } catch(e) {
+    console.error('[TMC] sbLoadAll failed:', e);
+    sbSetStatus('Supabase: data load failed', false);
+    sbShowLoginPrompt(true, `<strong>Data load failed.</strong> Signed in as ${esc(user.email)} (${esc(sbRoleLabel())}), but data could not be loaded: ${esc(e.message || String(e))}. Check Supabase RLS policies and table permissions.`);
+    applyRoleUI();
+    return;
+  }
   sbStartRealtime();
   sbShowLoginPrompt(false);
-  sbSetStatus('Supabase: connected',true);
+  sbSetStatus('Supabase: connected — role: '+sbRoleLabel(), true);
   applyRoleUI();
 }
 async function sbBoot(){
@@ -4720,7 +4780,7 @@ async function sbBoot(){
     sbSession=session;
     if(event === 'PASSWORD_RECOVERY'){ sbShowPasswordReset(); return; }
     if(event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED'){
-      await sbAfterAuth();
+      await sbAfterAuth().catch(e=>{ console.error('[TMC] sbAfterAuth failed in auth listener:', e); sbSetStatus('Auth error: '+(e.message||e), false); });
       return;
     }
     if(event === 'SIGNED_OUT'){
@@ -4752,7 +4812,7 @@ renderProjFilters();
 renderWeekLabel();
 renderTable();
 applyRoleUI();
-sbBoot();
+sbBoot().catch(e=>{ console.error('[TMC] sbBoot failed:', e); sbSetStatus('Supabase: boot error — ' + (e.message||e), false); });
 </script>
 </body>
 </html>
