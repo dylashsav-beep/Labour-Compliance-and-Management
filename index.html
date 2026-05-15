@@ -2693,7 +2693,7 @@ function saveProjectAssignment(){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx>-1) projectAssignments[idx] = {id:editingPAId,...obj};
   } else {
-    projectAssignments.push({id:'PA'+Date.now(),...obj});
+    projectAssignments.push({id:crypto.randomUUID(),...obj});
   }
   savePA(); closeM('paOverlay'); renderRoster(); renderTable();
 }
@@ -3109,7 +3109,7 @@ function saveProject(){
     if(projectStore.some(p=>p.name.toLowerCase()===name.toLowerCase())){
       alert('A project with this name already exists.');return;
     }
-    projectStore.push({id:'P'+String(Date.now()),name,desc,active});
+    projectStore.push({id:crypto.randomUUID(),name,desc,active});
   }
   saveProjects();
   closeM('projOverlay');
@@ -3913,7 +3913,7 @@ function saveAssignWorkerToAccom(){
   if(!wid){ alert('Please select a worker.'); return; }
   if(!accomHistory[wid]) accomHistory[wid] = [];
   accomHistory[wid].push({
-    id: 'A'+Date.now(),
+    id: crypto.randomUUID(),
     propId:    awAccomPropId,
     startDate: document.getElementById('awAccomStart').value,
     endDate:   document.getElementById('awAccomEnd').value,
@@ -3944,7 +3944,7 @@ function saveAssignWorkerToVehicle(){
   if(!wid){ alert('Please select a worker.'); return; }
   if(!vehHistory[wid]) vehHistory[wid] = [];
   vehHistory[wid].push({
-    id:        'V'+Date.now(),
+    id:        crypto.randomUUID(),
     vehicleId: awVehicleId,
     startDate: document.getElementById('awVehicleStart').value,
     endDate:   document.getElementById('awVehicleEnd').value,
@@ -3981,7 +3981,7 @@ function saveProperty(){
     const p=properties.find(x=>x.id===editingPropId);
     if(p){p.name=name;p.address=document.getElementById('propAddress').value.trim();p.notes=document.getElementById('propNotes').value.trim();}
   } else {
-    properties.push({id:'PROP'+Date.now(),name,address:document.getElementById('propAddress').value.trim(),notes:document.getElementById('propNotes').value.trim()});
+    properties.push({id:crypto.randomUUID(),name,address:document.getElementById('propAddress').value.trim(),notes:document.getElementById('propNotes').value.trim()});
   }
   saveProperties(); closeM('propOverlay'); renderResources();
 }
@@ -4028,7 +4028,7 @@ function saveAccomAssignment(){
     const entry = accomHistory[assignAccomWid].find(a=>a.id===assignAccomEntryId);
     if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); }
   } else {
-    accomHistory[assignAccomWid].push({id:'A'+Date.now(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim()});
+    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim()});
   }
   saveAccomHistory(); closeM('assignAccomOverlay'); renderResources();
 }
@@ -4113,7 +4113,7 @@ function saveVehicle(){
   if(!desc){alert('Please enter a vehicle description.');return;}
   const obj={desc,reg:document.getElementById('vehReg').value.trim(),make:document.getElementById('vehMake').value.trim(),model:document.getElementById('vehModel').value.trim(),colour:document.getElementById('vehColour').value.trim(),notes:document.getElementById('vehNotes').value.trim()};
   if(editingVehicleId){Object.assign(vehicles.find(x=>x.id===editingVehicleId),obj);}
-  else{vehicles.push({id:'VEH'+Date.now(),...obj});}
+  else{vehicles.push({id:crypto.randomUUID(),...obj});}
   saveVehicles();closeM('vehicleOverlay');renderResources();
 }
 function deleteVehicle(id){
@@ -4157,7 +4157,7 @@ function saveVehicleAssignment(){
     const entry = vehHistory[assignVehicleWid].find(a=>a.id===assignVehicleEntryId);
     if(entry){ entry.vehicleId=vehicleId; entry.startDate=document.getElementById('assignVehicleStart').value; entry.endDate=document.getElementById('assignVehicleEnd').value; entry.notes=document.getElementById('assignVehicleNotes').value.trim(); }
   } else {
-    vehHistory[assignVehicleWid].push({id:'V'+Date.now(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim()});
+    vehHistory[assignVehicleWid].push({id:crypto.randomUUID(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim()});
   }
   saveVehHistory(); closeM('assignVehicleOverlay'); renderResources();
 }
