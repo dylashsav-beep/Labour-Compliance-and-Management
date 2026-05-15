@@ -2949,6 +2949,8 @@ async function doAdd(){
   const type=document.getElementById('fType').value, nat=document.getElementById('fNat').value;
   if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
+  const dbDocSetId = isUuid ? docSetId : null;
   const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('W_' + Date.now() + '_' + Math.random().toString(36).slice(2));
   try{
     sbSetStatus('Supabase: adding worker…', true);
@@ -2958,7 +2960,7 @@ async function doAdd(){
       worker_type:type,
       reference:'',
       nationality:nat||'',
-      document_set_id:docSetId,
+      document_set_id:dbDocSetId,
       active:true,
       created_by:sbSession.user.id,
       updated_at:new Date().toISOString()
