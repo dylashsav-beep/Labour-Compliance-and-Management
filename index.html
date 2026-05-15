@@ -1485,9 +1485,26 @@ function deletedItemDetails(it){
   else if(it.type==='vehicle_assignment'){ add('Worker',m.workerName); add('Vehicle',m.vehicleName); add('Dates',[m.startDate,m.endDate].filter(Boolean).join(' → ')); }
   return rows;
 }
+async function sbArchiveDeletedItemImmediate(item){
+  if(!sbClient || !sbSession || !sbCanWriteTable('deleted_items')) return;
+  try{
+    const {error} = await sbClient.from('deleted_items').upsert({
+      id: item.id,
+      item_type: item.type,
+      label: item.label || '',
+      payload: item.payload || {},
+      details: item.payload?._meta || {},
+      deleted_by_email: item.deletedBy || '',
+      deleted_at: item.deletedAt || new Date().toISOString(),
+      restored: false
+    });
+    if(error) console.warn('[TMC] deleted_items save failed:', error.message);
+  } catch(e){ console.warn('[TMC] deleted_items save threw:', e.message); }
+}
 function archiveDeletedItem(type, label, payload){
   const enriched = enrichDeletedPayload(type, payload);
-  const item={id:'DEL'+Date.now()+Math.random().toString(36).slice(2),type,label,deletedAt:new Date().toISOString(),deletedBy:sbSession?.user?.email||'',payload:enriched};
+  const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('00000000-' + Date.now().toString(16).padStart(12,'0').slice(0,4) + '-4000-8000-' + Math.random().toString(16).slice(2,14).padStart(12,'0'));
+  const item={id:newId, type, label, deletedAt:new Date().toISOString(), deletedBy:sbSession?.user?.email||'', payload:enriched};
   deletedItems.unshift(item); saveDeletedItems(); sbArchiveDeletedItemImmediate(item); return item;
 }
 let tmcConfirmCallback = null;
@@ -3413,18 +3430,6 @@ The removed worker document data and file references will be saved as one groupe
       docSetItems[setId]=oldItems;
       alert('Could not delete the question in Supabase: '+e.message);
       return;
-    }
-    // Save to deleted_items history separately — failure here does NOT revert the deletion
-    if(sbClient && sbSession && sbCanWriteTable('deleted_items')){
-      const latest=deletedItems[0];
-      if(latest && latest.type==='document_set_item_group_delete'){
-        sbClient.from('deleted_items').upsert({
-          id:latest.id, item_type:latest.type, label:latest.label,
-          payload:latest.payload||{}, details:latest.payload?._meta||{},
-          deleted_by_email:latest.deletedBy||'',
-          deleted_at:latest.deletedAt||new Date().toISOString(), restored:false
-        }).then(({error})=>{ if(error) console.warn('[TMC] deleted_items save failed:', error.message); });
-      }
     }
     saveDocSets();
     renderSettings(); renderTable(); if(curW) rebuildModal(curW); renderDeletedItems(); sbQueueRemoteReload('document_set_items');
