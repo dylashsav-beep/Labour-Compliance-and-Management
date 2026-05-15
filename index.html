@@ -1580,6 +1580,37 @@ const DEFAULT_BLUE_DOCS = [
   {id:'payroll', name:'Payroll Registration',       icon:'💳',req:true, cat:'Payroll',     tip:'SNA/NBBU/ABU certified payroll'},
   {id:'greken',  name:'G-Account',                  icon:'🏦',req:false,cat:'Payroll',     tip:'Blocked account for payroll taxes'},
 ];
+const DEFAULT_BE_DOCS = [
+  {id:'id',          name:'Valid ID',                    icon:'🪪',req:true, cat:'Registration',tip:'Passport, national ID card or driving licence'},
+  {id:'niss',        name:'NISS Verification',           icon:'🔢',req:true, cat:'Registration',tip:'Belgian social security number (NISS/INSZ)'},
+  {id:'dimona',      name:'DIMONA Declaration',          icon:'📡',req:true, cat:'Registration',tip:'Electronic worker registration with ONSS – required before first day'},
+  {id:'contract',    name:'Employment Contract',         icon:'✍️',req:true, cat:'Employment',  tip:'Written contract required by Belgian labour law'},
+  {id:'pc_cao',      name:'Joint Committee (PC/CAO)',    icon:'📜',req:true, cat:'Employment',  tip:'Paritair Comité and sectoral collective agreement acknowledgement'},
+  {id:'min_wage',    name:'Minimum Wage Check',          icon:'💰',req:true, cat:'Employment',  tip:'AMISG / sectoral minimum wage compliance confirmed'},
+  {id:'onss',        name:'ONSS/RSZ Registration',       icon:'🏛️',req:true, cat:'Social',      tip:'National Social Security Office registration confirmation'},
+  {id:'limosa',      name:'LIMOSA Declaration',          icon:'🌍',req:false,cat:'Migration',   tip:'Required for posted workers from abroad (EU Posting Directive)'},
+  {id:'single_permit',name:'Single Permit',             icon:'📑',req:false,cat:'Migration',   tip:'Combined work & residence permit – required for non-EU workers'},
+  {id:'a1',          name:'A1 Certificate',              icon:'🇪🇺',req:false,cat:'Migration',   tip:'Social security coverage proof for EU posted workers'},
+  {id:'vca',         name:'VCA Certificate',             icon:'🦺',req:true, cat:'Safety',      tip:'VCA Basic or VCA VOL'},
+  {id:'first_aid',   name:'First Aid Certificate',       icon:'🚑',req:false,cat:'Safety',      tip:'EHBO / Premiers secours – emergency response certification'},
+  {id:'ra',          name:'Risk Analysis (RA)',           icon:'📊',req:true, cat:'Safety',      tip:'Workplace risk assessment (risicoanalyse / analyse des risques)'},
+];
+const DEFAULT_AT_DOCS = [
+  {id:'id',          name:'Valid ID',                    icon:'🪪',req:true, cat:'Registration',tip:'Passport, national ID card or driving licence'},
+  {id:'sv_nr',       name:'SV-Nummer Verification',      icon:'🔢',req:true, cat:'Registration',tip:'Austrian social security number (Sozialversicherungsnummer)'},
+  {id:'ogk',         name:'ÖGK Registration',            icon:'🏥',req:true, cat:'Registration',tip:'Österreichische Gesundheitskasse – health insurance registration'},
+  {id:'contract',    name:'Employment Contract',         icon:'✍️',req:true, cat:'Employment',  tip:'Written Arbeitsvertrag required by Austrian labour law'},
+  {id:'kv',          name:'Kollektivvertrag (KV)',        icon:'📜',req:true, cat:'Employment',  tip:'Sectoral collective agreement acknowledgement'},
+  {id:'min_wage',    name:'Minimum Wage Check',          icon:'💰',req:true, cat:'Employment',  tip:'KV-Mindestlohn / statutory minimum wage compliance confirmed'},
+  {id:'buak',        name:'BUAK Registration',           icon:'🏗️',req:true, cat:'Social',      tip:'Bauarbeiter-Urlaubs- und Abfertigungskasse – construction holiday & severance fund'},
+  {id:'zko',         name:'ZKO Declaration',             icon:'📡',req:false,cat:'Migration',   tip:'Zentrales Koordinationsstelle posting notification – required for posted workers'},
+  {id:'work_permit', name:'Work Permit (Beschäftigungsbewilligung)', icon:'📑',req:false,cat:'Migration',tip:'Required for non-EU/EEA workers'},
+  {id:'a1',          name:'A1 Certificate',              icon:'🇪🇺',req:false,cat:'Migration',   tip:'Social security coverage proof for EU posted workers'},
+  {id:'scc',         name:'SCC/VCA Certificate',         icon:'🦺',req:true, cat:'Safety',      tip:'Sicherheits Certifikat Contractoren – equivalent to VCA Basic or VOL'},
+  {id:'erste_hilfe', name:'First Aid (Erste Hilfe)',      icon:'🚑',req:false,cat:'Safety',      tip:'Valid first aid certification'},
+  {id:'sicherheit',  name:'Safety Induction',            icon:'⛑️',req:true, cat:'Safety',      tip:'Sicherheitsunterweisung – site-specific safety briefing documented'},
+  {id:'auva',        name:'AUVA Registration',           icon:'📊',req:true, cat:'Safety',      tip:'Allgemeine Unfallversicherungsanstalt – workplace accident insurance'},
+];
 
 // ── Document Sets store ──
 // sets:      [{id, name, description, country, builtIn}]
@@ -1591,14 +1622,20 @@ let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstru
 // Built-in set IDs (cannot be deleted)
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
 const SET_NL_BLUE = '00000000-0000-0000-0000-000000000002';
+const SET_BE_EMP  = '00000000-0000-0000-0000-000000000003';
+const SET_AT_EMP  = '00000000-0000-0000-0000-000000000004';
 
 function initDefaultSets(){
   docSets = [
     {id:SET_NL_ZZP,  name:'NL – ZZP (Self-employed)', description:'Netherlands self-employed / freelancer requirements', country:'NL', builtIn:true},
     {id:SET_NL_BLUE, name:'NL – Employed Worker',      description:'Netherlands employed (blue collar / direct labour)', country:'NL', builtIn:true},
+    {id:SET_BE_EMP,  name:'BE – Employed Worker',      description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true},
+    {id:SET_AT_EMP,  name:'AT – Employed Worker',      description:'Austria employed worker labour compliance requirements', country:'AT', builtIn:true},
   ];
   docSetItems[SET_NL_ZZP]  = DEFAULT_ZZP_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
+  docSetItems[SET_BE_EMP]  = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
+  docSetItems[SET_AT_EMP]  = DEFAULT_AT_DOCS.map(d=>({...d,builtIn:true}));
 }
 
 function loadSettings(){
@@ -1620,6 +1657,14 @@ function loadSettings(){
       if(!docSets.find(s=>s.id===SET_NL_BLUE)){
         docSets.splice(1,0,{id:SET_NL_BLUE, name:'NL – Employed Worker', description:'Netherlands employed worker', country:'NL', builtIn:true});
         docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
+      }
+      if(!docSets.find(s=>s.id===SET_BE_EMP)){
+        docSets.splice(2,0,{id:SET_BE_EMP, name:'BE – Employed Worker', description:'Belgium employed worker labour compliance requirements', country:'BE', builtIn:true});
+        docSetItems[SET_BE_EMP] = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
+      }
+      if(!docSets.find(s=>s.id===SET_AT_EMP)){
+        docSets.splice(3,0,{id:SET_AT_EMP, name:'AT – Employed Worker', description:'Austria employed worker labour compliance requirements', country:'AT', builtIn:true});
+        docSetItems[SET_AT_EMP] = DEFAULT_AT_DOCS.map(d=>({...d,builtIn:true}));
       }
       return;
     }
@@ -2648,7 +2693,7 @@ function saveProjectAssignment(){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx>-1) projectAssignments[idx] = {id:editingPAId,...obj};
   } else {
-    projectAssignments.push({id:'PA'+Date.now(),...obj});
+    projectAssignments.push({id:crypto.randomUUID(),...obj});
   }
   savePA(); closeM('paOverlay'); renderRoster(); renderTable();
 }
@@ -3064,7 +3109,7 @@ function saveProject(){
     if(projectStore.some(p=>p.name.toLowerCase()===name.toLowerCase())){
       alert('A project with this name already exists.');return;
     }
-    projectStore.push({id:'P'+String(Date.now()),name,desc,active});
+    projectStore.push({id:crypto.randomUUID(),name,desc,active});
   }
   saveProjects();
   closeM('projOverlay');
@@ -3868,7 +3913,7 @@ function saveAssignWorkerToAccom(){
   if(!wid){ alert('Please select a worker.'); return; }
   if(!accomHistory[wid]) accomHistory[wid] = [];
   accomHistory[wid].push({
-    id: 'A'+Date.now(),
+    id: crypto.randomUUID(),
     propId:    awAccomPropId,
     startDate: document.getElementById('awAccomStart').value,
     endDate:   document.getElementById('awAccomEnd').value,
@@ -3899,7 +3944,7 @@ function saveAssignWorkerToVehicle(){
   if(!wid){ alert('Please select a worker.'); return; }
   if(!vehHistory[wid]) vehHistory[wid] = [];
   vehHistory[wid].push({
-    id:        'V'+Date.now(),
+    id:        crypto.randomUUID(),
     vehicleId: awVehicleId,
     startDate: document.getElementById('awVehicleStart').value,
     endDate:   document.getElementById('awVehicleEnd').value,
@@ -3936,7 +3981,7 @@ function saveProperty(){
     const p=properties.find(x=>x.id===editingPropId);
     if(p){p.name=name;p.address=document.getElementById('propAddress').value.trim();p.notes=document.getElementById('propNotes').value.trim();}
   } else {
-    properties.push({id:'PROP'+Date.now(),name,address:document.getElementById('propAddress').value.trim(),notes:document.getElementById('propNotes').value.trim()});
+    properties.push({id:crypto.randomUUID(),name,address:document.getElementById('propAddress').value.trim(),notes:document.getElementById('propNotes').value.trim()});
   }
   saveProperties(); closeM('propOverlay'); renderResources();
 }
@@ -3983,7 +4028,7 @@ function saveAccomAssignment(){
     const entry = accomHistory[assignAccomWid].find(a=>a.id===assignAccomEntryId);
     if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); }
   } else {
-    accomHistory[assignAccomWid].push({id:'A'+Date.now(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim()});
+    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim()});
   }
   saveAccomHistory(); closeM('assignAccomOverlay'); renderResources();
 }
@@ -4068,7 +4113,7 @@ function saveVehicle(){
   if(!desc){alert('Please enter a vehicle description.');return;}
   const obj={desc,reg:document.getElementById('vehReg').value.trim(),make:document.getElementById('vehMake').value.trim(),model:document.getElementById('vehModel').value.trim(),colour:document.getElementById('vehColour').value.trim(),notes:document.getElementById('vehNotes').value.trim()};
   if(editingVehicleId){Object.assign(vehicles.find(x=>x.id===editingVehicleId),obj);}
-  else{vehicles.push({id:'VEH'+Date.now(),...obj});}
+  else{vehicles.push({id:crypto.randomUUID(),...obj});}
   saveVehicles();closeM('vehicleOverlay');renderResources();
 }
 function deleteVehicle(id){
@@ -4112,7 +4157,7 @@ function saveVehicleAssignment(){
     const entry = vehHistory[assignVehicleWid].find(a=>a.id===assignVehicleEntryId);
     if(entry){ entry.vehicleId=vehicleId; entry.startDate=document.getElementById('assignVehicleStart').value; entry.endDate=document.getElementById('assignVehicleEnd').value; entry.notes=document.getElementById('assignVehicleNotes').value.trim(); }
   } else {
-    vehHistory[assignVehicleWid].push({id:'V'+Date.now(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim()});
+    vehHistory[assignVehicleWid].push({id:crypto.randomUUID(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim()});
   }
   saveVehHistory(); closeM('assignVehicleOverlay'); renderResources();
 }
