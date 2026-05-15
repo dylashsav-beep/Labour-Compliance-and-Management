@@ -4392,23 +4392,32 @@ async function sbPersistAll(force=false){
 
 async function sbLoadProfile(){
   if(!sbClient || !sbSession?.user) return null;
-  let data, error;
+  const OWNER_EMAIL = 'dylan@tmconstruction.nl';
+  // Helper — always called last so the owner override survives any error path
+  function _finalise(){
+    sbUserRole = (sbProfile?.role) || 'viewer';
+    sbUserActive = sbProfile?.active !== false && sbUserRole !== 'no_access';
+    if(sbSession?.user?.email === OWNER_EMAIL){
+      sbUserRole = 'admin'; sbUserActive = true;
+      if(sbProfile){ sbProfile.role = 'admin'; sbProfile.active = true; }
+    }
+  }
+
+  let data, error, queryFailed = false;
   try {
     ({data, error} = await sbClient.from('profiles').select('*').eq('id', sbSession.user.id).maybeSingle());
   } catch(e) {
     console.error('[TMC] sbLoadProfile threw:', e);
-    sbLastWorkerLoadProblem = 'Profile query failed: ' + (e.message || e) + '. Check the RLS SELECT policy on the profiles table.';
-    sbProfile = {id:sbSession.user.id, email:sbSession.user.email, role:'viewer', active:false};
-    sbUserRole = 'viewer'; sbUserActive = false;
-    return sbProfile;
+    sbLastWorkerLoadProblem = 'Profile load error: ' + (e.message || e) + '. Run tmc_fix_admin.sql in Supabase to create the profiles table.';
+    queryFailed = true;
   }
-  if(error) {
-    console.error('[TMC] sbLoadProfile error:', error);
-    sbLastWorkerLoadProblem = 'Profile load error: ' + error.message + '. Check the RLS SELECT policy on the profiles table.';
+
+  if(queryFailed || error) {
+    if(error){ console.error('[TMC] sbLoadProfile error:', error); sbLastWorkerLoadProblem = 'Profile load error: ' + error.message + '. Run tmc_fix_admin.sql in Supabase to create the profiles table.'; }
     sbProfile = {id:sbSession.user.id, email:sbSession.user.email, role:'viewer', active:false};
-    sbUserRole = 'viewer'; sbUserActive = false;
-    return sbProfile;
+    _finalise(); return sbProfile;
   }
+
   if(!data) {
     // No profile row — check if any active admin exists before deciding role
     let isFirstAdmin = true;
@@ -4436,14 +4445,7 @@ async function sbLoadProfile(){
   } else {
     sbProfile = data;
   }
-  sbUserRole = sbProfile.role || 'viewer';
-  sbUserActive = sbProfile.active !== false && sbUserRole !== 'no_access';
-  // Owner account is permanently admin — cannot be overridden by DB state
-  if(sbSession?.user?.email === 'dylan@tmconstruction.nl'){
-    sbUserRole = 'admin'; sbUserActive = true;
-    if(sbProfile){ sbProfile.role = 'admin'; sbProfile.active = true; }
-  }
-  return sbProfile;
+  _finalise(); return sbProfile;
 }
 function applyRoleUI(){
   const canWorkers = canAction('workerDocs');
