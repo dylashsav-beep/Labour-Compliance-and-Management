@@ -1506,7 +1506,9 @@ function archiveDeletedItem(type, label, payload){
   const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('00000000-' + Date.now().toString(16).padStart(12,'0').slice(0,4) + '-4000-8000-' + Math.random().toString(16).slice(2,14).padStart(12,'0'));
   const item={id:newId, type, label, deletedAt:new Date().toISOString(), deletedBy:sbSession?.user?.email||'', payload:enriched};
   deletedItems.unshift(item); saveDeletedItems();
-  // Return the save promise so callers can await it before triggering a remote reload
+  // Suppress realtime reloads while the immediate save is in flight so a
+  // concurrent sbLoadAll can't overwrite deletedItems before the row lands.
+  if(typeof sbSuppressRealtimeUntil !== 'undefined') sbSuppressRealtimeUntil = Date.now() + 2500;
   const savePromise = sbArchiveDeletedItemImmediate(item);
   item._savePromise = savePromise;
   return item;
