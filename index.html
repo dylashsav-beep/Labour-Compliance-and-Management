@@ -1505,7 +1505,11 @@ function archiveDeletedItem(type, label, payload){
   const enriched = enrichDeletedPayload(type, payload);
   const newId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('00000000-' + Date.now().toString(16).padStart(12,'0').slice(0,4) + '-4000-8000-' + Math.random().toString(16).slice(2,14).padStart(12,'0'));
   const item={id:newId, type, label, deletedAt:new Date().toISOString(), deletedBy:sbSession?.user?.email||'', payload:enriched};
-  deletedItems.unshift(item); saveDeletedItems(); sbArchiveDeletedItemImmediate(item); return item;
+  deletedItems.unshift(item); saveDeletedItems();
+  // Return the save promise so callers can await it before triggering a remote reload
+  const savePromise = sbArchiveDeletedItemImmediate(item);
+  item._savePromise = savePromise;
+  return item;
 }
 let tmcConfirmCallback = null;
 function tmcConfirm(message, detail, onConfirm, opts={}){
@@ -3417,7 +3421,7 @@ Files retained in history: ${files}
 
 The removed worker document data and file references will be saved as one grouped Deleted Items record and can be restored.`;
   tmcConfirm('Delete this document question from the active set?', detail, async ()=>{
-    archiveDeletedItem('document_set_item_group_delete', `Document question deleted: ${doc?.name||docId}`, payload);
+    const archivedItem = archiveDeletedItem('document_set_item_group_delete', `Document question deleted: ${doc?.name||docId}`, payload);
     const oldItems=(docSetItems[setId]||[]).slice();
     docSetItems[setId]=oldItems.filter(d=>d.id!==docId);
     workersUsingDocSet(setId).forEach(w=>{
@@ -3432,7 +3436,11 @@ The removed worker document data and file references will be saved as one groupe
       return;
     }
     saveDocSets();
-    renderSettings(); renderTable(); if(curW) rebuildModal(curW); renderDeletedItems(); sbQueueRemoteReload('document_set_items');
+    renderSettings(); renderTable(); if(curW) rebuildModal(curW); renderDeletedItems();
+    // Await the history save before reloading from Supabase — prevents race condition where
+    // reload overwrites deletedItems before the new entry is persisted
+    await (archivedItem?._savePromise || Promise.resolve());
+    sbQueueRemoteReload('document_set_items');
   }, {title:'TMC Compliance', subtitle:'Protected delete confirmation', okText:'Delete & archive data'});
 }
 
@@ -4394,7 +4402,7 @@ async function sbPersistAll(force=false){
   const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
   const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
-  await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_by:userId,deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
+  await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
   await sbApplyArchivedDeletionsToSupabase();
   sbSetStatus('Supabase: synced', true);
 }
