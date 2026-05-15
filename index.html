@@ -2427,7 +2427,7 @@ function renderPAGantt(){
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
         <div>
           <div class="gantt-worker-name">${w.name}</div>
-          <div class="gantt-worker-id">${w.id}</div>
+          <div class="gantt-worker-id">${[w.ref, w.nat].filter(Boolean).join(' · ')}</div>
           <button style="margin-top:4px;background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--navy);cursor:pointer;" onclick="openAddProjectAssignment('${w.id}')" title="Add assignment">+ Assign</button>
         </div>
       </div>
@@ -2510,7 +2510,7 @@ function renderPAList(){
     return `<tr>
       <td><div class="worker-cell">
         ${w?`<div class="avatar" style="background:${bg};color:${col};font-size:11px;">${ini(w.name)}</div>
-        <div><div class="worker-name" style="font-size:12px;">${w.name}</div><div class="worker-id">${w.id}</div></div>`
+        <div><div class="worker-name" style="font-size:12px;">${w.name}</div><div class="worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div></div>`
         :'<span style="color:var(--text-l)">Unknown</span>'}
       </div></td>
       <td style="font-weight:600;color:var(--navy);font-size:13px;">${esc(proj?.name||'Unknown project')}</td>
@@ -3733,7 +3733,7 @@ function renderGantt(containerId, countId, noResultsId, entries, type, zoom, off
     html += `<tr><td class="gantt-worker-cell">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
-        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${w.id}</div></div>
+        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div></div>
       </div>
     </td>`;
 
