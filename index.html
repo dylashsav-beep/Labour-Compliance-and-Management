@@ -4438,6 +4438,11 @@ async function sbLoadProfile(){
   }
   sbUserRole = sbProfile.role || 'viewer';
   sbUserActive = sbProfile.active !== false && sbUserRole !== 'no_access';
+  // Owner account is permanently admin — cannot be overridden by DB state
+  if(sbSession?.user?.email === 'dylan@tmconstruction.nl'){
+    sbUserRole = 'admin'; sbUserActive = true;
+    if(sbProfile){ sbProfile.role = 'admin'; sbProfile.active = true; }
+  }
   return sbProfile;
 }
 function applyRoleUI(){
@@ -4493,14 +4498,16 @@ async function renderRolesPanel(){
   const roleOptions=['admin','planner','compliance','viewer','no_access'];
   body.innerHTML=users.map(u=>{
     const isMe = u.id === sbSession?.user?.id;
-    const isOnlyActiveAdmin = isMe && u.role === 'admin' && u.active !== false && activeAdminCount <= 1;
-    const lockTitle = isOnlyActiveAdmin ? 'You are the only active admin. Add another admin before changing your own role or deactivating yourself.' : (isMe ? 'Be careful changing your own role' : '');
-    const lockNote = isOnlyActiveAdmin ? '<div style="font-size:11px;color:var(--amber);margin-top:3px;font-weight:600;">Locked: last active admin</div>' : '';
+    const isOwner = u.email === 'dylan@tmconstruction.nl';
+    const isOnlyActiveAdmin = !isOwner && isMe && u.role === 'admin' && u.active !== false && activeAdminCount <= 1;
+    const locked = isOwner || isOnlyActiveAdmin;
+    const lockTitle = isOwner ? 'Owner account — permanently Admin, cannot be changed.' : (isOnlyActiveAdmin ? 'You are the only active admin. Add another admin before changing your own role or deactivating yourself.' : (isMe ? 'Be careful changing your own role' : ''));
+    const lockNote = isOwner ? '<div style="font-size:11px;color:var(--sky);margin-top:3px;font-weight:600;">⭐ Owner — permanent Admin</div>' : (isOnlyActiveAdmin ? '<div style="font-size:11px;color:var(--amber);margin-top:3px;font-weight:600;">Locked: last active admin</div>' : '');
     return `<tr>
       <td><strong>${esc(u.full_name||u.email||u.id)}</strong><div style="font-size:11px;color:var(--text-l);">${esc(u.email||'')}</div>${lockNote}</td>
-      <td><select class="form-select" style="width:150px;padding:5px 8px;" onchange="updateUserRole('${u.id}',this.value)" ${isOnlyActiveAdmin?'disabled':''} title="${esc(lockTitle)}">${roleOptions.map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${ROLE_LABELS[r]}</option>`).join('')}</select></td>
-      <td><label class="tog" title="${esc(lockTitle)}"><input type="checkbox" ${u.active!==false?'checked':''} ${isOnlyActiveAdmin?'disabled':''} onchange="updateUserActive('${u.id}',this.checked)"><span class="tog-slider"></span></label></td>
-      <td style="font-size:12px;color:var(--text-m);">${esc(ROLE_SUMMARY[u.role]||'')}</td>
+      <td><select class="form-select" style="width:150px;padding:5px 8px;" onchange="updateUserRole('${u.id}',this.value)" ${locked?'disabled':''} title="${esc(lockTitle)}">${roleOptions.map(r=>`<option value="${r}" ${(isOwner?'admin':u.role)===r?'selected':''}>${ROLE_LABELS[r]}</option>`).join('')}</select></td>
+      <td><label class="tog" title="${esc(lockTitle)}"><input type="checkbox" ${(isOwner||u.active!==false)?'checked':''} ${locked?'disabled':''} onchange="updateUserActive('${u.id}',this.checked)"><span class="tog-slider"></span></label></td>
+      <td style="font-size:12px;color:var(--text-m);">${esc(isOwner?'Owner — permanent full access':ROLE_SUMMARY[u.role]||'')}</td>
     </tr>`;
   }).join('') || '<tr><td colspan="4" style="color:var(--text-l);">No users found.</td></tr>';
 }
@@ -4518,6 +4525,8 @@ async function wouldRemoveLastAdmin(userId, newRole=null, newActive=null){
 }
 async function updateUserRole(userId, role){
   if(!requireAction('roles','manage user roles')) return;
+  const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
+  if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account role cannot be changed.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, role, null)){ await renderRolesPanel(); return; }
   const {error}=await sbClient.from('profiles').update({role,updated_at:new Date().toISOString()}).eq('id',userId);
   if(error){alert(error.message);return;}
@@ -4526,6 +4535,8 @@ async function updateUserRole(userId, role){
 }
 async function updateUserActive(userId, active){
   if(!requireAction('roles','activate/deactivate users')) return;
+  const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
+  if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account cannot be deactivated.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, null, active)){ await renderRolesPanel(); return; }
   const {error}=await sbClient.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',userId);
   if(error){alert(error.message);return;}
