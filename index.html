@@ -3409,19 +3409,22 @@ The removed worker document data and file references will be saved as one groupe
     });
     try{
       await sbRemoteDeleteDocSetItem(setId, docId, payload);
-      if(sbClient && sbSession && sbCanWriteTable('deleted_items')){
-        const latest=deletedItems[0];
-        if(latest && latest.type==='document_set_item_group_delete'){
-          await sbClient.from('deleted_items').upsert({
-            id:latest.id,item_type:latest.type,label:latest.label,payload:latest.payload||{},details:latest.payload?._meta||{},
-            deleted_by_email:latest.deletedBy||'',deleted_by:sbSession.user.id,deleted_at:latest.deletedAt||new Date().toISOString(),restored:false
-          });
-        }
-      }
     }catch(e){
       docSetItems[setId]=oldItems;
       alert('Could not delete the question in Supabase: '+e.message);
       return;
+    }
+    // Save to deleted_items history separately — failure here does NOT revert the deletion
+    if(sbClient && sbSession && sbCanWriteTable('deleted_items')){
+      const latest=deletedItems[0];
+      if(latest && latest.type==='document_set_item_group_delete'){
+        sbClient.from('deleted_items').upsert({
+          id:latest.id, item_type:latest.type, label:latest.label,
+          payload:latest.payload||{}, details:latest.payload?._meta||{},
+          deleted_by_email:latest.deletedBy||'',
+          deleted_at:latest.deletedAt||new Date().toISOString(), restored:false
+        }).then(({error})=>{ if(error) console.warn('[TMC] deleted_items save failed:', error.message); });
+      }
     }
     saveDocSets();
     renderSettings(); renderTable(); if(curW) rebuildModal(curW); renderDeletedItems(); sbQueueRemoteReload('document_set_items');
