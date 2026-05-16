@@ -341,16 +341,10 @@ ALTER TABLE accommodation_assignments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE vehicle_assignments       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deleted_items             ENABLE ROW LEVEL SECURITY;
 
--- ── Helper: resolve the calling user's role from profiles ──────────────────
--- COALESCE ensures NULL is never returned (NULL breaks IN() checks).
--- SECURITY DEFINER lets this function bypass RLS on the profiles table itself.
-CREATE OR REPLACE FUNCTION get_my_role()
-RETURNS TEXT LANGUAGE sql STABLE SECURITY DEFINER AS $$
-  SELECT COALESCE(
-    (SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1),
-    'viewer'
-  );
-$$;
+-- Role lookup shorthand (used inline in all write policies below)
+-- Reads the calling user's own profile row — always allowed by the SELECT policy.
+-- No helper function needed: direct subquery avoids SECURITY DEFINER auth.uid() issues.
+-- $role_c = admin or compliance  /  $role_p = admin or planner
 
 -- ── Drop existing policies before recreating (idempotent) ─────────────────
 DO $drop$ DECLARE r RECORD; BEGIN
@@ -364,139 +358,133 @@ DO $drop$ DECLARE r RECORD; BEGIN
   END LOOP;
 END $drop$;
 
+-- Inline role expression used in all write policies:
+--   (SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1)
+-- This reads the calling user's own profile row, which is always allowed by
+-- the profiles SELECT policy (id = auth.uid()). No helper function needed.
+
 -- ── profiles ───────────────────────────────────────────────────────────────
 CREATE POLICY profiles_select ON profiles
   FOR SELECT TO authenticated
-  USING (id = auth.uid() OR get_my_role() = 'admin');
+  USING (id = auth.uid() OR (SELECT role FROM profiles p WHERE p.id = auth.uid() AND p.active = TRUE LIMIT 1) = 'admin');
 
 CREATE POLICY profiles_insert ON profiles
   FOR INSERT TO authenticated
-  WITH CHECK (id = auth.uid() OR get_my_role() = 'admin');
+  WITH CHECK (id = auth.uid() OR (SELECT role FROM profiles p WHERE p.id = auth.uid() AND p.active = TRUE LIMIT 1) = 'admin');
 
 CREATE POLICY profiles_update ON profiles
   FOR UPDATE TO authenticated
-  USING (id = auth.uid() OR get_my_role() = 'admin');
+  USING      (id = auth.uid() OR (SELECT role FROM profiles p WHERE p.id = auth.uid() AND p.active = TRUE LIMIT 1) = 'admin')
+  WITH CHECK (id = auth.uid() OR (SELECT role FROM profiles p WHERE p.id = auth.uid() AND p.active = TRUE LIMIT 1) = 'admin');
 
 -- ── settings ──────────────────────────────────────────────────────────────
-CREATE POLICY settings_select ON settings
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY settings_select ON settings FOR SELECT TO authenticated USING (true);
 CREATE POLICY settings_write ON settings
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── document_sets ─────────────────────────────────────────────────────────
-CREATE POLICY doc_sets_select ON document_sets
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY doc_sets_select ON document_sets FOR SELECT TO authenticated USING (true);
 CREATE POLICY doc_sets_write ON document_sets
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── document_set_items ────────────────────────────────────────────────────
-CREATE POLICY doc_set_items_select ON document_set_items
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY doc_set_items_select ON document_set_items FOR SELECT TO authenticated USING (true);
 CREATE POLICY doc_set_items_write ON document_set_items
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── workers ───────────────────────────────────────────────────────────────
-CREATE POLICY workers_select ON workers
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY workers_select ON workers FOR SELECT TO authenticated USING (true);
 CREATE POLICY workers_write ON workers
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── worker_documents ──────────────────────────────────────────────────────
-CREATE POLICY worker_docs_select ON worker_documents
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY worker_docs_select ON worker_documents FOR SELECT TO authenticated USING (true);
 CREATE POLICY worker_docs_write ON worker_documents
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── worker_document_files ─────────────────────────────────────────────────
-CREATE POLICY worker_doc_files_select ON worker_document_files
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY worker_doc_files_select ON worker_document_files FOR SELECT TO authenticated USING (true);
 CREATE POLICY worker_doc_files_write ON worker_document_files
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 -- ── projects ──────────────────────────────────────────────────────────────
-CREATE POLICY projects_select ON projects
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY projects_select ON projects FOR SELECT TO authenticated USING (true);
 CREATE POLICY projects_write ON projects
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── project_assignments ───────────────────────────────────────────────────
-CREATE POLICY proj_assign_select ON project_assignments
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY proj_assign_select ON project_assignments FOR SELECT TO authenticated USING (true);
 CREATE POLICY proj_assign_write ON project_assignments
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── project_assignment_files ──────────────────────────────────────────────
-CREATE POLICY proj_assign_files_select ON project_assignment_files
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY proj_assign_files_select ON project_assignment_files FOR SELECT TO authenticated USING (true);
 CREATE POLICY proj_assign_files_write ON project_assignment_files
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── roster_week_allocations ───────────────────────────────────────────────
-CREATE POLICY roster_select ON roster_week_allocations
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY roster_select ON roster_week_allocations FOR SELECT TO authenticated USING (true);
 CREATE POLICY roster_write ON roster_week_allocations
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── properties ────────────────────────────────────────────────────────────
-CREATE POLICY properties_select ON properties
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY properties_select ON properties FOR SELECT TO authenticated USING (true);
 CREATE POLICY properties_write ON properties
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── vehicles ──────────────────────────────────────────────────────────────
-CREATE POLICY vehicles_select ON vehicles
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY vehicles_select ON vehicles FOR SELECT TO authenticated USING (true);
 CREATE POLICY vehicles_write ON vehicles
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── accommodation_assignments ─────────────────────────────────────────────
-CREATE POLICY accom_assign_select ON accommodation_assignments
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY accom_assign_select ON accommodation_assignments FOR SELECT TO authenticated USING (true);
 CREATE POLICY accom_assign_write ON accommodation_assignments
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
 -- ── vehicle_assignments ───────────────────────────────────────────────────
-CREATE POLICY veh_assign_select ON vehicle_assignments
-  FOR SELECT TO authenticated USING (true);
-
+CREATE POLICY veh_assign_select ON vehicle_assignments FOR SELECT TO authenticated USING (true);
 CREATE POLICY veh_assign_write ON vehicle_assignments
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','planner'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','planner'));
 
--- ── deleted_items ─────────────────────────────────────────────────────────
+-- ── deleted_items (role check on reads too) ───────────────────────────────
 CREATE POLICY deleted_items_select ON deleted_items
   FOR SELECT TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
 
 CREATE POLICY deleted_items_write ON deleted_items
   FOR ALL TO authenticated
-  USING (get_my_role() IN ('admin','compliance'));
+  USING      ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'))
+  WITH CHECK ((SELECT role FROM profiles WHERE id = auth.uid() AND active = TRUE LIMIT 1) IN ('admin','compliance'));
+
 
 
 -- ────────────────────────────────────────────────────────────────────────────
