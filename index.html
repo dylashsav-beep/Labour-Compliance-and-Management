@@ -204,6 +204,32 @@ td{padding:10px 14px;vertical-align:middle;}
 .alloc-option.checked{background:var(--sky-xl);font-weight:500;color:var(--navy);}
 .alloc-panel-foot{padding:6px 12px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:6px;}
 
+/* Project filter dropdown */
+.pf-wrap{position:relative;display:inline-flex;}
+.pf-trigger{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;}
+.pf-trigger .pf-caret{font-size:9px;opacity:.6;transition:transform .15s;}
+.pf-trigger.open .pf-caret{transform:rotate(180deg);}
+.pf-badge{display:inline-flex;align-items:center;justify-content:center;
+  background:var(--navy);color:#fff;border-radius:10px;
+  font-size:10px;font-weight:700;min-width:16px;height:16px;padding:0 4px;line-height:1;}
+.pf-panel{
+  position:absolute;top:calc(100% + 4px);left:0;z-index:400;
+  min-width:200px;max-width:min(280px,calc(100vw - 24px));
+  background:#fff;border:1px solid var(--border);border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+  display:none;
+}
+.pf-panel.open{display:block;}
+.pf-panel-head{padding:7px 12px 5px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.pf-panel-head span{font-size:11px;font-weight:600;color:var(--text-l);}
+.pf-clear{font-size:11px;color:var(--navy);background:none;border:none;cursor:pointer;padding:0;font-weight:500;}
+.pf-clear:hover{text-decoration:underline;}
+.pf-options{max-height:240px;overflow-y:auto;}
+.pf-option{display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;transition:background .1s;font-size:13px;}
+.pf-option:hover{background:var(--sky-xl);}
+.pf-option input[type=checkbox]{accent-color:var(--navy);width:14px;height:14px;flex-shrink:0;cursor:pointer;}
+.pf-option.checked{background:var(--sky-xl);font-weight:500;color:var(--navy);}
+
 /* Roster view multi-select - compact version */
 .roster-alloc-trigger{
   display:flex;align-items:center;flex-wrap:wrap;gap:3px;
@@ -619,8 +645,15 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <button class="fbtn f-red"   data-fs="nogo"    onclick="setFS('nogo',this)">✕ No-Go</button>
       </div>
       <div class="filter-sep"></div>
-      <span class="filter-label">Project:</span>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;" id="pfGroup"></div>
+      <div class="pf-wrap" id="pfWrap">
+        <button class="fbtn pf-trigger" id="pfTrigger" onclick="togglePFPanel(event)">
+          <span id="pfLabel">All Projects</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="pfPanel">
+          <div class="pf-panel-head"><span>Filter by project</span><button class="pf-clear" onclick="setFP('all')">Clear</button></div>
+          <div class="pf-options" id="pfGroup"></div>
+        </div>
+      </div>
       <input class="search-input" type="text" placeholder="Search by name or project…" oninput="handleSearch(this.value)"/>
     </div>
     <div class="legend">
@@ -2094,34 +2127,70 @@ function setFS(v,el){
     b.classList.toggle('active', fStatus.has(b.dataset.fs));
   });
 }
-function setFP(v, el){
-  const name = decodeURIComponent(v);
+function togglePFPanel(e){
+  if(e) e.stopPropagation();
+  const panel = document.getElementById('pfPanel');
+  const trigger = document.getElementById('pfTrigger');
+  const isOpen = panel.classList.contains('open');
+  panel.classList.toggle('open', !isOpen);
+  trigger.classList.toggle('open', !isOpen);
+  if(!isOpen){
+    const pr = panel.getBoundingClientRect();
+    if(pr.right > window.innerWidth - 4){ panel.style.left='auto'; panel.style.right='0'; }
+    else { panel.style.left=''; panel.style.right=''; }
+  }
+}
+function closePFPanel(){
+  const panel = document.getElementById('pfPanel');
+  const trigger = document.getElementById('pfTrigger');
+  if(panel){ panel.classList.remove('open'); panel.style.left=''; panel.style.right=''; }
+  if(trigger) trigger.classList.remove('open');
+}
+document.addEventListener('click', function(e){
+  const wrap = document.getElementById('pfWrap');
+  if(wrap && !wrap.contains(e.target)) closePFPanel();
+});
+
+function setFP(v){
+  const name = typeof v === 'string' ? decodeURIComponent(v) : v;
   if(name === 'all'){
     fProj.clear();
   } else {
     if(fProj.has(name)) fProj.delete(name);
     else fProj.add(name);
   }
-  // Re-render buttons to reflect current state
   renderProjFilters();
   renderTable();
 }
 
 function renderProjFilters(){
   const g = document.getElementById('pfGroup');
+  const label = document.getElementById('pfLabel');
+  const trigger = document.getElementById('pfTrigger');
+  if(!g) return;
   const active = projectStore.filter(p => p.active);
-  // Remove any selected projects that are now inactive
   if(fProj.size){
     const activeNames = new Set(active.map(p => p.name));
     fProj.forEach(p => { if(!activeNames.has(p)) fProj.delete(p); });
   }
-  const allActive = fProj.size === 0;
-  g.innerHTML =
-    `<button class="fbtn${allActive?' active':''}" data-fp="all" onclick="setFP('all',this)">All</button>` +
-    active.map(p => {
-      const sel = fProj.has(p.name);
-      return `<button class="fbtn${sel?' active':''}" data-fp="${encodeURIComponent(p.name)}" onclick="setFP('${encodeURIComponent(p.name)}',this)">${esc(p.name)}</button>`;
-    }).join('');
+  // Update trigger label / badge
+  if(label){
+    if(fProj.size === 0){
+      label.innerHTML = 'All Projects';
+      if(trigger) trigger.classList.remove('active');
+    } else {
+      label.innerHTML = `Projects <span class="pf-badge">${fProj.size}</span>`;
+      if(trigger) trigger.classList.add('active');
+    }
+  }
+  // Render checklist
+  g.innerHTML = active.map(p => {
+    const sel = fProj.has(p.name);
+    return `<label class="pf-option${sel?' checked':''}" onclick="setFP('${encodeURIComponent(p.name)}');event.preventDefault()">
+      <input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFP('${encodeURIComponent(p.name)}')">
+      ${esc(p.name)}
+    </label>`;
+  }).join('') || `<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No active projects</div>`;
 }
 
 // ─── Multi-select Allocation Widget ──────────────────────────────────────────
