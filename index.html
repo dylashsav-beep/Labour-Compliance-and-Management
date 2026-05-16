@@ -2011,9 +2011,9 @@ let workers=[];
 // Workers are loaded from Supabase after login. Do not seed demo workers into live data.
 
 // ─── Per-worker document requirement overrides ────────────────────────────────
-// Stored in localStorage so it works without a Supabase schema change.
-// If the workers table gains a doc_req JSONB column, sbPersistAll/sbLoadAll
-// will silently sync it there too, enabling multi-browser consistency.
+// Supabase (workers.doc_req JSONB) is the source of truth.
+// localStorage is a read-through cache so the UI reflects changes instantly
+// before the next sbPersistAll round-trip completes.
 const DOC_REQ_KEY = 'tmc_doc_req_v1';
 let docReqOverrides = {}; // { workerId: { docId: true|false } }
 function loadDocReq(){ try{ const r=localStorage.getItem(DOC_REQ_KEY); if(r) docReqOverrides=JSON.parse(r); }catch(e){ docReqOverrides={}; } }
@@ -4696,13 +4696,8 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
-  // Silently attempt to sync doc_req overrides (requires doc_req JSONB column in workers table)
-  try{
-    const drRows=Object.keys(docReqOverrides).filter(wid=>workers.find(w=>w.id===wid)).map(wid=>({id:wid,doc_req:docReqOverrides[wid],updated_at:new Date().toISOString()}));
-    if(drRows.length && sbCanWriteTable('workers')) await sbClient.from('workers').upsert(drRows);
-  }catch(e){ /* doc_req column not yet in schema — local-only */ }
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
