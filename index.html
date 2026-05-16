@@ -155,7 +155,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .go-dot.go{background:#276749;}
 .go-dot.warning{background:#b45309;}
 .go-dot.nogo{background:#c53030;}
-.detail-btn{width:28px;height:28px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer;font-size:14px;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.detail-btn{width:36px;height:36px;border-radius:4px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);cursor:pointer;font-size:14px;transition:all .15s;display:flex;align-items:center;justify-content:center;}
 .detail-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
 .no-results{text-align:center;padding:48px;color:var(--text-l);}
 .no-results-icon{font-size:32px;margin-bottom:10px;}
@@ -186,7 +186,7 @@ td{padding:10px 14px;vertical-align:middle;}
 /* DROPDOWN PANEL */
 .alloc-panel{
   position:absolute;top:calc(100% + 4px);left:0;z-index:400;
-  min-width:200px;max-width:280px;
+  min-width:200px;max-width:min(280px,calc(100vw - 24px));
   background:#fff;border:1px solid var(--border);border-radius:6px;
   box-shadow:0 4px 16px rgba(0,0,0,.12);
   display:none;
@@ -433,7 +433,55 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 @media(max-width:700px){.restore-detail-grid{grid-template-columns:1fr;}}
 .protected-input{background:#f7f7f7!important;color:var(--text-l)!important;}
 
-@media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}.expand-grid{grid-template-columns:1fr;}}
+@media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}.expand-grid{grid-template-columns:1fr;}.worker-summary-grid{grid-template-columns:1fr 1fr;}}
+
+/* WORKER SUMMARY GRID — 3-panel card row inside worker detail modal */
+.worker-summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — TABLET ≤768px
+══════════════════════════════════════ */
+@media(max-width:768px){
+  .worker-summary-grid{grid-template-columns:1fr 1fr;}
+  .week-label{min-width:140px;}
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — MOBILE ≤480px
+══════════════════════════════════════ */
+@media(max-width:480px){
+  .wrap{padding:0 12px;}
+  /* Tabs become a horizontal scroll strip */
+  .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;}
+  .vtab{flex-shrink:0;padding:7px 11px;font-size:12px;}
+  /* Week navigator compact */
+  .week-label{min-width:110px;padding:6px 8px;font-size:12px;}
+  .week-label .week-dates{display:none;}
+  .week-arrow{padding:6px 10px;}
+  .week-today-btn{padding:6px 8px;font-size:11px;}
+  /* Filters */
+  .filter-sep{display:none;}
+  .search-input{width:100%;margin-left:0;}
+  /* Forms in modals go single-column */
+  .form-grid{grid-template-columns:1fr;}
+  /* Worker summary panels stack */
+  .worker-summary-grid{grid-template-columns:1fr;}
+  /* Modal body less padding */
+  .modal-body{padding:14px;}
+  /* Warning range slider fills available space */
+  #warnRange{width:100%;max-width:200px;}
+  /* Compliance report grid stacks */
+  #complianceReportGrid{grid-template-columns:1fr !important;}
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE — SMALL PHONE ≤375px
+══════════════════════════════════════ */
+@media(max-width:375px){
+  .stats-row{grid-template-columns:1fr;}
+  .week-label{min-width:90px;padding:6px 6px;}
+  .week-arrow{padding:6px 8px;font-size:13px;}
+}
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -698,7 +746,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <span class="table-head-title">Projects</span>
         <span class="table-head-count" id="projCount"></span>
       </div>
-      <table>
+      <div class="table-scroll"><table>
         <thead><tr>
           <th class="no-sort">Project Name</th>
           <th class="no-sort">Description</th>
@@ -707,7 +755,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <th class="no-sort">Actions</th>
         </tr></thead>
         <tbody id="projBody"></tbody>
-      </table>
+      </table></div>
       <div class="no-results" id="noProjRes" style="display:none">
         <div class="no-results-icon">📋</div>No projects yet — add one above
       </div>
@@ -744,7 +792,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <div class="settings-card-title">📧 Compliance Email Report</div>
           <div class="settings-card-desc">Create a report of active workers currently in Warning or No-Go status and prepare an email to compliance.</div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
+        <div id="complianceReportGrid" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
           <div class="form-field">
             <label class="form-label">Report recipient</label>
             <input class="form-input" id="complianceReportEmail" type="email" value="compliance@tmconstruction.nl" onchange="setComplianceReportEmail(this.value)"/>
@@ -848,7 +896,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <span class="table-head-title">Properties</span>
           <span class="table-head-count" id="propCount"></span>
         </div>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr>
             <th class="no-sort">Property Name</th>
             <th class="no-sort">Address</th>
@@ -857,7 +905,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
             <th class="no-sort">Actions</th>
           </tr></thead>
           <tbody id="propBody"></tbody>
-        </table>
+        </table></div>
         <div class="no-results" id="noPropRes" style="display:none;"><div class="no-results-icon">🏠</div>No properties added yet</div>
       </div>
     </div>
@@ -896,7 +944,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <span class="table-head-title">Fleet</span>
           <span class="table-head-count" id="fleetCount"></span>
         </div>
-        <table>
+        <div class="table-scroll"><table>
           <thead><tr>
             <th class="no-sort">Description</th>
             <th class="no-sort">Reg. Plate</th>
@@ -907,7 +955,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
             <th class="no-sort">Actions</th>
           </tr></thead>
           <tbody id="fleetBody"></tbody>
-        </table>
+        </table></div>
         <div class="no-results" id="noFleetRes" style="display:none;"><div class="no-results-icon">🚗</div>No vehicles added yet</div>
       </div>
     </div>
@@ -2154,12 +2202,16 @@ function toggleDropdown(wid, weekKey, event){
   if(!isOpen){
     panel.classList.add('open');
     activeDropdown={wid,weekKey,uid};
+    // Flip to right-anchored if panel overflows viewport right edge
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
   }
 }
 function closeDropdown(){
   if(activeDropdown){
     const p=document.getElementById(`panel_${activeDropdown.uid}`);
-    if(p)p.classList.remove('open');
+    if(p){p.classList.remove('open');p.style.left='';p.style.right='';}
     activeDropdown=null;
   }
 }
@@ -2867,7 +2919,7 @@ function rebuildModal(id){
   // Accommodation panel
   const acc = currentAccom(id);
   const accProp = acc ? properties.find(p=>p.id===acc.propId) : null;
-  html += `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+  html += `<div class="worker-summary-grid">
     <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
       <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">📋 PROJECT ASSIGNMENT</div>
       ${cpa&&cpaProj
