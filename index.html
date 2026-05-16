@@ -2494,111 +2494,205 @@ function renderRoster(){
   renderPAList();
 }
 
-function renderPAGantt(){
-  const zoom = paGanttZoom;
-  const cols = ganttColumns(zoom, paGanttOffset);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayMs = today.getTime();
+// ─── GANTT OVERLAY & DRAG HELPERS ────────────────────────────────────────────
+let _paGanttRAF=null,_resGanttRAF=null,_ganttDragState=null,_ganttTooltip=null;
 
-  // Render zoom buttons
-  renderZoomBtns('paZoomBtns', zoom, 'setPAGanttZoom');
-
-  const widSet = [...new Set(projectAssignments.map(a=>a.wid))];
-  const cnt = document.getElementById('paGanttCount');
-  if(cnt) cnt.textContent = widSet.length + ' worker' + (widSet.length!==1?'s':'');
-
-  if(!projectAssignments.length){
-    document.getElementById('paGantt').innerHTML='';
-    document.getElementById('noPAAssign').style.display='block';
-    return;
+function _ganttTip(){
+  if(!_ganttTooltip){
+    _ganttTooltip=document.createElement('div');
+    _ganttTooltip.style.cssText='position:fixed;z-index:9999;pointer-events:none;background:#1a2340;color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:5px;white-space:nowrap;display:none;box-shadow:0 2px 8px rgba(0,0,0,.25);line-height:1.5;';
+    document.body.appendChild(_ganttTooltip);
   }
+  return _ganttTooltip;
+}
+function _ganttFmtD(d){
+  const dn=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${dn[d.getDay()]} ${d.getDate()} ${mn[d.getMonth()]} ${d.getFullYear()}`;
+}
+function _ganttDStr(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function _ganttAddDays(s,n){if(!s)return s;const d=new Date(s);d.setDate(d.getDate()+n);return _ganttDStr(d);}
+
+function _ganttDateToX(dateStr,cols,cRects,zoom){
+  if(!dateStr)return cRects[0].left;
+  const dMs=new Date(dateStr).setHours(0,0,0,0);
+  for(let i=0;i<cols.length;i++){const cs=cols[i].getTime(),dur=colDuration(cols[i],zoom);if(dMs>=cs&&dMs<cs+dur)return cRects[i].left+(dMs-cs)/dur*cRects[i].width;}
+  return dMs<cols[0].getTime()?cRects[0].left:cRects[cRects.length-1].right;
+}
+function _ganttEndToX(dateStr,cols,cRects,zoom){
+  if(!dateStr)return cRects[cRects.length-1].right;
+  const endMs=new Date(dateStr).setHours(0,0,0,0)+86400000;
+  for(let i=0;i<cols.length;i++){const cs=cols[i].getTime(),dur=colDuration(cols[i],zoom),ce=cs+dur;if(endMs>cs&&endMs<=ce)return cRects[i].left+(endMs-cs)/dur*cRects[i].width;}
+  return endMs<=cols[0].getTime()?cRects[0].left:cRects[cRects.length-1].right;
+}
+function _ganttXToDate(x,cols,cRects,zoom){
+  x=Math.max(cRects[0].left,Math.min(cRects[cRects.length-1].right-1,x));
+  for(let i=0;i<cols.length;i++){const cr=cRects[i];if(x>=cr.left&&x<cr.right){const d=new Date(cols[i].getTime()+(x-cr.left)/cr.width*colDuration(cols[i],zoom));d.setHours(0,0,0,0);return d;}}
+  const last=new Date(cols[cols.length-1].getTime()+colDuration(cols[cols.length-1],zoom)-86400000);last.setHours(0,0,0,0);return last;
+}
+function _ganttCRects(container,cols){
+  const tbl=container.querySelector('table.gantt-grid');if(!tbl)return null;
+  const base=container.getBoundingClientRect();
+  return [...tbl.querySelectorAll('thead th')].slice(1).map(th=>{const r=th.getBoundingClientRect();return{left:r.left-base.left,right:r.right-base.left,width:r.width};});
+}
+
+function ganttOverlayBars(container,cols,zoom,barsData,onDragSave){
+  container.querySelectorAll('.g-obar').forEach(el=>el.remove());
+  const cRects=_ganttCRects(container,cols);if(!cRects||!cRects.length)return;
+  const cRect=container.getBoundingClientRect();
+  const firstMs=cols[0].getTime(),lastMs=cols[cols.length-1].getTime()+colDuration(cols[cols.length-1],zoom);
+
+  barsData.forEach(bd=>{
+    const aS=bd.startDate?new Date(bd.startDate).setHours(0,0,0,0):-Infinity;
+    const aE=bd.endDate?new Date(bd.endDate).setHours(0,0,0,0)+86400000:Infinity;
+    if(aS>=lastMs||aE<=firstMs||!bd.rowEl)return;
+    const rowR=bd.rowEl.getBoundingClientRect(),barH=24;
+    const barTop=(rowR.top-cRect.top)+Math.max(4,(rowR.height-barH)/2-(bd.barIdx||0)*0)+(bd.barIdx||0)*28;
+
+    let x1=_ganttDateToX(bd.startDate,cols,cRects,zoom);
+    let x2=_ganttEndToX(bd.endDate,cols,cRects,zoom);
+    x1=Math.max(cRects[0].left,x1);x2=Math.min(cRects[cRects.length-1].right,x2);
+    if(x2<x1+6)x2=x1+6;
+
+    const bar=document.createElement('div');
+    bar.className=`gantt-bar ${bd.barCls} g-obar`;
+    bar.style.cssText=`position:absolute;left:${x1}px;top:${barTop}px;width:${x2-x1}px;height:${barH}px;z-index:0;cursor:grab;user-select:none;display:flex;align-items:center;overflow:hidden;padding:0;${bd.bgStyle||''}`;
+    if(bd.title)bar.title=bd.title;
+
+    const lbl=document.createElement('span');
+    lbl.style.cssText='pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding:0 12px 0 12px;font-size:10px;font-weight:600;';
+    lbl.textContent=(bd.contractIcon||'')+bd.label;
+    bar.appendChild(lbl);
+
+    const lh=document.createElement('div');lh.style.cssText='position:absolute;left:0;top:0;width:9px;height:100%;cursor:w-resize;border-radius:4px 0 0 4px;';
+    const rh=document.createElement('div');rh.style.cssText='position:absolute;right:0;top:0;width:9px;height:100%;cursor:e-resize;border-radius:0 4px 4px 0;';
+    bar.appendChild(lh);bar.appendChild(rh);
+
+    const drag=(e,zone)=>{e.preventDefault();e.stopPropagation();_startGanttDrag(e,bar,bd,zone,cols,cRects,zoom,cRect,container,onDragSave);};
+    lh.addEventListener('mousedown',e=>drag(e,'start'));
+    rh.addEventListener('mousedown',e=>drag(e,'end'));
+    bar.addEventListener('mousedown',e=>{if(e.target===lh||e.target===rh)return;drag(e,'move');});
+    bar.addEventListener('click',e=>{if(_ganttDragState&&_ganttDragState.moved)return;if(bd.onclick)bd.onclick(bd.id);});
+    container.appendChild(bar);
+  });
+}
+
+function _startGanttDrag(ev,barEl,bd,zone,cols,cRects,zoom,cRect,container,onDragSave){
+  const tip=_ganttTip();tip.style.display='block';
+  const oS=bd.startDate,oE=bd.endDate,oX=parseFloat(barEl.style.left),oW=parseFloat(barEl.style.width);
+  const anchorDate=_ganttXToDate(ev.clientX-cRect.left,cols,cRects,zoom);
+  let cS=oS,cE=oE,moved=false;
+  _ganttDragState={moved:false};barEl.style.cursor='grabbing';
+
+  const onMove=e=>{
+    moved=true;_ganttDragState.moved=true;
+    const dd=_ganttXToDate(e.clientX-cRect.left,cols,cRects,zoom);
+    if(zone==='start'){
+      if(cE&&dd>=new Date(cE))return;
+      cS=_ganttDStr(dd);
+      const nx=_ganttDateToX(cS,cols,cRects,zoom);
+      barEl.style.left=Math.max(cRects[0].left,nx)+'px';
+      barEl.style.width=Math.max(6,oX+oW-nx)+'px';
+      tip.innerHTML=_ganttFmtD(dd);
+    } else if(zone==='end'){
+      const ed=new Date(dd);ed.setDate(ed.getDate()-1);
+      if(cS&&ed<new Date(cS))return;
+      cE=_ganttDStr(ed);
+      barEl.style.width=Math.max(6,_ganttEndToX(cE,cols,cRects,zoom)-oX)+'px';
+      tip.innerHTML=_ganttFmtD(ed);
+    } else {
+      const diff=Math.round((dd-anchorDate)/86400000);
+      cS=_ganttAddDays(oS,diff);cE=_ganttAddDays(oE,diff);
+      barEl.style.left=(cS?_ganttDateToX(cS,cols,cRects,zoom):cRects[0].left)+'px';
+      tip.innerHTML=(cS?_ganttFmtD(new Date(cS)):'—')+'<br>→&nbsp;'+(cE?_ganttFmtD(new Date(cE)):'Ongoing');
+    }
+    tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-50)+'px';
+  };
+  const onUp=()=>{
+    document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);
+    tip.style.display='none';barEl.style.cursor='grab';
+    if(moved&&(cS!==oS||cE!==oE)){bd.startDate=cS;bd.endDate=cE;onDragSave(bd);}
+    else{barEl.style.left=oX+'px';barEl.style.width=oW+'px';}
+    setTimeout(()=>{_ganttDragState=null;},50);
+  };
+  document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+}
+
+function renderPAGantt(){
+  const zoom=paGanttZoom,cols=ganttColumns(zoom,paGanttOffset);
+  const today=new Date();today.setHours(0,0,0,0);
+  renderZoomBtns('paZoomBtns',zoom,'setPAGanttZoom');
+  const widSet=[...new Set(projectAssignments.map(a=>a.wid))];
+  const cnt=document.getElementById('paGanttCount');
+  if(cnt)cnt.textContent=widSet.length+' worker'+(widSet.length!==1?'s':'');
+  const container=document.getElementById('paGantt');
+  if(!projectAssignments.length){container.innerHTML='';document.getElementById('noPAAssign').style.display='block';return;}
   document.getElementById('noPAAssign').style.display='none';
 
   const projColors=['#1a3082','#276749','#b45309','#5b21b6','#0d6b5a','#9a3412','#1e40af','#166534'];
-  function projColor(pid){ const idx=projectStore.findIndex(p=>p.id===pid); return projColors[Math.abs(idx)%projColors.length]; }
+  const projColor=pid=>{const i=projectStore.findIndex(p=>p.id===pid);return projColors[Math.abs(i)%projColors.length];};
+  const colMinW=zoom==='day'?52:zoom==='week'?110:90;
 
-  const colMinW = zoom==='day'?52 : zoom==='week'?110 : 90;
-
-  let html = `<table class="gantt-grid" style="table-layout:fixed;"><thead><tr>
-    <th class="gantt-worker-col" style="width:160px;">Worker</th>`;
-  cols.forEach(col=>{
-    const isNow = isNowCol(col, zoom);
-    html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;
-  });
+  // Phase 1 — skeleton table (empty cells provide grid lines; bars overlay in phase 2)
+  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
+  cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
   html+=`</tr></thead><tbody>`;
 
   workers.forEach(w=>{
-    const wAssigns = projectAssignments.filter(a=>a.wid===w.id);
-    if(!wAssigns.length) return;
+    const wA=projectAssignments.filter(a=>a.wid===w.id);if(!wA.length)return;
     const [bg,col]=avc(w.id);
-
-    html+=`<tr><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;">
+    const rowH=Math.max(44,wA.length*28+8);
+    html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
-        <div>
-          <div class="gantt-worker-name">${w.name}</div>
-          <div class="gantt-worker-id">${[w.ref, w.nat].filter(Boolean).join(' · ')}</div>
-          <button style="margin-top:4px;background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--navy);cursor:pointer;" onclick="openAddProjectAssignment('${w.id}')" title="Add assignment">+ Assign</button>
-        </div>
-      </div>
-    </td>`;
-
-    cols.forEach((colStart, colIdx)=>{
-      const dur = colDuration(colStart, zoom);
-      const colStartMs = colStart.getTime();
-      const colEndMs   = colStartMs + dur;
-      const isNow      = isNowCol(colStart, zoom);
-
-      const overlap = wAssigns.filter(a=>{
-        const s=a.startDate?new Date(a.startDate).setHours(0,0,0,0):-Infinity;
-        const e=a.endDate?new Date(a.endDate).setHours(0,0,0,0)+86400000:Infinity;
-        return s<colEndMs&&e>colStartMs;
-      });
-
-      if(!overlap.length){ html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:3px 2px;"></td>`; return; }
-
-      const bars = overlap.map((a, ai)=>{
-        const proj=projectStore.find(p=>p.id===a.projectId);
-        const pColor=projColor(a.projectId);
-        let barCls='gb-active';
-        if(a.startDate&&new Date(a.startDate)>today) barCls='gb-future';
-        else if(a.endDate){
-          const e2=new Date(a.endDate);e2.setHours(0,0,0,0);
-          if(e2<today) barCls='gb-expired';
-          else if((e2-today)/86400000<=settings.warningDays) barCls='gb-expiring';
-        }
-        const es2=a.startDate?Math.max(new Date(a.startDate).setHours(0,0,0,0),colStartMs):colStartMs;
-        const ee2=a.endDate?Math.min(new Date(a.endDate).setHours(0,0,0,0)+86400000,colEndMs):colEndMs;
-        const lp=Math.round((es2-colStartMs)/dur*100);
-        const wp=Math.max(4,Math.round((ee2-es2)/dur*100));
-        const isFirst=a.startDate?new Date(a.startDate).setHours(0,0,0,0)>=colStartMs:colIdx===0;
-        const contractIcon=a.contractFile?'📎 ':'⚠ ';
-        const showLabel=(isFirst||lp===0)&&zoom!=='month';
-        const bgStyle=barCls==='gb-active'?`background:${pColor};`:'';
-        return `<div class="gantt-bar ${barCls}"
-          style="position:relative;left:${lp}%;width:${wp}%;min-width:6px;margin-bottom:${ai<overlap.length-1?'3':'0'}px;${bgStyle}"
-          onclick="openEditPA('${a.id}')"
-          title="${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${a.contractFile?'Contract attached':'No contract'}">
-          ${showLabel?contractIcon+esc(proj?.name||'?'):''}
-        </div>`;
-      }).join('');
-
-      html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:3px 2px;vertical-align:top;">
-        <div style="display:flex;flex-direction:column;">${bars}</div>
-      </td>`;
-    });
+        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div>
+        <button style="margin-top:4px;background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--navy);cursor:pointer;" onclick="openAddProjectAssignment('${w.id}')" title="Add assignment">+ Assign</button></div>
+      </div></td>`;
+    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
     html+=`</tr>`;
   });
 
-  html+=`</tbody></table>
-    <div class="gantt-legend">
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--navy)"></div>Active (colour = project)</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--sky)"></div>Future / Planned</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--amber)"></div>Ending soon</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8"></div>Past / Ended</div>
-      <div class="gantt-leg-item">📎 = contract &nbsp; ⚠ = missing contract</div>
-    </div>`;
-  document.getElementById('paGantt').innerHTML=html;
+  html+=`</tbody></table><div class="gantt-legend">
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--navy)"></div>Active (colour = project)</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--sky)"></div>Future / Planned</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--amber)"></div>Ending soon</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8"></div>Past / Ended</div>
+    <div class="gantt-leg-item">📎 = contract &nbsp; ⚠ = missing contract</div>
+    <div class="gantt-leg-item" style="color:var(--text-l);font-style:italic;">Drag edges to resize · drag middle to move</div>
+  </div>`;
+  container.style.position='relative';
+  container.innerHTML=html;
+
+  // Phase 2 — overlay merged bars after layout is complete
+  if(_paGanttRAF)cancelAnimationFrame(_paGanttRAF);
+  _paGanttRAF=requestAnimationFrame(()=>{
+    _paGanttRAF=null;
+    const tbl=container.querySelector('table.gantt-grid');if(!tbl)return;
+    const barsData=[];
+    workers.forEach(w=>{
+      const wA=projectAssignments.filter(a=>a.wid===w.id);if(!wA.length)return;
+      const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
+      wA.forEach((a,ai)=>{
+        const proj=projectStore.find(p=>p.id===a.projectId);
+        const pColor=projColor(a.projectId);
+        let barCls='gb-active';
+        if(a.startDate&&new Date(a.startDate)>today)barCls='gb-future';
+        else if(a.endDate){const e2=new Date(a.endDate);e2.setHours(0,0,0,0);
+          if(e2<today)barCls='gb-expired';
+          else if((e2-today)/86400000<=settings.warningDays)barCls='gb-expiring';}
+        barsData.push({id:a.id,wid:w.id,startDate:a.startDate,endDate:a.endDate,barIdx:ai,
+          label:proj?.name||'?',contractIcon:a.contractFile?'📎 ':'⚠ ',barCls,
+          bgStyle:barCls==='gb-active'?`background:${pColor};`:'',
+          title:`${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${a.contractFile?'Contract attached':'No contract'}`,
+          onclick:id=>openEditPA(id),rowEl});
+      });
+    });
+    ganttOverlayBars(container,cols,zoom,barsData,bd=>{
+      const a=projectAssignments.find(x=>x.id===bd.id);
+      if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;savePA();}
+      renderRoster();
+    });
+  });
 }
 
 function renderPAList(){
@@ -3836,124 +3930,85 @@ function ganttBarClass(startDate, endDate){
   return 'gb-active';
 }
 
-// Core Gantt renderer — handles zoom levels + overlap stacking
-function renderGantt(containerId, countId, noResultsId, entries, type, zoom, offset, zoomChangeFn, shiftFn, resetFn){
-  const container = document.getElementById(containerId);
-  const cnt       = document.getElementById(countId);
-  const noRes     = document.getElementById(noResultsId);
-  const workerSet = [...new Set(entries.map(e=>e.wid))];
-
-  if(!entries.length){
-    container.innerHTML='';
-    noRes.style.display='block';
-    cnt.textContent='0 workers assigned';
-    return;
-  }
+// Core Gantt renderer — handles zoom levels, merged spanning bars, drag resize/move
+function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zoomChangeFn,shiftFn,resetFn,onEntrySave){
+  const container=document.getElementById(containerId);
+  const cnt=document.getElementById(countId),noRes=document.getElementById(noResultsId);
+  const workerSet=[...new Set(entries.map(e=>e.wid))];
+  if(!entries.length){container.innerHTML='';noRes.style.display='block';cnt.textContent='0 workers assigned';return;}
   noRes.style.display='none';
-  cnt.textContent = workerSet.length + ' worker' + (workerSet.length!==1?'s':'');
+  cnt.textContent=workerSet.length+' worker'+(workerSet.length!==1?'s':'');
 
-  const cols = ganttColumns(zoom, offset);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const todayMs = today.getTime();
+  const cols=ganttColumns(zoom,offset),today=new Date();today.setHours(0,0,0,0);
+  const colMinW=zoom==='day'?48:zoom==='week'?110:90;
 
-  // Min col width varies by zoom
-  const colMinW = zoom==='day'?48 : zoom==='week'?110 : 90;
-
-  let html = `<table class="gantt-grid" style="table-layout:fixed;">
-    <thead><tr>
-      <th class="gantt-worker-col" style="width:150px;">Worker</th>`;
-  cols.forEach(col=>{
-    const isNow = isNowCol(col, zoom);
-    html += `<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;
-  });
-  html += `</tr></thead><tbody>`;
+  // Phase 1 — skeleton table
+  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:150px;">Worker</th>`;
+  cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
+  html+=`</tr></thead><tbody>`;
 
   workers.forEach(w=>{
-    const workerEntries = entries.filter(e=>e.wid===w.id);
-    if(!workerEntries.length) return;
-    const [bg,col] = avc(w.id);
-
-    html += `<tr><td class="gantt-worker-cell">
+    const wE=entries.filter(e=>e.wid===w.id);if(!wE.length)return;
+    const [bg,col]=avc(w.id);
+    const rowH=Math.max(44,wE.length*28+8);
+    html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="height:${rowH}px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
         <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div></div>
-      </div>
-    </td>`;
-
-    cols.forEach((colStart, colIdx)=>{
-      const dur = colDuration(colStart, zoom);
-      const colStartMs = colStart.getTime();
-      const colEndMs   = colStartMs + dur;
-      const isNow = isNowCol(colStart, zoom);
-
-      // All entries overlapping this column
-      const overlap = workerEntries.filter(e=>{
-        const es = e.startDate ? new Date(e.startDate).setHours(0,0,0,0) : -Infinity;
-        const ee = e.endDate   ? new Date(e.endDate).setHours(0,0,0,0)+86400000 : Infinity;
-        return es < colEndMs && ee > colStartMs;
-      });
-
-      if(!overlap.length){
-        html += `<td class="${isNow?'gantt-today-col':''}" style="padding:2px;"></td>`;
-        return;
-      }
-
-      // Stack all overlapping bars vertically
-      const bars = overlap.map(e=>{
-        const barClass = ganttBarClass(e.startDate, e.endDate);
-        const es2 = e.startDate ? Math.max(new Date(e.startDate).setHours(0,0,0,0), colStartMs) : colStartMs;
-        const ee2 = e.endDate   ? Math.min(new Date(e.endDate).setHours(0,0,0,0)+86400000, colEndMs) : colEndMs;
-        const leftPct  = Math.round((es2-colStartMs)/dur*100);
-        const widthPct = Math.max(4, Math.round((ee2-es2)/dur*100));
-        const isFirst  = e.startDate ? new Date(e.startDate).setHours(0,0,0,0) >= colStartMs : colIdx===0;
-        const showLabel = (isFirst || leftPct===0) && zoom!=='month' ? esc(e.label) : (zoom==='month' ? esc(e.label.substring(0,8)) : '');
-        return `<div class="gantt-bar ${barClass}"
-          style="position:relative;left:${leftPct}%;width:${widthPct}%;min-width:4px;margin-bottom:2px;"
-          onclick="${e.onclick}"
-          title="${esc(e.label)} | ${e.startDate||'—'} → ${e.endDate||'ongoing'}">
-          ${showLabel}
-        </div>`;
-      }).join('');
-
-      // If multiple bars, stack in a flex column so row height grows naturally
-      html += `<td class="${isNow?'gantt-today-col':''}" style="padding:3px 2px;vertical-align:top;">
-        <div style="display:flex;flex-direction:column;gap:2px;">${bars}</div>
-      </td>`;
-    });
-
-    html += `</tr>`;
+      </div></td>`;
+    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
+    html+=`</tr>`;
   });
 
-  html += `</tbody></table>
-    <div class="gantt-legend">
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--navy)"></div>Active</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--sky)"></div>Future / Planned</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--amber)"></div>Expiring soon</div>
-      <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8"></div>Past / Ended</div>
-    </div>`;
+  html+=`</tbody></table><div class="gantt-legend">
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--navy)"></div>Active</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--sky)"></div>Future / Planned</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--amber)"></div>Expiring soon</div>
+    <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8"></div>Past / Ended</div>
+    <div class="gantt-leg-item" style="color:var(--text-l);font-style:italic;">Drag edges to resize · drag middle to move</div>
+  </div>`;
+  container.style.position='relative';
+  container.innerHTML=html;
 
-  container.innerHTML = html;
+  // Phase 2 — overlay merged bars
+  if(_resGanttRAF)cancelAnimationFrame(_resGanttRAF);
+  _resGanttRAF=requestAnimationFrame(()=>{
+    _resGanttRAF=null;
+    const tbl=container.querySelector('table.gantt-grid');if(!tbl)return;
+    const barsData=[];
+    workers.forEach(w=>{
+      const wE=entries.filter(e=>e.wid===w.id);if(!wE.length)return;
+      const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
+      wE.forEach((e,ei)=>{
+        barsData.push({id:e.id,wid:w.id,startDate:e.startDate,endDate:e.endDate,barIdx:ei,
+          label:e.label,contractIcon:'',barCls:ganttBarClass(e.startDate,e.endDate),bgStyle:'',
+          title:`${esc(e.label)} | ${e.startDate||'—'} → ${e.endDate||'ongoing'}`,
+          onclick:e.onclickFn,rowEl});
+      });
+    });
+    ganttOverlayBars(container,cols,zoom,barsData,bd=>{
+      if(onEntrySave)onEntrySave(bd);
+    });
+  });
 }
 
 // ──────────────────────────────────────────────────────
 // ACCOMMODATION
 // ──────────────────────────────────────────────────────
 function renderAccomSummary(){
-  // Build entries from history
-  const entries = [];
+  const entries=[];
   workers.forEach(w=>{
     (accomHistory[w.id]||[]).forEach(a=>{
-      const prop = properties.find(p=>p.id===a.propId);
-      entries.push({
-        wid: w.id,
-        label: prop?.name || 'Unknown',
-        startDate: a.startDate,
-        endDate: a.endDate,
-        onclick: `openAssignAccom('${w.id}','${a.id}')`
-      });
+      const prop=properties.find(p=>p.id===a.propId);
+      entries.push({wid:w.id,id:a.id,label:prop?.name||'Unknown',startDate:a.startDate,endDate:a.endDate,
+        onclickFn:(id)=>openAssignAccom(w.id,a.id)});
     });
   });
-  renderGantt('accomGantt','accomSummaryCount','noAccomAssign', entries, 'accom', ganttZoom, ganttOffset, 'setGanttZoom', 'shiftGantt', 'resetGantt');
+  renderGantt('accomGantt','accomSummaryCount','noAccomAssign',entries,'accom',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+    const a=(accomHistory[bd.wid]||[]).find(x=>x.id===bd.id);
+    if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveAccomHistory();}
+    renderResources();
+  });
 }
 
 function renderProperties(){
@@ -4133,20 +4188,19 @@ function clearAccomAssignment(){
 // VEHICLES
 // ──────────────────────────────────────────────────────
 function renderVehicleSummary(){
-  const entries = [];
+  const entries=[];
   workers.forEach(w=>{
     (vehHistory[w.id]||[]).forEach(a=>{
-      const v = vehicles.find(x=>x.id===a.vehicleId);
-      entries.push({
-        wid: w.id,
-        label: v ? (v.desc+(v.reg?' · '+v.reg:'')) : 'Unknown',
-        startDate: a.startDate,
-        endDate: a.endDate,
-        onclick: `openAssignVehicle('${w.id}','${a.id}')`
-      });
+      const v=vehicles.find(x=>x.id===a.vehicleId);
+      entries.push({wid:w.id,id:a.id,label:v?(v.desc+(v.reg?' · '+v.reg:'')):'Unknown',startDate:a.startDate,endDate:a.endDate,
+        onclickFn:(id)=>openAssignVehicle(w.id,a.id)});
     });
   });
-  renderGantt('vehicleGantt','vehicleSummaryCount','noVehicleAssign', entries, 'vehicle', ganttZoom, ganttOffset, 'setGanttZoom', 'shiftGantt', 'resetGantt');
+  renderGantt('vehicleGantt','vehicleSummaryCount','noVehicleAssign',entries,'vehicle',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+    const a=(vehHistory[bd.wid]||[]).find(x=>x.id===bd.id);
+    if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveVehHistory();}
+    renderResources();
+  });
 }
 
 function renderFleet(){
