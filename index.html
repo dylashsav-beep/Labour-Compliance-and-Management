@@ -296,6 +296,9 @@ td{padding:10px 14px;vertical-align:middle;}
 .req-tag{font-size:10px;font-weight:600;padding:1px 5px;border-radius:3px;margin-left:5px;vertical-align:middle;}
 .req-tag.req{background:var(--red-l);color:var(--red);border:1px solid var(--red-b);}
 .req-tag.opt{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
+.req-tag.overridden{outline:2px dashed currentColor;outline-offset:1px;}
+.req-tag[onclick]{cursor:pointer;}
+.req-tag[onclick]:hover{opacity:.75;}
 .doc-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
 .expiry-tag{font-size:11px;color:var(--text-l);white-space:nowrap;}
 .status-select{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:4px 8px;border-radius:4px;border:1px solid;cursor:pointer;outline:none;transition:all .12s;}
@@ -1843,13 +1846,22 @@ async function sbRemoteDeleteDocSetItem(setId, docId, payload){
 loadSettings();
 
 // ── Accessors ──
-// Get docs for a worker — falls back to type-based default if no docSetId
+// Get docs for a worker — falls back to type-based default if no docSetId.
+// Each item is enriched with:
+//   _baseReq     — the document-set default (true/false)
+//   _overridden  — true when a worker-specific override is active
+//   req          — the EFFECTIVE requirement used for Go/No-Go
 function tmplForWorker(w){
   const items = (w.docSetId && docSetItems[w.docSetId])
     ? docSetItems[w.docSetId]
     : (w.type==='zzp' ? (docSetItems[SET_NL_ZZP]||DEFAULT_ZZP_DOCS) : (docSetItems[SET_NL_BLUE]||DEFAULT_BLUE_DOCS));
-  // Archived questions remain visible for historical review, but they are not counted as required compliance items.
-  return items.map(d=>d.archived ? {...d, req:false} : d);
+  const overrides = docReqOverrides[w.id] || {};
+  return items.map(d => {
+    const baseReq = !d.archived && !!d.req;
+    const ov = overrides[d.id];
+    const effectiveReq = d.archived ? false : (ov !== undefined ? !!ov : baseReq);
+    return {...d, req: effectiveReq, _baseReq: baseReq, _overridden: ov !== undefined};
+  });
 }
 // Keep old getZzpDocs/getBlueDocs for anything that still references them
 function getZzpDocs() { return docSetItems[SET_NL_ZZP]  || DEFAULT_ZZP_DOCS; }
@@ -1997,6 +2009,16 @@ function addWeeks(date,n){const d=new Date(date);d.setDate(d.getDate()+n*7);retu
 // ─── Data ─────────────────────────────────────────────────────────────────────
 let workers=[];
 // Workers are loaded from Supabase after login. Do not seed demo workers into live data.
+
+// ─── Per-worker document requirement overrides ────────────────────────────────
+// Stored in localStorage so it works without a Supabase schema change.
+// If the workers table gains a doc_req JSONB column, sbPersistAll/sbLoadAll
+// will silently sync it there too, enabling multi-browser consistency.
+const DOC_REQ_KEY = 'tmc_doc_req_v1';
+let docReqOverrides = {}; // { workerId: { docId: true|false } }
+function loadDocReq(){ try{ const r=localStorage.getItem(DOC_REQ_KEY); if(r) docReqOverrides=JSON.parse(r); }catch(e){ docReqOverrides={}; } }
+function saveDocReq(){ try{ localStorage.setItem(DOC_REQ_KEY,JSON.stringify(docReqOverrides)); }catch(e){} }
+loadDocReq();
 
 
 const fileStore={};
@@ -3141,7 +3163,7 @@ function rebuildModal(id){
         <div class="doc-item-row">
           <div class="doc-icon">${d.icon}</div>
           <div class="doc-info">
-            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}</div>
+            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}</div>
             <div class="doc-tip">${d.tip}</div>
           </div>
           <div class="doc-controls">
@@ -3202,6 +3224,27 @@ function setExpiry(wid,did,val){
   refreshScore(wid);renderTable();
 }
 function setIssue(wid,did,val){const w=workers.find(x=>x.id===wid);if(!w||!w.docs[did])return;w.docs[did].issueDate=val;}
+
+// Toggle a per-worker document requirement override.
+// First click: override to opposite of the document-set default.
+// Second click: reset back to document-set default (remove override).
+function toggleDocReq(wid, did){
+  if(!requireAction('workerDocs','change document requirements for this worker')) return;
+  const w = workers.find(x=>x.id===wid); if(!w) return;
+  const t = tmplForWorker(w).find(d=>d.id===did); if(!t || t.archived) return;
+  if(!docReqOverrides[wid]) docReqOverrides[wid] = {};
+  if(t._overridden){
+    delete docReqOverrides[wid][did];
+    if(!Object.keys(docReqOverrides[wid]).length) delete docReqOverrides[wid];
+  } else {
+    docReqOverrides[wid][did] = !t._baseReq;
+  }
+  saveDocReq();
+  sbScheduleSync();
+  rebuildModal(wid);
+  renderTable();
+}
+
 function toggleExp(wid,did){const key=`${wid}_${did}`;const el=document.getElementById(`dexp_${key}`);if(!el)return;const open=el.classList.toggle('open');expandedDoc=open?key:null;}
 function attachF(wid,did,input){
   if(!fileStore[wid])fileStore[wid]={};if(!fileStore[wid][did])fileStore[wid][did]=[];
@@ -4654,6 +4697,11 @@ async function sbPersistAll(force=false){
     w.active = activeVal;
     return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
+  // Silently attempt to sync doc_req overrides (requires doc_req JSONB column in workers table)
+  try{
+    const drRows=Object.keys(docReqOverrides).filter(wid=>workers.find(w=>w.id===wid)).map(wid=>({id:wid,doc_req:docReqOverrides[wid],updated_at:new Date().toISOString()}));
+    if(drRows.length && sbCanWriteTable('workers')) await sbClient.from('workers').upsert(drRows);
+  }catch(e){ /* doc_req column not yet in schema — local-only */ }
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
@@ -4875,6 +4923,9 @@ async function sbLoadAll(){
     } else {
       workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',docSetId:w.document_set_id||undefined,active:w.active!==false,docs:{}}));
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
+      // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
+      (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
+      saveDocReq();
     }
 
     if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; }
