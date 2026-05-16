@@ -2673,7 +2673,7 @@ function handlePAContractUpload(input){
   input.value='';
 }
 
-function saveProjectAssignment(){
+async function saveProjectAssignment(){
   if(editingPAId){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx>-1 && hasContractFile(projectAssignments[idx])){
@@ -2687,6 +2687,16 @@ function saveProjectAssignment(){
   const projectId = document.getElementById('paProject').value;
   if(!wid)       { alert('Please select a worker.');  return; }
   if(!projectId) { alert('Please select a project.'); return; }
+  const assignmentId = editingPAId || crypto.randomUUID();
+  let contractFile = paContractData;
+  // L2: Upload contract to Storage immediately rather than deferring to sbPersistAll
+  if(contractFile && contractFile.dataUrl && sbClient && sbSession){
+    try{
+      const path=`assignments/${assignmentId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(contractFile.name)}`;
+      await sbUploadDataUrl(path, contractFile);
+      contractFile = {name:contractFile.name, size:contractFile.size, type:contractFile.type, file_path:path, storagePath:path};
+    }catch(e){ console.warn('[TMC] contract immediate upload failed:', e.message); }
+  }
   const obj = {
     wid, projectId,
     startDate:    document.getElementById('paStart').value,
@@ -2694,13 +2704,13 @@ function saveProjectAssignment(){
     rate:         document.getElementById('paRate').value,
     rateType:     document.getElementById('paRateType').value,
     notes:        document.getElementById('paNotes').value.trim(),
-    contractFile: paContractData
+    contractFile
   };
   if(editingPAId){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx>-1) projectAssignments[idx] = {id:editingPAId,...obj};
   } else {
-    projectAssignments.push({id:crypto.randomUUID(),...obj});
+    projectAssignments.push({id:assignmentId,...obj});
   }
   savePA(); closeM('paOverlay'); renderRoster(); renderTable();
 }
@@ -4240,8 +4250,8 @@ function restoreDeletedItem(id){
   tmcConfirm('Restore this archived item?', 'The item will be returned to the active dashboard where possible. The restore action will be recorded in Supabase.', async ()=>{
   const p=it.payload||{};
   if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters(); renderRoster(); renderTable(); }
-  else if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); }
-  else if(it.type==='worker_document_file'){ if(!fileStore[p.wid])fileStore[p.wid]={}; if(!fileStore[p.wid][p.did])fileStore[p.wid][p.did]=[]; fileStore[p.wid][p.did].push(p.file); refreshFiles(p.wid,p.did); }
+  else if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); if(sbClient&&sbSession&&restored.id&&sbCanWriteTable('project_assignments')){ sbClient.from('project_assignments').update({active:true,archived_at:null,archived_by:null}).eq('id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment Supabase write failed:',error.message); }); if(sbCanWriteTable('project_assignment_files')) sbClient.from('project_assignment_files').update({active:true}).eq('project_assignment_id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment files Supabase write failed:',error.message); }); } }
+  else if(it.type==='worker_document_file'){ if(!fileStore[p.wid])fileStore[p.wid]={}; if(!fileStore[p.wid][p.did])fileStore[p.wid][p.did]=[]; fileStore[p.wid][p.did].push(p.file); refreshFiles(p.wid,p.did); const fp=p.file?.file_path||p.file?.storagePath; if(sbClient&&sbSession&&fp&&sbCanWriteTable('worker_document_files')){ sbClient.from('worker_document_files').update({active:true}).eq('file_path',fp).then(({error})=>{ if(error) console.warn('[TMC] restore worker file Supabase write failed:',error.message); }); } }
   else if(it.type==='worker_status_change'){ const wid=p.workerId||p.wid||p._meta?.workerId; const w=workers.find(x=>x.id===wid); if(w){ w.active = p.oldActive !== false; renderTable(); renderStats(); if(curW===wid) rebuildModal(wid); } }
   else if(it.type==='document_set' && p.set){ docSets.push(p.set); docSetItems[p.set.id]=p.items||[]; (p.workerIds||[]).forEach(wid=>{const w=workers.find(x=>x.id===wid); if(w) w.docSetId=p.set.id;}); saveDocSets(); renderDocSets(); renderTable(); }
   else if(it.type==='document_set_item' && p.doc){ if(!docSetItems[p.setId])docSetItems[p.setId]=[]; docSetItems[p.setId].push(p.doc); saveDocSets(); renderDocSets(); renderTable(); }
@@ -4404,6 +4414,7 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
         // Contracted assignments are now allowed to be archived, but never physically deleted.
         // The Storage file and assignment file record are retained for restore/history.
         if(p.id && sbCanWriteTable('project_assignments')) await sbClient.from('project_assignments').update({active:false, archived_at:new Date().toISOString(), archived_by:sbSession?.user?.id||null}).eq('id',p.id);
+        if(p.id && sbCanWriteTable('project_assignment_files')) await sbClient.from('project_assignment_files').update({active:false}).eq('project_assignment_id',p.id);
       } else if(it.type==='worker_document_file'){
         const filePath=m.filePath || p.file?.file_path || p.file?.storagePath || p.file_path;
         if(filePath && sbCanWriteTable('worker_document_files')) await sbClient.from('worker_document_files').update({active:false}).eq('file_path',filePath);
@@ -4702,7 +4713,7 @@ async function sbLoadAll(){
     workers.forEach(w=>{tmplForWorker(w).forEach(d=>w.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});});
     (wdocData||[]).forEach(d=>{const w=workers.find(x=>x.id===d.worker_id); if(w){w.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]};}});
     Object.keys(fileStore).forEach(k=>delete fileStore[k]); workers.forEach(w=>{fileStore[w.id]={}; tmplForWorker(w).forEach(d=>fileStore[w.id][d.id]=[]);});
-    (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); }});
+    (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
     const paFiles={}; (pafData||[]).forEach(f=>paFiles[f.project_assignment_id]={name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path});
     projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:paFiles[a.id]||null}));
@@ -4749,7 +4760,7 @@ function sbInstallWrappers(){
     if(!fileStore[wid])fileStore[wid]={}; if(!fileStore[wid][did])fileStore[wid][did]=[];
     for(const file of Array.from(input.files||[])){
       if(sbClient&&sbSession){ const path=`workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`; const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true}); if(error){alert('Upload failed: '+error.message);continue;} fileStore[wid][did].push({name:file.name,size:file.size,type:file.type,file_path:path,storagePath:path}); }
-      else { await new Promise(res=>{const reader=new FileReader();reader.onload=e=>{fileStore[wid][did].push({name:file.name,size:file.size,type:file.type,dataUrl:e.target.result});res();};reader.readAsDataURL(file);}); }
+      else { alert('Cannot upload: you are not signed in. Please sign in and try again — files cannot be saved without an active session.'); }
     }
     refreshFiles(wid,did); input.value=''; sbScheduleSync();
   };
