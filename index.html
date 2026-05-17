@@ -1386,6 +1386,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Full Name</label><input class="form-input" id="fName" placeholder="First Last"/></div>
         <div class="form-field"><label class="form-label">BSN / KVK Reference</label><input class="form-input" id="fRef" placeholder="e.g. NL-2024-001"/></div>
+        <div class="form-field"><label class="form-label">Agency / Company Name</label><input class="form-input" id="fAgency" placeholder="e.g. Bouw Uitzendbureau BV"/></div>
         <div class="form-field"><label class="form-label">Worker Type</label>
           <select class="form-select" id="fType">
             <option value="zzp">ZZP (Self-employed)</option>
@@ -2349,7 +2350,7 @@ function renderInactiveWorkersTable(){
     const goLabels={go:'✓ Go',warning:'⚠ Warning',nogo:'✕ No-Go'};
     const chips=tmpl(w).filter(d=>d.req).slice(0,4).map(d=>{ const ds=docStatusAt(w.docs[d.id], currentWeekMonday); return `<span class="chip ${ds}" title="${esc(d.name)}"><span class="chip-dot"></span>${d.icon} ${esc(d.name.split(' ')[0])}</span>`; }).join('');
     return `<tr class="inactive-worker-row">
-      <td><div class="worker-cell"><div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div><div><div class="worker-name">${esc(w.name)}</div><div class="worker-id">${[w.ref, w.nat].filter(Boolean).join(' · ')}</div></div></div></td>
+      <td><div class="worker-cell"><div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div><div><div class="worker-name">${esc(w.name)}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div></div></td>
       <td><span class="type-badge ${w.type}">${w.type==='zzp'?'ZZP':'Employed'}</span></td>
       <td>${workerAssignmentSummary(w.id)}</td>
       <td><div class="doc-chips">${chips}</div></td>
@@ -2619,7 +2620,7 @@ function filtered(){
       return s <= wkSun && e >= wkMon;
     }));
   }
-  if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
+  if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
   if(sortKey){l.sort((a,b)=>{
     let av,bv;
     if(sortKey==='name'){av=a.name;bv=b.name;}
@@ -2698,7 +2699,7 @@ function renderTable(){
     return `<tr style="${!workerActive?'opacity:.58;background:#fafafa;':''}">
       <td><div class="worker-cell">
         <div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div>
-        <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat].filter(Boolean).join(' · ')}</div></div>
+        <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div>
       </div></td>
       <td><span class="type-badge ${w.type}">${w.type==='zzp'?'ZZP':'Employed'}</span></td>
       <td><span class="worker-active-badge ${workerActive?'active':'inactive'}">${workerActive?'● Active':'○ Inactive'}</span></td>
@@ -3005,7 +3006,7 @@ function renderPAGantt(){
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
-        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div>
+        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div>
         <button style="margin-top:4px;background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--navy);cursor:pointer;" onclick="openAddProjectAssignment('${w.id}')" title="Add assignment">+ Assign</button></div>
       </div></td>`;
     cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
@@ -3074,7 +3075,7 @@ function renderPAList(){
     return `<tr>
       <td><div class="worker-cell">
         ${w?`<div class="avatar" style="background:${bg};color:${col};font-size:11px;">${ini(w.name)}</div>
-        <div><div class="worker-name" style="font-size:12px;">${w.name}</div><div class="worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div></div>`
+        <div><div class="worker-name" style="font-size:12px;">${w.name}</div><div class="worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div></div>`
         :'<span style="color:var(--text-l)">Unknown</span>'}
       </div></td>
       <td style="font-weight:600;color:var(--navy);font-size:13px;">${esc(proj?.name||'Unknown project')}</td>
@@ -3314,6 +3315,16 @@ async function saveWorkerNotes(wid, notes){
     if(error){ console.warn('[TMC] saveWorkerNotes failed:', error.message); }
   }
 }
+async function saveWorkerAgency(wid, agency){
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const trimmed = (agency||'').trim();
+  if(w.agency === trimmed) return;
+  w.agency = trimmed;
+  if(sbClient && sbSession && sbCanWriteTable('workers')){
+    const {error}=await sbClient.from('workers').update({agency_name:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error){ console.warn('[TMC] saveWorkerAgency failed:', error.message); }
+  }
+}
 function setWorkerActiveStatus(wid, makeActive, sourceLabel){
   if(!requireAction('workers','change worker active/inactive status')) return;
   const w=workers.find(x=>x.id===wid); if(!w) return;
@@ -3439,6 +3450,10 @@ function rebuildModal(id){
         ${currentVeh(id)?'Edit':'Assign'} Vehicle
       </button>
     </div>
+  </div>`;
+  html+=`<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">🏢 Agency / Company Name</div>
+    <input id="workerAgencyInput_${id}" type="text" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="e.g. Bouw Uitzendbureau BV" value="${esc(w.agency||'')}" onblur="saveWorkerAgency('${id}',this.value)"/>
   </div>`;
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📝 Notes / Comments</div>
@@ -3592,6 +3607,7 @@ async function doAdd(){
   if(!sbClient || !sbSession){alert('Supabase is not connected. Workers can only be added to Supabase.');return;}
   const type=document.getElementById('fType').value, nat=document.getElementById('fNat').value;
   const ref=(document.getElementById('fRef')?.value||'').trim();
+  const agency=(document.getElementById('fAgency')?.value||'').trim();
   if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
@@ -3605,12 +3621,13 @@ async function doAdd(){
       worker_type:type,
       reference:ref,
       nationality:nat||'',
+      agency_name:agency||null,
       document_set_id:dbDocSetId,
       active:true,
       updated_at:new Date().toISOString()
     });
     if(error) throw error;
-    closeM('addOverlay'); document.getElementById('fName').value='';
+    closeM('addOverlay'); document.getElementById('fName').value=''; document.getElementById('fAgency').value='';
     await sbLoadAll();
     sbSetStatus('Supabase: worker added', true);
   }catch(e){
@@ -4789,7 +4806,7 @@ function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zo
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="height:${rowH}px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
-        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat].filter(Boolean).join(' · ')}</div></div>
+        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div></div>
       </div></td>`;
     cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
     html+=`</tr>`;
@@ -5483,7 +5500,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
@@ -5718,7 +5735,7 @@ async function sbLoadAll(){
       workers=[];
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
-      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
+      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
       (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
