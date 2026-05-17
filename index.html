@@ -3538,12 +3538,20 @@ function deleteProject(id){
   const detail = linkedAssignments.length
     ? `Project: ${p.name}\n\nThis project has ${linkedAssignments.length} worker assignment(s). The project and all its assignments will be moved to Deleted Items and can be restored by an authorised user.`
     : `Project: ${p.name}\n\nThis will move the project to Deleted Items. It can be restored by an authorised user.`;
-  tmcConfirm('Delete this project?', detail, ()=>{
+  tmcConfirm('Delete this project?', detail, async ()=>{
     archiveDeletedItem('project', `Project: ${p.name}`, {project:p, assignments:linkedAssignments});
     projectStore = projectStore.filter(x=>x.id!==id);
     projectAssignments = projectAssignments.filter(a=>a.projectId!==id);
     saveProjects(); savePA();
     renderProjects(); renderProjFilters(); renderRoster(); renderTable(); renderDeletedItems();
+    // Mark inactive in Supabase immediately — don't rely on deferred sync
+    if(sbClient && sbSession && sbCanWriteTable('projects')){
+      await sbClient.from('projects').update({active:false}).eq('id',id);
+      for(const a of linkedAssignments){
+        if(a.id) await sbClient.from('project_assignments').update({active:false}).eq('id',a.id);
+      }
+    }
+    sbScheduleSync();
   }, {title:'TMC Compliance', subtitle:'Delete project', okText:'Delete'});
 }
 
@@ -4581,11 +4589,16 @@ function saveProperty(){
 function deleteProperty(id){
   const p=properties.find(x=>x.id===id);
   const linked={}; Object.keys(accomHistory).forEach(wid=>{ const rows=(accomHistory[wid]||[]).filter(a=>a.propId===id); if(rows.length) linked[wid]=rows; });
-  confirmDeleteAction('Delete this property? Existing accommodation assignments will be archived and removed from active view.', ()=>{
+  confirmDeleteAction('Delete this property? Existing accommodation assignments will be archived and removed from active view.', async ()=>{
     archiveDeletedItem('property', `Property: ${p?.name||id}`, {property:p,accomAssignments:linked});
     properties=properties.filter(p=>p.id!==id);
     Object.keys(accomHistory).forEach(wid=>{ accomHistory[wid]=(accomHistory[wid]||[]).filter(a=>a.propId!==id); });
     saveProperties(); saveAccomHistory(); renderResources(); renderDeletedItems();
+    if(sbClient && sbSession && sbCanWriteTable('properties')){
+      await sbClient.from('properties').update({active:false}).eq('id',id);
+      await sbClient.from('accommodation_assignments').update({active:false}).eq('property_id',id);
+    }
+    sbScheduleSync();
   });
 }
 
@@ -4711,11 +4724,16 @@ function saveVehicle(){
 function deleteVehicle(id){
   const v=vehicles.find(x=>x.id===id);
   const linked={}; Object.keys(vehHistory).forEach(wid=>{ const rows=(vehHistory[wid]||[]).filter(a=>a.vehicleId===id); if(rows.length) linked[wid]=rows; });
-  confirmDeleteAction('Delete this vehicle? Existing vehicle assignments will be archived and removed from active view.', ()=>{
+  confirmDeleteAction('Delete this vehicle? Existing vehicle assignments will be archived and removed from active view.', async ()=>{
     archiveDeletedItem('vehicle', `Vehicle: ${v?.desc||id}`, {vehicle:v,vehicleAssignments:linked});
     vehicles=vehicles.filter(v=>v.id!==id);
     Object.keys(vehHistory).forEach(wid=>{ vehHistory[wid]=(vehHistory[wid]||[]).filter(a=>a.vehicleId!==id); });
     saveVehicles(); saveVehHistory(); renderResources(); renderDeletedItems();
+    if(sbClient && sbSession && sbCanWriteTable('vehicles')){
+      await sbClient.from('vehicles').update({active:false}).eq('id',id);
+      await sbClient.from('vehicle_assignments').update({active:false}).eq('vehicle_id',id);
+    }
+    sbScheduleSync();
   });
 }
 
