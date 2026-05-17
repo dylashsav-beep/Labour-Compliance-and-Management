@@ -4204,8 +4204,8 @@ function saveProperties(){ try{localStorage.setItem(PROP_KEY,JSON.stringify(prop
 function saveVehicles(){    try{localStorage.setItem(VEHICLE_KEY,JSON.stringify(vehicles));}catch(e){} }
 function saveAccomHistory(){ try{localStorage.setItem(ACCOM_HIST_KEY,JSON.stringify(accomHistory));}catch(e){} }
 function saveVehHistory(){   try{localStorage.setItem(VEH_HIST_KEY,JSON.stringify(vehHistory));}catch(e){} }
-function saveAccomCharges(){ try{localStorage.setItem('tmc_accom_charges_v1',JSON.stringify(accomCharges));}catch(e){} }
-function saveVehCharges(){   try{localStorage.setItem('tmc_veh_charges_v1',JSON.stringify(vehCharges));}catch(e){} }
+function saveAccomCharges(){ /* charges persist via Supabase only */ }
+function saveVehCharges(){   /* charges persist via Supabase only */ }
 loadResources();
 
 // ── Compliance Documents store ──────────────────────────────────────────────
