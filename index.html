@@ -448,6 +448,13 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .deleted-items-body::-webkit-scrollbar-track{background:var(--bg);border-radius:9px;}
 #deletedItemsCard.collapsed .deleted-items-chevron{transform:rotate(-90deg);}
 .del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+.billing-cell{padding:4px 2px;text-align:center;vertical-align:middle;border-right:1px solid var(--border);min-width:80px;height:36px;font-size:11px;font-weight:600;}
+.billing-cell.in-range{cursor:pointer;background:#f8fafc;}
+.billing-cell.in-range:hover{background:#e8f4fd;}
+.billing-cell.charged{background:#dcfce7;color:#166534;cursor:pointer;}
+.billing-cell.charged:hover{background:#bbf7d0;}
+.billing-cell.out-range{background:#f9fafb;color:var(--text-l);}
+.billing-worker-cell{font-size:12px;font-weight:600;color:var(--navy);padding:6px 10px;white-space:nowrap;border-right:2px solid var(--border);position:sticky;left:0;background:#fff;z-index:1;min-width:180px;}
 .del-search{flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);}
 .del-search:focus{outline:none;border-color:var(--navy-l);}
 .del-filters{display:flex;flex-wrap:wrap;gap:5px;}
@@ -1007,6 +1014,20 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="no-results" id="noAccomAssign" style="display:none;"><div class="no-results-icon">🏠</div>No accommodation assigned yet</div>
       </div>
 
+      <!-- Accommodation Billing Tracker -->
+      <div class="table-card" id="accomBillingCard" style="margin-bottom:20px;display:none;">
+        <div class="table-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="table-head-title">💳 Accommodation Billing Tracker</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="table-head-count" id="accomBillingCount"></span>
+            <button class="week-arrow" onclick="shiftBilling(-1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8592;</button>
+            <button class="week-today-btn" onclick="resetBilling()" style="color:var(--sky-l);">Today</button>
+            <button class="week-arrow" onclick="shiftBilling(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;"><div id="accomBillingGrid" style="min-width:900px;"></div></div>
+      </div>
+
       <!-- Properties list -->
       <div class="table-card">
         <div class="table-head">
@@ -1054,6 +1075,20 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <div id="vehicleGantt" style="min-width:900px;"></div>
         </div>
         <div class="no-results" id="noVehicleAssign" style="display:none;"><div class="no-results-icon">🚗</div>No vehicles assigned yet</div>
+      </div>
+
+      <!-- Vehicle Billing Tracker -->
+      <div class="table-card" id="vehBillingCard" style="margin-bottom:20px;display:none;">
+        <div class="table-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="table-head-title">💳 Vehicle Billing Tracker</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="table-head-count" id="vehBillingCount"></span>
+            <button class="week-arrow" onclick="shiftBilling(-1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8592;</button>
+            <button class="week-today-btn" onclick="resetBilling()" style="color:var(--sky-l);">Today</button>
+            <button class="week-arrow" onclick="shiftBilling(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;"><div id="vehBillingGrid" style="min-width:900px;"></div></div>
       </div>
 
       <!-- Vehicles list -->
@@ -1208,6 +1243,13 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">Check-out Date</label><input type="date" class="form-input" id="assignAccomEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignAccomNotes" placeholder="Room number, special requirements…"/></div>
       </div>
+      <div class="form-field full">
+        <label class="form-label">Charge to operative?</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <label class="tog"><input type="checkbox" id="assignAccomCharge" onchange=""/><span class="tog-slider"></span></label>
+          <span style="font-size:12px;color:var(--text-m);">If enabled, this assignment will appear in the billing tracker for weekly charge tracking.</span>
+        </div>
+      </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('assignAccomOverlay')">Cancel</button>
         <button class="btn btn-danger" id="clearAccomBtn" onclick="clearAccomAssignment()" style="margin-right:auto;display:none;">Remove Assignment</button>
@@ -1232,6 +1274,17 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">From Date</label><input type="date" class="form-input" id="assignVehicleStart"/></div>
         <div class="form-field"><label class="form-label">Until Date</label><input type="date" class="form-input" id="assignVehicleEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignVehicleNotes" placeholder="Usage notes, fuel card…"/></div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Charge to operative?</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <label class="tog"><input type="checkbox" id="assignVehicleCharge" onchange=""/><span class="tog-slider"></span></label>
+          <span style="font-size:12px;color:var(--text-m);">Track weekly charges in billing tracker</span>
+        </div>
+      </div>
+      <div class="form-field">
+        <label class="form-label">Weekly charge amount (€, optional)</label>
+        <input class="form-input" id="assignVehicleChargeAmt" type="number" min="0" step="0.01" placeholder="e.g. 250.00"/>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('assignVehicleOverlay')">Cancel</button>
@@ -1440,6 +1493,28 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 </div>
 
 <!-- TMC CUSTOM CONFIRMATION MODAL -->
+<div class="overlay" id="chargeEntryOverlay">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="chargeEntryTitle">Mark as Charged</div><div class="modal-subtitle" id="chargeEntrySubtitle">—</div></div>
+      <button class="modal-close" onclick="closeM('chargeEntryOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label class="form-label">Invoice Number (optional)</label>
+          <input class="form-input" id="chargeInvoiceNum" placeholder="e.g. INV-2025-001"/></div>
+        <div class="form-field full"><label class="form-label">Invoice Amount € (optional)</label>
+          <input class="form-input" id="chargeInvoiceAmt" type="number" min="0" step="0.01" placeholder="e.g. 350.00"/></div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" onclick="closeM('chargeEntryOverlay')">Cancel</button>
+        <button class="btn btn-danger" id="chargeRemoveBtn" onclick="removeCharge()" style="display:none;margin-right:auto;">Remove Charge</button>
+        <button class="btn btn-save" onclick="saveChargeEntry()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="tmcConfirmOverlay">
   <div class="modal" style="max-width:500px;">
     <div class="modal-header">
@@ -1507,7 +1582,7 @@ function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
   const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','admin_notifications','audit_log','deleted_items','compliance_documents'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','admin_notifications','audit_log','deleted_items','compliance_documents'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -4097,10 +4172,14 @@ const VEHASSIGN_KEY = 'tmc_veh_assign_v1';
 
 let properties = [];   // [{id,name,address,notes}]
 let vehicles   = [];   // [{id,desc,reg,make,model,colour,notes}]
-// History arrays: accomHistory[wid] = [{id, propId, startDate, endDate, notes}]
+// History arrays: accomHistory[wid] = [{id, propId, startDate, endDate, notes, chargeToOperative}]
 let accomHistory = {};
-// vehHistory[wid] = [{id, vehicleId, startDate, endDate, notes}]
+// vehHistory[wid] = [{id, vehicleId, startDate, endDate, notes, chargeToOperative, weeklyChargeAmount}]
 let vehHistory = {};
+let accomCharges = [];
+let vehCharges = [];
+let billingOffset = 0;
+let _chargeModalState = null; // {type, assignmentId, wid, weekKey}
 
 // Legacy key migration: if old single-assignment keys exist, convert them
 const ACCOM_HIST_KEY   = 'tmc_accom_hist_v1';
@@ -4125,6 +4204,8 @@ function saveProperties(){ try{localStorage.setItem(PROP_KEY,JSON.stringify(prop
 function saveVehicles(){    try{localStorage.setItem(VEHICLE_KEY,JSON.stringify(vehicles));}catch(e){} }
 function saveAccomHistory(){ try{localStorage.setItem(ACCOM_HIST_KEY,JSON.stringify(accomHistory));}catch(e){} }
 function saveVehHistory(){   try{localStorage.setItem(VEH_HIST_KEY,JSON.stringify(vehHistory));}catch(e){} }
+function saveAccomCharges(){ try{localStorage.setItem('tmc_accom_charges_v1',JSON.stringify(accomCharges));}catch(e){} }
+function saveVehCharges(){   try{localStorage.setItem('tmc_veh_charges_v1',JSON.stringify(vehCharges));}catch(e){} }
 loadResources();
 
 // ── Compliance Documents store ──────────────────────────────────────────────
@@ -4462,8 +4543,8 @@ function renderResources(){
   // Render zoom buttons into header elements
   renderZoomBtns('accomZoomBtns', ganttZoom, 'setGanttZoom');
   renderZoomBtns('vehicleZoomBtns', ganttZoom, 'setGanttZoom');
-  if(currentResTab==='accom')   { renderAccomSummary(); renderProperties(); }
-  else                          { renderVehicleSummary(); renderFleet(); }
+  if(currentResTab==='accom')   { renderAccomSummary(); renderProperties(); renderBillingTracker('accom'); }
+  else                          { renderVehicleSummary(); renderFleet(); renderBillingTracker('vehicle'); }
 }
 
 // ── Gantt helpers ──
@@ -4538,6 +4619,138 @@ function isNowCol(colStart, zoom){
 function shiftGantt(n){ ganttOffset += n; renderResources(); }
 function resetGantt(){ ganttOffset = 0; renderResources(); }
 function setGanttZoom(z){ ganttZoom=z; ganttOffset=0; renderResources(); }
+
+// ── Billing tracker helpers ──
+function shiftBilling(n){ billingOffset+=n; renderResources(); }
+function resetBilling(){ billingOffset=0; renderResources(); }
+function billingColumns(){
+  const base=weekMonday(new Date());
+  const cols=[];
+  for(let i=-6+billingOffset;i<=6+billingOffset;i++) cols.push(addWeeks(base,i));
+  return cols;
+}
+function renderBillingTracker(type){
+  const isAccom = type==='accom';
+  const card = document.getElementById(isAccom?'accomBillingCard':'vehBillingCard');
+  const grid = document.getElementById(isAccom?'accomBillingGrid':'vehBillingGrid');
+  const cnt  = document.getElementById(isAccom?'accomBillingCount':'vehBillingCount');
+  if(!card||!grid) return;
+
+  // Gather chargeable assignments
+  const entries=[];
+  workers.forEach(w=>{
+    const hist = isAccom ? (accomHistory[w.id]||[]) : (vehHistory[w.id]||[]);
+    hist.forEach(a=>{
+      if(!a.chargeToOperative) return;
+      const resource = isAccom
+        ? properties.find(p=>p.id===a.propId)
+        : vehicles.find(v=>v.id===a.vehicleId);
+      entries.push({wid:w.id, workerName:w.name, assignmentId:a.id,
+        label: isAccom ? (resource?.name||'Unknown') : (resource?.desc||'Unknown')+(resource?.reg?' · '+resource.reg:''),
+        startDate:a.startDate, endDate:a.endDate,
+        weeklyAmt: isAccom ? null : (a.weeklyChargeAmount||null)
+      });
+    });
+  });
+
+  if(!entries.length){ card.style.display='none'; return; }
+  card.style.display='block';
+  cnt.textContent = entries.length+' chargeable assignment'+(entries.length!==1?'s':'');
+
+  const cols = billingColumns();
+  const charges = isAccom ? accomCharges : vehCharges;
+  const canEdit = sbUserRole==='admin'||sbUserRole==='planner';
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build table
+  let html=`<table style="border-collapse:collapse;width:100%;table-layout:auto;">
+    <thead><tr>
+      <th style="background:var(--navy-d);color:#fff;font-size:11px;font-weight:600;padding:7px 10px;text-align:left;border-right:2px solid var(--border);position:sticky;left:0;z-index:2;min-width:180px;">Worker / ${isAccom?'Property':'Vehicle'}</th>`;
+  cols.forEach(col=>{
+    const wk=isoWeekKey(col);
+    const isNow=wk===isoWeekKey(today);
+    html+=`<th style="background:${isNow?'var(--navy-l)':'var(--navy-d)'};color:#fff;font-size:10px;font-weight:600;padding:5px 4px;text-align:center;border-right:1px solid rgba(255,255,255,.15);min-width:80px;">${colLabel(col,'week')}</th>`;
+  });
+  html+=`</tr></thead><tbody>`;
+
+  entries.forEach(e=>{
+    const startMs = e.startDate ? new Date(e.startDate).setHours(0,0,0,0) : -Infinity;
+    const endMs   = e.endDate   ? new Date(e.endDate).setHours(23,59,59,999) : Infinity;
+    html+=`<tr>
+      <td class="billing-worker-cell">
+        <div style="font-weight:600;color:var(--navy);">${esc(e.workerName)}</div>
+        <div style="font-size:11px;color:var(--text-l);">${esc(e.label)}</div>
+        ${e.weeklyAmt!=null?`<div style="font-size:11px;color:var(--text-m);">€${parseFloat(e.weeklyAmt).toFixed(2)}/wk</div>`:''}
+      </td>`;
+    cols.forEach(col=>{
+      const wk=isoWeekKey(col);
+      const colStartMs=col.getTime();
+      const colEndMs=colStartMs+7*86400000-1;
+      const inRange = startMs<=colEndMs && endMs>=colStartMs;
+      const charge = charges.find(c=>c.assignmentId===e.assignmentId&&c.weekKey===wk);
+      const isCharged = !!charge?.charged;
+      const tooltip = isCharged
+        ? `Charged ✓${charge.invoiceNumber?' | Inv: '+charge.invoiceNumber:''}${charge.invoiceAmount?' | €'+parseFloat(charge.invoiceAmount).toFixed(2):''}`
+        : (inRange?'Click to mark as charged':'Outside assignment period');
+      const cls = isCharged?'charged':inRange?'in-range':'out-range';
+      const onclick = inRange&&canEdit ? `openChargeModal('${type}','${e.assignmentId}','${e.wid}','${wk}')` : '';
+      html+=`<td class="billing-cell ${cls}" onclick="${onclick}" title="${esc(tooltip)}">${isCharged?'✓':''}</td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table>
+  <div style="padding:10px 14px;font-size:11px;color:var(--text-l);border-top:1px solid var(--border);">
+    ✓ = charged this week &nbsp;|&nbsp; Click a week cell to mark as charged and optionally log invoice details &nbsp;|&nbsp; Admin/Planner only
+  </div>`;
+  grid.innerHTML=html;
+}
+function openChargeModal(type, assignmentId, wid, weekKey){
+  if(sbUserRole!=='admin'&&sbUserRole!=='planner'){alert('Admin or Planner role required.');return;}
+  _chargeModalState={type,assignmentId,wid,weekKey};
+  const charges = type==='accom'?accomCharges:vehCharges;
+  const existing = charges.find(c=>c.assignmentId===assignmentId&&c.weekKey===weekKey);
+  document.getElementById('chargeEntryTitle').textContent = existing?.charged?'Edit Charge':'Mark as Charged';
+  document.getElementById('chargeEntrySubtitle').textContent = `Week: ${weekKey}`;
+  document.getElementById('chargeInvoiceNum').value = existing?.invoiceNumber||'';
+  document.getElementById('chargeInvoiceAmt').value = existing?.invoiceAmount||'';
+  document.getElementById('chargeRemoveBtn').style.display = existing?.charged?'inline-flex':'none';
+  document.getElementById('chargeEntryOverlay').classList.add('open');
+}
+async function saveChargeEntry(){
+  if(!_chargeModalState) return;
+  const {type,assignmentId,weekKey}=_chargeModalState;
+  const charges = type==='accom'?accomCharges:vehCharges;
+  const id=`${assignmentId}__${weekKey}`;
+  const invoiceNumber=document.getElementById('chargeInvoiceNum').value.trim()||null;
+  const invoiceAmount=parseFloat(document.getElementById('chargeInvoiceAmt').value)||null;
+  const existing=charges.findIndex(c=>c.id===id);
+  const entry={id,assignmentId,weekKey,charged:true,invoiceNumber,invoiceAmount,chargedAt:new Date().toISOString(),chargedBy:sbSession?.user?.email||''};
+  if(existing>=0) charges[existing]=entry; else charges.push(entry);
+  if(type==='accom') saveAccomCharges(); else saveVehCharges();
+  closeM('chargeEntryOverlay');
+  renderResources();
+  // Write to Supabase immediately
+  if(sbClient&&sbSession){
+    const table=type==='accom'?'accommodation_charges':'vehicle_charges';
+    const row={id,assignment_id:assignmentId,week_key:weekKey,charged:true,invoice_number:invoiceNumber,invoice_amount:invoiceAmount,charged_at:entry.chargedAt,charged_by:entry.chargedBy,active:true};
+    sbClient.from(table).upsert(row).then(({error})=>{if(error)console.warn('[TMC] charge upsert failed:',error.message);});
+  }
+}
+async function removeCharge(){
+  if(!_chargeModalState) return;
+  const {type,assignmentId,weekKey}=_chargeModalState;
+  const charges=type==='accom'?accomCharges:vehCharges;
+  const id=`${assignmentId}__${weekKey}`;
+  const idx=charges.findIndex(c=>c.id===id);
+  if(idx>=0) charges.splice(idx,1);
+  if(type==='accom') saveAccomCharges(); else saveVehCharges();
+  closeM('chargeEntryOverlay');
+  renderResources();
+  if(sbClient&&sbSession){
+    const table=type==='accom'?'accommodation_charges':'vehicle_charges';
+    sbClient.from(table).update({active:false}).eq('id',id).then(({error})=>{if(error)console.warn('[TMC] charge remove failed:',error.message);});
+  }
+}
 function setPAGanttZoom(z){ paGanttZoom=z; paGanttOffset=0; renderRoster(); }
 
 // Returns bar status class
@@ -4792,6 +5005,7 @@ function openAssignAccom(wid, entryId){
   document.getElementById('assignAccomStart').value = entry?.startDate||'';
   document.getElementById('assignAccomEnd').value   = entry?.endDate||'';
   document.getElementById('assignAccomNotes').value = entry?.notes||'';
+  document.getElementById('assignAccomCharge').checked = entry?.chargeToOperative||false;
   document.getElementById('clearAccomBtn').style.display = entry ? 'inline-flex' : 'none';
   document.getElementById('assignAccomOverlay').classList.add('open');
 }
@@ -4799,11 +5013,12 @@ function saveAccomAssignment(){
   const propId = document.getElementById('assignAccomProp').value;
   if(!propId){ alert('Please select a property.'); return; }
   if(!accomHistory[assignAccomWid]) accomHistory[assignAccomWid] = [];
+  const accomCharge = document.getElementById('assignAccomCharge').checked;
   if(assignAccomEntryId){
     const entry = accomHistory[assignAccomWid].find(a=>a.id===assignAccomEntryId);
-    if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); }
+    if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); entry.chargeToOperative=accomCharge; }
   } else {
-    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim()});
+    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim(),chargeToOperative:accomCharge});
   }
   saveAccomHistory(); closeM('assignAccomOverlay'); renderResources();
 }
@@ -4925,6 +5140,8 @@ function openAssignVehicle(wid, entryId){
   document.getElementById('assignVehicleStart').value = entry?.startDate||'';
   document.getElementById('assignVehicleEnd').value   = entry?.endDate||'';
   document.getElementById('assignVehicleNotes').value = entry?.notes||'';
+  document.getElementById('assignVehicleCharge').checked = entry?.chargeToOperative||false;
+  document.getElementById('assignVehicleChargeAmt').value = entry?.weeklyChargeAmount||'';
   document.getElementById('clearVehicleBtn').style.display = entry ? 'inline-flex' : 'none';
   document.getElementById('assignVehicleOverlay').classList.add('open');
 }
@@ -4932,11 +5149,13 @@ function saveVehicleAssignment(){
   const vehicleId = document.getElementById('assignVehicleSel').value;
   if(!vehicleId){ alert('Please select a vehicle.'); return; }
   if(!vehHistory[assignVehicleWid]) vehHistory[assignVehicleWid] = [];
+  const vehCharge = document.getElementById('assignVehicleCharge').checked;
+  const vehChargeAmt = parseFloat(document.getElementById('assignVehicleChargeAmt').value)||null;
   if(assignVehicleEntryId){
     const entry = vehHistory[assignVehicleWid].find(a=>a.id===assignVehicleEntryId);
-    if(entry){ entry.vehicleId=vehicleId; entry.startDate=document.getElementById('assignVehicleStart').value; entry.endDate=document.getElementById('assignVehicleEnd').value; entry.notes=document.getElementById('assignVehicleNotes').value.trim(); }
+    if(entry){ entry.vehicleId=vehicleId; entry.startDate=document.getElementById('assignVehicleStart').value; entry.endDate=document.getElementById('assignVehicleEnd').value; entry.notes=document.getElementById('assignVehicleNotes').value.trim(); entry.chargeToOperative=vehCharge; entry.weeklyChargeAmount=vehChargeAmt; }
   } else {
-    vehHistory[assignVehicleWid].push({id:crypto.randomUUID(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim()});
+    vehHistory[assignVehicleWid].push({id:crypto.randomUUID(),vehicleId,startDate:document.getElementById('assignVehicleStart').value,endDate:document.getElementById('assignVehicleEnd').value,notes:document.getElementById('assignVehicleNotes').value.trim(),chargeToOperative:vehCharge,weeklyChargeAmount:vehChargeAmt});
   }
   saveVehHistory(); closeM('assignVehicleOverlay'); renderResources();
 }
@@ -5277,9 +5496,11 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('project_assignment_files',paf);
   await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true})));
   await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true})));
-  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
-  const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
+  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,active:true}); }));
+  const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
+  await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
+  await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -5472,7 +5693,7 @@ async function sbLoadAll(){
     }catch(e){ tableErr(name,e); return fallback; }
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
@@ -5488,7 +5709,9 @@ async function sbLoadAll(){
       q('accommodation_assignments', sbClient.from('accommodation_assignments').select('*').eq('active',true), []),
       q('vehicle_assignments', sbClient.from('vehicle_assignments').select('*').eq('active',true), []),
       q('deleted_items', sbClient.from('deleted_items').select('*').eq('restored',false).order('deleted_at',{ascending:false}), []),
-      q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), [])
+      q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), []),
+      q('accommodation_charges', sbClient.from('accommodation_charges').select('*').eq('active',true), []),
+      q('vehicle_charges', sbClient.from('vehicle_charges').select('*').eq('active',true), [])
     ]);
 
     if(workerData === null){
@@ -5519,8 +5742,10 @@ async function sbLoadAll(){
     projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:paFiles[a.id]||null}));
     properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
-    accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||''}); });
-    vehHistory={}; (vaData||[]).forEach(a=>{ if(!vehHistory[a.worker_id]) vehHistory[a.worker_id]=[]; vehHistory[a.worker_id].push({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||''}); });
+    accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}); });
+    vehHistory={}; (vaData||[]).forEach(a=>{ if(!vehHistory[a.worker_id]) vehHistory[a.worker_id]=[]; vehHistory[a.worker_id].push({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
+    accomCharges=(accomChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
+    vehCharges=(vehChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};
