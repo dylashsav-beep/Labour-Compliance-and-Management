@@ -448,11 +448,23 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .deleted-items-body::-webkit-scrollbar-track{background:var(--bg);border-radius:9px;}
 #deletedItemsCard.collapsed .deleted-items-chevron{transform:rotate(-90deg);}
 .del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+.event-type-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.event-type-badge.note{background:#eff6ff;color:#1d4ed8;}
+.event-type-badge.breakdown{background:#fff1f2;color:#be123c;}
+.event-type-badge.repair{background:#f0fff4;color:#276749;}
+.event-type-badge.inspection{background:#fffbeb;color:#b45309;}
+.event-type-badge.other{background:#f3f4f6;color:#374151;}
 .billing-cell{padding:4px 2px;text-align:center;vertical-align:middle;border-right:1px solid var(--border);min-width:80px;height:36px;font-size:11px;font-weight:600;}
 .billing-cell.in-range{cursor:pointer;background:#f8fafc;}
 .billing-cell.in-range:hover{background:#e8f4fd;}
 .billing-cell.in-range.needs-charge{background:#fff7ed;border-bottom:3px solid #f59e0b;}
 .billing-cell.in-range.needs-charge:hover{background:#fef3c7;}
+.event-type-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
+.event-type-badge.note{background:#eff6ff;color:#1d4ed8;}
+.event-type-badge.breakdown{background:#fff1f2;color:#be123c;}
+.event-type-badge.repair{background:#f0fff4;color:#276749;}
+.event-type-badge.inspection{background:#fffbeb;color:#b45309;}
+.event-type-badge.other{background:#f3f4f6;color:#374151;}
 .billing-cell.charged{background:#dcfce7;color:#166534;cursor:pointer;}
 .billing-cell.charged:hover{background:#bbf7d0;}
 .billing-cell.out-range{background:#f9fafb;color:var(--text-l);}
@@ -1066,6 +1078,23 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         </table></div>
         <div class="no-results" id="noPropRes" style="display:none;"><div class="no-results-icon">🏠</div>No properties added yet</div>
       </div>
+      <div class="table-card" style="margin-top:20px;" id="accomEventLogCard">
+  <div class="table-head">
+    <span class="table-head-title">Property Event Log</span>
+    <span class="table-head-count" id="accomEventLogCount"></span>
+  </div>
+  <div class="table-scroll"><table>
+    <thead><tr>
+      <th class="no-sort">Date</th>
+      <th class="no-sort">Property</th>
+      <th class="no-sort">Type</th>
+      <th class="no-sort">Description</th>
+      <th class="no-sort">Logged By</th>
+    </tr></thead>
+    <tbody id="accomEventLogBody"></tbody>
+  </table></div>
+  <div class="no-results" id="noAccomEvents" style="display:none;"><div class="no-results-icon">📋</div>No events logged yet</div>
+</div>
     </div>
 
     <!-- VEHICLES SUB-VIEW -->
@@ -1140,6 +1169,23 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         </table></div>
         <div class="no-results" id="noFleetRes" style="display:none;"><div class="no-results-icon">🚗</div>No vehicles added yet</div>
       </div>
+      <div class="table-card" style="margin-top:20px;" id="vehEventLogCard">
+  <div class="table-head">
+    <span class="table-head-title">Vehicle Event Log</span>
+    <span class="table-head-count" id="vehEventLogCount"></span>
+  </div>
+  <div class="table-scroll"><table>
+    <thead><tr>
+      <th class="no-sort">Date</th>
+      <th class="no-sort">Vehicle</th>
+      <th class="no-sort">Type</th>
+      <th class="no-sort">Description</th>
+      <th class="no-sort">Logged By</th>
+    </tr></thead>
+    <tbody id="vehEventLogBody"></tbody>
+  </table></div>
+  <div class="no-results" id="noVehEvents" style="display:none;"><div class="no-results-icon">📋</div>No events logged yet</div>
+</div>
     </div>
 
   </div>
@@ -1229,7 +1275,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 
 <!-- ADD/EDIT PROPERTY MODAL -->
 <div class="overlay" id="propOverlay">
-  <div class="modal" style="max-width:500px;">
+  <div class="modal" style="max-width:560px;">
     <div class="modal-header">
       <div><div class="modal-title" id="propModalTitle">Add Property</div><div class="modal-subtitle">Register an accommodation property</div></div>
       <button class="modal-close" onclick="closeM('propOverlay')">✕</button>
@@ -1241,6 +1287,25 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">Cost per Night per Room (€, optional)</label><input class="form-input" id="propCostPerNight" type="number" min="0" step="0.01" placeholder="e.g. 95.00"/></div>
         <div class="form-field"><label class="form-label">Notes (optional)</label><input class="form-input" id="propNotes" placeholder="e.g. Contact: Jan +31 6 123 456, check-in from 15:00"/></div>
       </div>
+      <div id="propEventSection" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+  <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">📋 Event Log</div>
+  <div id="propEventList" style="max-height:160px;overflow-y:auto;margin-bottom:10px;"></div>
+  <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Add Event</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+    <div><label class="form-label" style="font-size:11px;">Date</label><input type="date" class="form-input" id="propEventDate" style="font-size:12px;"/></div>
+    <div><label class="form-label" style="font-size:11px;">Type</label>
+      <select class="form-select" id="propEventType" style="font-size:12px;">
+        <option value="note">Note</option>
+        <option value="breakdown">Breakdown</option>
+        <option value="repair">Repair</option>
+        <option value="inspection">Inspection</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </div>
+  <textarea class="form-input" id="propEventDesc" rows="2" placeholder="Describe the event…" style="width:100%;box-sizing:border-box;font-size:12px;margin-bottom:8px;resize:vertical;font-family:inherit;"></textarea>
+  <button class="btn btn-save" style="font-size:11px;padding:5px 12px;" onclick="addResourceEvent('property')">+ Add to Log</button>
+</div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('propOverlay')">Cancel</button>
         <button class="btn btn-save" onclick="saveProperty()">Save Property</button>
@@ -1251,7 +1316,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 
 <!-- ADD/EDIT VEHICLE MODAL -->
 <div class="overlay" id="vehicleOverlay">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:580px;">
     <div class="modal-header">
       <div><div class="modal-title" id="vehicleModalTitle">Add Vehicle</div><div class="modal-subtitle">Register a vehicle to the fleet</div></div>
       <button class="modal-close" onclick="closeM('vehicleOverlay')">✕</button>
@@ -1265,6 +1330,25 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">Colour</label><input class="form-input" id="vehColour" placeholder="e.g. White"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="vehNotes" placeholder="e.g. Lease ends Dec 2025, contact fleet manager"/></div>
       </div>
+      <div id="vehEventSection" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+  <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">📋 Event Log</div>
+  <div id="vehEventList" style="max-height:160px;overflow-y:auto;margin-bottom:10px;"></div>
+  <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Add Event</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+    <div><label class="form-label" style="font-size:11px;">Date</label><input type="date" class="form-input" id="vehEventDate" style="font-size:12px;"/></div>
+    <div><label class="form-label" style="font-size:11px;">Type</label>
+      <select class="form-select" id="vehEventType" style="font-size:12px;">
+        <option value="note">Note</option>
+        <option value="breakdown">Breakdown</option>
+        <option value="repair">Repair</option>
+        <option value="inspection">Inspection</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+  </div>
+  <textarea class="form-input" id="vehEventDesc" rows="2" placeholder="Describe the event…" style="width:100%;box-sizing:border-box;font-size:12px;margin-bottom:8px;resize:vertical;font-family:inherit;"></textarea>
+  <button class="btn btn-save" style="font-size:11px;padding:5px 12px;" onclick="addResourceEvent('vehicle')">+ Add to Log</button>
+</div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('vehicleOverlay')">Cancel</button>
         <button class="btn btn-save" onclick="saveVehicle()">Save Vehicle</button>
@@ -1654,7 +1738,7 @@ function sbCanWriteTable(table){
 function sbActionForFunction(name){
   const workerFns = ['openAdd','doAdd','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','rmFile','refreshFiles'];
   const settingsFns = ['saveSettings','saveDocSets','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','addCustomDoc','applyWarningDays','openAddDocSet'];
-  const planningFns = ['saveProjects','openAddProject','saveProject','deleteProject','toggleProjectActive','editProject','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','savePA','saveRoster','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'];
+  const planningFns = ['saveProjects','openAddProject','saveProject','deleteProject','toggleProjectActive','editProject','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','savePA','saveRoster','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent'];
   if(workerFns.includes(name)) return 'workerDocs';
   if(settingsFns.includes(name)) return 'settings';
   if(planningFns.includes(name)) return 'planning';
@@ -4362,6 +4446,7 @@ let accomHistory = {};
 let vehHistory = {};
 let accomCharges = [];
 let vehCharges = [];
+let resourceEvents = [];
 let billingOffset = 0;
 let _chargeModalState = null; // {type, assignmentId, wid, weekKey}
 
@@ -4390,7 +4475,85 @@ function saveAccomHistory(){ try{localStorage.setItem(ACCOM_HIST_KEY,JSON.string
 function saveVehHistory(){   try{localStorage.setItem(VEH_HIST_KEY,JSON.stringify(vehHistory));}catch(e){} }
 function saveAccomCharges(){ /* charges persist via Supabase only */ }
 function saveVehCharges(){   /* charges persist via Supabase only */ }
+function saveResourceEvents(){ try{localStorage.setItem('tmc_res_events',JSON.stringify(resourceEvents));}catch(e){} }
+function loadResourceEvents(){ try{const d=localStorage.getItem('tmc_res_events');if(d)resourceEvents=JSON.parse(d);}catch(e){} }
 loadResources();
+loadResourceEvents();
+
+function addResourceEvent(resType){
+  const isProp = resType==='property';
+  const id = isProp ? editingPropId : editingVehicleId;
+  if(!id){ alert('Save the resource first.'); return; }
+  const dateEl = document.getElementById(isProp?'propEventDate':'vehEventDate');
+  const typeEl = document.getElementById(isProp?'propEventType':'vehEventType');
+  const descEl = document.getElementById(isProp?'propEventDesc':'vehEventDesc');
+  const eventDate = dateEl.value;
+  const description = descEl.value.trim();
+  if(!eventDate || !description){ alert('Please enter a date and description.'); return; }
+  const entry = {
+    id: crypto.randomUUID(),
+    resourceType: isProp ? 'property' : 'vehicle',
+    resourceId: id,
+    eventDate,
+    eventType: typeEl.value,
+    description,
+    createdAt: new Date().toISOString(),
+    createdBy: sbSession?.user?.email || ''
+  };
+  resourceEvents.push(entry);
+  saveResourceEvents();
+  descEl.value = '';
+  renderResourceEventList(isProp ? 'property' : 'vehicle', id);
+  renderResourceEventLog(isProp ? 'accom' : 'vehicle');
+  if(sbClient && sbSession){
+    sbClient.from('resource_events').upsert({
+      id: entry.id, resource_type: entry.resourceType, resource_id: entry.resourceId,
+      event_date: entry.eventDate, event_type: entry.eventType, description: entry.description,
+      created_at: entry.createdAt, created_by: entry.createdBy, active: true
+    }).then(({error})=>{ if(error) console.warn('[TMC] resource event upsert failed:', error.message); });
+  }
+}
+
+function renderResourceEventList(resType, resourceId){
+  const listEl = document.getElementById(resType==='property'?'propEventList':'vehEventList');
+  if(!listEl) return;
+  const events = resourceEvents.filter(e=>e.resourceType===resType&&e.resourceId===resourceId)
+    .sort((a,b)=>b.eventDate.localeCompare(a.eventDate));
+  if(!events.length){ listEl.innerHTML='<div style="font-size:12px;color:var(--text-l);padding:4px 0;">No events logged yet.</div>'; return; }
+  listEl.innerHTML=events.map(e=>`
+    <div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:flex-start;">
+      <div style="font-size:11px;color:var(--text-l);white-space:nowrap;padding-top:1px;min-width:70px;">${e.eventDate}</div>
+      <span class="event-type-badge ${e.eventType}">${e.eventType}</span>
+      <div style="flex:1;font-size:12px;color:var(--text);">${esc(e.description)}</div>
+      <div style="font-size:10px;color:var(--text-l);white-space:nowrap;">${e.createdBy?e.createdBy.split('@')[0]:''}</div>
+    </div>`).join('');
+}
+
+function renderResourceEventLog(tabType){
+  const isProp = tabType==='accom';
+  const resType = isProp ? 'property' : 'vehicle';
+  const bodyEl = document.getElementById(isProp?'accomEventLogBody':'vehEventLogBody');
+  const cntEl = document.getElementById(isProp?'accomEventLogCount':'vehEventLogCount');
+  const emptyEl = document.getElementById(isProp?'noAccomEvents':'noVehEvents');
+  if(!bodyEl) return;
+  const events = resourceEvents.filter(e=>e.resourceType===resType)
+    .sort((a,b)=>b.eventDate.localeCompare(a.eventDate));
+  if(cntEl) cntEl.textContent = events.length + ' event' + (events.length!==1?'s':'');
+  if(!events.length){ bodyEl.innerHTML=''; if(emptyEl)emptyEl.style.display='block'; return; }
+  if(emptyEl) emptyEl.style.display='none';
+  const resources = isProp ? properties : vehicles;
+  bodyEl.innerHTML = events.map(e=>{
+    const res = resources.find(r=>r.id===e.resourceId);
+    const resName = isProp ? res?.name : (res?.desc || [res?.make,res?.model].filter(Boolean).join(' ') || 'Unknown');
+    return `<tr>
+      <td style="font-size:12px;white-space:nowrap;">${e.eventDate}</td>
+      <td style="font-size:12px;font-weight:600;color:var(--navy);">${esc(resName||'Unknown')}</td>
+      <td><span class="event-type-badge ${e.eventType}">${e.eventType}</span></td>
+      <td style="font-size:12px;">${esc(e.description)}</td>
+      <td style="font-size:11px;color:var(--text-l);">${e.createdBy?e.createdBy.split('@')[0]:''}</td>
+    </tr>`;
+  }).join('');
+}
 
 // ── Compliance Documents store ──────────────────────────────────────────────
 const COMP_DOCS_KEY = 'tmc_comp_docs_v1';
@@ -4728,8 +4891,8 @@ function renderResources(){
   // Render zoom buttons into header elements
   renderZoomBtns('accomZoomBtns', ganttZoom, 'setGanttZoom');
   renderZoomBtns('vehicleZoomBtns', ganttZoom, 'setGanttZoom');
-  if(currentResTab==='accom')   { renderAccomSummary(); renderProperties(); renderBillingTracker('accom'); }
-  else                          { renderVehicleSummary(); renderFleet(); renderBillingTracker('vehicle'); }
+  if(currentResTab==='accom')   { renderAccomSummary(); renderProperties(); renderBillingTracker('accom'); renderResourceEventLog('accom'); }
+  else                          { renderVehicleSummary(); renderFleet(); renderBillingTracker('vehicle'); renderResourceEventLog('vehicle'); }
 }
 
 // ── Gantt helpers ──
@@ -5312,6 +5475,7 @@ function openAddProperty(){
   document.getElementById('propAddress').value='';
   document.getElementById('propCostPerNight').value='';
   document.getElementById('propNotes').value='';
+  document.getElementById('propEventSection').style.display='none';
   document.getElementById('propOverlay').classList.add('open');
 }
 function editProperty(id){
@@ -5322,6 +5486,10 @@ function editProperty(id){
   document.getElementById('propAddress').value=p.address||'';
   document.getElementById('propCostPerNight').value=p.costPerNight!=null?p.costPerNight:'';
   document.getElementById('propNotes').value=p.notes||'';
+  document.getElementById('propEventSection').style.display='block';
+  document.getElementById('propEventDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('propEventDesc').value='';
+  renderResourceEventList('property', id);
   document.getElementById('propOverlay').classList.add('open');
 }
 function saveProperty(){
@@ -5486,6 +5654,7 @@ function openAddVehicle(){
   editingVehicleId=null;
   document.getElementById('vehicleModalTitle').textContent='Add Vehicle';
   ['vehDesc','vehReg','vehMake','vehModel','vehColour','vehNotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('vehEventSection').style.display='none';
   document.getElementById('vehicleOverlay').classList.add('open');
 }
 function editVehicle(id){
@@ -5498,6 +5667,10 @@ function editVehicle(id){
   document.getElementById('vehModel').value=v.model||'';
   document.getElementById('vehColour').value=v.colour||'';
   document.getElementById('vehNotes').value=v.notes||'';
+  document.getElementById('vehEventSection').style.display='block';
+  document.getElementById('vehEventDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('vehEventDesc').value='';
+  renderResourceEventList('vehicle', id);
   document.getElementById('vehicleOverlay').classList.add('open');
 }
 function saveVehicle(){
@@ -5904,6 +6077,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
   await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
+  if(resourceEvents.length) await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true})));
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -6114,7 +6288,8 @@ async function sbLoadAll(){
       q('deleted_items', sbClient.from('deleted_items').select('*').eq('restored',false).order('deleted_at',{ascending:false}), []),
       q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), []),
       q('accommodation_charges', sbClient.from('accommodation_charges').select('*').eq('active',true), []),
-      q('vehicle_charges', sbClient.from('vehicle_charges').select('*').eq('active',true), [])
+      q('vehicle_charges', sbClient.from('vehicle_charges').select('*').eq('active',true), []),
+      q('resource_events', sbClient.from('resource_events').select('*').eq('active',true).order('event_date',{ascending:false}), [])
     ]);
 
     if(workerData === null){
@@ -6149,6 +6324,8 @@ async function sbLoadAll(){
     vehHistory={}; (vaData||[]).forEach(a=>{ if(!vehHistory[a.worker_id]) vehHistory[a.worker_id]=[]; vehHistory[a.worker_id].push({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
     accomCharges=(accomChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     vehCharges=(vehChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
+    resourceEvents=(resEventsData||[]).map(e=>({id:e.id,resourceType:e.resource_type,resourceId:e.resource_id,eventDate:e.event_date,eventType:e.event_type,description:e.description,createdAt:e.created_at,createdBy:e.created_by||''}));
+    saveResourceEvents();
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};
@@ -6181,7 +6358,7 @@ async function sbLoadAll(){
 
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
 function sbInstallWrappers(){
-  ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'].forEach(sbWrap);
+  ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent'].forEach(sbWrap);
   const oldDlFile=window.dlFile; window.dlFile=function(wid,did,idx){ const f=fileStore[wid]?.[did]?.[idx]; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldDlFile(wid,did,idx); };
   const oldPA=window.downloadPAContract; window.downloadPAContract=function(id){ const a=projectAssignments.find(x=>x.id===id),f=a?.contractFile; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldPA(id); };
   window.attachF=async function(wid,did,input){
