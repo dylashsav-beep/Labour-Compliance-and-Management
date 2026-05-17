@@ -2893,13 +2893,16 @@ function _paSortRows(list){
   return list;
 }
 function _paFilteredAssignments(){
-  // Gantt: scope to assignments overlapping the reference week
-  const refMon=paRefWeekMonday(), refSun=weekSunday(refMon);
+  // Gantt: show any assignment visible within the current column range
+  const cols=ganttColumns(paGanttZoom,paGanttOffset);
+  const visStart=new Date(cols[0]); visStart.setHours(0,0,0,0);
+  const lastCol=cols[cols.length-1];
+  const visEnd=new Date(lastCol.getTime()+colDuration(lastCol,paGanttZoom)-1);
   let list=projectAssignments.filter(a=>{
     if(!a.startDate) return false;
     const s=new Date(a.startDate); s.setHours(0,0,0,0);
     const e=a.endDate ? new Date(a.endDate) : null; if(e) e.setHours(23,59,59,999);
-    return s<=refSun && (!e||e>=refMon);
+    return s<=visEnd && (!e||e>=visStart);
   });
   if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch)||(w?.agency||'').toLowerCase().includes(paSearch); });
   if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
