@@ -349,7 +349,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .gantt-grid th,.gantt-grid td{border-right:1px solid var(--border);vertical-align:middle;}
 .gantt-grid th{background:var(--sky-xl);padding:7px 8px;font-size:10px;font-weight:600;color:var(--text-m);text-align:center;border-bottom:2px solid var(--border);white-space:nowrap;}
 .gantt-grid th.gantt-today-col{background:#e0ecf8;color:var(--navy);font-weight:700;}
-.gantt-grid th.gantt-worker-col{text-align:left;min-width:150px;width:150px;position:sticky;left:0;background:var(--sky-xl);z-index:2;border-right:2px solid var(--border-d,var(--border));}
+.gantt-grid th.gantt-worker-col{text-align:left;min-width:190px;width:190px;position:sticky;left:0;background:var(--sky-xl);z-index:2;border-right:2px solid var(--border-d,var(--border));}
 .gantt-grid td.gantt-worker-cell{position:sticky;left:0;background:#fff;z-index:1;border-right:2px solid var(--border);padding:6px 10px;}
 .gantt-grid tbody tr:hover td{background:#f7faff;}
 .gantt-grid tbody tr:hover td.gantt-worker-cell{background:#f0f6ff;}
@@ -1025,6 +1025,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="accomProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
             <option value="all">All projects</option>
           </select>
+          <span id="accomRefWeekLabel" style="font-size:12px;font-weight:600;color:var(--navy);padding:3px 10px;border:1px solid var(--navy-l);border-radius:6px;background:#eef2ff;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <div style="overflow-x:auto;" id="accomGanttWrap">
           <div id="accomGantt" style="min-width:900px;"></div>
@@ -1097,6 +1098,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="vehicleProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
             <option value="all">All projects</option>
           </select>
+          <span id="vehicleRefWeekLabel" style="font-size:12px;font-weight:600;color:var(--navy);padding:3px 10px;border:1px solid var(--navy-l);border-radius:6px;background:#eef2ff;white-space:nowrap;margin-left:auto;"></span>
         </div>
         <div style="overflow-x:auto;" id="vehicleGanttWrap">
           <div id="vehicleGantt" style="min-width:900px;"></div>
@@ -4980,27 +4982,33 @@ function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zo
 
   const cols=ganttColumns(zoom,offset),today=new Date();today.setHours(0,0,0,0);
   const colMinW=zoom==='day'?48:zoom==='week'?110:90;
+  const refCol=cols[Math.floor(cols.length/2)];
+  const refKey=isoWeekKey(refCol);
 
   const orderedWorkers = workerOrder
     ? workerOrder.map(wid=>workers.find(x=>x.id===wid)).filter(Boolean)
     : workers;
 
   // Phase 1 — skeleton table
-  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
-  cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
+  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:190px;">Worker</th>`;
+  cols.forEach(col=>{
+    const isNow=isNowCol(col,zoom);
+    const isRef=zoom==='week'&&isoWeekKey(col)===refKey&&!isNow;
+    html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;${isRef?'background:rgba(99,102,241,.18);outline:2px solid rgba(99,102,241,.5);outline-offset:-2px;':''}">${colLabel(col,zoom)}${isRef?'<div style="font-size:9px;font-weight:700;color:#4f46e5;letter-spacing:.04em;margin-top:1px;">REF</div>':''}</th>`;
+  });
   html+=`</tr></thead><tbody>`;
 
   orderedWorkers.forEach(w=>{
     const wE=entries.filter(e=>e.wid===w.id);if(!wE.length)return;
     const [bg,col]=avc(w.id);
-    const rowH=Math.max(44,wE.length*28+8);
     const meta=workerMeta?workerMeta(w.id):'';
+    const rowH=Math.max(meta?58:44,wE.length*28+8);
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="height:${rowH}px;">
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;margin-top:2px;">${ini(w.name)}</div>
         <div style="min-width:0;"><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div>${meta}</div>
       </div></td>`;
-    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
+    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);const isRef=zoom==='week'&&isoWeekKey(colStart)===refKey&&!isNow;html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;${isRef?'background:rgba(99,102,241,.06);':''}"></td>`;});
     html+=`</tr>`;
   });
 
@@ -5097,9 +5105,12 @@ function renderAccomSummary(){
   }
   _populateResProjectFilter('accomProjectFilter',refMon,refSun);
   const sortSel=document.getElementById('accomSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const refLbl=document.getElementById('accomRefWeekLabel');
+  if(refLbl){const wn=isoWeekKey(refMon).split('-W')[1];const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});refLbl.textContent=`Ref: W${wn} · ${fmt(refMon)} – ${fmt(weekSunday(refMon))}`;}
+
   const workerMeta=wid=>{
     const proj=getWorkerProjectForWeek(wid);
-    return proj?`<div style="margin-top:3px;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(proj.name)}">${esc(proj.name.length>20?proj.name.slice(0,19)+'…':proj.name)}</span></div>`:'';
+    return proj?`<div style="margin-top:3px;overflow:hidden;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${esc(proj.name)}">${esc(proj.name)}</span></div>`:'';
   };
   renderGantt('accomGantt','accomSummaryCount','noAccomAssign',filteredEntries,'accom',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
     const a=(accomHistory[bd.wid]||[]).find(x=>x.id===bd.id);
@@ -5354,9 +5365,12 @@ function renderVehicleSummary(){
   }
   _populateResProjectFilter('vehicleProjectFilter',refMon,refSun);
   const sortSel=document.getElementById('vehicleSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const refLbl=document.getElementById('vehicleRefWeekLabel');
+  if(refLbl){const wn=isoWeekKey(refMon).split('-W')[1];const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});refLbl.textContent=`Ref: W${wn} · ${fmt(refMon)} – ${fmt(weekSunday(refMon))}`;}
+
   const workerMeta=wid=>{
     const proj=getWorkerProjectForWeek(wid);
-    return proj?`<div style="margin-top:3px;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(proj.name)}">${esc(proj.name.length>20?proj.name.slice(0,19)+'…':proj.name)}</span></div>`:'';
+    return proj?`<div style="margin-top:3px;overflow:hidden;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${esc(proj.name)}">${esc(proj.name)}</span></div>`:'';
   };
   renderGantt('vehicleGantt','vehicleSummaryCount','noVehicleAssign',filteredEntries,'vehicle',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
     const a=(vehHistory[bd.wid]||[]).find(x=>x.id===bd.id);
