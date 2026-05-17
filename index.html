@@ -546,6 +546,25 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 #tmcConfirmOkBtn{display:inline-flex!important;visibility:visible!important;align-items:center;justify-content:center;}
 #tmcConfirmOkBtn.role-hide{display:inline-flex!important;}
 
+/* COMPLIANCE DOCUMENTS */
+.doc-register-group{margin-bottom:24px;}
+.doc-register-group-title{font-size:12px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.doc-register-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:14px 16px;box-shadow:var(--sh);display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;transition:box-shadow .15s;}
+.doc-register-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.doc-register-card-body{flex:1;min-width:0;}
+.doc-register-card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.doc-register-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.doc-register-card-notes{font-size:12px;color:var(--text-m);margin-top:4px;white-space:pre-wrap;}
+.doc-register-card-actions{display:flex;gap:6px;flex-shrink:0;align-items:flex-start;}
+.doc-scope-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:var(--sky-xl);color:var(--navy);border:1px solid var(--sky-l);}
+.doc-cat-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;}
+.doc-count-badge{display:inline-flex;align-items:center;justify-content:center;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:var(--navy);color:#fff;margin-left:4px;vertical-align:middle;}
+.doc-file-info{font-size:11px;color:var(--text-l);display:flex;align-items:center;gap:4px;}
+.doc-no-results{text-align:center;padding:48px 20px;color:var(--text-l);}
+.doc-no-results-icon{font-size:36px;margin-bottom:8px;}
+.doc-scope-radio{display:flex;gap:12px;align-items:center;margin-top:4px;}
+.doc-scope-radio label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-m);font-weight:500;}
+
 </style>
 </head>
 <body>
@@ -610,6 +629,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
       <button class="vtab"        id="tabProjects" onclick="switchView('projects')">Projects</button>
       <button class="vtab"        id="tabResources" onclick="switchView('resources')">Resources</button>
+      <button class="vtab"        id="tabDocuments" onclick="switchView('documents')">Documents</button>
       <button class="vtab"        id="tabSettings" onclick="switchView('settings')">⚙ Settings</button>
     </div>
     <div class="week-nav" id="weekNav">
@@ -797,6 +817,38 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       </div>
     </div>
   </div>
+  <!-- DOCUMENTS VIEW -->
+  <div id="viewDocuments" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Compliance Document Register</div>
+        <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Compliance rules, delivery bookings, health &amp; safety files and general documents — scoped to a project or country.</div>
+      </div>
+      <button class="btn btn-primary" id="addCompDocBtn" onclick="openAddCompDoc()">+ Add Document</button>
+    </div>
+    <!-- Filter bar -->
+    <div class="filter-bar" id="cdFilterBar">
+      <span class="filter-label">Scope:</span>
+      <div style="display:flex;gap:4px;">
+        <button class="fbtn active" data-cd-scope="all"     onclick="setCDScope('all',this)">All</button>
+        <button class="fbtn"        data-cd-scope="project" onclick="setCDScope('project',this)">Project</button>
+        <button class="fbtn"        data-cd-scope="country" onclick="setCDScope('country',this)">Country</button>
+      </div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Category:</span>
+      <div style="display:flex;gap:4px;">
+        <button class="fbtn active" data-cd-cat="all"           onclick="setCDCat('all',this)">All</button>
+        <button class="fbtn"        data-cd-cat="compliance"    onclick="setCDCat('compliance',this)">Compliance Rules</button>
+        <button class="fbtn"        data-cd-cat="delivery"      onclick="setCDCat('delivery',this)">Delivery &amp; Booking</button>
+        <button class="fbtn"        data-cd-cat="health_safety" onclick="setCDCat('health_safety',this)">Health &amp; Safety</button>
+        <button class="fbtn"        data-cd-cat="general"       onclick="setCDCat('general',this)">General</button>
+      </div>
+      <input class="search-input" id="cdSearch" type="text" placeholder="Search documents…" oninput="renderDocuments()">
+    </div>
+    <!-- Document list -->
+    <div id="cdList"></div>
+  </div>
+
   <!-- SETTINGS VIEW -->
   <div id="viewSettings" style="display:none;">
     <div style="max-width:900px;">
