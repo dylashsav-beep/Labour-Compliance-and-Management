@@ -764,6 +764,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <select id="paProjectSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:#fff;color:var(--text);cursor:pointer;" onchange="handlePAProjectFilter(this.value)">
         <option value="all">All projects</option>
       </select>
+      <span id="paRefWeekLabel" style="font-size:12px;font-weight:600;color:var(--navy);padding:4px 10px;border:1px solid var(--navy-l);border-radius:6px;background:var(--navy-bg,#eef2ff);white-space:nowrap;"></span>
       <button class="del-filter-btn" onclick="clearPAFilters()" style="margin-left:auto;" title="Clear filters">✕ Clear</button>
     </div>
 
@@ -2788,6 +2789,13 @@ function shiftPAGantt(n){ paGanttOffset+=n; renderRoster(); }
 function resetPAGantt(){ paGanttOffset=0; renderRoster(); }
 function setPAGanttZoom(z){ paGanttZoom=z; paGanttOffset=0; renderRoster(); }
 
+// Reference week = center column of the PA Gantt; used as date context for all filters
+function paRefWeekMonday(){
+  const cols=ganttColumns(paGanttZoom,paGanttOffset);
+  return cols[Math.floor(cols.length/2)];
+}
+function paRefWeekKey(){ return isoWeekKey(paRefWeekMonday()); }
+
 let paSearch = '';
 let paProjectFilter = 'all';
 let paSortKey = 'start';
@@ -2806,7 +2814,14 @@ function paSrt(key){
   renderRoster();
 }
 function _paFilteredAssignments(){
-  let list=[...projectAssignments];
+  // Always scope to assignments overlapping the reference week (center Gantt column)
+  const refMon=paRefWeekMonday(), refSun=weekSunday(refMon);
+  let list=projectAssignments.filter(a=>{
+    if(!a.startDate) return false;
+    const s=new Date(a.startDate); s.setHours(0,0,0,0);
+    const e=a.endDate ? new Date(a.endDate) : null; if(e) e.setHours(23,59,59,999);
+    return s<=refSun && (!e||e>=refMon);
+  });
   if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch); });
   if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
   list.sort((a,b)=>{
@@ -2980,10 +2995,21 @@ function renderPAGantt(){
   const zoom=paGanttZoom,cols=ganttColumns(zoom,paGanttOffset);
   const today=new Date();today.setHours(0,0,0,0);
   renderZoomBtns('paZoomBtns',zoom,'setPAGanttZoom');
+
+  // Update reference week label
+  const refMon=paRefWeekMonday(), refSun=weekSunday(refMon);
+  const refLabel=document.getElementById('paRefWeekLabel');
+  if(refLabel){
+    const wkNum=paRefWeekKey().split('-W')[1];
+    const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    refLabel.textContent=`Reference: W${wkNum} · ${fmt(refMon)} – ${fmt(refSun)}`;
+  }
+  const refKey=paRefWeekKey();
+
   const filteredPA=_paFilteredAssignments();
   const filteredWids=new Set(filteredPA.map(a=>a.wid));
   const cnt=document.getElementById('paGanttCount');
-  if(cnt)cnt.textContent=filteredWids.size+' worker'+(filteredWids.size!==1?'s':'')+(filteredWids.size!==new Set(projectAssignments.map(a=>a.wid)).size?' (filtered)':'');
+  if(cnt)cnt.textContent=filteredWids.size+' worker'+(filteredWids.size!==1?'s':'')+' · '+paRefWeekKey();
   const container=document.getElementById('paGantt');
   if(!projectAssignments.length){container.innerHTML='';document.getElementById('noPAAssign').style.display='block';return;}
   if(!filteredPA.length){container.innerHTML='<div class="no-results" style="display:block;"><div class="no-results-icon">🔍</div>No assignments match the current filters</div>';document.getElementById('noPAAssign').style.display='none';return;}
@@ -2995,7 +3021,11 @@ function renderPAGantt(){
 
   // Phase 1 — skeleton table
   let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
-  cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
+  cols.forEach(col=>{
+    const isNow=isNowCol(col,zoom);
+    const isRef=isoWeekKey(col)===refKey&&!isNow;
+    html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;${isRef?'background:rgba(99,102,241,.18);outline:2px solid rgba(99,102,241,.5);outline-offset:-2px;':''}">${colLabel(col,zoom)}${isRef?'<div style="font-size:9px;font-weight:700;color:#4f46e5;letter-spacing:.04em;margin-top:1px;">REF</div>':''}</th>`;
+  });
   html+=`</tr></thead><tbody>`;
 
   workers.forEach(w=>{
@@ -3009,7 +3039,7 @@ function renderPAGantt(){
         <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div>
         <button style="margin-top:4px;background:none;border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:10px;color:var(--navy);cursor:pointer;" onclick="openAddProjectAssignment('${w.id}')" title="Add assignment">+ Assign</button></div>
       </div></td>`;
-    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
+    cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);const isRef=isoWeekKey(colStart)===refKey&&!isNow;html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;${isRef?'background:rgba(99,102,241,.06);':''}"></td>`;});
     html+=`</tr>`;
   });
 
