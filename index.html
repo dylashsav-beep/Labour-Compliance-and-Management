@@ -812,6 +812,8 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="table-scroll"><table>
         <thead><tr>
           <th class="no-sort">Project Name</th>
+          <th class="no-sort">Client</th>
+          <th class="no-sort">Project Manager</th>
           <th class="no-sort">Description</th>
           <th class="no-sort">Currently Assigned</th>
           <th class="no-sort">Status</th>
@@ -1356,6 +1358,8 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field full"><label class="form-label">Project Name</label><input class="form-input" id="pName" placeholder="e.g. Zuidas Tower Phase 2"/></div>
+        <div class="form-field"><label class="form-label">Client</label><input class="form-input" id="pClient" placeholder="e.g. Schiphol Group"/></div>
+        <div class="form-field"><label class="form-label">Lead Project Manager</label><input class="form-input" id="pPM" placeholder="e.g. Jan de Vries"/></div>
         <div class="form-field full"><label class="form-label">Description (optional)</label><input class="form-input" id="pDesc" placeholder="Brief description or location"/></div>
         <div class="form-field"><label class="form-label">Status</label>
           <select class="form-select" id="pStatus">
@@ -3470,6 +3474,8 @@ function renderProjects(){
     const docBadge = docCount>0?`<span class="doc-count-badge" title="${docCount} compliance document${docCount!==1?'s':''}">${docCount}</span>`:'';
     return `<tr style="${!p.active?'opacity:.65':''}">
       <td style="font-weight:600;color:var(--navy);">${esc(p.name)}${docBadge}</td>
+      <td style="font-size:12px;color:var(--text-m);">${p.client?esc(p.client):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+      <td style="font-size:12px;color:var(--text-m);">${p.pm?esc(p.pm):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
       <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
       <td style="font-size:12px;">${wNames.length?wNames.map(n=>`<span class="project-tag">${esc(n)}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None active</span>'}</td>
       <td>${activeBadge}</td>
@@ -3488,6 +3494,8 @@ function openAddProject(){
   editingProjectId = null;
   document.getElementById('projModalTitle').textContent = 'Add Project';
   document.getElementById('pName').value = '';
+  document.getElementById('pClient').value = '';
+  document.getElementById('pPM').value = '';
   document.getElementById('pDesc').value = '';
   document.getElementById('pStatus').value = 'active';
   document.getElementById('projOverlay').classList.add('open');
@@ -3497,6 +3505,8 @@ function editProject(id){
   editingProjectId = id;
   document.getElementById('projModalTitle').textContent = 'Edit Project';
   document.getElementById('pName').value = p.name;
+  document.getElementById('pClient').value = p.client||'';
+  document.getElementById('pPM').value = p.pm||'';
   document.getElementById('pDesc').value = p.desc||'';
   document.getElementById('pStatus').value = p.active?'active':'inactive';
   document.getElementById('projOverlay').classList.add('open');
@@ -3505,17 +3515,19 @@ function saveProject(){
   const name = document.getElementById('pName').value.trim();
   if(!name){ alert('Please enter a project name.'); return; }
   if(name.length > 120){ alert('Project name must be 120 characters or fewer.'); return; }
+  const client = document.getElementById('pClient').value.trim();
+  const pm = document.getElementById('pPM').value.trim();
   const desc = document.getElementById('pDesc').value.trim();
   const active = document.getElementById('pStatus').value === 'active';
   if(editingProjectId){
     const p = projectStore.find(x=>x.id===editingProjectId);
-    if(p){ p.name=name; p.desc=desc; p.active=active; }
+    if(p){ p.name=name; p.client=client; p.pm=pm; p.desc=desc; p.active=active; }
   } else {
     // Check for duplicate name
     if(projectStore.some(p=>p.name.toLowerCase()===name.toLowerCase())){
       alert('A project with this name already exists.');return;
     }
-    projectStore.push({id:crypto.randomUUID(),name,desc,active});
+    projectStore.push({id:crypto.randomUUID(),name,client,pm,desc,active});
   }
   saveProjects();
   closeM('projOverlay');
@@ -5082,7 +5094,7 @@ async function sbPersistAll(force=false){
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true}); }));
   await sbUpsertRows('document_set_items',dsi);
-  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,description:p.desc||'',active:p.active!==false})));
+  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',description:p.desc||'',active:p.active!==false})));
   await sbUpsertRows('workers', workers.map(w=>{
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
@@ -5325,7 +5337,7 @@ async function sbLoadAll(){
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
       (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
     }
-    if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,desc:p.description||'',active:p.active!==false}));
+    if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
 
     workers.forEach(w=>{tmplForWorker(w).forEach(d=>w.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});});
     (wdocData||[]).forEach(d=>{const w=workers.find(x=>x.id===d.worker_id); if(w){w.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]};}});
