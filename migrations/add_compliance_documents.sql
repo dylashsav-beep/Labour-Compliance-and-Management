@@ -36,14 +36,17 @@ INSERT INTO storage.buckets (id, name, public)
   ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated users to upload/download from tmc-documents bucket.
-CREATE POLICY IF NOT EXISTS "tmc_documents_auth_select"
+DROP POLICY IF EXISTS "tmc_documents_auth_select" ON storage.objects;
+CREATE POLICY "tmc_documents_auth_select"
   ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id = 'tmc-documents');
 
-CREATE POLICY IF NOT EXISTS "tmc_documents_auth_insert"
+DROP POLICY IF EXISTS "tmc_documents_auth_insert" ON storage.objects;
+CREATE POLICY "tmc_documents_auth_insert"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'tmc-documents');
 
-CREATE POLICY IF NOT EXISTS "tmc_documents_auth_update"
+DROP POLICY IF EXISTS "tmc_documents_auth_update" ON storage.objects;
+CREATE POLICY "tmc_documents_auth_update"
   ON storage.objects FOR UPDATE TO authenticated
   USING (bucket_id = 'tmc-documents');
