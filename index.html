@@ -2764,7 +2764,7 @@ function ganttOverlayBars(container,cols,zoom,barsData,onDragSave){
     const aE=bd.endDate?new Date(bd.endDate).setHours(0,0,0,0)+86400000:Infinity;
     if(aS>=lastMs||aE<=firstMs||!bd.rowEl)return;
     const rowR=bd.rowEl.getBoundingClientRect(),barH=24;
-    const barTop=(rowR.top-cRect.top)+Math.max(4,(rowR.height-barH)/2-(bd.barIdx||0)*0)+(bd.barIdx||0)*28;
+    const barTop=(rowR.top-cRect.top)+4+(bd.barIdx||0)*28;
 
     let x1=_ganttDateToX(bd.startDate,cols,cRects,zoom);
     let x2=_ganttEndToX(bd.endDate,cols,cRects,zoom);
@@ -3416,6 +3416,7 @@ async function doAdd(){
   if(name.length > 120){alert('Name must be 120 characters or fewer.');return;}
   if(!sbClient || !sbSession){alert('Supabase is not connected. Workers can only be added to Supabase.');return;}
   const type=document.getElementById('fType').value, nat=document.getElementById('fNat').value;
+  const ref=(document.getElementById('fRef')?.value||'').trim();
   if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
@@ -3427,11 +3428,10 @@ async function doAdd(){
       id:newId,
       full_name:name,
       worker_type:type,
-      reference:'',
+      reference:ref,
       nationality:nat||'',
       document_set_id:dbDocSetId,
       active:true,
-      created_by:sbSession.user.id,
       updated_at:new Date().toISOString()
     });
     if(error) throw error;
@@ -4187,6 +4187,11 @@ async function saveCompDoc(){
   }
   complianceDocs.unshift(newDoc);
   saveComplianceDocs();
+  // Upsert directly to Supabase immediately — don't rely solely on deferred sync
+  if(sbClient && sbSession){
+    const row={id:newDoc.id,title:newDoc.title,category:newDoc.category,scope_type:newDoc.scope_type,scope_id:newDoc.scope_id,scope_label:newDoc.scope_label||'',notes:newDoc.notes||'',file_name:newDoc.file_name||'',file_path:newDoc.file_path||'',file_size:newDoc.file_size||0,mime_type:newDoc.mime_type||'',uploaded_by:newDoc.uploaded_by||'',active:true,created_at:newDoc.created_at};
+    sbClient.from('compliance_documents').upsert(row).then(({error})=>{ if(error) console.warn('[TMC] compliance_documents upsert failed:',error.message); });
+  }
   closeAddCompDoc();
   renderDocuments();
   renderProjects();
