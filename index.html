@@ -261,6 +261,7 @@ td{padding:10px 14px;vertical-align:middle;}
 @keyframes min{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-d);border-radius:8px 8px 0 0;}
 .modal-title{font-size:15px;font-weight:600;color:#fff;}
+.modal-title-input{font-size:15px;font-weight:600;color:#fff;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.3);outline:none;padding:1px 2px;width:260px;max-width:100%;}
 .modal-subtitle{font-size:12px;color:var(--sky-l);margin-top:2px;}
 .modal-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0;border-radius:3px;}
 .modal-close:hover{color:#fff;background:rgba(255,255,255,.1);}
@@ -1084,7 +1085,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 <div class="overlay" id="detailOverlay">
   <div class="modal">
     <div class="modal-header">
-      <div><div class="modal-title" id="mName">—</div><div class="modal-subtitle" id="mMeta">—</div></div>
+      <div><input class="modal-title-input" id="mName" value="—" onblur="saveWorkerName(curW,this.value)" onkeydown="if(event.key==='Enter')this.blur()"/><div class="modal-subtitle" id="mMeta">—</div></div>
       <button class="modal-close" onclick="closeM('detailOverlay')">✕</button>
     </div>
     <div class="modal-body" id="mBody"></div>
@@ -3132,7 +3133,7 @@ let curW=null;
 function openWorker(id){
   curW=id;expandedDoc=null;
   const w=workers.find(x=>x.id===id);if(!w)return;
-  document.getElementById('mName').textContent=w.name;
+  document.getElementById('mName').value=w.name;
   document.getElementById('mMeta').textContent=`${[w.ref,w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
   rebuildModal(id);
   document.getElementById('detailOverlay').classList.add('open');
@@ -3150,6 +3151,23 @@ async function sbUpdateWorkerActiveImmediate(wid, isActive){
   if(!check) throw new Error('Worker status update was sent, but the worker row could not be read back. Check RLS SELECT policy.');
   if((check.active!==false)!==(isActive!==false)) throw new Error('Worker status did not match after saving. Check database trigger/RLS policy.');
   return check.active !== false;
+}
+async function saveWorkerName(wid, name){
+  if(!requireAction('workers','edit worker name')) return;
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const trimmed=(name||'').trim();
+  if(!trimmed){alert('Name cannot be empty.');document.getElementById('mName').value=w.name;return;}
+  if(trimmed.length>120){alert('Name must be 120 characters or fewer.');document.getElementById('mName').value=w.name;return;}
+  if(workers.some(x=>x.id!==wid&&x.name.toLowerCase()===trimmed.toLowerCase())){alert('A worker with this name already exists.');document.getElementById('mName').value=w.name;return;}
+  if(w.name===trimmed) return;
+  w.name=trimmed;
+  document.getElementById('mName').value=trimmed;
+  document.getElementById('mMeta').textContent=`${[w.ref,w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
+  renderTable(); renderStats();
+  if(sbClient&&sbSession&&sbCanWriteTable('workers')){
+    const {error}=await sbClient.from('workers').update({full_name:trimmed,updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error){console.warn('[TMC] saveWorkerName failed:',error.message);alert('Name change was not saved: '+error.message);}
+  }
 }
 async function saveWorkerNotes(wid, notes){
   const w=workers.find(x=>x.id===wid); if(!w) return;
