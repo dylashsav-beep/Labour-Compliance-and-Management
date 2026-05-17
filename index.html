@@ -706,6 +706,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <th class="no-sort">Required Docs</th>
           <th onclick="srt('score')">Score</th>
           <th onclick="srt('status')">Go / No-Go</th>
+          <th class="no-sort">Notes</th>
           <th class="no-sort"></th>
         </tr></thead>
         <tbody id="tBody"></tbody>
@@ -2621,6 +2622,7 @@ function renderTable(){
       <td><div class="doc-chips">${chips(w)}</div></td>
       <td><div class="score-cell"><div class="score-bar"><div class="score-fill" style="width:${s}%;background:${sc(s)}"></div></div><span class="score-num" style="color:${sc(s)}">${s}%</span></div></td>
       <td title="${goTips[st]}"><span class="status-badge ${st}"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
+      <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td><button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button></td>
     </tr>`;
   }).join('');
@@ -3149,6 +3151,17 @@ async function sbUpdateWorkerActiveImmediate(wid, isActive){
   if((check.active!==false)!==(isActive!==false)) throw new Error('Worker status did not match after saving. Check database trigger/RLS policy.');
   return check.active !== false;
 }
+async function saveWorkerNotes(wid, notes){
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const trimmed = (notes||'').trim();
+  if(w.notes === trimmed) return;
+  w.notes = trimmed;
+  renderTable();
+  if(sbClient && sbSession && sbCanWriteTable('workers')){
+    const {error}=await sbClient.from('workers').update({notes:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error){ console.warn('[TMC] saveWorkerNotes failed:', error.message); }
+  }
+}
 function setWorkerActiveStatus(wid, makeActive, sourceLabel){
   if(!requireAction('workers','change worker active/inactive status')) return;
   const w=workers.find(x=>x.id===wid); if(!w) return;
@@ -3274,6 +3287,10 @@ function rebuildModal(id){
         ${currentVeh(id)?'Edit':'Assign'} Vehicle
       </button>
     </div>
+  </div>`;
+  html+=`<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📝 Notes / Comments</div>
+    <textarea id="workerNotesArea_${id}" rows="3" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);resize:vertical;font-family:inherit;" placeholder="Add any extra information about this worker…" onblur="saveWorkerNotes('${id}',this.value)">${esc(w.notes||'')}</textarea>
   </div>`;
   cats.forEach(cat=>{
     html+=`<div class="doc-section"><div class="doc-section-title">${cat}</div>`;
@@ -5107,7 +5124,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
@@ -5332,7 +5349,7 @@ async function sbLoadAll(){
       workers=[];
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
-      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',docSetId:w.document_set_id||undefined,active:w.active!==false,docs:{}}));
+      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
       (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
