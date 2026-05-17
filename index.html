@@ -5413,10 +5413,14 @@ async function renderRolesPanel(){
   }).join('') || '<tr><td colspan="4" style="color:var(--text-l);">No users found.</td></tr>';
 }
 async function wouldRemoveLastAdmin(userId, newRole=null, newActive=null){
-  const {data,error}=await sbClient.from('profiles').select('id,role,active');
+  const OWNER_EMAIL = 'dylan@tmconstruction.nl';
+  const {data,error}=await sbClient.from('profiles').select('id,email,role,active');
   if(error){ alert(error.message); return true; }
   const users = data || [];
-  const after = users.map(u => u.id === userId ? { ...u, role: newRole ?? u.role, active: newActive ?? u.active } : u);
+  const after = users.map(u => {
+    if(u.email === OWNER_EMAIL) return {...u, role:'admin', active:true}; // owner always counts as active admin
+    return u.id === userId ? {...u, role:newRole??u.role, active:newActive??u.active} : u;
+  });
   const activeAdmins = after.filter(u => u.role === 'admin' && u.active !== false).length;
   if(activeAdmins < 1){
     alert('Blocked: this would leave the dashboard with no active admin. Create or promote another admin first.');
