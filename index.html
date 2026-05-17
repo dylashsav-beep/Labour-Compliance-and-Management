@@ -1006,6 +1006,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <thead><tr>
             <th class="no-sort">Property Name</th>
             <th class="no-sort">Address</th>
+            <th class="no-sort">Cost / Night / Room</th>
             <th class="no-sort">Notes</th>
             <th class="no-sort">Currently Assigned</th>
             <th class="no-sort">Actions</th>
@@ -1146,7 +1147,8 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="form-grid">
         <div class="form-field full"><label class="form-label">Property Name</label><input class="form-input" id="propName" placeholder="e.g. Hotel Ibis Rotterdam"/></div>
         <div class="form-field full"><label class="form-label">Address</label><input class="form-input" id="propAddress" placeholder="e.g. Leuvehaven 80, 3011 EA Rotterdam"/></div>
-        <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="propNotes" placeholder="e.g. Contact: Jan +31 6 123 456, check-in from 15:00"/></div>
+        <div class="form-field"><label class="form-label">Cost per Night per Room (€, optional)</label><input class="form-input" id="propCostPerNight" type="number" min="0" step="0.01" placeholder="e.g. 95.00"/></div>
+        <div class="form-field"><label class="form-label">Notes (optional)</label><input class="form-input" id="propNotes" placeholder="e.g. Contact: Jan +31 6 123 456, check-in from 15:00"/></div>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('propOverlay')">Cancel</button>
@@ -2984,7 +2986,7 @@ function openAddProjectAssignment(presetWid, presetProjId){
     projectStore.filter(p=>p.active).map(p=>`<option value="${p.id}"${p.id===presetProjId?' selected':''}>${esc(p.name)}</option>`).join('');
   // Clear fields
   ['paStart','paEnd','paRate','paNotes'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('paRateType').value='day';
+  document.getElementById('paRateType').value='hour';
   document.getElementById('paContractCurrent').style.display='none';
   document.getElementById('paContractDropText').textContent='📎 Click to attach contract (PDF, DOCX)';
   setPAProtectedMode(false);
@@ -4468,6 +4470,7 @@ function renderProperties(){
     return `<tr>
       <td style="font-weight:600;color:var(--navy);">${esc(p.name)}</td>
       <td style="font-size:12px;color:var(--text-m);">${esc(p.address||'—')}</td>
+      <td style="font-size:12px;color:var(--text-m);">${p.costPerNight!=null?`<span class="rate-tag">€${parseFloat(p.costPerNight).toFixed(2)}</span>`:'<span style="color:var(--text-l)">—</span>'}</td>
       <td style="font-size:12px;color:var(--text-m);">${esc(p.notes||'—')}</td>
       <td style="font-size:12px;">${occupants.length?occupants.map(w=>`<span class="project-tag">${w.name}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None</span>'}</td>
       <td><div style="display:flex;gap:6px;">
@@ -4548,6 +4551,7 @@ function openAddProperty(){
   document.getElementById('propModalTitle').textContent='Add Property';
   document.getElementById('propName').value='';
   document.getElementById('propAddress').value='';
+  document.getElementById('propCostPerNight').value='';
   document.getElementById('propNotes').value='';
   document.getElementById('propOverlay').classList.add('open');
 }
@@ -4557,17 +4561,20 @@ function editProperty(id){
   document.getElementById('propModalTitle').textContent='Edit Property';
   document.getElementById('propName').value=p.name;
   document.getElementById('propAddress').value=p.address||'';
+  document.getElementById('propCostPerNight').value=p.costPerNight!=null?p.costPerNight:'';
   document.getElementById('propNotes').value=p.notes||'';
   document.getElementById('propOverlay').classList.add('open');
 }
 function saveProperty(){
   const name=document.getElementById('propName').value.trim();
   if(!name){alert('Please enter a property name.');return;}
+  const costRaw=document.getElementById('propCostPerNight').value;
+  const costPerNight=costRaw!==''&&!isNaN(parseFloat(costRaw))?parseFloat(costRaw):null;
   if(editingPropId){
     const p=properties.find(x=>x.id===editingPropId);
-    if(p){p.name=name;p.address=document.getElementById('propAddress').value.trim();p.notes=document.getElementById('propNotes').value.trim();}
+    if(p){p.name=name;p.address=document.getElementById('propAddress').value.trim();p.costPerNight=costPerNight;p.notes=document.getElementById('propNotes').value.trim();}
   } else {
-    properties.push({id:crypto.randomUUID(),name,address:document.getElementById('propAddress').value.trim(),notes:document.getElementById('propNotes').value.trim()});
+    properties.push({id:crypto.randomUUID(),name,address:document.getElementById('propAddress').value.trim(),costPerNight,notes:document.getElementById('propNotes').value.trim()});
   }
   saveProperties(); closeM('propOverlay'); renderResources();
 }
@@ -4778,8 +4785,8 @@ function delItemMatchesFilter(it){
   const complianceTypes=['compliance_document'];
   if(f==='worker_docs') return workerDocTypes.includes(it.type);
   if(f==='assignments') return assignmentTypes.includes(it.type);
-  if(f==='accommodation') return it.type==='accommodation_assignment';
-  if(f==='vehicles') return it.type==='vehicle_assignment';
+  if(f==='accommodation') return it.type==='accommodation_assignment'||it.type==='property';
+  if(f==='vehicles') return it.type==='vehicle_assignment'||it.type==='vehicle';
   if(f==='compliance') return complianceTypes.includes(it.type);
   return true;
 }
@@ -5073,7 +5080,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('project_assignments',paRows);
   const paf=[]; projectAssignments.forEach(a=>{const f=a.contractFile;if(f&&(f.file_path||f.storagePath))paf.push({id:`${a.id}__contract`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true});});
   await sbUpsertRows('project_assignment_files',paf);
-  await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',notes:p.notes||'',active:true})));
+  await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true})));
   await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true})));
   const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
   const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
@@ -5309,7 +5316,7 @@ async function sbLoadAll(){
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
     const paFiles={}; (pafData||[]).forEach(f=>paFiles[f.project_assignment_id]={name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path});
     projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:paFiles[a.id]||null}));
-    properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',notes:p.notes||''}));
+    properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
     accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||''}); });
     vehHistory={}; (vaData||[]).forEach(a=>{ if(!vehHistory[a.worker_id]) vehHistory[a.worker_id]=[]; vehHistory[a.worker_id].push({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||''}); });
