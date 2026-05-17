@@ -451,10 +451,18 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .billing-cell{padding:4px 2px;text-align:center;vertical-align:middle;border-right:1px solid var(--border);min-width:80px;height:36px;font-size:11px;font-weight:600;}
 .billing-cell.in-range{cursor:pointer;background:#f8fafc;}
 .billing-cell.in-range:hover{background:#e8f4fd;}
+.billing-cell.in-range.needs-charge{background:#fff7ed;border-bottom:3px solid #f59e0b;}
+.billing-cell.in-range.needs-charge:hover{background:#fef3c7;}
 .billing-cell.charged{background:#dcfce7;color:#166534;cursor:pointer;}
 .billing-cell.charged:hover{background:#bbf7d0;}
 .billing-cell.out-range{background:#f9fafb;color:var(--text-l);}
-.billing-worker-cell{font-size:12px;font-weight:600;color:var(--navy);padding:6px 10px;white-space:nowrap;border-right:2px solid var(--border);position:sticky;left:0;background:#fff;z-index:1;min-width:180px;}
+.billing-worker-cell{font-size:12px;font-weight:600;color:var(--navy);padding:6px 10px;white-space:nowrap;border-right:2px solid var(--border);position:sticky;left:0;background:#fff;z-index:1;min-width:200px;}
+.billing-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;border:1px solid var(--navy-l);background:var(--navy-bg,#eef2ff);color:var(--navy);font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0;vertical-align:middle;margin-left:4px;}
+.billing-info-btn:hover{background:var(--navy);color:#fff;}
+.billing-pending-badge{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:9px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-top:2px;}
+.billing-detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;display:none;align-items:center;justify-content:center;}
+.billing-detail-overlay.open{display:flex;}
+.billing-detail-modal{background:#fff;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,.18);padding:24px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;}
 .del-search{flex:1;min-width:160px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--bg);color:var(--text);}
 .del-search:focus{outline:none;border-color:var(--navy-l);}
 .del-filters{display:flex;flex-wrap:wrap;gap:5px;}
@@ -1514,6 +1522,20 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <button class="btn btn-save" onclick="saveChargeEntry()">Save</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- BILLING ASSIGNMENT DETAIL PANEL -->
+<div class="billing-detail-overlay" id="billingDetailOverlay" onclick="if(event.target===this)closeM('billingDetailOverlay')">
+  <div class="billing-detail-modal">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;color:var(--navy);" id="bdTitle">—</div>
+        <div style="font-size:12px;color:var(--text-l);margin-top:2px;" id="bdSubtitle">—</div>
+      </div>
+      <button class="modal-close" onclick="closeM('billingDetailOverlay')" style="margin-left:12px;">✕</button>
+    </div>
+    <div id="bdBody"></div>
   </div>
 </div>
 
@@ -4723,11 +4745,27 @@ function renderBillingTracker(type){
   entries.forEach(e=>{
     const startMs = e.startDate ? new Date(e.startDate).setHours(0,0,0,0) : -Infinity;
     const endMs   = e.endDate   ? new Date(e.endDate).setHours(23,59,59,999) : Infinity;
+
+    // Count pending (in-range, uncharged, not in future) weeks across all 13 cols
+    let pendingCount=0;
+    cols.forEach(col=>{
+      const colStartMs=col.getTime(), colEndMs=colStartMs+7*86400000-1;
+      const inRange=startMs<=colEndMs&&endMs>=colStartMs;
+      if(!inRange) return;
+      if(colStartMs>today.getTime()) return; // future weeks don't count as pending
+      const charge=charges.find(c=>c.assignmentId===e.assignmentId&&c.weekKey===isoWeekKey(col));
+      if(!charge?.charged) pendingCount++;
+    });
+
     html+=`<tr>
       <td class="billing-worker-cell">
-        <div style="font-weight:600;color:var(--navy);">${esc(e.workerName)}</div>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span style="font-weight:600;color:var(--navy);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${esc(e.workerName)}</span>
+          <span class="billing-info-btn" onclick="openBillingDetail('${type}','${e.assignmentId}','${e.wid}')" title="View assignment details">ℹ</span>
+        </div>
         <div style="font-size:11px;color:var(--text-l);">${esc(e.label)}</div>
         ${e.weeklyAmt!=null?`<div style="font-size:11px;color:var(--text-m);">€${parseFloat(e.weeklyAmt).toFixed(2)}/wk</div>`:''}
+        ${pendingCount>0?`<div class="billing-pending-badge">⚠ ${pendingCount} week${pendingCount!==1?'s':''} pending</div>`:''}
       </td>`;
     cols.forEach(col=>{
       const wk=isoWeekKey(col);
@@ -4736,12 +4774,14 @@ function renderBillingTracker(type){
       const inRange = startMs<=colEndMs && endMs>=colStartMs;
       const charge = charges.find(c=>c.assignmentId===e.assignmentId&&c.weekKey===wk);
       const isCharged = !!charge?.charged;
+      const isPast = colStartMs <= today.getTime();
+      const needsCharge = inRange && !isCharged && isPast;
       const tooltip = isCharged
         ? `Charged ✓${charge.invoiceNumber?' | Inv: '+charge.invoiceNumber:''}${charge.invoiceAmount?' | €'+parseFloat(charge.invoiceAmount).toFixed(2):''}`
         : (inRange?'Click to mark as charged':'Outside assignment period');
-      const cls = isCharged?'charged':inRange?'in-range':'out-range';
+      const cls = isCharged?'charged':inRange?`in-range${needsCharge?' needs-charge':''}`:'out-range';
       const onclick = inRange&&canEdit ? `openChargeModal('${type}','${e.assignmentId}','${e.wid}','${wk}')` : '';
-      html+=`<td class="billing-cell ${cls}" onclick="${onclick}" title="${esc(tooltip)}">${isCharged?'✓':''}</td>`;
+      html+=`<td class="billing-cell ${cls}" onclick="${onclick}" title="${esc(tooltip)}">${isCharged?'✓':needsCharge?'·':''}</td>`;
     });
     html+=`</tr>`;
   });
@@ -4797,6 +4837,78 @@ async function removeCharge(){
     const table=type==='accom'?'accommodation_charges':'vehicle_charges';
     sbClient.from(table).update({active:false}).eq('id',id).then(({error})=>{if(error)console.warn('[TMC] charge remove failed:',error.message);});
   }
+}
+function openBillingDetail(type, assignmentId, wid){
+  const isAccom = type==='accom';
+  const w = workers.find(x=>x.id===wid);
+  const hist = isAccom ? (accomHistory[wid]||[]) : (vehHistory[wid]||[]);
+  const a = hist.find(x=>x.id===assignmentId);
+  if(!a) return;
+  const resource = isAccom ? properties.find(p=>p.id===a.propId) : vehicles.find(v=>v.id===a.vehicleId);
+  const charges = isAccom ? accomCharges : vehCharges;
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // Build list of all weeks from startDate to min(endDate, today)
+  const startMon = weekMonday(new Date(a.startDate));
+  const endDate  = a.endDate ? new Date(a.endDate) : today;
+  const lastMon  = weekMonday(endDate > today ? today : endDate);
+  const pendingWeeks=[], chargedWeeks=[];
+  let cur = new Date(startMon);
+  while(cur<=lastMon){
+    const wk=isoWeekKey(cur);
+    const charge=charges.find(c=>c.assignmentId===assignmentId&&c.weekKey===wk);
+    if(charge?.charged) chargedWeeks.push({wk,charge});
+    else pendingWeeks.push(wk);
+    cur=addWeeks(cur,1);
+  }
+
+  // Resource detail lines
+  let resourceDetail='';
+  if(isAccom&&resource){
+    resourceDetail=`<div style="font-size:12px;color:var(--text-m);margin-top:2px;">${esc(resource.address||'')}</div>`;
+    if(resource.costPerNight) resourceDetail+=`<div style="font-size:12px;color:var(--text-m);">€${parseFloat(resource.costPerNight).toFixed(2)}/night</div>`;
+  } else if(!isAccom&&resource){
+    resourceDetail=`<div style="font-size:12px;color:var(--text-m);">${[resource.make,resource.model,resource.colour].filter(Boolean).join(' ')||''}</div>`;
+    if(a.weeklyChargeAmount) resourceDetail+=`<div style="font-size:12px;color:var(--text-m);">€${parseFloat(a.weeklyChargeAmount).toFixed(2)}/week charge</div>`;
+  }
+
+  const fmt=d=>new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+  const pendingHtml = pendingWeeks.length
+    ? pendingWeeks.map(wk=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border-l,#f1f5f9);">
+        <span style="font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;border:1px solid #fcd34d;border-radius:4px;padding:1px 7px;">${wk}</span>
+        <span style="font-size:12px;color:var(--text-l);">Not charged</span>
+        ${(sbUserRole==='admin'||sbUserRole==='planner')?`<button style="margin-left:auto;font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--navy-l);background:var(--navy-bg,#eef2ff);color:var(--navy);cursor:pointer;" onclick="closeM('billingDetailOverlay');openChargeModal('${type}','${assignmentId}','${wid}','${wk}')">Mark charged</button>`:''}
+      </div>`).join('')
+    : '<div style="font-size:12px;color:var(--green);font-weight:600;">All past weeks charged ✓</div>';
+
+  const chargedHtml = chargedWeeks.length
+    ? chargedWeeks.map(({wk,charge})=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border-l,#f1f5f9);">
+        <span style="font-size:11px;font-weight:700;color:#166534;background:#dcfce7;border:1px solid #bbf7d0;border-radius:4px;padding:1px 7px;">✓ ${wk}</span>
+        ${charge.invoiceNumber?`<span style="font-size:11px;color:var(--text-m);">Inv: ${esc(charge.invoiceNumber)}</span>`:''}
+        ${charge.invoiceAmount?`<span style="font-size:11px;color:var(--text-m);">€${parseFloat(charge.invoiceAmount).toFixed(2)}</span>`:''}
+      </div>`).join('')
+    : '';
+
+  document.getElementById('bdTitle').textContent = w?.name||wid;
+  document.getElementById('bdSubtitle').textContent = (isAccom?'Accommodation':'Vehicle')+' · '+(resource ? (isAccom?resource.name:(resource.desc+(resource.reg?' · '+resource.reg:''))) : 'Unknown');
+  document.getElementById('bdBody').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-l);margin-bottom:4px;">${isAccom?'PROPERTY':'VEHICLE'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);">${resource?(isAccom?esc(resource.name):esc(resource.desc+(resource.reg?' · '+resource.reg:''))):'Unknown'}</div>
+        ${resourceDetail}
+      </div>
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-l);margin-bottom:4px;">ASSIGNMENT PERIOD</div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);">${a.startDate?fmt(a.startDate):'—'} →</div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);">${a.endDate?fmt(a.endDate):'Ongoing'}</div>
+      </div>
+    </div>
+    ${a.notes?`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:12px;color:#92400e;"><span style="font-weight:700;">Notes: </span>${esc(a.notes)}</div>`:''}
+    ${pendingWeeks.length?`<div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;">⚠ ${pendingWeeks.length} Week${pendingWeeks.length!==1?'s':''} Pending</div>${pendingHtml}`:'<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px;">All past weeks charged ✓</div>'}
+    ${chargedWeeks.length?`<div style="font-size:11px;font-weight:700;color:#166534;margin:10px 0 6px;text-transform:uppercase;letter-spacing:.04em;">Charged Weeks</div>${chargedHtml}`:''}
+  `;
+  document.getElementById('billingDetailOverlay').classList.add('open');
 }
 function setPAGanttZoom(z){ paGanttZoom=z; paGanttOffset=0; renderRoster(); }
 
