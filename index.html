@@ -3435,7 +3435,7 @@ async function saveProjectAssignment(){
       // Contracted assignments are legally protected in the UI: only dates may be changed.
       projectAssignments[idx].startDate = document.getElementById('paStart').value;
       projectAssignments[idx].endDate   = document.getElementById('paEnd').value;
-      savePA(); closeM('paOverlay'); renderRoster(); renderTable(); return;
+      savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW); return;
     }
   }
   const wid       = document.getElementById('paWorker').value;
@@ -3467,7 +3467,7 @@ async function saveProjectAssignment(){
   } else {
     projectAssignments.push({id:assignmentId,...obj});
   }
-  savePA(); closeM('paOverlay'); renderRoster(); renderTable();
+  savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW);
 }
 
 function deleteProjectAssignment(){
@@ -3500,7 +3500,7 @@ function deleteProjectAssignment(){
   tmcConfirm(message, detail, ()=>{
     archiveDeletedItem('project_assignment', `Worker assignment: ${archivePayload._meta.workerName} → ${archivePayload._meta.projectName}`, archivePayload);
     projectAssignments = projectAssignments.filter(x=>x.id!==editingPAId);
-    savePA(); closeM('paOverlay'); renderRoster(); renderTable(); renderDeletedItems();
+    savePA(); closeM('paOverlay'); renderRoster(); renderTable(); renderDeletedItems(); if(curW) rebuildModal(curW);
   }, {title:'TMC Compliance', subtitle:'Archive worker assignment', okText:'Archive'});
 }
 
