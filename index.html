@@ -3097,6 +3097,7 @@ function renderPAGantt(){
   const colMinW=zoom==='day'?52:zoom==='week'?110:90;
 
   // Build ordered worker list for Gantt rows
+  const pSortDir=paSortDir;
   let ganttWorkerOrder=[...filteredWids];
   if(paSortKey==='project'){
     ganttWorkerOrder.sort((a,b)=>{
@@ -3109,7 +3110,6 @@ function renderPAGantt(){
   } else if(paSortKey==='worker'){
     ganttWorkerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
   }
-  const pSortDir=paSortDir;
 
   // Phase 1 — skeleton table
   let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:190px;">Worker</th>`;
