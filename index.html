@@ -1160,7 +1160,11 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="awAccomNotes" placeholder="Room number, requirements…"/></div>
         <div class="form-field full" style="display:flex;align-items:center;gap:10px;">
           <label class="form-label" style="margin:0;">Charge to operative?</label>
-          <label class="tog"><input type="checkbox" id="awAccomCharge"/><span class="tog-slider"></span></label>
+          <label class="tog"><input type="checkbox" id="awAccomCharge" onchange="document.getElementById('awAccomChargeAmtRow').style.display=this.checked?'block':'none'"/><span class="tog-slider"></span></label>
+        </div>
+        <div class="form-field full" id="awAccomChargeAmtRow" style="display:none;">
+          <label class="form-label">Weekly Charge Amount (€, optional)</label>
+          <input type="number" class="form-input" id="awAccomChargeAmt" placeholder="0.00" min="0" step="0.01" style="max-width:180px;"/>
         </div>
       </div>
       <div class="form-actions">
@@ -1267,9 +1271,13 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="form-field full">
         <label class="form-label">Charge to operative?</label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
-          <label class="tog"><input type="checkbox" id="assignAccomCharge" onchange=""/><span class="tog-slider"></span></label>
+          <label class="tog"><input type="checkbox" id="assignAccomCharge" onchange="document.getElementById('accomChargeAmtRow').style.display=this.checked?'block':'none'"/><span class="tog-slider"></span></label>
           <span style="font-size:12px;color:var(--text-m);">If enabled, this assignment will appear in the billing tracker for weekly charge tracking.</span>
         </div>
+      </div>
+      <div class="form-field" id="accomChargeAmtRow" style="display:none;">
+        <label class="form-label">Weekly Charge Amount (€, optional)</label>
+        <input class="form-input" id="assignAccomChargeAmt" type="number" min="0" step="0.01" placeholder="e.g. 250.00"/>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('assignAccomOverlay')">Cancel</button>
@@ -4576,6 +4584,8 @@ function currentVeh(wid){
 
 // Gantt window: number of weeks to show each side of today
 let ganttOffset = 0; // weeks offset from today-centred view
+let resGanttSort = 'worker';      // 'worker' | 'resource'
+let resGanttProjectFilter = 'all';
 const GANTT_BACK = 6;  // weeks back
 const GANTT_FWD  = 6;  // weeks forward
 const GANTT_TOTAL = GANTT_BACK + 1 + GANTT_FWD; // 13 weeks visible
@@ -4729,7 +4739,7 @@ function renderBillingTracker(type){
       entries.push({wid:w.id, workerName:w.name, assignmentId:a.id,
         label: isAccom ? (resource?.name||'Unknown') : (resource?.desc||'Unknown')+(resource?.reg?' · '+resource.reg:''),
         startDate:a.startDate, endDate:a.endDate,
-        weeklyAmt: isAccom ? null : (a.weeklyChargeAmount||null)
+        weeklyAmt: a.weeklyChargeAmount||null
       });
     });
   });
@@ -5001,6 +5011,32 @@ function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zo
 // ──────────────────────────────────────────────────────
 // ACCOMMODATION
 // ──────────────────────────────────────────────────────
+function getWorkerProjectForWeek(wid){
+  const refMon = addWeeks(weekMonday(new Date()), ganttOffset);
+  const refSun = weekSunday(refMon);
+  const pa = projectAssignments.find(a=>{
+    if(a.wid!==wid||!a.startDate) return false;
+    const s=new Date(a.startDate);s.setHours(0,0,0,0);
+    const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+    return s<=refSun&&(!e||e>=refMon);
+  });
+  return pa ? (projectStore.find(p=>p.id===pa.projectId)||null) : null;
+}
+
+function _populateResProjectFilter(elId, refMon, refSun){
+  const el=document.getElementById(elId); if(!el) return;
+  const activeProjects=new Set(projectAssignments.filter(a=>{
+    if(!a.startDate) return false;
+    const s=new Date(a.startDate);s.setHours(0,0,0,0);
+    const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+    return s<=refSun&&(!e||e>=refMon);
+  }).map(a=>a.projectId));
+  const prev=el.value;
+  el.innerHTML='<option value="all">All projects</option>'+
+    projectStore.filter(p=>activeProjects.has(p.id)).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  if([...el.options].some(o=>o.value===prev)) el.value=prev;
+}
+
 function renderAccomSummary(){
   const entries=[];
   workers.forEach(w=>{
@@ -5057,19 +5093,27 @@ function openAssignWorkerToAccom(propId){
   document.getElementById('awAccomEnd').value    = '';
   document.getElementById('awAccomNotes').value  = '';
   document.getElementById('awAccomCharge').checked = false;
+  document.getElementById('awAccomChargeAmt').value = '';
+  document.getElementById('awAccomChargeAmtRow').style.display = 'none';
+  document.getElementById('awAccomCharge').onchange = function(){
+    document.getElementById('awAccomChargeAmtRow').style.display = this.checked ? 'block' : 'none';
+  };
   document.getElementById('assignWorkerToAccomOverlay').classList.add('open');
 }
 function saveAssignWorkerToAccom(){
   const wid = document.getElementById('awAccomWorker').value;
   if(!wid){ alert('Please select a worker.'); return; }
   if(!accomHistory[wid]) accomHistory[wid] = [];
+  const awAccomCharge = document.getElementById('awAccomCharge').checked;
+  const awAccomChargeAmt = awAccomCharge ? (parseFloat(document.getElementById('awAccomChargeAmt').value)||null) : null;
   accomHistory[wid].push({
     id: crypto.randomUUID(),
     propId:    awAccomPropId,
     startDate: document.getElementById('awAccomStart').value,
     endDate:   document.getElementById('awAccomEnd').value,
     notes:     document.getElementById('awAccomNotes').value.trim(),
-    chargeToOperative: document.getElementById('awAccomCharge').checked
+    chargeToOperative: awAccomCharge,
+    weeklyChargeAmount: awAccomChargeAmt
   });
   saveAccomHistory();
   sbScheduleSync();
@@ -5191,6 +5235,9 @@ function openAssignAccom(wid, entryId){
   document.getElementById('assignAccomEnd').value   = entry?.endDate||'';
   document.getElementById('assignAccomNotes').value = entry?.notes||'';
   document.getElementById('assignAccomCharge').checked = entry?.chargeToOperative||false;
+  const accomAmtRow = document.getElementById('accomChargeAmtRow');
+  document.getElementById('assignAccomChargeAmt').value = entry?.weeklyChargeAmount||'';
+  if(accomAmtRow) accomAmtRow.style.display = entry?.chargeToOperative ? 'block' : 'none';
   document.getElementById('clearAccomBtn').style.display = entry ? 'inline-flex' : 'none';
   document.getElementById('assignAccomOverlay').classList.add('open');
 }
@@ -5199,13 +5246,14 @@ function saveAccomAssignment(){
   if(!propId){ alert('Please select a property.'); return; }
   if(!accomHistory[assignAccomWid]) accomHistory[assignAccomWid] = [];
   const accomCharge = document.getElementById('assignAccomCharge').checked;
+  const accomChargeAmt = accomCharge ? (parseFloat(document.getElementById('assignAccomChargeAmt').value)||null) : null;
   if(assignAccomEntryId){
     const entry = accomHistory[assignAccomWid].find(a=>a.id===assignAccomEntryId);
-    if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); entry.chargeToOperative=accomCharge; }
+    if(entry){ entry.propId=propId; entry.startDate=document.getElementById('assignAccomStart').value; entry.endDate=document.getElementById('assignAccomEnd').value; entry.notes=document.getElementById('assignAccomNotes').value.trim(); entry.chargeToOperative=accomCharge; entry.weeklyChargeAmount=accomChargeAmt; }
   } else {
-    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim(),chargeToOperative:accomCharge});
+    accomHistory[assignAccomWid].push({id:crypto.randomUUID(),propId,startDate:document.getElementById('assignAccomStart').value,endDate:document.getElementById('assignAccomEnd').value,notes:document.getElementById('assignAccomNotes').value.trim(),chargeToOperative:accomCharge,weeklyChargeAmount:accomChargeAmt});
   }
-  saveAccomHistory(); closeM('assignAccomOverlay'); renderResources();
+  saveAccomHistory(); sbScheduleSync(); closeM('assignAccomOverlay'); renderResources();
 }
 function clearAccomAssignment(){
   const entry=(accomHistory[assignAccomWid]||[]).find(a=>a.id===assignAccomEntryId);
@@ -5681,7 +5729,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('project_assignment_files',paf);
   await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true})));
   await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true})));
-  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,active:true}); }));
+  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
   const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
   await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
@@ -5927,7 +5975,7 @@ async function sbLoadAll(){
     projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:paFiles[a.id]||null}));
     properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
-    accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}); });
+    accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
     vehHistory={}; (vaData||[]).forEach(a=>{ if(!vehHistory[a.worker_id]) vehHistory[a.worker_id]=[]; vehHistory[a.worker_id].push({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
     accomCharges=(accomChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     vehCharges=(vehChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
