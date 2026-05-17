@@ -6270,7 +6270,7 @@ async function sbLoadAll(){
     }catch(e){ tableErr(name,e); return fallback; }
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
