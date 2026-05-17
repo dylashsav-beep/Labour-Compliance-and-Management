@@ -1017,6 +1017,15 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
             <button class="week-arrow" onclick="shiftGantt(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
           </div>
         </div>
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fafbfc;">
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="accomSortSel" onchange="resGanttSort=this.value;renderResources()">
+            <option value="worker">Sort: Worker A–Z</option>
+            <option value="resource">Group by Property</option>
+          </select>
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="accomProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
+            <option value="all">All projects</option>
+          </select>
+        </div>
         <div style="overflow-x:auto;" id="accomGanttWrap">
           <div id="accomGantt" style="min-width:900px;"></div>
         </div>
@@ -1079,6 +1088,15 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
             <button class="week-today-btn" onclick="resetGantt()" style="color:var(--sky-l);">Today</button>
             <button class="week-arrow" onclick="shiftGantt(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
           </div>
+        </div>
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fafbfc;">
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="vehicleSortSel" onchange="resGanttSort=this.value;renderResources()">
+            <option value="worker">Sort: Worker A–Z</option>
+            <option value="resource">Group by Vehicle</option>
+          </select>
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="vehicleProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
+            <option value="all">All projects</option>
+          </select>
         </div>
         <div style="overflow-x:auto;" id="vehicleGanttWrap">
           <div id="vehicleGantt" style="min-width:900px;"></div>
@@ -4947,7 +4965,7 @@ function ganttBarClass(startDate, endDate){
 }
 
 // Core Gantt renderer — handles zoom levels, merged spanning bars, drag resize/move
-function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zoomChangeFn,shiftFn,resetFn,onEntrySave){
+function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zoomChangeFn,shiftFn,resetFn,onEntrySave,workerOrder,workerMeta){
   const container=document.getElementById(containerId);
   const cnt=document.getElementById(countId),noRes=document.getElementById(noResultsId);
   const workerSet=[...new Set(entries.map(e=>e.wid))];
@@ -4958,19 +4976,24 @@ function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zo
   const cols=ganttColumns(zoom,offset),today=new Date();today.setHours(0,0,0,0);
   const colMinW=zoom==='day'?48:zoom==='week'?110:90;
 
+  const orderedWorkers = workerOrder
+    ? workerOrder.map(wid=>workers.find(x=>x.id===wid)).filter(Boolean)
+    : workers;
+
   // Phase 1 — skeleton table
-  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:150px;">Worker</th>`;
+  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
   cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
   html+=`</tr></thead><tbody>`;
 
-  workers.forEach(w=>{
+  orderedWorkers.forEach(w=>{
     const wE=entries.filter(e=>e.wid===w.id);if(!wE.length)return;
     const [bg,col]=avc(w.id);
     const rowH=Math.max(44,wE.length*28+8);
+    const meta=workerMeta?workerMeta(w.id):'';
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="height:${rowH}px;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
-        <div><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div></div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;margin-top:2px;">${ini(w.name)}</div>
+        <div style="min-width:0;"><div class="gantt-worker-name">${w.name}</div><div class="gantt-worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div>${meta}</div>
       </div></td>`;
     cols.forEach(colStart=>{const isNow=isNowCol(colStart,zoom);html+=`<td class="${isNow?'gantt-today-col':''}" style="padding:0;height:${rowH}px;"></td>`;});
     html+=`</tr>`;
@@ -4992,7 +5015,7 @@ function renderGantt(containerId,countId,noResultsId,entries,type,zoom,offset,zo
     _resGanttRAF=null;
     const tbl=container.querySelector('table.gantt-grid');if(!tbl)return;
     const barsData=[];
-    workers.forEach(w=>{
+    orderedWorkers.forEach(w=>{
       const wE=entries.filter(e=>e.wid===w.id);if(!wE.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
       wE.forEach((e,ei)=>{
@@ -5042,15 +5065,42 @@ function renderAccomSummary(){
   workers.forEach(w=>{
     (accomHistory[w.id]||[]).forEach(a=>{
       const prop=properties.find(p=>p.id===a.propId);
-      entries.push({wid:w.id,id:a.id,label:prop?.name||'Unknown',startDate:a.startDate,endDate:a.endDate,
+      entries.push({wid:w.id,id:a.id,label:prop?.name||'Unknown',resourceId:a.propId,startDate:a.startDate,endDate:a.endDate,
         onclickFn:(id)=>openAssignAccom(w.id,a.id)});
     });
   });
-  renderGantt('accomGantt','accomSummaryCount','noAccomAssign',entries,'accom',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+  const refMon=addWeeks(weekMonday(new Date()),ganttOffset), refSun=weekSunday(refMon);
+  let filteredEntries=entries;
+  if(resGanttProjectFilter!=='all'){
+    const widsOnProj=new Set(projectAssignments.filter(a=>{
+      if(a.projectId!==resGanttProjectFilter||!a.startDate) return false;
+      const s=new Date(a.startDate);s.setHours(0,0,0,0);
+      const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+      return s<=refSun&&(!e||e>=refMon);
+    }).map(a=>a.wid));
+    filteredEntries=entries.filter(e=>widsOnProj.has(e.wid));
+  }
+  let workerOrder=[...new Set(filteredEntries.map(e=>e.wid))];
+  if(resGanttSort==='resource'){
+    workerOrder.sort((a,b)=>{
+      const la=(filteredEntries.find(e=>e.wid===a)?.label||'').toLowerCase();
+      const lb=(filteredEntries.find(e=>e.wid===b)?.label||'').toLowerCase();
+      return la.localeCompare(lb);
+    });
+  } else {
+    workerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
+  }
+  _populateResProjectFilter('accomProjectFilter',refMon,refSun);
+  const sortSel=document.getElementById('accomSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const workerMeta=wid=>{
+    const proj=getWorkerProjectForWeek(wid);
+    return proj?`<div style="margin-top:3px;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(proj.name)}">${esc(proj.name.length>20?proj.name.slice(0,19)+'…':proj.name)}</span></div>`:'';
+  };
+  renderGantt('accomGantt','accomSummaryCount','noAccomAssign',filteredEntries,'accom',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
     const a=(accomHistory[bd.wid]||[]).find(x=>x.id===bd.id);
     if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveAccomHistory();}
     renderResources();
-  });
+  },workerOrder,workerMeta);
 }
 
 function renderProperties(){
@@ -5272,15 +5322,42 @@ function renderVehicleSummary(){
   workers.forEach(w=>{
     (vehHistory[w.id]||[]).forEach(a=>{
       const v=vehicles.find(x=>x.id===a.vehicleId);
-      entries.push({wid:w.id,id:a.id,label:v?(v.desc+(v.reg?' · '+v.reg:'')):'Unknown',startDate:a.startDate,endDate:a.endDate,
+      entries.push({wid:w.id,id:a.id,label:v?(v.desc+(v.reg?' · '+v.reg:'')):'Unknown',resourceId:a.vehicleId,startDate:a.startDate,endDate:a.endDate,
         onclickFn:(id)=>openAssignVehicle(w.id,a.id)});
     });
   });
-  renderGantt('vehicleGantt','vehicleSummaryCount','noVehicleAssign',entries,'vehicle',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+  const refMon=addWeeks(weekMonday(new Date()),ganttOffset), refSun=weekSunday(refMon);
+  let filteredEntries=entries;
+  if(resGanttProjectFilter!=='all'){
+    const widsOnProj=new Set(projectAssignments.filter(a=>{
+      if(a.projectId!==resGanttProjectFilter||!a.startDate) return false;
+      const s=new Date(a.startDate);s.setHours(0,0,0,0);
+      const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+      return s<=refSun&&(!e||e>=refMon);
+    }).map(a=>a.wid));
+    filteredEntries=entries.filter(e=>widsOnProj.has(e.wid));
+  }
+  let workerOrder=[...new Set(filteredEntries.map(e=>e.wid))];
+  if(resGanttSort==='resource'){
+    workerOrder.sort((a,b)=>{
+      const la=(filteredEntries.find(e=>e.wid===a)?.label||'').toLowerCase();
+      const lb=(filteredEntries.find(e=>e.wid===b)?.label||'').toLowerCase();
+      return la.localeCompare(lb);
+    });
+  } else {
+    workerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
+  }
+  _populateResProjectFilter('vehicleProjectFilter',refMon,refSun);
+  const sortSel=document.getElementById('vehicleSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const workerMeta=wid=>{
+    const proj=getWorkerProjectForWeek(wid);
+    return proj?`<div style="margin-top:3px;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(proj.name)}">${esc(proj.name.length>20?proj.name.slice(0,19)+'…':proj.name)}</span></div>`:'';
+  };
+  renderGantt('vehicleGantt','vehicleSummaryCount','noVehicleAssign',filteredEntries,'vehicle',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
     const a=(vehHistory[bd.wid]||[]).find(x=>x.id===bd.id);
     if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveVehHistory();}
     renderResources();
-  });
+  },workerOrder,workerMeta);
 }
 
 function renderFleet(){
