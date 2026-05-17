@@ -3083,8 +3083,11 @@ function renderPAGantt(){
   }
   const refKey=paRefWeekKey();
 
+  // filteredPA determines which workers appear (must have ref-week assignment)
   const filteredPA=_paFilteredAssignments();
   const filteredWids=new Set(filteredPA.map(a=>a.wid));
+  // allFilteredPA: all assignments for visible workers (search+project filter, no date filter) — used for bars
+  const allFilteredPA=_paAllAssignments().filter(a=>filteredWids.has(a.wid));
   const cnt=document.getElementById('paGanttCount');
   if(cnt)cnt.textContent=filteredWids.size+' worker'+(filteredWids.size!==1?'s':'')+' · '+paRefWeekKey();
   const container=document.getElementById('paGantt');
@@ -3123,7 +3126,7 @@ function renderPAGantt(){
   ganttWorkerOrder.forEach(wid=>{
     const w=workers.find(x=>x.id===wid); if(!w) return;
     if(!filteredWids.has(w.id))return;
-    const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
+    const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
     const [bg,col]=avc(w.id);
     const rowH=Math.max(44,wA.length*28+8);
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
@@ -3156,7 +3159,7 @@ function renderPAGantt(){
     ganttWorkerOrder.forEach(wid=>{
       const w=workers.find(x=>x.id===wid);if(!w)return;
       if(!filteredWids.has(w.id))return;
-      const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
+      const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
       wA.forEach((a,ai)=>{
         const proj=projectStore.find(p=>p.id===a.projectId);
