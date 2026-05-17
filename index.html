@@ -546,6 +546,25 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 #tmcConfirmOkBtn{display:inline-flex!important;visibility:visible!important;align-items:center;justify-content:center;}
 #tmcConfirmOkBtn.role-hide{display:inline-flex!important;}
 
+/* COMPLIANCE DOCUMENTS */
+.doc-register-group{margin-bottom:24px;}
+.doc-register-group-title{font-size:12px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.05em;padding:0 0 8px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+.doc-register-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:14px 16px;box-shadow:var(--sh);display:flex;align-items:flex-start;gap:14px;margin-bottom:8px;transition:box-shadow .15s;}
+.doc-register-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);}
+.doc-register-card-body{flex:1;min-width:0;}
+.doc-register-card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.doc-register-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.doc-register-card-notes{font-size:12px;color:var(--text-m);margin-top:4px;white-space:pre-wrap;}
+.doc-register-card-actions{display:flex;gap:6px;flex-shrink:0;align-items:flex-start;}
+.doc-scope-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:var(--sky-xl);color:var(--navy);border:1px solid var(--sky-l);}
+.doc-cat-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:#fff;}
+.doc-count-badge{display:inline-flex;align-items:center;justify-content:center;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:var(--navy);color:#fff;margin-left:4px;vertical-align:middle;}
+.doc-file-info{font-size:11px;color:var(--text-l);display:flex;align-items:center;gap:4px;}
+.doc-no-results{text-align:center;padding:48px 20px;color:var(--text-l);}
+.doc-no-results-icon{font-size:36px;margin-bottom:8px;}
+.doc-scope-radio{display:flex;gap:12px;align-items:center;margin-top:4px;}
+.doc-scope-radio label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-m);font-weight:500;}
+
 </style>
 </head>
 <body>
@@ -610,6 +629,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
       <button class="vtab"        id="tabProjects" onclick="switchView('projects')">Projects</button>
       <button class="vtab"        id="tabResources" onclick="switchView('resources')">Resources</button>
+      <button class="vtab"        id="tabDocuments" onclick="switchView('documents')">Documents</button>
       <button class="vtab"        id="tabSettings" onclick="switchView('settings')">⚙ Settings</button>
     </div>
     <div class="week-nav" id="weekNav">
@@ -797,6 +817,38 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       </div>
     </div>
   </div>
+  <!-- DOCUMENTS VIEW -->
+  <div id="viewDocuments" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Compliance Document Register</div>
+        <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Compliance rules, delivery bookings, health &amp; safety files and general documents — scoped to a project or country.</div>
+      </div>
+      <button class="btn btn-primary" id="addCompDocBtn" onclick="openAddCompDoc()">+ Add Document</button>
+    </div>
+    <!-- Filter bar -->
+    <div class="filter-bar" id="cdFilterBar">
+      <span class="filter-label">Scope:</span>
+      <div style="display:flex;gap:4px;">
+        <button class="fbtn active" data-cd-scope="all"     onclick="setCDScope('all',this)">All</button>
+        <button class="fbtn"        data-cd-scope="project" onclick="setCDScope('project',this)">Project</button>
+        <button class="fbtn"        data-cd-scope="country" onclick="setCDScope('country',this)">Country</button>
+      </div>
+      <div class="filter-sep"></div>
+      <span class="filter-label">Category:</span>
+      <div style="display:flex;gap:4px;">
+        <button class="fbtn active" data-cd-cat="all"           onclick="setCDCat('all',this)">All</button>
+        <button class="fbtn"        data-cd-cat="compliance"    onclick="setCDCat('compliance',this)">Compliance Rules</button>
+        <button class="fbtn"        data-cd-cat="delivery"      onclick="setCDCat('delivery',this)">Delivery &amp; Booking</button>
+        <button class="fbtn"        data-cd-cat="health_safety" onclick="setCDCat('health_safety',this)">Health &amp; Safety</button>
+        <button class="fbtn"        data-cd-cat="general"       onclick="setCDCat('general',this)">General</button>
+      </div>
+      <input class="search-input" id="cdSearch" type="text" placeholder="Search documents…" oninput="renderDocuments()">
+    </div>
+    <!-- Document list -->
+    <div id="cdList"></div>
+  </div>
+
   <!-- SETTINGS VIEW -->
   <div id="viewSettings" style="display:none;">
     <div style="max-width:900px;">
@@ -1300,6 +1352,60 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
   </div>
 </div>
 
+<!-- ADD COMPLIANCE DOCUMENT MODAL -->
+<div class="overlay" id="addCompDocOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div><div class="modal-title">Add Compliance Document</div><div class="modal-subtitle">Upload a document scoped to a project or country</div></div>
+      <button class="modal-close" onclick="closeAddCompDoc()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label class="form-label">Document Title</label>
+          <input class="form-input" id="cdTitle" placeholder="e.g. VCA Certificate – Project Alpha"/></div>
+        <div class="form-field"><label class="form-label">Category</label>
+          <select class="form-select" id="cdCategory">
+            <option value="compliance">Compliance Rules</option>
+            <option value="delivery">Delivery &amp; Booking</option>
+            <option value="health_safety">Health &amp; Safety</option>
+            <option value="general">General</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Scope</label>
+          <div class="doc-scope-radio">
+            <label><input type="radio" name="cdScopeType" value="project" checked onchange="toggleCDScopeType('project')"> Project</label>
+            <label><input type="radio" name="cdScopeType" value="country" onchange="toggleCDScopeType('country')"> Country</label>
+          </div>
+        </div>
+        <div class="form-field full" id="cdProjectField">
+          <label class="form-label">Project</label>
+          <select class="form-select" id="cdProject"><option value="">— Select project —</option></select>
+        </div>
+        <div class="form-field full" id="cdCountryField" style="display:none;">
+          <label class="form-label">Country</label>
+          <select class="form-select" id="cdCountry"><option value="">— Select country —</option></select>
+        </div>
+        <div class="form-field full"><label class="form-label">Notes (optional)</label>
+          <textarea class="form-input" id="cdNotes" rows="3" placeholder="Additional context or instructions…" style="resize:vertical;"></textarea>
+        </div>
+        <div class="form-field full">
+          <label class="form-label">Attach File (optional)</label>
+          <div id="cdFileCurrent" style="display:none;margin-bottom:6px;font-size:12px;color:var(--text-m);"></div>
+          <label class="file-drop" style="margin-top:0;">
+            <div class="file-drop-text" id="cdFileDropText">📎 Click to attach a file (PDF, DOCX, image…)</div>
+            <input type="file" id="cdFile" onchange="handleCDFileSelect(this)"/>
+          </label>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" onclick="closeAddCompDoc()">Cancel</button>
+        <button class="btn btn-save" onclick="saveCompDoc()">Save Document</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TMC CUSTOM CONFIRMATION MODAL -->
 <div class="overlay" id="tmcConfirmOverlay">
   <div class="modal" style="max-width:500px;">
@@ -1367,8 +1473,8 @@ function requireAction(action, label){ if(canAction(action)) return true; alert(
 function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
-  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','admin_notifications','audit_log','deleted_items'];
+  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','admin_notifications','audit_log','deleted_items','compliance_documents'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -2061,15 +2167,16 @@ function renderWeekLabel(){
 let currentView='workers';
 function switchView(v){
   currentView=v;
-  ['workers','roster','projects','resources','settings'].forEach(id=>{
+  ['workers','roster','projects','resources','documents','settings'].forEach(id=>{
     document.getElementById('view'+id.charAt(0).toUpperCase()+id.slice(1)).style.display=v===id?'block':'none';
     document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).className='vtab'+(v===id?' active':'');
   });
-  document.getElementById('weekNav').style.display=(v==='projects'||v==='settings'||v==='resources'||v==='roster')?'none':'flex';
+  document.getElementById('weekNav').style.display=(v==='projects'||v==='settings'||v==='resources'||v==='roster'||v==='documents')?'none':'flex';
   if(v==='roster')renderRoster();
   if(v==='projects')renderProjects();
   if(v==='settings')renderSettings();
   if(v==='resources')renderResources();
+  if(v==='documents')renderDocuments();
 }
 
 // ─── Filter state (multi-select Sets, empty = show all) ──────────────────────
@@ -3338,8 +3445,10 @@ function renderProjects(){
     const activeBadge = p.active
       ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);">● Active</span>`
       : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text-l);border:1px solid var(--border);">○ Inactive</span>`;
+    const docCount = complianceDocs.filter(d=>d.active!==false&&d.scope_type==='project'&&d.scope_id===p.id).length;
+    const docBadge = docCount>0?`<span class="doc-count-badge" title="${docCount} compliance document${docCount!==1?'s':''}">${docCount}</span>`:'';
     return `<tr style="${!p.active?'opacity:.65':''}">
-      <td style="font-weight:600;color:var(--navy);">${esc(p.name)}</td>
+      <td style="font-weight:600;color:var(--navy);">${esc(p.name)}${docBadge}</td>
       <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
       <td style="font-size:12px;">${wNames.length?wNames.map(n=>`<span class="project-tag">${esc(n)}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None active</span>'}</td>
       <td>${activeBadge}</td>
@@ -3882,6 +3991,204 @@ function saveVehicles(){    try{localStorage.setItem(VEHICLE_KEY,JSON.stringify(
 function saveAccomHistory(){ try{localStorage.setItem(ACCOM_HIST_KEY,JSON.stringify(accomHistory));}catch(e){} }
 function saveVehHistory(){   try{localStorage.setItem(VEH_HIST_KEY,JSON.stringify(vehHistory));}catch(e){} }
 loadResources();
+
+// ── Compliance Documents store ──────────────────────────────────────────────
+const COMP_DOCS_KEY = 'tmc_comp_docs_v1';
+let complianceDocs = [];
+const COMPLIANCE_COUNTRIES = [
+  {code:'NL', name:'Netherlands', flag:'🇳🇱'},
+  {code:'BE', name:'Belgium', flag:'🇧🇪'},
+  {code:'AT', name:'Austria', flag:'🇦🇹'},
+  {code:'DE', name:'Germany', flag:'🇩🇪'},
+  {code:'FR', name:'France', flag:'🇫🇷'},
+  {code:'PL', name:'Poland', flag:'🇵🇱'},
+  {code:'RO', name:'Romania', flag:'🇷🇴'},
+  {code:'BG', name:'Bulgaria', flag:'🇧🇬'},
+  {code:'HR', name:'Croatia', flag:'🇭🇷'},
+  {code:'PT', name:'Portugal', flag:'🇵🇹'},
+];
+const DOC_CAT_LABELS = {
+  compliance: 'Compliance Rules',
+  delivery: 'Delivery & Booking',
+  health_safety: 'Health & Safety',
+  general: 'General'
+};
+const DOC_CAT_COLORS = {
+  compliance: '#1e40af',
+  delivery: '#854d0e',
+  health_safety: '#166534',
+  general: '#6b7280'
+};
+function loadComplianceDocs(){ try{ const r=localStorage.getItem(COMP_DOCS_KEY); if(r) complianceDocs=JSON.parse(r); }catch(e){ complianceDocs=[]; } }
+function saveComplianceDocs(){ try{ localStorage.setItem(COMP_DOCS_KEY,JSON.stringify(complianceDocs)); }catch(e){} }
+loadComplianceDocs();
+
+let cdScopeFilter = 'all';
+let cdCatFilter = 'all';
+
+function setCDScope(v, el){
+  cdScopeFilter = v;
+  document.querySelectorAll('[data-cd-scope]').forEach(b=>b.classList.toggle('active', b.dataset.cdScope===v));
+  renderDocuments();
+}
+function setCDCat(v, el){
+  cdCatFilter = v;
+  document.querySelectorAll('[data-cd-cat]').forEach(b=>b.classList.toggle('active', b.dataset.cdCat===v));
+  renderDocuments();
+}
+
+function renderDocuments(){
+  const list = document.getElementById('cdList');
+  if(!list) return;
+  const search = (document.getElementById('cdSearch')?.value||'').toLowerCase().trim();
+  let docs = complianceDocs.filter(d=>d.active!==false);
+  if(cdScopeFilter !== 'all') docs = docs.filter(d=>d.scope_type===cdScopeFilter);
+  if(cdCatFilter !== 'all') docs = docs.filter(d=>d.category===cdCatFilter);
+  if(search) docs = docs.filter(d=>(d.title||'').toLowerCase().includes(search)||(d.scope_label||'').toLowerCase().includes(search)||(d.notes||'').toLowerCase().includes(search));
+
+  if(!docs.length){
+    list.innerHTML=`<div class="doc-no-results"><div class="doc-no-results-icon">📂</div><div>No documents found.</div><div style="font-size:12px;margin-top:4px;">Add a document using the button above or adjust the filters.</div></div>`;
+    return;
+  }
+
+  // Group by scope type then scope label
+  const groups = {};
+  docs.forEach(d=>{
+    const gkey = d.scope_type + ':' + d.scope_id;
+    if(!groups[gkey]) groups[gkey]={scope_type:d.scope_type, scope_id:d.scope_id, scope_label:d.scope_label||d.scope_id, docs:[]};
+    groups[gkey].docs.push(d);
+  });
+  const sortedGroups = Object.values(groups).sort((a,b)=>{
+    if(a.scope_type!==b.scope_type) return a.scope_type==='project'?-1:1;
+    return (a.scope_label||'').localeCompare(b.scope_label||'');
+  });
+
+  list.innerHTML = sortedGroups.map(g=>{
+    const scopeIcon = g.scope_type==='project'?'Project':'Country';
+    const cardsHtml = g.docs.map(d=>{
+      const catColor = DOC_CAT_COLORS[d.category]||'#6b7280';
+      const catLabel = DOC_CAT_LABELS[d.category]||d.category;
+      const filePart = d.file_name?`<div class="doc-file-info"><span>📎</span><span>${esc(d.file_name)}</span>${d.file_size?`<span>(${Math.round(d.file_size/1024)}KB)</span>`:''}</div>`:'';
+      const canEdit = canAction('workerDocs');
+      const dlBtn = d.file_path?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="downloadCompDoc('${d.id}')">Download</button>`:'';
+      const delBtn = canEdit?`<button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteCompDoc('${d.id}')">Delete</button>`:'';
+      const byPart = d.uploaded_by?`<span style="font-size:11px;color:var(--text-l);">by ${esc(d.uploaded_by)}</span>`:'';
+      const datePart = d.created_at?`<span style="font-size:11px;color:var(--text-l);">${new Date(d.created_at).toLocaleDateString('en-GB')}</span>`:'';
+      return `<div class="doc-register-card">
+        <div class="doc-register-card-body">
+          <div class="doc-register-card-title">${esc(d.title)}</div>
+          <div class="doc-register-card-meta">
+            <span class="doc-cat-tag" style="background:${catColor};">${esc(catLabel)}</span>
+            ${datePart}${byPart}
+          </div>
+          ${d.notes?`<div class="doc-register-card-notes">${esc(d.notes)}</div>`:''}
+          ${filePart}
+        </div>
+        <div class="doc-register-card-actions">${dlBtn}${delBtn}</div>
+      </div>`;
+    }).join('');
+    return `<div class="doc-register-group">
+      <div class="doc-register-group-title"><span class="doc-scope-badge">${esc(scopeIcon)}</span> ${esc(g.scope_label)}</div>
+      ${cardsHtml}
+    </div>`;
+  }).join('');
+}
+
+function openAddCompDoc(){
+  if(!requireAction('workerDocs','upload compliance documents')) return;
+  document.getElementById('cdTitle').value='';
+  document.getElementById('cdCategory').value='compliance';
+  document.getElementById('cdNotes').value='';
+  document.getElementById('cdFileDropText').textContent='📎 Click to attach a file (PDF, DOCX, image…)';
+  document.getElementById('cdFileCurrent').style.display='none';
+  document.getElementById('cdFile').value='';
+  // Set scope to project
+  document.querySelectorAll('[name="cdScopeType"]').forEach(r=>r.checked=(r.value==='project'));
+  toggleCDScopeType('project');
+  // Populate project picker
+  const ps = document.getElementById('cdProject');
+  ps.innerHTML='<option value="">— Select project —</option>'+projectStore.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  // Populate country picker
+  const cs = document.getElementById('cdCountry');
+  cs.innerHTML='<option value="">— Select country —</option>'+COMPLIANCE_COUNTRIES.map(c=>`<option value="${c.code}">${c.flag} ${c.name}</option>`).join('');
+  // Store temp file info
+  window._cdTempFile = null;
+  document.getElementById('addCompDocOverlay').classList.add('open');
+}
+function closeAddCompDoc(){
+  document.getElementById('addCompDocOverlay').classList.remove('open');
+  window._cdTempFile = null;
+}
+function toggleCDScopeType(type){
+  document.getElementById('cdProjectField').style.display = type==='project'?'':'none';
+  document.getElementById('cdCountryField').style.display = type==='country'?'':'none';
+}
+function handleCDFileSelect(input){
+  const f = input.files?.[0];
+  if(!f){ window._cdTempFile=null; document.getElementById('cdFileDropText').textContent='📎 Click to attach a file (PDF, DOCX, image…)'; return; }
+  window._cdTempFile = f;
+  document.getElementById('cdFileDropText').textContent=`📎 ${f.name} (${Math.round(f.size/1024)}KB)`;
+}
+async function saveCompDoc(){
+  if(!requireAction('workerDocs','upload compliance documents')) return;
+  const title = document.getElementById('cdTitle').value.trim();
+  if(!title){ alert('Please enter a document title.'); return; }
+  const category = document.getElementById('cdCategory').value;
+  const scopeTypeEl = document.querySelector('[name="cdScopeType"]:checked');
+  const scope_type = scopeTypeEl?scopeTypeEl.value:'project';
+  let scope_id='', scope_label='';
+  if(scope_type==='project'){
+    scope_id = document.getElementById('cdProject').value;
+    if(!scope_id){ alert('Please select a project.'); return; }
+    const proj = projectStore.find(p=>p.id===scope_id);
+    scope_label = proj?proj.name:scope_id;
+  } else {
+    scope_id = document.getElementById('cdCountry').value;
+    if(!scope_id){ alert('Please select a country.'); return; }
+    const country = COMPLIANCE_COUNTRIES.find(c=>c.code===scope_id);
+    scope_label = country?`${country.flag} ${country.name}`:scope_id;
+  }
+  const notes = document.getElementById('cdNotes').value.trim();
+  const newDoc = {
+    id: crypto.randomUUID(),
+    title, category, scope_type, scope_id, scope_label,
+    notes, file_name:'', file_path:'', file_size:0, mime_type:'',
+    uploaded_by: sbSession?.user?.email||'',
+    active: true,
+    created_at: new Date().toISOString()
+  };
+  // Upload file if selected
+  const file = window._cdTempFile;
+  if(file){
+    if(!sbClient||!sbSession){ alert('Cannot upload file: you are not signed in.'); return; }
+    const path=`compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+    const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
+    if(error){ alert('File upload failed: '+error.message); return; }
+    newDoc.file_name=file.name; newDoc.file_path=path; newDoc.file_size=file.size; newDoc.mime_type=file.type||'';
+  }
+  complianceDocs.unshift(newDoc);
+  saveComplianceDocs();
+  closeAddCompDoc();
+  renderDocuments();
+  renderProjects();
+  sbScheduleSync();
+}
+async function deleteCompDoc(id){
+  if(!requireAction('workerDocs','delete compliance documents')) return;
+  const d = complianceDocs.find(x=>x.id===id); if(!d) return;
+  tmcConfirm(`Delete document: ${d.title}?`, 'This will permanently remove the document record. The file in storage will not be deleted.', async ()=>{
+    d.active=false;
+    saveComplianceDocs();
+    renderDocuments();
+    renderProjects();
+    sbScheduleSync();
+  },{title:'TMC Compliance', subtitle:'Confirm delete', okText:'Delete'});
+}
+async function downloadCompDoc(id){
+  const d = complianceDocs.find(x=>x.id===id);
+  if(!d||!d.file_path){ alert('No file attached.'); return; }
+  await sbSignedDownload(d.file_path, d.file_name||'document');
+}
 
 // Current assignment = most recent non-expired entry (or the one with no end date)
 function currentAccom(wid){
@@ -4713,6 +5020,7 @@ async function sbPersistAll(force=false){
   const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',active:true}); }));
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
+  await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
   await sbApplyArchivedDeletionsToSupabase();
   sbSetStatus('Supabase: synced', true);
 }
@@ -4805,6 +5113,8 @@ function applyRoleUI(){
   hideByOnclick(['openAdd()','doAdd()','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','attachF','rmFile'], canWorkers);
   hideByOnclick(['openAddProject','editProject','toggleProjectActive','openAddProjectAssignment','openEditPA','deleteProjectAssignment','saveProjectAssignment','openAddProperty','editProperty','deleteProperty','openAddVehicle','editVehicle','deleteVehicle','openAssignAccom','openAssignVehicle','saveAccomAssignment','saveVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'], canPlanning);
   hideByOnclick(['openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays'], canSettings);
+  hideByOnclick(['openAddCompDoc()','deleteCompDoc'], canWorkers);
+  const addCompDocBtn=document.getElementById('addCompDocBtn'); if(addCompDocBtn) addCompDocBtn.classList.toggle('role-hide', !canWorkers);
   document.querySelectorAll('#paContractFile').forEach(el=>el.classList.toggle('role-hide', !canPlanning));
   document.querySelectorAll('#warnRange,#zzpNewName,#zzpNewCat,#zzpNewTip,#zzpNewReq,#blueNewName,#blueNewCat,#blueNewTip,#blueNewReq').forEach(el=>el.disabled=!canSettings);
   const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.toggle('role-hide', !(canSettings || canRoles));
@@ -4895,7 +5205,7 @@ async function sbLoadAll(){
     }catch(e){ tableErr(name,e); return fallback; }
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
@@ -4910,7 +5220,8 @@ async function sbLoadAll(){
       q('vehicles', sbClient.from('vehicles').select('*').eq('active',true).order('description'), []),
       q('accommodation_assignments', sbClient.from('accommodation_assignments').select('*').eq('active',true), []),
       q('vehicle_assignments', sbClient.from('vehicle_assignments').select('*').eq('active',true), []),
-      q('deleted_items', sbClient.from('deleted_items').select('*').eq('restored',false).order('deleted_at',{ascending:false}), [])
+      q('deleted_items', sbClient.from('deleted_items').select('*').eq('restored',false).order('deleted_at',{ascending:false}), []),
+      q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), [])
     ]);
 
     if(workerData === null){
@@ -4949,8 +5260,9 @@ async function sbLoadAll(){
       const enriched = enrichDeletedPayload(d.item_type, payload);
       return {id:d.id,type:d.item_type,label:d.label,deletedAt:d.deleted_at,deletedBy:d.deleted_by_email,payload:enriched};
     });
+    if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     sbHasLoadedRemote = true;
-    renderProjFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); renderDeletedItems(); applyRoleUI();
+    renderProjFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
       const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
       if(workerErr){
