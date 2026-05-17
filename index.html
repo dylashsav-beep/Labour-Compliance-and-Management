@@ -3123,12 +3123,28 @@ function renderPAGantt(){
   });
   html+=`</tr></thead><tbody>`;
 
+  // Pack assignments into minimum lanes: non-overlapping bars share a lane
+  const packLanes=assignments=>{
+    const sorted=[...assignments].sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+    const laneEnd=[]; // tracks end date of last bar in each lane
+    const lanes=new Map();
+    sorted.forEach(a=>{
+      const s=a.startDate||'0000-01-01';
+      let lane=laneEnd.findIndex(e=>e<s);
+      if(lane===-1){lane=laneEnd.length;laneEnd.push('');}
+      laneEnd[lane]=a.endDate||'9999-12-31';
+      lanes.set(a.id,lane);
+    });
+    return {lanes, laneCount: laneEnd.length};
+  };
+
   ganttWorkerOrder.forEach(wid=>{
     const w=workers.find(x=>x.id===wid); if(!w) return;
     if(!filteredWids.has(w.id))return;
     const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
+    const {laneCount}=packLanes(wA);
     const [bg,col]=avc(w.id);
-    const rowH=Math.max(44,wA.length*28+8);
+    const rowH=Math.max(44,laneCount*28+8);
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
@@ -3161,7 +3177,8 @@ function renderPAGantt(){
       if(!filteredWids.has(w.id))return;
       const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
-      wA.forEach((a,ai)=>{
+      const {lanes}=packLanes(wA);
+      wA.forEach(a=>{
         const proj=projectStore.find(p=>p.id===a.projectId);
         const pColor=projColor(a.projectId);
         let barCls='gb-active';
@@ -3169,7 +3186,7 @@ function renderPAGantt(){
         else if(a.endDate){const e2=new Date(a.endDate);e2.setHours(0,0,0,0);
           if(e2<today)barCls='gb-expired';
           else if((e2-today)/86400000<=settings.warningDays)barCls='gb-expiring';}
-        barsData.push({id:a.id,wid:w.id,startDate:a.startDate,endDate:a.endDate,barIdx:ai,
+        barsData.push({id:a.id,wid:w.id,startDate:a.startDate,endDate:a.endDate,barIdx:lanes.get(a.id)||0,
           label:proj?.name||'?',contractIcon:a.contractFile?'📎 ':'⚠ ',barCls,
           bgStyle:barCls==='gb-active'?`background:${pColor};`:'',
           title:`${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${a.contractFile?'Contract attached':'No contract'}`,
