@@ -729,7 +729,6 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <thead><tr>
           <th onclick="srt('name')">Name</th>
           <th onclick="srt('type')">Type</th>
-          <th class="no-sort">Worker Status</th>
           <th class="no-sort" id="thWeekAssign">Worker Assignment</th>
           <th class="no-sort">Required Docs</th>
           <th onclick="srt('score')">Score</th>
@@ -2849,11 +2848,10 @@ function renderTable(){
         <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div>
       </div></td>
       <td><span class="type-badge ${w.type}">${w.type==='zzp'?'ZZP':'Employed'}</span></td>
-      <td><span class="worker-active-badge ${workerActive?'active':'inactive'}">${workerActive?'● Active':'○ Inactive'}</span></td>
       <td id="assigncell_${w.id}">${weekPAHtml}</td>
       <td><div class="doc-chips">${chips(w)}</div></td>
-      <td><div class="score-cell"><div class="score-bar"><div class="score-fill" style="width:${s}%;background:${sc(s)}"></div></div><span class="score-num" style="color:${sc(s)}">${s}%</span></div></td>
-      <td title="${goTips[st]}"><span class="status-badge ${st}"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
+      <td><span class="score-num" style="color:${sc(s)};font-size:12px;font-weight:600;">${s}%</span></td>
+      <td title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td><button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button></td>
     </tr>`;
