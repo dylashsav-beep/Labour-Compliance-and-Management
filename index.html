@@ -804,7 +804,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <table>
           <thead><tr>
             <th onclick="paSrt('worker')" style="cursor:pointer;" id="paTh_worker">Worker</th>
-            <th class="no-sort">Project</th>
+            <th onclick="paSrt('project')" style="cursor:pointer;" id="paTh_project">Project</th>
             <th onclick="paSrt('start')" style="cursor:pointer;" id="paTh_start">Start</th>
             <th onclick="paSrt('end')" style="cursor:pointer;" id="paTh_end">End</th>
             <th class="no-sort">Rate</th>
@@ -2807,16 +2807,15 @@ function savePA(){ try{ localStorage.setItem(PA_KEY,JSON.stringify(projectAssign
 loadPA();
 
 // Current active assignment for a worker (most recent overlapping today)
-function currentPA(wid){
-  const today = new Date(); today.setHours(0,0,0,0);
+function currentPA(wid, refDate){
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
   const active = projectAssignments.filter(a=>{
     if(a.wid!==wid) return false;
     const s = a.startDate ? new Date(a.startDate) : new Date(0);
     const e = a.endDate   ? new Date(a.endDate)   : new Date(9999,0);
-    return s<=today && e>=today;
+    return s<=ref && e>=ref;
   });
   if(active.length) return active[active.length-1];
-  // Fall back to most recent past
   const past = projectAssignments.filter(a=>a.wid===wid).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
   return past[0]||null;
 }
@@ -2860,8 +2859,8 @@ function paRefWeekKey(){ return isoWeekKey(paRefWeekMonday()); }
 
 let paSearch = '';
 let paProjectFilter = 'all';
-let paSortKey = 'start';
-let paSortDir = -1;
+let paSortKey = 'project';
+let paSortDir = 1;
 
 function handlePASearch(v){ paSearch=v.toLowerCase().trim(); renderRoster(); }
 function handlePAProjectFilter(v){ paProjectFilter=v; renderRoster(); }
@@ -2872,21 +2871,17 @@ function clearPAFilters(){
   renderRoster();
 }
 function paSrt(key){
-  if(paSortKey===key) paSortDir*=-1; else { paSortKey=key; paSortDir=key==='worker'?1:-1; }
+  if(paSortKey===key) paSortDir*=-1; else { paSortKey=key; paSortDir=1; }
   renderRoster();
 }
-function _paFilteredAssignments(){
-  // Always scope to assignments overlapping the reference week (center Gantt column)
-  const refMon=paRefWeekMonday(), refSun=weekSunday(refMon);
-  let list=projectAssignments.filter(a=>{
-    if(!a.startDate) return false;
-    const s=new Date(a.startDate); s.setHours(0,0,0,0);
-    const e=a.endDate ? new Date(a.endDate) : null; if(e) e.setHours(23,59,59,999);
-    return s<=refSun && (!e||e>=refMon);
-  });
-  if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch); });
-  if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
+function _paSortRows(list){
   list.sort((a,b)=>{
+    if(paSortKey==='project'){
+      const pa=projectStore.find(p=>p.id===a.projectId)?.name||'';
+      const pb=projectStore.find(p=>p.id===b.projectId)?.name||'';
+      const c=paSortDir*pa.localeCompare(pb); if(c!==0) return c;
+      return (workers.find(x=>x.id===a.wid)?.name||'').localeCompare(workers.find(x=>x.id===b.wid)?.name||'');
+    }
     if(paSortKey==='worker'){
       const wa=workers.find(x=>x.id===a.wid)?.name||''; const wb=workers.find(x=>x.id===b.wid)?.name||'';
       return paSortDir*wa.localeCompare(wb);
@@ -2896,6 +2891,26 @@ function _paFilteredAssignments(){
     return 0;
   });
   return list;
+}
+function _paFilteredAssignments(){
+  // Gantt: scope to assignments overlapping the reference week
+  const refMon=paRefWeekMonday(), refSun=weekSunday(refMon);
+  let list=projectAssignments.filter(a=>{
+    if(!a.startDate) return false;
+    const s=new Date(a.startDate); s.setHours(0,0,0,0);
+    const e=a.endDate ? new Date(a.endDate) : null; if(e) e.setHours(23,59,59,999);
+    return s<=refSun && (!e||e>=refMon);
+  });
+  if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch)||(w?.agency||'').toLowerCase().includes(paSearch); });
+  if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
+  return _paSortRows(list);
+}
+function _paAllAssignments(){
+  // Table: all assignments (no ref-week filter), just search + project filter
+  let list=[...projectAssignments];
+  if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch)||(w?.agency||'').toLowerCase().includes(paSearch); });
+  if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
+  return _paSortRows(list);
 }
 function _paSortIndicator(key){ return paSortKey===key?(paSortDir===1?' ▲':' ▼'):''; }
 
@@ -2922,8 +2937,8 @@ function renderRoster(){
     if(cur&&cur!=='all') ps.value=cur;
   }
   // Update sort indicators
-  ['worker','start','end'].forEach(k=>{
-    const th=document.getElementById('paTh_'+k); if(th) th.textContent={worker:'Worker',start:'Start',end:'End'}[k]+_paSortIndicator(k);
+  ['worker','project','start','end'].forEach(k=>{
+    const th=document.getElementById('paTh_'+k); if(th) th.textContent={worker:'Worker',project:'Project',start:'Start',end:'End'}[k]+_paSortIndicator(k);
   });
   renderPAGantt();
   renderPAList();
@@ -3081,8 +3096,23 @@ function renderPAGantt(){
   const projColor=pid=>{const i=projectStore.findIndex(p=>p.id===pid);return projColors[Math.abs(i)%projColors.length];};
   const colMinW=zoom==='day'?52:zoom==='week'?110:90;
 
+  // Build ordered worker list for Gantt rows
+  let ganttWorkerOrder=[...filteredWids];
+  if(paSortKey==='project'){
+    ganttWorkerOrder.sort((a,b)=>{
+      const pa=filteredPA.find(x=>x.wid===a); const pb=filteredPA.find(x=>x.wid===b);
+      const pna=projectStore.find(p=>p.id===pa?.projectId)?.name||'';
+      const pnb=projectStore.find(p=>p.id===pb?.projectId)?.name||'';
+      const c=pSortDir*pna.localeCompare(pnb);if(c!==0)return c;
+      return (workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||'');
+    });
+  } else if(paSortKey==='worker'){
+    ganttWorkerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
+  }
+  const pSortDir=paSortDir;
+
   // Phase 1 — skeleton table
-  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
+  let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:190px;">Worker</th>`;
   cols.forEach(col=>{
     const isNow=isNowCol(col,zoom);
     const isRef=isoWeekKey(col)===refKey&&!isNow;
@@ -3090,7 +3120,8 @@ function renderPAGantt(){
   });
   html+=`</tr></thead><tbody>`;
 
-  workers.forEach(w=>{
+  ganttWorkerOrder.forEach(wid=>{
+    const w=workers.find(x=>x.id===wid); if(!w) return;
     if(!filteredWids.has(w.id))return;
     const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
     const [bg,col]=avc(w.id);
@@ -3122,7 +3153,8 @@ function renderPAGantt(){
     _paGanttRAF=null;
     const tbl=container.querySelector('table.gantt-grid');if(!tbl)return;
     const barsData=[];
-    workers.forEach(w=>{
+    ganttWorkerOrder.forEach(wid=>{
+      const w=workers.find(x=>x.id===wid);if(!w)return;
       if(!filteredWids.has(w.id))return;
       const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
@@ -3154,17 +3186,21 @@ function renderPAList(){
   const cnt=document.getElementById('paListCount');
   if(!projectAssignments.length){ cnt.textContent='0 assignments'; tb.innerHTML=''; document.getElementById('noPAList').style.display='block'; return; }
   document.getElementById('noPAList').style.display='none';
-  const sorted=_paFilteredAssignments();
-  cnt.textContent=sorted.length+' assignment'+(sorted.length!==1?'s':'')+(sorted.length!==projectAssignments.length?' (filtered)':'');
+  const all=_paAllAssignments();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const active=all.filter(a=>!a.endDate||new Date(a.endDate)>=today);
+  const completed=all.filter(a=>a.endDate&&new Date(a.endDate)<today);
+  cnt.textContent=all.length+' assignment'+(all.length!==1?'s':'')+(all.length!==projectAssignments.length?' (filtered)':'');
   const rateLabel={day:'/ day',hour:'/ hour',week:'/ week',fixed:'fixed'};
-  tb.innerHTML=sorted.map(a=>{
+  const stColors={'gb-active':'var(--green)','gb-future':'var(--sky)','gb-expiring':'var(--amber)','gb-expired':'var(--text-l)'};
+  const stLabels={'gb-active':'Active','gb-future':'Planned','gb-expiring':'Ending soon','gb-expired':'Ended'};
+  const rowHtml=(a,dim=false)=>{
     const w=workers.find(x=>x.id===a.wid);
     const proj=projectStore.find(p=>p.id===a.projectId);
     const [bg,col]=w?avc(w.id):['#eef','#114'];
     const st=ganttBarClass(a.startDate,a.endDate);
-    const stLabels={gb_active:'Active','gb-active':'Active','gb-future':'Planned','gb-expiring':'Ending soon','gb-expired':'Ended'};
-    const stColors={'gb-active':'var(--green)','gb-future':'var(--sky)','gb-expiring':'var(--amber)','gb-expired':'var(--text-l)'};
-    return `<tr>
+    const noContract=!a.contractFile;
+    return `<tr style="${dim?'opacity:.7;':''}">
       <td><div class="worker-cell">
         ${w?`<div class="avatar" style="background:${bg};color:${col};font-size:11px;">${ini(w.name)}</div>
         <div><div class="worker-name" style="font-size:12px;">${w.name}</div><div class="worker-id">${[w.ref,w.nat,w.agency].filter(Boolean).join(' · ')}</div></div>`
@@ -3176,12 +3212,21 @@ function renderPAList(){
       <td>${a.rate?`<span class="rate-tag">€${parseFloat(a.rate).toFixed(2)} ${rateLabel[a.rateType]||''}</span>`:'<span style="color:var(--text-l);font-size:11px;">—</span>'}</td>
       <td>${a.contractFile
         ?`<span class="contract-pill" onclick="downloadPAContract('${a.id}')" title="Download contract">📎 ${esc(a.contractFile.name)}</span>`
-        :`<span class="contract-pill missing">⚠ Missing</span>`
+        :`<span class="contract-pill missing" title="${dim?'Completed assignment has no contract on file — this needs attention':'Contract missing'}">⚠ ${dim?'No contract — flag':'Missing'}</span>`
       }</td>
       <td><span style="font-size:11px;font-weight:600;color:${stColors[st]||'var(--text-m)'};">● ${stLabels[st]||st}</span></td>
       <td><button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openEditPA('${a.id}')">Edit</button></td>
     </tr>`;
-  }).join('');
+  };
+  const sectionHdr=(label,color='var(--navy)')=>`<tr><td colspan="8" style="padding:8px 10px;font-size:11px;font-weight:700;color:${color};background:var(--bg);border-top:2px solid var(--border);letter-spacing:.04em;text-transform:uppercase;">${label}</td></tr>`;
+
+  let html='';
+  if(active.length) html+=sectionHdr(`Active & Upcoming · ${active.length}`)+active.map(a=>rowHtml(a,false)).join('');
+  if(completed.length){
+    const flagged=completed.filter(a=>!a.contractFile).length;
+    html+=sectionHdr(`Completed · ${completed.length}${flagged?` · ⚠ ${flagged} missing contract`:''}`, flagged?'#c53030':'var(--text-m)')+completed.map(a=>rowHtml(a,true)).join('');
+  }
+  tb.innerHTML=html;
 }
 
 // ─── Protected assignment helpers ─────────────────────────────────────────────
@@ -3464,16 +3509,19 @@ function setWorkerActiveFromSelect(wid){
 }
 function rebuildModal(id){
   const w=workers.find(x=>x.id===id);if(!w)return;
-  const t=tmpl(w),s=score(w),cats=[...new Set(t.map(d=>d.cat))];
-  const gs=goStatus(w);  // always today for document management purposes
+  const refDate=currentWeekMonday; // match the week selected in the workers tab
+  const t=tmpl(w),s=scoreAt(w,refDate),cats=[...new Set(t.map(d=>d.cat))];
+  const gs=goStatusAt(w,refDate);
+  const isCurrentWeekRef=isoWeekKey(refDate)===isoWeekKey(new Date());
+  const refNote=isCurrentWeekRef?'':` <span style="font-size:10px;font-weight:400;opacity:.75;">(${isoWeekKey(refDate)})</span>`;
   const goBg=gs==='go'?'#f0fff4':gs==='warning'?'#fffbeb':'#fff5f5';
   const goColor=gs==='go'?'#276749':gs==='warning'?'#b45309':'#c53030';
   const goBorder=gs==='go'?'#c6f6d5':gs==='warning'?'#fde68a':'#fed7d7';
-  const goText=gs==='go'?'✓ GO — All required documents on file. Worker is cleared for site.'
+  const goText=(gs==='go'?'✓ GO — All required documents on file. Worker is cleared for site.'
     :gs==='warning'?'⚠ WARNING — Worker is on site but one or more required documents are expiring soon. Action required before expiry.'
-    :'✕ NO-GO — One or more required documents are missing or expired. Worker must not be on site until resolved.';
-  const missingDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id], new Date())==='missing');
-  const expiringDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id], new Date())==='expiring');
+    :'✕ NO-GO — One or more required documents are missing or expired. Worker must not be on site until resolved.')+refNote;
+  const missingDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='missing');
+  const expiringDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='expiring');
   let html=`<div style="padding:12px 16px;background:${goBg};border:1px solid ${goBorder};border-radius:6px;margin-bottom:10px;">
     <div style="font-size:13px;font-weight:700;color:${goColor};margin-bottom:${missingDocs.length||expiringDocs.length?'6px':'0'}">${goText}</div>
     ${missingDocs.length?`<div style="font-size:11px;color:var(--red);margin-top:4px;">Missing: ${missingDocs.map(d=>d.name).join(', ')}</div>`:''}
@@ -3498,11 +3546,11 @@ function rebuildModal(id){
   </div>`;
 
   // Project assignment panel
-  const cpa = currentPA(id);
+  const cpa = currentPA(id, refDate);
   const cpaProj = cpa ? projectStore.find(p=>p.id===cpa.projectId) : null;
   const rateLabel={day:'/ day',hour:'/ hour',week:'/ week',fixed:'fixed'};
   // Accommodation panel
-  const acc = currentAccom(id);
+  const acc = currentAccom(id, refDate);
   const accProp = acc ? properties.find(p=>p.id===acc.propId) : null;
   html += `<div class="worker-summary-grid">
     <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
@@ -3532,14 +3580,14 @@ function rebuildModal(id){
     </div>
     <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
       <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">🚗 VEHICLE</div>
-      ${(()=>{const va=currentVeh(id);const v=va?vehicles.find(x=>x.id===va.vehicleId):null;return va&&v
+      ${(()=>{const va=currentVeh(id,refDate);const v=va?vehicles.find(x=>x.id===va.vehicleId):null;return va&&v
         ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(v.desc||'Unknown')}</div>
            <div style="font-size:11px;color:var(--text-l);margin-top:2px;">${esc([v.make,v.model].filter(Boolean).join(' ')||'')} ${v.reg?'· '+v.reg:''}</div>
            <div style="font-size:11px;margin-top:4px;">Until: <strong>${va.endDate||'—'}</strong> ${resStatusBadge(va.endDate)}</div>`
         : `<div style="font-size:12px;color:var(--text-l);">Not assigned</div>`;})()
       }
       <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignVehicle('${id}')">
-        ${currentVeh(id)?'Edit':'Assign'} Vehicle
+        ${currentVeh(id,refDate)?'Edit':'Assign'} Vehicle
       </button>
     </div>
   </div>`;
@@ -4584,20 +4632,19 @@ async function downloadCompDoc(id){
 }
 
 // Current assignment = most recent non-expired entry (or the one with no end date)
-function currentAccom(wid){
+function currentAccom(wid, refDate){
   const hist = accomHistory[wid]||[];
   if(!hist.length) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  // Prefer entry with no end date, or end date >= today
-  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=today);
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=ref);
   if(active.length) return active[active.length-1];
-  return hist[hist.length-1]; // return last even if expired
+  return hist[hist.length-1];
 }
-function currentVeh(wid){
+function currentVeh(wid, refDate){
   const hist = vehHistory[wid]||[];
   if(!hist.length) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=today);
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=ref);
   if(active.length) return active[active.length-1];
   return hist[hist.length-1];
 }
