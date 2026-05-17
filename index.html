@@ -1158,6 +1158,10 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">Check-in Date</label><input type="date" class="form-input" id="awAccomStart"/></div>
         <div class="form-field"><label class="form-label">Check-out Date</label><input type="date" class="form-input" id="awAccomEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="awAccomNotes" placeholder="Room number, requirements…"/></div>
+        <div class="form-field full" style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0;">Charge to operative?</label>
+          <label class="tog"><input type="checkbox" id="awAccomCharge"/><span class="tog-slider"></span></label>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('assignWorkerToAccomOverlay')">Cancel</button>
@@ -1182,6 +1186,14 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">From Date</label><input type="date" class="form-input" id="awVehicleStart"/></div>
         <div class="form-field"><label class="form-label">Until Date</label><input type="date" class="form-input" id="awVehicleEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="awVehicleNotes" placeholder="Fuel card, usage notes…"/></div>
+        <div class="form-field full" style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0;">Charge to operative?</label>
+          <label class="tog"><input type="checkbox" id="awVehicleCharge"/><span class="tog-slider"></span></label>
+        </div>
+        <div class="form-field full" id="awVehicleChargeAmtRow" style="display:none;">
+          <label class="form-label">Weekly Charge Amount (€)</label>
+          <input type="number" class="form-input" id="awVehicleChargeAmt" placeholder="0.00" min="0" step="0.01" style="max-width:180px;"/>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('assignWorkerToVehicleOverlay')">Cancel</button>
@@ -5041,9 +5053,10 @@ function openAssignWorkerToAccom(propId){
   const sel = document.getElementById('awAccomWorker');
   sel.innerHTML = '<option value="">— Select worker —</option>' +
     workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
-  document.getElementById('awAccomStart').value = '';
-  document.getElementById('awAccomEnd').value   = '';
-  document.getElementById('awAccomNotes').value = '';
+  document.getElementById('awAccomStart').value  = '';
+  document.getElementById('awAccomEnd').value    = '';
+  document.getElementById('awAccomNotes').value  = '';
+  document.getElementById('awAccomCharge').checked = false;
   document.getElementById('assignWorkerToAccomOverlay').classList.add('open');
 }
 function saveAssignWorkerToAccom(){
@@ -5055,9 +5068,11 @@ function saveAssignWorkerToAccom(){
     propId:    awAccomPropId,
     startDate: document.getElementById('awAccomStart').value,
     endDate:   document.getElementById('awAccomEnd').value,
-    notes:     document.getElementById('awAccomNotes').value.trim()
+    notes:     document.getElementById('awAccomNotes').value.trim(),
+    chargeToOperative: document.getElementById('awAccomCharge').checked
   });
   saveAccomHistory();
+  sbScheduleSync();
   closeM('assignWorkerToAccomOverlay');
   renderResources();
 }
@@ -5072,23 +5087,34 @@ function openAssignWorkerToVehicle(vehicleId){
   const sel = document.getElementById('awVehicleWorker');
   sel.innerHTML = '<option value="">— Select worker —</option>' +
     workers.map(w=>`<option value="${w.id}">${esc(w.name)}</option>`).join('');
-  document.getElementById('awVehicleStart').value = '';
-  document.getElementById('awVehicleEnd').value   = '';
-  document.getElementById('awVehicleNotes').value = '';
+  document.getElementById('awVehicleStart').value  = '';
+  document.getElementById('awVehicleEnd').value    = '';
+  document.getElementById('awVehicleNotes').value  = '';
+  document.getElementById('awVehicleCharge').checked = false;
+  document.getElementById('awVehicleChargeAmt').value = '';
+  document.getElementById('awVehicleChargeAmtRow').style.display = 'none';
+  document.getElementById('awVehicleCharge').onchange = function(){
+    document.getElementById('awVehicleChargeAmtRow').style.display = this.checked ? 'block' : 'none';
+  };
   document.getElementById('assignWorkerToVehicleOverlay').classList.add('open');
 }
 function saveAssignWorkerToVehicle(){
   const wid = document.getElementById('awVehicleWorker').value;
   if(!wid){ alert('Please select a worker.'); return; }
+  const vehCharge = document.getElementById('awVehicleCharge').checked;
+  const vehChargeAmt = vehCharge ? (parseFloat(document.getElementById('awVehicleChargeAmt').value)||null) : null;
   if(!vehHistory[wid]) vehHistory[wid] = [];
   vehHistory[wid].push({
-    id:        crypto.randomUUID(),
-    vehicleId: awVehicleId,
-    startDate: document.getElementById('awVehicleStart').value,
-    endDate:   document.getElementById('awVehicleEnd').value,
-    notes:     document.getElementById('awVehicleNotes').value.trim()
+    id:                crypto.randomUUID(),
+    vehicleId:         awVehicleId,
+    startDate:         document.getElementById('awVehicleStart').value,
+    endDate:           document.getElementById('awVehicleEnd').value,
+    notes:             document.getElementById('awVehicleNotes').value.trim(),
+    chargeToOperative: vehCharge,
+    weeklyChargeAmount: vehChargeAmt
   });
   saveVehHistory();
+  sbScheduleSync();
   closeM('assignWorkerToVehicleOverlay');
   renderResources();
 }
