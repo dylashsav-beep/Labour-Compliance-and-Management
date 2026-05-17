@@ -3457,7 +3457,7 @@ function renderProjects(){
     return;
   }
   document.getElementById('noProjRes').style.display='none';
-  tb.innerHTML = projectStore.map(p=>{
+  tb.innerHTML = projectStore.filter(p=>p.active!==false).map(p=>{
     const today = new Date(); today.setHours(0,0,0,0);
     const activeWorkers = [...new Set(projectAssignments
       .filter(a=>a.projectId===p.id && (!a.endDate||new Date(a.endDate)>=today))
@@ -5293,7 +5293,7 @@ async function sbLoadAll(){
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
-      q('projects', sbClient.from('projects').select('*').order('name'), []),
+      q('projects', sbClient.from('projects').select('*').eq('active',true).order('name'), []),
       q('workers', sbClient.from('workers').select('*').order('full_name'), null),
       q('worker_documents', sbClient.from('worker_documents').select('*').eq('active',true), []),
       q('worker_document_files', sbClient.from('worker_document_files').select('*').eq('active',true), []),
