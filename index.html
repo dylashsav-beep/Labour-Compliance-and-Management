@@ -4896,7 +4896,7 @@ function renderBillingTracker(type){
       const charge = charges.find(c=>c.assignmentId===e.assignmentId&&c.weekKey===wk);
       const isCharged = !!charge?.charged;
       const isPast = colStartMs <= today.getTime();
-      const needsCharge = inRange && !isCharged && isPast;
+      const needsCharge = inRange && !isCharged;
       const tooltip = isCharged
         ? `Charged ✓${charge.invoiceNumber?' | Inv: '+charge.invoiceNumber:''}${charge.invoiceAmount?' | €'+parseFloat(charge.invoiceAmount).toFixed(2):''}`
         : (inRange?'Click to mark as charged':'Outside assignment period');
