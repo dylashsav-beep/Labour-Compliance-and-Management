@@ -745,12 +745,19 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 
   <!-- ROSTER / PROJECT ASSIGNMENTS VIEW -->
   <div id="viewRoster" style="display:none;">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--text);">Worker Assignments</div>
         <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Each assignment includes a contract and rate. Workers can have sequential or overlapping assignments across projects.</div>
       </div>
       <button class="btn btn-primary" id="newAssignmentBtn" onclick="openAddProjectAssignment()">+ New Assignment</button>
+    </div>
+    <div class="del-toolbar" style="margin-bottom:16px;">
+      <input class="del-search" id="paSearchInput" type="text" placeholder="Search by worker name…" oninput="handlePASearch(this.value)" style="max-width:260px;"/>
+      <select id="paProjectSelect" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:#fff;color:var(--text);cursor:pointer;" onchange="handlePAProjectFilter(this.value)">
+        <option value="all">All projects</option>
+      </select>
+      <button class="del-filter-btn" onclick="clearPAFilters()" style="margin-left:auto;" title="Clear filters">✕ Clear</button>
     </div>
 
     <!-- Assignment Gantt -->
@@ -780,10 +787,10 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="table-scroll">
         <table>
           <thead><tr>
-            <th class="no-sort">Worker</th>
+            <th onclick="paSrt('worker')" style="cursor:pointer;" id="paTh_worker">Worker</th>
             <th class="no-sort">Project</th>
-            <th class="no-sort">Start</th>
-            <th class="no-sort">End</th>
+            <th onclick="paSrt('start')" style="cursor:pointer;" id="paTh_start">Start</th>
+            <th onclick="paSrt('end')" style="cursor:pointer;" id="paTh_end">End</th>
             <th class="no-sort">Rate</th>
             <th class="no-sort">Contract</th>
             <th class="no-sort">Status</th>
@@ -2705,6 +2712,40 @@ function shiftPAGantt(n){ paGanttOffset+=n; renderRoster(); }
 function resetPAGantt(){ paGanttOffset=0; renderRoster(); }
 function setPAGanttZoom(z){ paGanttZoom=z; paGanttOffset=0; renderRoster(); }
 
+let paSearch = '';
+let paProjectFilter = 'all';
+let paSortKey = 'start';
+let paSortDir = -1;
+
+function handlePASearch(v){ paSearch=v.toLowerCase().trim(); renderRoster(); }
+function handlePAProjectFilter(v){ paProjectFilter=v; renderRoster(); }
+function clearPAFilters(){
+  paSearch=''; paProjectFilter='all';
+  const si=document.getElementById('paSearchInput'); if(si) si.value='';
+  const ps=document.getElementById('paProjectSelect'); if(ps) ps.value='all';
+  renderRoster();
+}
+function paSrt(key){
+  if(paSortKey===key) paSortDir*=-1; else { paSortKey=key; paSortDir=key==='worker'?1:-1; }
+  renderRoster();
+}
+function _paFilteredAssignments(){
+  let list=[...projectAssignments];
+  if(paSearch) list=list.filter(a=>{ const w=workers.find(x=>x.id===a.wid); return (w?.name||'').toLowerCase().includes(paSearch); });
+  if(paProjectFilter!=='all') list=list.filter(a=>a.projectId===paProjectFilter);
+  list.sort((a,b)=>{
+    if(paSortKey==='worker'){
+      const wa=workers.find(x=>x.id===a.wid)?.name||''; const wb=workers.find(x=>x.id===b.wid)?.name||'';
+      return paSortDir*wa.localeCompare(wb);
+    }
+    if(paSortKey==='start') return paSortDir*((a.startDate||'').localeCompare(b.startDate||''));
+    if(paSortKey==='end')   return paSortDir*((a.endDate||'zzz').localeCompare(b.endDate||'zzz'));
+    return 0;
+  });
+  return list;
+}
+function _paSortIndicator(key){ return paSortKey===key?(paSortDir===1?' ▲':' ▼'):''; }
+
 // Render zoom toggle buttons into a container element
 function renderZoomBtns(elId, currentZoom, setFn){
   const el = document.getElementById(elId); if(!el) return;
@@ -2717,6 +2758,20 @@ function renderZoomBtns(elId, currentZoom, setFn){
 
 // ─── Render Roster (Project Assignment Gantt + List) ─────────────────────────
 function renderRoster(){
+  // Refresh project dropdown
+  const ps=document.getElementById('paProjectSelect');
+  if(ps){
+    const cur=ps.value;
+    const usedIds=[...new Set(projectAssignments.map(a=>a.projectId))];
+    ps.innerHTML='<option value="all">All projects</option>'+
+      projectStore.filter(p=>usedIds.includes(p.id)).sort((a,b)=>a.name.localeCompare(b.name))
+        .map(p=>`<option value="${p.id}"${p.id===cur?' selected':''}>${esc(p.name)}</option>`).join('');
+    if(cur&&cur!=='all') ps.value=cur;
+  }
+  // Update sort indicators
+  ['worker','start','end'].forEach(k=>{
+    const th=document.getElementById('paTh_'+k); if(th) th.textContent={worker:'Worker',start:'Start',end:'End'}[k]+_paSortIndicator(k);
+  });
   renderPAGantt();
   renderPAList();
 }
@@ -2849,24 +2904,27 @@ function renderPAGantt(){
   const zoom=paGanttZoom,cols=ganttColumns(zoom,paGanttOffset);
   const today=new Date();today.setHours(0,0,0,0);
   renderZoomBtns('paZoomBtns',zoom,'setPAGanttZoom');
-  const widSet=[...new Set(projectAssignments.map(a=>a.wid))];
+  const filteredPA=_paFilteredAssignments();
+  const filteredWids=new Set(filteredPA.map(a=>a.wid));
   const cnt=document.getElementById('paGanttCount');
-  if(cnt)cnt.textContent=widSet.length+' worker'+(widSet.length!==1?'s':'');
+  if(cnt)cnt.textContent=filteredWids.size+' worker'+(filteredWids.size!==1?'s':'')+(filteredWids.size!==new Set(projectAssignments.map(a=>a.wid)).size?' (filtered)':'');
   const container=document.getElementById('paGantt');
   if(!projectAssignments.length){container.innerHTML='';document.getElementById('noPAAssign').style.display='block';return;}
+  if(!filteredPA.length){container.innerHTML='<div class="no-results" style="display:block;"><div class="no-results-icon">🔍</div>No assignments match the current filters</div>';document.getElementById('noPAAssign').style.display='none';return;}
   document.getElementById('noPAAssign').style.display='none';
 
   const projColors=['#1a3082','#276749','#b45309','#5b21b6','#0d6b5a','#9a3412','#1e40af','#166534'];
   const projColor=pid=>{const i=projectStore.findIndex(p=>p.id===pid);return projColors[Math.abs(i)%projColors.length];};
   const colMinW=zoom==='day'?52:zoom==='week'?110:90;
 
-  // Phase 1 — skeleton table (empty cells provide grid lines; bars overlay in phase 2)
+  // Phase 1 — skeleton table
   let html=`<table class="gantt-grid" style="table-layout:fixed;"><thead><tr><th class="gantt-worker-col" style="width:160px;">Worker</th>`;
   cols.forEach(col=>{const isNow=isNowCol(col,zoom);html+=`<th class="${isNow?'gantt-today-col':''}" style="min-width:${colMinW}px;">${colLabel(col,zoom)}</th>`;});
   html+=`</tr></thead><tbody>`;
 
   workers.forEach(w=>{
-    const wA=projectAssignments.filter(a=>a.wid===w.id);if(!wA.length)return;
+    if(!filteredWids.has(w.id))return;
+    const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
     const [bg,col]=avc(w.id);
     const rowH=Math.max(44,wA.length*28+8);
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
@@ -2897,7 +2955,8 @@ function renderPAGantt(){
     const tbl=container.querySelector('table.gantt-grid');if(!tbl)return;
     const barsData=[];
     workers.forEach(w=>{
-      const wA=projectAssignments.filter(a=>a.wid===w.id);if(!wA.length)return;
+      if(!filteredWids.has(w.id))return;
+      const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
       wA.forEach((a,ai)=>{
         const proj=projectStore.find(p=>p.id===a.projectId);
@@ -2925,11 +2984,10 @@ function renderPAGantt(){
 function renderPAList(){
   const tb=document.getElementById('paListBody');
   const cnt=document.getElementById('paListCount');
-  cnt.textContent=projectAssignments.length+' assignment'+(projectAssignments.length!==1?'s':'');
-  if(!projectAssignments.length){ tb.innerHTML=''; document.getElementById('noPAList').style.display='block'; return; }
+  if(!projectAssignments.length){ cnt.textContent='0 assignments'; tb.innerHTML=''; document.getElementById('noPAList').style.display='block'; return; }
   document.getElementById('noPAList').style.display='none';
-  // Sort by startDate desc
-  const sorted=[...projectAssignments].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  const sorted=_paFilteredAssignments();
+  cnt.textContent=sorted.length+' assignment'+(sorted.length!==1?'s':'')+(sorted.length!==projectAssignments.length?' (filtered)':'');
   const rateLabel={day:'/ day',hour:'/ hour',week:'/ week',fixed:'fixed'};
   tb.innerHTML=sorted.map(a=>{
     const w=workers.find(x=>x.id===a.wid);
