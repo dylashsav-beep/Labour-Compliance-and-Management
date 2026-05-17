@@ -3014,7 +3014,11 @@ function ganttOverlayBars(container,cols,zoom,barsData,onDragSave){
 
     const lbl=document.createElement('span');
     lbl.style.cssText='pointer-events:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;padding:0 12px 0 12px;font-size:10px;font-weight:600;';
-    lbl.textContent=(bd.contractIcon||'')+bd.label;
+    if(bd.contractIcon){
+      lbl.innerHTML=bd.contractIcon+esc(bd.label);
+    } else {
+      lbl.textContent=bd.label;
+    }
     bar.appendChild(lbl);
 
     const lh=document.createElement('div');lh.style.cssText='position:absolute;left:0;top:0;width:9px;height:100%;cursor:w-resize;border-radius:4px 0 0 4px;';
@@ -3163,7 +3167,7 @@ function renderPAGantt(){
     <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--sky)"></div>Future / Planned</div>
     <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:var(--amber)"></div>Ending soon</div>
     <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8"></div>Past / Ended</div>
-    <div class="gantt-leg-item">📎 = contract &nbsp; ⚠ = missing contract</div>
+    <div class="gantt-leg-item"><span style="color:#276749;font-weight:600;">✓</span> = contract attached &nbsp; ⚠ = missing contract</div>
     <div class="gantt-leg-item" style="color:var(--text-l);font-style:italic;">Drag edges to resize · drag middle to move</div>
   </div>`;
   container.style.position='relative';
@@ -3190,7 +3194,7 @@ function renderPAGantt(){
           if(e2<today)barCls='gb-expired';
           else if((e2-today)/86400000<=settings.warningDays)barCls='gb-expiring';}
         barsData.push({id:a.id,wid:w.id,startDate:a.startDate,endDate:a.endDate,barIdx:lanes.get(a.id)||0,
-          label:proj?.name||'?',contractIcon:a.contractFile?'📎 ':'⚠ ',barCls,
+          label:proj?.name||'?',contractIcon:a.contractFile?'<span style="color:#276749;font-weight:600;margin-right:3px;">✓</span>':'<span style="margin-right:3px;">⚠</span>',barCls,
           bgStyle:barCls==='gb-active'?`background:${pColor};`:'',
           title:`${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${a.contractFile?'Contract attached':'No contract'}`,
           onclick:id=>openEditPA(id),rowEl});
