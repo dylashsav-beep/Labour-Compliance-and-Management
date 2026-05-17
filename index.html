@@ -1382,7 +1382,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 <div class="overlay" id="addCompDocOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
-      <div><div class="modal-title">Add Compliance Document</div><div class="modal-subtitle">Upload a document scoped to a project or country</div></div>
+      <div><div class="modal-title" id="cdModalTitle">Add Compliance Document</div><div class="modal-subtitle" id="cdModalSub">Upload a document scoped to a project or country</div></div>
       <button class="modal-close" onclick="closeAddCompDoc()">✕</button>
     </div>
     <div class="modal-body">
@@ -1426,7 +1426,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeAddCompDoc()">Cancel</button>
-        <button class="btn btn-save" onclick="saveCompDoc()">Save Document</button>
+        <button class="btn btn-save" id="cdSaveBtn" onclick="saveCompDoc()">Save Document</button>
       </div>
     </div>
   </div>
@@ -1706,6 +1706,7 @@ function deletedItemDetails(it){
   else if(it.type==='vehicle'){ add('Vehicle',m.vehicleName); add('Registration',m.registration); add('Archived assignments',m.assignmentCount); add('Affected worker names',m.affectedWorkers); }
   else if(it.type==='accommodation_assignment'){ add('Worker',m.workerName); add('Property',m.propertyName); add('Dates',[m.startDate,m.endDate].filter(Boolean).join(' → ')); }
   else if(it.type==='vehicle_assignment'){ add('Worker',m.workerName); add('Vehicle',m.vehicleName); add('Dates',[m.startDate,m.endDate].filter(Boolean).join(' → ')); }
+  else if(it.type==='compliance_document_file'){ const p2=it.payload||{}; add('Document',p2.title); add('Old file',p2.oldFileName); add('Old file size',p2.oldFileSize?Math.round(p2.oldFileSize/1024)+'KB':'—'); }
   return rows;
 }
 async function sbArchiveDeletedItemImmediate(item){
@@ -4147,6 +4148,7 @@ function renderDocuments(){
       const filePart = d.file_name?`<div class="doc-file-info"><span>📎</span><span>${esc(d.file_name)}</span>${d.file_size?`<span>(${Math.round(d.file_size/1024)}KB)</span>`:''}</div>`:'';
       const canEdit = canAction('workerDocs');
       const dlBtn = d.file_path?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="downloadCompDoc('${d.id}')">Download</button>`:'';
+      const editBtn = canEdit?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openEditCompDoc('${d.id}')">Edit</button>`:'';
       const delBtn = canEdit?`<button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteCompDoc('${d.id}')">Delete</button>`:'';
       const byPart = d.uploaded_by?`<span style="font-size:11px;color:var(--text-l);">by ${esc(d.uploaded_by)}</span>`:'';
       const datePart = d.created_at?`<span style="font-size:11px;color:var(--text-l);">${new Date(d.created_at).toLocaleDateString('en-GB')}</span>`:'';
@@ -4160,7 +4162,7 @@ function renderDocuments(){
           ${d.notes?`<div class="doc-register-card-notes">${esc(d.notes)}</div>`:''}
           ${filePart}
         </div>
-        <div class="doc-register-card-actions">${dlBtn}${delBtn}</div>
+        <div class="doc-register-card-actions">${dlBtn}${editBtn}${delBtn}</div>
       </div>`;
     }).join('');
     return `<div class="doc-register-group">
@@ -4170,30 +4172,67 @@ function renderDocuments(){
   }).join('');
 }
 
+function _cdPopulateModal(){
+  const ps = document.getElementById('cdProject');
+  ps.innerHTML='<option value="">— Select project —</option>'+projectStore.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  const cs = document.getElementById('cdCountry');
+  cs.innerHTML='<option value="">— Select country —</option>'+COMPLIANCE_COUNTRIES.map(c=>`<option value="${c.code}">${c.flag} ${c.name}</option>`).join('');
+}
 function openAddCompDoc(){
   if(!requireAction('workerDocs','upload compliance documents')) return;
+  window._cdEditId = null;
+  document.getElementById('cdModalTitle').textContent='Add Compliance Document';
+  document.getElementById('cdModalSub').textContent='Upload a document scoped to a project or country';
+  document.getElementById('cdSaveBtn').textContent='Save Document';
   document.getElementById('cdTitle').value='';
   document.getElementById('cdCategory').value='compliance';
   document.getElementById('cdNotes').value='';
   document.getElementById('cdFileDropText').textContent='📎 Click to attach a file (PDF, DOCX, image…)';
   document.getElementById('cdFileCurrent').style.display='none';
   document.getElementById('cdFile').value='';
-  // Set scope to project
   document.querySelectorAll('[name="cdScopeType"]').forEach(r=>r.checked=(r.value==='project'));
   toggleCDScopeType('project');
-  // Populate project picker
-  const ps = document.getElementById('cdProject');
-  ps.innerHTML='<option value="">— Select project —</option>'+projectStore.filter(p=>p.active).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  // Populate country picker
-  const cs = document.getElementById('cdCountry');
-  cs.innerHTML='<option value="">— Select country —</option>'+COMPLIANCE_COUNTRIES.map(c=>`<option value="${c.code}">${c.flag} ${c.name}</option>`).join('');
-  // Store temp file info
+  _cdPopulateModal();
   window._cdTempFile = null;
+  document.getElementById('addCompDocOverlay').classList.add('open');
+}
+function openEditCompDoc(id){
+  if(!requireAction('workerDocs','edit compliance documents')) return;
+  const d = complianceDocs.find(x=>x.id===id); if(!d) return;
+  window._cdEditId = id;
+  document.getElementById('cdModalTitle').textContent='Edit Compliance Document';
+  document.getElementById('cdModalSub').textContent='Update document details or replace the attached file';
+  document.getElementById('cdSaveBtn').textContent='Save Changes';
+  document.getElementById('cdTitle').value=d.title||'';
+  document.getElementById('cdCategory').value=d.category||'compliance';
+  document.getElementById('cdNotes').value=d.notes||'';
+  document.getElementById('cdFile').value='';
+  window._cdTempFile = null;
+  _cdPopulateModal();
+  // Set scope type
+  const st = d.scope_type||'project';
+  document.querySelectorAll('[name="cdScopeType"]').forEach(r=>{ r.checked=(r.value===st); });
+  toggleCDScopeType(st);
+  // Pre-select scope value (after DOM settles)
+  setTimeout(()=>{
+    if(st==='project') document.getElementById('cdProject').value=d.scope_id||'';
+    else document.getElementById('cdCountry').value=d.scope_id||'';
+  },0);
+  // Show current file
+  if(d.file_name){
+    document.getElementById('cdFileCurrent').style.display='block';
+    document.getElementById('cdFileCurrent').textContent=`Current file: ${d.file_name}${d.file_size?' ('+Math.round(d.file_size/1024)+'KB)':''}`;
+    document.getElementById('cdFileDropText').textContent='📎 Click to replace file (optional)';
+  } else {
+    document.getElementById('cdFileCurrent').style.display='none';
+    document.getElementById('cdFileDropText').textContent='📎 Click to attach a file (PDF, DOCX, image…)';
+  }
   document.getElementById('addCompDocOverlay').classList.add('open');
 }
 function closeAddCompDoc(){
   document.getElementById('addCompDocOverlay').classList.remove('open');
   window._cdTempFile = null;
+  window._cdEditId = null;
 }
 function toggleCDScopeType(type){
   document.getElementById('cdProjectField').style.display = type==='project'?'':'none';
@@ -4225,6 +4264,37 @@ async function saveCompDoc(){
     scope_label = country?`${country.flag} ${country.name}`:scope_id;
   }
   const notes = document.getElementById('cdNotes').value.trim();
+  const file = window._cdTempFile;
+
+  // ── EDIT mode ────────────────────────────────────────────────────────────────
+  if(window._cdEditId){
+    const existing = complianceDocs.find(x=>x.id===window._cdEditId); if(!existing) return;
+    // If replacing file, archive the old one to deleted history first
+    if(file && existing.file_name){
+      archiveDeletedItem('compliance_document_file', `Replaced file: ${existing.title} — ${existing.file_name}`, {
+        docId:existing.id, title:existing.title,
+        oldFileName:existing.file_name, oldFilePath:existing.file_path, oldFileSize:existing.file_size
+      });
+    }
+    existing.title=title; existing.category=category; existing.scope_type=scope_type;
+    existing.scope_id=scope_id; existing.scope_label=scope_label; existing.notes=notes;
+    if(file){
+      if(!sbClient||!sbSession){ alert('Cannot upload file: you are not signed in.'); return; }
+      const path=`compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+      const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
+      if(error){ alert('File upload failed: '+error.message); return; }
+      existing.file_name=file.name; existing.file_path=path; existing.file_size=file.size; existing.mime_type=file.type||'';
+    }
+    saveComplianceDocs();
+    if(sbClient&&sbSession){
+      const row={id:existing.id,title:existing.title,category:existing.category,scope_type:existing.scope_type,scope_id:existing.scope_id,scope_label:existing.scope_label||'',notes:existing.notes||'',file_name:existing.file_name||'',file_path:existing.file_path||'',file_size:existing.file_size||0,mime_type:existing.mime_type||'',uploaded_by:existing.uploaded_by||'',active:true,created_at:existing.created_at};
+      sbClient.from('compliance_documents').upsert(row).then(({error})=>{ if(error) console.warn('[TMC] compliance_documents upsert failed:',error.message); });
+    }
+    closeAddCompDoc(); renderDocuments(); renderProjects(); renderDeletedItems(); sbScheduleSync();
+    return;
+  }
+
+  // ── ADD mode ─────────────────────────────────────────────────────────────────
   const newDoc = {
     id: crypto.randomUUID(),
     title, category, scope_type, scope_id, scope_label,
@@ -4233,8 +4303,6 @@ async function saveCompDoc(){
     active: true,
     created_at: new Date().toISOString()
   };
-  // Upload file if selected
-  const file = window._cdTempFile;
   if(file){
     if(!sbClient||!sbSession){ alert('Cannot upload file: you are not signed in.'); return; }
     const path=`compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
@@ -4244,15 +4312,11 @@ async function saveCompDoc(){
   }
   complianceDocs.unshift(newDoc);
   saveComplianceDocs();
-  // Upsert directly to Supabase immediately — don't rely solely on deferred sync
-  if(sbClient && sbSession){
+  if(sbClient&&sbSession){
     const row={id:newDoc.id,title:newDoc.title,category:newDoc.category,scope_type:newDoc.scope_type,scope_id:newDoc.scope_id,scope_label:newDoc.scope_label||'',notes:newDoc.notes||'',file_name:newDoc.file_name||'',file_path:newDoc.file_path||'',file_size:newDoc.file_size||0,mime_type:newDoc.mime_type||'',uploaded_by:newDoc.uploaded_by||'',active:true,created_at:newDoc.created_at};
     sbClient.from('compliance_documents').upsert(row).then(({error})=>{ if(error) console.warn('[TMC] compliance_documents upsert failed:',error.message); });
   }
-  closeAddCompDoc();
-  renderDocuments();
-  renderProjects();
-  sbScheduleSync();
+  closeAddCompDoc(); renderDocuments(); renderProjects(); sbScheduleSync();
 }
 async function deleteCompDoc(id){
   if(!requireAction('workerDocs','delete compliance documents')) return;
@@ -4847,7 +4911,7 @@ function delItemMatchesFilter(it){
   if(f==='all') return true;
   const workerDocTypes=['worker_document_file','document_set_item','document_set_item_group_delete','document_set'];
   const assignmentTypes=['project_assignment','project'];
-  const complianceTypes=['compliance_document'];
+  const complianceTypes=['compliance_document','compliance_document_file'];
   if(f==='worker_docs') return workerDocTypes.includes(it.type);
   if(f==='assignments') return assignmentTypes.includes(it.type);
   if(f==='accommodation') return it.type==='accommodation_assignment'||it.type==='property';
