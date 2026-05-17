@@ -4726,7 +4726,12 @@ function isNowCol(colStart, zoom){
 }
 
 function shiftGantt(n){ ganttOffset += n; renderResources(); }
-function resetGantt(){ ganttOffset = 0; renderResources(); }
+function resetGantt(){
+  ganttOffset = 0;
+  resGanttProjectFilter = 'all';
+  ['accomProjectFilter','vehicleProjectFilter'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value='all'; });
+  renderResources();
+}
 function setGanttZoom(z){ ganttZoom=z; ganttOffset=0; renderResources(); }
 
 // ── Billing tracker helpers ──
