@@ -4130,6 +4130,10 @@ function downloadComplianceReportCsv(){
 // ── Document Sets render ──
 // Track which set panels are open (by setId)
 const openSetPanels = new Set();
+// Track which doc items are in inline-edit mode { [setId__docId]: true }
+let docItemEditActive = {};
+// Track which category headers are in rename mode { [setId||cat]: true }
+let catRenameActive = {};
 
 function renderDocSets(){
   const container=document.getElementById('docSetsContainer');if(!container)return;
@@ -4147,6 +4151,8 @@ function renderDocSetCard(s){
   const isOpen=openSetPanels.has(s.id);
   const countryBadge=s.country?`<span style="padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;background:var(--sky-xl);color:var(--navy);border:1px solid var(--sky-l);">${esc(s.country)}</span>`:'';
   const builtInBadge=s.builtIn?`<span style="padding:1px 7px;border-radius:3px;font-size:10px;font-weight:600;background:var(--bg);color:var(--text-l);border:1px solid var(--border);">Built-in</span>`:'';
+  const canEdit=sbCanWriteTable('document_set_items');
+  const existingCats=[...new Set(activeItems.map(d=>d.cat).filter(Boolean))];
 
   let html=`<div class="docset-card" id="dsc_${s.id}">
     <div class="docset-header" onclick="toggleDocSetPanel('${s.id}')">
@@ -4178,39 +4184,84 @@ function renderDocSetCard(s){
   const cats=[...new Set(items.map(d=>d.cat || (d.archived?'Archived':'Custom')))];
   if(items.length){
     cats.forEach(cat=>{
-      html+=`<div style="font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 5px;padding-bottom:4px;border-bottom:1px solid var(--border);">${cat}</div>`;
+      const catSafe=cat.replace(/[^a-zA-Z0-9]/g,'_');
+      const catEnc=encodeURIComponent(cat);
+      const renamingCat=catRenameActive[s.id+'||'+cat];
+      if(renamingCat){
+        html+=`<div style="display:flex;align-items:center;gap:6px;margin:10px 0 5px;padding-bottom:4px;border-bottom:1px solid var(--border);">
+          <input id="catRenameInput_${s.id}_${catSafe}" class="form-input" value="${esc(cat)}" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;width:160px;padding:2px 7px;" onkeydown="if(event.key==='Enter')saveCatRename('${s.id}','${catEnc}');if(event.key==='Escape')cancelCatRename('${s.id}','${catEnc}')"/>
+          <button class="btn btn-primary" style="font-size:10px;padding:2px 8px;" onclick="saveCatRename('${s.id}','${catEnc}')">Rename</button>
+          <button class="btn btn-cancel" style="font-size:10px;padding:2px 8px;" onclick="cancelCatRename('${s.id}','${catEnc}')">Cancel</button>
+        </div>`;
+      } else {
+        html+=`<div style="display:flex;align-items:center;gap:6px;margin:10px 0 5px;padding-bottom:4px;border-bottom:1px solid var(--border);">
+          <span style="font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;">${esc(cat)}</span>
+          ${canEdit?`<button class="btn" style="font-size:10px;padding:1px 6px;color:var(--text-l);border-color:transparent;background:transparent;" onclick="openCatRename('${s.id}','${catEnc}')" title="Rename this category">✏️ Rename</button>`:''}
+        </div>`;
+      }
       items.filter(d=>d.cat===cat).forEach(d=>{
         const rowId=`dsr_${s.id}_${d.id}`;
-        html+=`<div class="doc-settings-row${d.req&&!d.archived?' is-req':''}${d.archived?' archived-question':''}" id="${rowId}">
-          <div class="doc-settings-left">
-            <span style="font-size:14px;">${d.icon}</span>
-            <div>
-              <div class="doc-settings-name">${esc(d.name)}
-                <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}
+        const editingThis=docItemEditActive[s.id+'__'+d.id];
+        if(editingThis){
+          html+=`<div class="doc-settings-row" id="${rowId}" style="flex-direction:column;gap:0;padding:10px 12px 12px;background:var(--sky-xl);">
+            <div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:8px;">Edit document field${d.builtIn?' <span style="font-size:10px;font-weight:400;color:var(--text-l);">(built-in — rename only, cannot delete)</span>':''}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">Icon</label>
+                <input id="editDoc_icon_${s.id}_${d.id}" class="form-input" value="${esc(d.icon||'📌')}" style="width:54px;" placeholder="📌"/>
               </div>
-              <div class="doc-settings-meta">${esc(d.tip)}</div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">Name *</label>
+                <input id="editDoc_name_${s.id}_${d.id}" class="form-input" value="${esc(d.name)}" style="width:200px;" placeholder="Document name" onkeydown="if(event.key==='Enter')saveDocItemEdit('${s.id}','${d.id}')"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">Category</label>
+                <input id="editDoc_cat_${s.id}_${d.id}" class="form-input" value="${esc(d.cat||'')}" list="catlist_${s.id}" style="width:140px;" placeholder="e.g. Safety"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">Description</label>
+                <input id="editDoc_tip_${s.id}_${d.id}" class="form-input" value="${esc(d.tip||'')}" style="width:220px;" placeholder="Brief description"/>
+              </div>
+              <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save</button>
+              <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
             </div>
-          </div>
-          <div class="doc-settings-right">
-            <span style="font-size:11px;color:var(--text-l);">Required</span>
-            <label class="tog" title="${d.req?'Click to make optional':'Click to make required'}">
-              <input type="checkbox" ${d.req&&!d.archived?'checked':''} ${d.archived?'disabled':''} onchange="toggleDocSetItemReq('${s.id}','${d.id}',this.checked)">
-              <span class="tog-slider"></span>
-            </label>
-            ${d.custom
-              ? `${d.archived
-                    ? `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="restoreArchivedDocSetItem('${s.id}','${d.id}')" title="Restore archived question">Restore</button>`
-                    : `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="archiveDocSetItem('${s.id}','${d.id}')" title="Archive question but keep it visible for history">Archive</button>`}
-                 <button class="btn btn-danger" style="font-size:11px;padding:3px 8px;" onclick="removeDocSetItem('${s.id}','${d.id}')" title="Delete question from active set and archive all worker data">Delete</button>`
-              :`<span style="font-size:11px;color:var(--text-l);opacity:.45;" title="Built-in document — cannot be removed">🔒</span>`
-            }
-          </div>
-        </div>`;
+          </div>`;
+        } else {
+          html+=`<div class="doc-settings-row${d.req&&!d.archived?' is-req':''}${d.archived?' archived-question':''}" id="${rowId}">
+            <div class="doc-settings-left">
+              <span style="font-size:14px;">${d.icon}</span>
+              <div>
+                <div class="doc-settings-name">${esc(d.name)}
+                  <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}
+                </div>
+                <div class="doc-settings-meta">${esc(d.tip)}</div>
+              </div>
+            </div>
+            <div class="doc-settings-right">
+              <span style="font-size:11px;color:var(--text-l);">Required</span>
+              <label class="tog" title="${d.req?'Click to make optional':'Click to make required'}">
+                <input type="checkbox" ${d.req&&!d.archived?'checked':''} ${d.archived?'disabled':''} onchange="toggleDocSetItemReq('${s.id}','${d.id}',this.checked)">
+                <span class="tog-slider"></span>
+              </label>
+              ${canEdit&&!d.archived?`<button class="btn" style="font-size:11px;padding:3px 8px;" onclick="openDocItemEdit('${s.id}','${d.id}')" title="Edit name, category or description">✏️ Edit</button>`:''}
+              ${d.custom
+                ? `${d.archived
+                      ? `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="restoreArchivedDocSetItem('${s.id}','${d.id}')" title="Restore archived question">Restore</button>`
+                      : `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="archiveDocSetItem('${s.id}','${d.id}')" title="Archive question but keep it visible for history">Archive</button>`}
+                   <button class="btn btn-danger" style="font-size:11px;padding:3px 8px;" onclick="removeDocSetItem('${s.id}','${d.id}')" title="Delete question from active set and archive all worker data">Delete</button>`
+                :`<span style="font-size:11px;color:var(--text-l);opacity:.45;" title="Built-in document — cannot be removed">🔒</span>`
+              }
+            </div>
+          </div>`;
+        }
       });
     });
   } else {
     html+=`<div style="font-size:12px;color:var(--text-l);padding:8px 0;">No documents in this set yet. Add one below.</div>`;
   }
+
+  // Datalist for category autocomplete (used by both inline-edit forms and the add form)
+  html+=`<datalist id="catlist_${s.id}">${existingCats.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`;
 
   // Add document form
   html+=`<div class="doc-add-row">
@@ -4220,7 +4271,7 @@ function renderDocSetCard(s){
     </div>
     <div style="display:flex;flex-direction:column;gap:3px;">
       <label style="font-size:10px;color:var(--text-l);">Category</label>
-      <input class="form-input" id="newDoc_cat_${s.id}" placeholder="e.g. Safety" style="width:120px;"/>
+      <input class="form-input" id="newDoc_cat_${s.id}" placeholder="e.g. Safety" list="catlist_${s.id}" style="width:120px;"/>
     </div>
     <div style="display:flex;flex-direction:column;gap:3px;">
       <label style="font-size:10px;color:var(--text-l);">Description</label>
@@ -4374,6 +4425,80 @@ function renderDocSetCardInPlace(setId){
   const s=docSets.find(x=>x.id===setId);if(!s)return;
   const card=document.getElementById(`dsc_${setId}`);if(!card)return;
   card.outerHTML=renderDocSetCard(s);
+}
+
+// ── Doc item inline-edit ──
+function openDocItemEdit(setId,docId){
+  docItemEditActive[setId+'__'+docId]=true;
+  renderDocSetCardInPlace(setId);
+  // Auto-focus the name field after render
+  const el=document.getElementById(`editDoc_name_${setId}_${docId}`);
+  if(el) setTimeout(()=>{el.focus();el.select();},30);
+}
+function cancelDocItemEdit(setId,docId){
+  delete docItemEditActive[setId+'__'+docId];
+  renderDocSetCardInPlace(setId);
+}
+async function saveDocItemEdit(setId,docId){
+  if(!sbCanWriteTable('document_set_items')){alert('Your role does not allow editing document set questions.');return;}
+  const doc=(docSetItems[setId]||[]).find(d=>d.id===docId);
+  if(!doc) return;
+  const newName=(document.getElementById(`editDoc_name_${setId}_${docId}`)?.value||'').trim();
+  if(!newName){alert('Document name cannot be empty.');return;}
+  const newCat=(document.getElementById(`editDoc_cat_${setId}_${docId}`)?.value||'').trim()||doc.cat||'Custom';
+  const newTip=(document.getElementById(`editDoc_tip_${setId}_${docId}`)?.value||'').trim()||newName;
+  const newIcon=(document.getElementById(`editDoc_icon_${setId}_${docId}`)?.value||'').trim()||doc.icon||'📌';
+  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon};
+  doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon;
+  try{
+    await sbRemoteUpsertDocSetItem(setId,doc);
+  }catch(e){
+    Object.assign(doc,prev);
+    alert('Could not save changes: '+e.message);
+    return;
+  }
+  delete docItemEditActive[setId+'__'+docId];
+  saveDocSets();
+  renderDocSetCardInPlace(setId);
+  renderTable(); if(curW) rebuildModal(curW);
+}
+
+// ── Category rename ──
+function openCatRename(setId,encodedCat){
+  const cat=decodeURIComponent(encodedCat);
+  catRenameActive[setId+'||'+cat]=true;
+  renderDocSetCardInPlace(setId);
+  const catSafe=cat.replace(/[^a-zA-Z0-9]/g,'_');
+  const el=document.getElementById(`catRenameInput_${setId}_${catSafe}`);
+  if(el) setTimeout(()=>{el.focus();el.select();},30);
+}
+function cancelCatRename(setId,encodedCat){
+  const cat=decodeURIComponent(encodedCat);
+  delete catRenameActive[setId+'||'+cat];
+  renderDocSetCardInPlace(setId);
+}
+async function saveCatRename(setId,encodedCat){
+  if(!sbCanWriteTable('document_set_items')){alert('Your role does not allow editing document set questions.');return;}
+  const oldCat=decodeURIComponent(encodedCat);
+  const catSafe=oldCat.replace(/[^a-zA-Z0-9]/g,'_');
+  const newCat=(document.getElementById(`catRenameInput_${setId}_${catSafe}`)?.value||'').trim();
+  if(!newCat){alert('Category name cannot be empty.');return;}
+  if(newCat===oldCat){cancelCatRename(setId,encodedCat);return;}
+  const affected=(docSetItems[setId]||[]).filter(d=>d.cat===oldCat);
+  if(!affected.length){cancelCatRename(setId,encodedCat);return;}
+  const prevCats=affected.map(d=>d.cat);
+  affected.forEach(d=>d.cat=newCat);
+  try{
+    await Promise.all(affected.map(d=>sbRemoteUpsertDocSetItem(setId,d)));
+  }catch(e){
+    affected.forEach((d,i)=>d.cat=prevCats[i]);
+    alert('Could not rename category: '+e.message);
+    return;
+  }
+  delete catRenameActive[setId+'||'+oldCat];
+  saveDocSets();
+  renderDocSetCardInPlace(setId);
+  renderTable();
 }
 
 // ── Document Set CRUD ──
