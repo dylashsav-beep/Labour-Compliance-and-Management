@@ -646,6 +646,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <div class="header-spacer"></div>
       <div class="header-actions">
         <button class="btn btn-outline" onclick="doExport()">Export CSV</button>
+        <button class="btn btn-outline" id="exportFilesBtn" onclick="exportWorkerFiles()">Export Files</button>
         <button class="btn btn-primary" id="addWorkerBtn" onclick="openAdd()">Add Worker</button>
       </div>
     </div>
@@ -5990,6 +5991,107 @@ function doExport(){
   const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download=`TMC_compliance_${wk}.csv`;a.click();
+}
+
+async function exportWorkerFiles(){
+  if(!sbClient||!sbSession){alert('Please sign in to export files.');return;}
+  const list=filtered();
+  if(!list.length){alert('No workers in current filter.');return;}
+
+  // Collect all files across filtered workers
+  const toExport=[];
+  for(const w of list){
+    const docNameMap=Object.fromEntries(tmplForWorker(w).map(d=>[d.id,d.name]));
+    for(const [docId,files] of Object.entries(fileStore[w.id]||{})){
+      if(!files||!files.length) continue;
+      const docName=docNameMap[docId]||docId;
+      for(const f of files) toExport.push({workerName:w.name||w.id,docName,file:f});
+    }
+  }
+  if(!toExport.length){alert('No files found for the workers in the current filter.');return;}
+
+  // Load JSZip on demand
+  if(!window.JSZip){
+    try{
+      await new Promise((resolve,reject)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+        s.onload=resolve; s.onerror=()=>reject(new Error('Failed to load JSZip'));
+        document.head.appendChild(s);
+      });
+    }catch(e){alert('Could not load ZIP library: '+e.message);return;}
+  }
+
+  // Progress overlay
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  overlay.innerHTML=`<div style="background:#fff;border-radius:10px;padding:28px 36px;min-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.18);text-align:center;">
+    <div style="font-size:15px;font-weight:700;color:#1a2035;margin-bottom:6px;">Exporting Worker Files</div>
+    <div id="expProgText" style="font-size:12px;color:#64748b;margin-bottom:14px;">Preparing…</div>
+    <div style="height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+      <div id="expProgBar" style="height:100%;background:#4f46e5;border-radius:3px;width:0%;transition:width .2s;"></div>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  const setProgress=(done,total,text)=>{
+    const b=document.getElementById('expProgBar'),t=document.getElementById('expProgText');
+    if(b) b.style.width=Math.round((done/total)*100)+'%';
+    if(t) t.textContent=text;
+  };
+
+  const zip=new window.JSZip();
+  const usedNames={}; // dedup filenames within each folder
+  let done=0,failed=0;
+  const total=toExport.length;
+
+  for(const {workerName,docName,file} of toExport){
+    const safeW=(workerName).replace(/[/\\:*?"<>|]/g,'_').trim();
+    const safeD=(docName).replace(/[/\\:*?"<>|]/g,'_').trim();
+    const folderKey=safeW+'/'+safeD;
+    if(!usedNames[folderKey]) usedNames[folderKey]=new Set();
+
+    // Deduplicate filename within folder
+    const base=(file.name||'file').replace(/[/\\:*?"<>|]/g,'_').trim();
+    let safeName=base, n=1;
+    while(usedNames[folderKey].has(safeName)){
+      const dot=base.lastIndexOf('.');
+      safeName=dot>0?base.slice(0,dot)+`_${++n}`+base.slice(dot):base+`_${++n}`;
+    }
+    usedNames[folderKey].add(safeName);
+
+    setProgress(done,total,`Fetching ${done+1} of ${total}: ${file.name}`);
+    try{
+      let blob;
+      if(file.dataUrl){
+        blob=await fetch(file.dataUrl).then(r=>r.blob());
+      }else{
+        const path=file.file_path||file.storagePath;
+        const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path,300);
+        if(error) throw error;
+        const resp=await fetch(data.signedUrl);
+        if(!resp.ok) throw new Error('HTTP '+resp.status);
+        blob=await resp.blob();
+      }
+      zip.folder(safeW).folder(safeD).file(safeName,blob);
+    }catch(e){
+      console.warn('[TMC] Export: failed to fetch',file.name,e.message);
+      failed++;
+    }
+    done++;
+  }
+
+  setProgress(total,total,'Compressing…');
+  const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  const today=new Date().toISOString().slice(0,10);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(zipBlob);
+  a.download=`TMC_Worker_Files_${today}.zip`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href),15000);
+
+  document.body.removeChild(overlay);
+  const ok=done-failed;
+  sbSetStatus(`Export complete — ${ok} file${ok!==1?'s':''} in ZIP${failed?` (${failed} failed)`:''}`,true);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
