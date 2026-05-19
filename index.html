@@ -4364,7 +4364,9 @@ async function addDocSetItem(setId){
   if(!name){alert('Please enter a document name.');return;}
   if(!sbClient || !sbSession){ alert('Supabase is not connected yet. Please sign in again and try once more.'); return; }
   if(!sbCanWriteTable('document_set_items')){ alert('Your role does not allow editing document set questions.'); return; }
-  const cat=document.getElementById(`newDoc_cat_${setId}`).value.trim()||'Custom';
+  const rawCat=document.getElementById(`newDoc_cat_${setId}`).value.trim()||'Custom';
+  const catMatch=(docSetItems[setId]||[]).filter(d=>!d.archived).map(d=>d.cat).filter(Boolean).find(c=>c.toLowerCase()===rawCat.toLowerCase());
+  const cat=catMatch||rawCat;
   const tip=document.getElementById(`newDoc_tip_${setId}`).value.trim()||name;
   const req=document.getElementById(`newDoc_req_${setId}`).value==='true';
   if(!docSetItems[setId])docSetItems[setId]=[];
@@ -4445,7 +4447,9 @@ async function saveDocItemEdit(setId,docId){
   if(!doc) return;
   const newName=(document.getElementById(`editDoc_name_${setId}_${docId}`)?.value||'').trim();
   if(!newName){alert('Document name cannot be empty.');return;}
-  const newCat=(document.getElementById(`editDoc_cat_${setId}_${docId}`)?.value||'').trim()||doc.cat||'Custom';
+  const rawNewCat=(document.getElementById(`editDoc_cat_${setId}_${docId}`)?.value||'').trim()||doc.cat||'Custom';
+  const catMatchEdit=(docSetItems[setId]||[]).filter(d=>!d.archived&&d.id!==docId).map(d=>d.cat).filter(Boolean).find(c=>c.toLowerCase()===rawNewCat.toLowerCase());
+  const newCat=catMatchEdit||rawNewCat;
   const newTip=(document.getElementById(`editDoc_tip_${setId}_${docId}`)?.value||'').trim()||newName;
   const newIcon=(document.getElementById(`editDoc_icon_${setId}_${docId}`)?.value||'').trim()||doc.icon||'📌';
   const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon};
