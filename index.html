@@ -5998,14 +5998,28 @@ async function exportWorkerFiles(){
   const list=filtered();
   if(!list.length){alert('No workers in current filter.');return;}
 
-  // Collect all files across filtered workers
+  const safe=s=>s.replace(/[/\\:*?"<>|]/g,'_').trim();
+
+  // Collect all files: {safeW, folderPath, file}
+  // folderPath is relative to the worker root, e.g. "Insurance" or "Assignments/ProjectName (2025-01-01 to 2025-06-30)"
   const toExport=[];
   for(const w of list){
+    const safeW=safe(w.name||w.id);
+
+    // Document files
     const docNameMap=Object.fromEntries(tmplForWorker(w).map(d=>[d.id,d.name]));
     for(const [docId,files] of Object.entries(fileStore[w.id]||{})){
       if(!files||!files.length) continue;
-      const docName=docNameMap[docId]||docId;
-      for(const f of files) toExport.push({workerName:w.name||w.id,docName,file:f});
+      const folder=safe(docNameMap[docId]||docId);
+      for(const f of files) toExport.push({safeW,folderPath:folder,file:f});
+    }
+
+    // Assignment contract files
+    for(const a of projectAssignments.filter(x=>x.wid===w.id&&x.contractFile)){
+      const projName=safe(projectNameById(a.projectId)||'Unknown Project');
+      const dates=[a.startDate,a.endDate].filter(Boolean).join(' to ');
+      const label=projName+(dates?' ('+dates+')':'');
+      toExport.push({safeW,folderPath:'Assignments/'+label,file:a.contractFile});
     }
   }
   if(!toExport.length){alert('No files found for the workers in the current filter.');return;}
@@ -6044,20 +6058,18 @@ async function exportWorkerFiles(){
   let done=0,failed=0;
   const total=toExport.length;
 
-  for(const {workerName,docName,file} of toExport){
-    const safeW=(workerName).replace(/[/\\:*?"<>|]/g,'_').trim();
-    const safeD=(docName).replace(/[/\\:*?"<>|]/g,'_').trim();
-    const folderKey=safeW+'/'+safeD;
-    if(!usedNames[folderKey]) usedNames[folderKey]=new Set();
+  for(const {safeW,folderPath,file} of toExport){
+    const zipFolder=safeW+'/'+folderPath;
+    if(!usedNames[zipFolder]) usedNames[zipFolder]=new Set();
 
     // Deduplicate filename within folder
-    const base=(file.name||'file').replace(/[/\\:*?"<>|]/g,'_').trim();
-    let safeName=base, n=1;
-    while(usedNames[folderKey].has(safeName)){
+    const base=safe(file.name||'file')||'file';
+    let safeName=base,n=1;
+    while(usedNames[zipFolder].has(safeName)){
       const dot=base.lastIndexOf('.');
       safeName=dot>0?base.slice(0,dot)+`_${++n}`+base.slice(dot):base+`_${++n}`;
     }
-    usedNames[folderKey].add(safeName);
+    usedNames[zipFolder].add(safeName);
 
     setProgress(done,total,`Fetching ${done+1} of ${total}: ${file.name}`);
     try{
@@ -6072,7 +6084,7 @@ async function exportWorkerFiles(){
         if(!resp.ok) throw new Error('HTTP '+resp.status);
         blob=await resp.blob();
       }
-      zip.folder(safeW).folder(safeD).file(safeName,blob);
+      zip.file(zipFolder+'/'+safeName,blob);
     }catch(e){
       console.warn('[TMC] Export: failed to fetch',file.name,e.message);
       failed++;
