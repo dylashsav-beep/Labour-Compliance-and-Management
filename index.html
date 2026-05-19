@@ -1728,8 +1728,8 @@ function requireAction(action, label){ if(canAction(action)) return true; alert(
 function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
-  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','admin_notifications','audit_log','deleted_items','compliance_documents'];
+  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -6075,7 +6075,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
   await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
-  if(resourceEvents.length) await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true})));
+  if(resourceEvents.length){ try{ await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true}))); }catch(e){ console.warn('[TMC] resource_events sync skipped — run migrations/add_resource_events.sql to enable:', e.message); } }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
   await sbApplyArchivedDeletionsToSupabase();
