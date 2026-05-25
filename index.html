@@ -334,7 +334,7 @@ input[type="date"].expand-input::-webkit-calendar-picker-indicator{cursor:pointe
 .form-field{display:flex;flex-direction:column;gap:5px;}
 .form-field.full{grid-column:1/-1;}
 .form-label{font-size:12px;font-weight:500;color:var(--text-m);}
-.form-input,.form-select{font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;transition:border-color .15s;}
+.form-input,.form-select{font-family:'Inter',sans-serif;font-size:13px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:4px;color:var(--text);outline:none;transition:border-color .15s;box-sizing:border-box;}
 .form-input:focus,.form-select:focus{border-color:var(--navy);box-shadow:0 0 0 2px rgba(26,48,130,.1);}
 .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
 
@@ -635,9 +635,9 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-doc-btn:active{background:#4338ca;}
 .wp-doc-btn.cancel{background:#e2e8f0;color:#475569;}
 .wp-doc-btn.cancel:active{background:#cbd5e1;}
-.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:10px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:12px;}
+.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:10px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:12px;overflow:hidden;}
 .wp-submit-form label{font-size:12px;font-weight:600;color:var(--text-m,#475569);display:block;margin-bottom:4px;}
-.wp-submit-form input,.wp-submit-form .form-input{width:100%;box-sizing:border-box;min-height:44px;font-size:15px;}
+.wp-submit-form input,.wp-submit-form .form-input{width:100%;max-width:100%;box-sizing:border-box;min-height:44px;font-size:15px;-webkit-appearance:none;appearance:none;}
 .wp-submit-form input[type=file]{min-height:44px;padding:8px;}
 .wp-submit-row{display:flex;gap:10px;}
 .wp-submit-row .wp-doc-btn{flex:1;}
