@@ -1368,6 +1368,16 @@ body.wp-mode #sbAuthBar{display:none!important;}
             <button class="week-arrow" onclick="shiftGantt(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
           </div>
         </div>
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fafbfc;">
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="toolSortSel" onchange="resGanttSort=this.value;renderResources()">
+            <option value="worker">Sort: Worker A–Z</option>
+            <option value="resource">Group by Tool</option>
+          </select>
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="toolProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
+            <option value="all">All projects</option>
+          </select>
+          <span id="toolRefWeekLabel" style="font-size:12px;font-weight:600;color:var(--navy);padding:3px 10px;border:1px solid var(--navy-l);border-radius:6px;background:#eef2ff;white-space:nowrap;margin-left:auto;"></span>
+        </div>
         <div style="overflow-x:auto;" id="toolGanttWrap">
           <div id="toolGantt" style="min-width:900px;"></div>
         </div>
@@ -1707,6 +1717,12 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <div class="form-field"><label class="form-label">Issue Date</label><input type="date" class="form-input" id="assignToolStart"/></div>
         <div class="form-field"><label class="form-label">Return Date</label><input type="date" class="form-input" id="assignToolEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignToolNotes" placeholder="Condition notes, project use…"/></div>
+        <div class="form-field"><label class="form-label">Proof of Issue (optional)</label>
+          <input type="file" class="form-input" id="assignToolIssueFile" accept=".pdf,.jpg,.jpeg,.png"/>
+          <div id="assignToolIssueFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
+        <div class="form-field"><label class="form-label">Proof of Return (optional)</label>
+          <input type="file" class="form-input" id="assignToolReturnFile" accept=".pdf,.jpg,.jpeg,.png"/>
+          <div id="assignToolReturnFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
       </div>
       <div class="form-field full">
         <label class="form-label">Charge to operative?</label>
@@ -6775,6 +6791,26 @@ function openAssignTool(wid, entryId){
   document.getElementById('assignToolChargeAmt').value=entry?.weeklyChargeAmount||'';
   if(amtRow) amtRow.style.display=entry?.chargeToOperative?'block':'none';
   document.getElementById('clearToolBtn').style.display=entry?'inline-flex':'none';
+  // Reset file inputs
+  const issueFileEl=document.getElementById('assignToolIssueFile');
+  const returnFileEl=document.getElementById('assignToolReturnFile');
+  if(issueFileEl) issueFileEl.value='';
+  if(returnFileEl) returnFileEl.value='';
+  // Show existing proof file names
+  const issueExistEl=document.getElementById('assignToolIssueFileExisting');
+  const returnExistEl=document.getElementById('assignToolReturnFileExisting');
+  if(issueExistEl){
+    if(entry?.issueFileName){
+      issueExistEl.style.display='block';
+      issueExistEl.innerHTML=`Existing: <strong>${esc(entry.issueFileName)}</strong>${entry.issueFilePath?` <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${entry.issueFilePath}','${esc(entry.issueFileName)}')">View</button>`:''}`;
+    } else { issueExistEl.style.display='none'; issueExistEl.innerHTML=''; }
+  }
+  if(returnExistEl){
+    if(entry?.returnFileName){
+      returnExistEl.style.display='block';
+      returnExistEl.innerHTML=`Existing: <strong>${esc(entry.returnFileName)}</strong>${entry.returnFilePath?` <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${entry.returnFilePath}','${esc(entry.returnFileName)}')">View</button>`:''}`;
+    } else { returnExistEl.style.display='none'; returnExistEl.innerHTML=''; }
+  }
   document.getElementById('assignToolOverlay').classList.add('open');
 }
 function saveToolAssignment(){
@@ -6811,46 +6847,50 @@ function renderToolSummary(){
 }
 
 function renderTools(){
-  const el=document.getElementById('toolGantt'); if(!el) return;
   renderToolSummary();
-  const today=new Date(); today.setHours(0,0,0,0);
-  const cols=ganttColumns(ganttZoom, ganttOffset);
-
-  if(!tools.length){ el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-l);font-size:13px;">No tools registered. Click + Add Tool to get started.</div>'; return; }
-
-  let html='<table class="res-table"><thead><tr><th style="min-width:160px;">Tool</th>';
-  cols.forEach(colDate=>{ html+=`<th style="text-align:center;font-size:11px;white-space:nowrap;">${colLabel(colDate,ganttZoom)}</th>`; });
-  html+='</tr></thead><tbody>';
-
-  tools.forEach(t=>{
-    html+=`<tr><td><div style="font-weight:600;font-size:13px;color:var(--navy);">${esc(t.name)}</div>${t.serial?`<div style="font-size:11px;color:var(--text-l);">${esc(t.serial)}</div>`:''}<div style="display:flex;gap:4px;margin-top:4px;"><button class="btn" style="font-size:10px;padding:2px 8px;" onclick="editTool('${t.id}')">Edit</button><button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deleteTool('${t.id}')">✕</button></div></td>`;
-    cols.forEach(colDate=>{
-      const colStart=new Date(colDate); colStart.setHours(0,0,0,0);
-      const colEnd=new Date(colDate.getTime()+colDuration(colDate,ganttZoom)-1);
-      const assignments=[];
-      workers.forEach(w=>{
-        (toolHistory[w.id]||[]).forEach(a=>{
-          if(a.toolId!==t.id) return;
-          const aStart=a.startDate?new Date(a.startDate):null;
-          const aEnd=a.endDate?new Date(a.endDate):null;
-          if(aStart) aStart.setHours(0,0,0,0); if(aEnd) aEnd.setHours(23,59,59,999);
-          const inRange=(!aStart||aStart<=colEnd)&&(!aEnd||aEnd>=colStart);
-          if(inRange) assignments.push({w,a});
-        });
-      });
-      if(assignments.length){
-        const bg=assignments.length>1?'#fef3c7':'#dcfce7';
-        const textCol=assignments.length>1?'#92400e':'#166534';
-        const names=assignments.map(x=>x.w.name).join(', ');
-        html+=`<td style="text-align:center;background:${bg};cursor:pointer;" title="${esc(names)}" onclick="openAssignTool('${assignments[0].w.id}','${assignments[0].a.id}')"><span style="font-size:11px;font-weight:600;color:${textCol};">${esc(assignments.length>1?assignments.length+' workers':assignments[0].w.name.split(' ')[0])}</span></td>`;
-      } else {
-        html+=`<td style="text-align:center;color:var(--text-l);font-size:11px;">—</td>`;
-      }
+  const entries=[];
+  workers.forEach(w=>{
+    (toolHistory[w.id]||[]).forEach(a=>{
+      const t=tools.find(x=>x.id===a.toolId);
+      entries.push({wid:w.id,id:a.id,label:t?(t.name+(t.serial?' ('+t.serial+')':'')):'Unknown',resourceId:a.toolId,startDate:a.startDate,endDate:a.endDate,
+        onclickFn:(id)=>openAssignTool(w.id,a.id)});
     });
-    html+='</tr>';
   });
-  html+='</tbody></table>';
-  el.innerHTML=html;
+  const refMon=addWeeks(weekMonday(new Date()),ganttOffset), refSun=weekSunday(refMon);
+  let filteredEntries=entries;
+  if(resGanttProjectFilter!=='all'){
+    const widsOnProj=new Set(projectAssignments.filter(a=>{
+      if(a.projectId!==resGanttProjectFilter||!a.startDate) return false;
+      const s=new Date(a.startDate);s.setHours(0,0,0,0);
+      const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+      return s<=refSun&&(!e||e>=refMon);
+    }).map(a=>a.wid));
+    filteredEntries=entries.filter(e=>widsOnProj.has(e.wid));
+  }
+  let workerOrder=[...new Set(filteredEntries.map(e=>e.wid))];
+  if(resGanttSort==='resource'){
+    workerOrder.sort((a,b)=>{
+      const la=(filteredEntries.find(e=>e.wid===a)?.label||'').toLowerCase();
+      const lb=(filteredEntries.find(e=>e.wid===b)?.label||'').toLowerCase();
+      return la.localeCompare(lb);
+    });
+  } else {
+    workerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
+  }
+  _populateResProjectFilter('toolProjectFilter',refMon,refSun);
+  const sortSel=document.getElementById('toolSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const refLbl=document.getElementById('toolRefWeekLabel');
+  if(refLbl){const wn=isoWeekKey(refMon).split('-W')[1];const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});refLbl.textContent=`Ref: W${wn} · ${fmt(refMon)} – ${fmt(weekSunday(refMon))}`;}
+
+  const workerMeta=wid=>{
+    const proj=getWorkerProjectForWeek(wid);
+    return proj?`<div style="margin-top:3px;overflow:hidden;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${esc(proj.name)}">${esc(proj.name)}</span></div>`:'';
+  };
+  renderGantt('toolGantt','toolSummaryCount','noToolAssign',filteredEntries,'tool',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+    const a=(toolHistory[bd.wid]||[]).find(x=>x.id===bd.id);
+    if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveToolHistory();sbScheduleSync();}
+    renderResources();
+  },workerOrder,workerMeta);
 }
 
 // ─── Deleted Items / Restore History ─────────────────────────────────────────
