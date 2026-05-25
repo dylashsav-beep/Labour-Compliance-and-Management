@@ -1162,6 +1162,7 @@ body.wp-mode #sbAuthBar{display:none!important;}
     <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:5px;overflow:hidden;width:fit-content;margin-bottom:18px;box-shadow:var(--sh);">
       <button class="vtab active" id="resTabAccom"  onclick="switchResTab('accom')" style="font-size:12px;padding:6px 16px;">🏠 Accommodation</button>
       <button class="vtab"        id="resTabVehicle" onclick="switchResTab('vehicle')" style="font-size:12px;padding:6px 16px;">🚗 Vehicles</button>
+      <button class="vtab"        id="resTabTool"    onclick="switchResTab('tool')" style="font-size:12px;padding:6px 16px;">🔧 Tools</button>
     </div>
 
     <!-- ACCOMMODATION SUB-VIEW -->
@@ -1343,6 +1344,68 @@ body.wp-mode #sbAuthBar{display:none!important;}
   </table></div>
   <div class="no-results" id="noVehEvents" style="display:none;"><div class="no-results-icon">📋</div>No events logged yet</div>
 </div>
+    </div>
+
+    <!-- TOOLS SUB-VIEW -->
+    <div id="resViewTool" style="display:none;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:14px;font-weight:600;color:var(--text);">Tool Register</div>
+          <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Manage tools and track which workers have which tool and until when.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddTool()">+ Add Tool</button>
+      </div>
+
+      <!-- Tool Timeline -->
+      <div class="table-card" style="margin-bottom:20px;">
+        <div class="table-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="table-head-title">Tool Timeline</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="table-head-count" id="toolSummaryCount"></span>
+            <div style="display:flex;gap:2px;border:1px solid rgba(255,255,255,.2);border-radius:4px;overflow:hidden;" id="toolZoomBtns"></div>
+            <button class="week-arrow" onclick="shiftGantt(-1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8592;</button>
+            <button class="week-today-btn" onclick="resetGantt()" style="color:var(--sky-l);">Today</button>
+            <button class="week-arrow" onclick="shiftGantt(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;" id="toolGanttWrap">
+          <div id="toolGantt" style="min-width:900px;"></div>
+        </div>
+        <div class="no-results" id="noToolAssign" style="display:none;"><div class="no-results-icon">🔧</div>No tools assigned yet</div>
+      </div>
+
+      <!-- Tool Billing Tracker -->
+      <div class="table-card" id="toolBillingCard" style="margin-bottom:20px;display:none;">
+        <div class="table-head" style="display:flex;align-items:center;justify-content:space-between;">
+          <span class="table-head-title">💳 Tool Billing Tracker</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="table-head-count" id="toolBillingCount"></span>
+            <button class="week-arrow" onclick="shiftBilling(-1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8592;</button>
+            <button class="week-today-btn" onclick="resetBilling()" style="color:var(--sky-l);">Today</button>
+            <button class="week-arrow" onclick="shiftBilling(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;"><div id="toolBillingGrid" style="min-width:900px;"></div></div>
+      </div>
+
+      <!-- Tool Event Log -->
+      <div class="table-card" style="margin-top:20px;" id="toolEventLogCard">
+        <div class="table-head">
+          <span class="table-head-title">Tool Event Log</span>
+          <span class="table-head-count" id="toolEventLogCount"></span>
+        </div>
+        <div class="table-scroll"><table>
+          <thead><tr>
+            <th class="no-sort">Date</th>
+            <th class="no-sort">Tool</th>
+            <th class="no-sort">Type</th>
+            <th class="no-sort">Description</th>
+            <th class="no-sort">Logged By</th>
+          </tr></thead>
+          <tbody id="toolEventLogBody"></tbody>
+        </table></div>
+        <div class="no-results" id="noToolEvents" style="display:none;"><div class="no-results-icon">📋</div>No events logged yet</div>
+      </div>
     </div>
 
   </div>
@@ -1583,6 +1646,83 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <button class="btn btn-cancel" onclick="closeM('assignVehicleOverlay')">Cancel</button>
         <button class="btn btn-danger" id="clearVehicleBtn" onclick="clearVehicleAssignment()" style="margin-right:auto;display:none;">Remove Assignment</button>
         <button class="btn btn-save" onclick="saveVehicleAssignment()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT TOOL MODAL -->
+<div class="overlay" id="toolOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="toolModalTitle">Add Tool</div><div class="modal-subtitle">Register a tool for tracking</div></div>
+      <button class="modal-close" onclick="closeM('toolOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label class="form-label">Tool Name *</label><input class="form-input" id="toolName" placeholder="e.g. Hilti SDS Drill"/></div>
+        <div class="form-field"><label class="form-label">Description</label><input class="form-input" id="toolDesc" placeholder="e.g. Rotary hammer drill"/></div>
+        <div class="form-field"><label class="form-label">Serial / Asset Number</label><input class="form-input" id="toolSerial" placeholder="e.g. SN-12345"/></div>
+        <div class="form-field full"><label class="form-label">Notes</label><input class="form-input" id="toolNotes" placeholder="e.g. Case included, handle with care"/></div>
+      </div>
+      <div id="toolEventSection" style="display:none;margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">📋 Event Log</div>
+        <div id="toolEventList" style="max-height:160px;overflow-y:auto;margin-bottom:10px;"></div>
+        <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Add Event</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
+          <div><label class="form-label" style="font-size:11px;">Date</label><input type="date" class="form-input" id="toolEventDate" style="font-size:12px;"/></div>
+          <div><label class="form-label" style="font-size:11px;">Type</label>
+            <select class="form-select" id="toolEventType" style="font-size:12px;">
+              <option value="note">Note</option>
+              <option value="repair">Repair</option>
+              <option value="inspection">Inspection</option>
+              <option value="lost">Lost/Missing</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <textarea class="form-input" id="toolEventDesc" rows="2" placeholder="Describe the event…" style="width:100%;box-sizing:border-box;font-size:12px;margin-bottom:8px;resize:vertical;font-family:inherit;"></textarea>
+        <button class="btn btn-save" style="font-size:11px;padding:5px 12px;" onclick="addResourceEvent('tool')">+ Add to Log</button>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" onclick="closeM('toolOverlay')">Cancel</button>
+        <button class="btn btn-save" onclick="saveTool()">Save Tool</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN TOOL MODAL -->
+<div class="overlay" id="assignToolOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div><div class="modal-title" id="assignToolTitle">Assign Tool</div><div class="modal-subtitle" id="assignToolSub">—</div></div>
+      <button class="modal-close" onclick="closeM('assignToolOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field full"><label class="form-label">Tool</label>
+          <select class="form-select" id="assignToolSel"><option value="">— Select tool —</option></select>
+        </div>
+        <div class="form-field"><label class="form-label">Issue Date</label><input type="date" class="form-input" id="assignToolStart"/></div>
+        <div class="form-field"><label class="form-label">Return Date</label><input type="date" class="form-input" id="assignToolEnd"/></div>
+        <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignToolNotes" placeholder="Condition notes, project use…"/></div>
+      </div>
+      <div class="form-field full">
+        <label class="form-label">Charge to operative?</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <label class="tog"><input type="checkbox" id="assignToolCharge" onchange="document.getElementById('toolChargeAmtRow').style.display=this.checked?'block':'none'"/><span class="tog-slider"></span></label>
+          <span style="font-size:12px;color:var(--text-m);">If enabled, appears in the billing tracker for weekly charge tracking.</span>
+        </div>
+      </div>
+      <div class="form-field" id="toolChargeAmtRow" style="display:none;">
+        <label class="form-label">Weekly Charge Amount (€, optional)</label>
+        <input class="form-input" id="assignToolChargeAmt" type="number" min="0" step="0.01" placeholder="e.g. 50.00"/>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-cancel" onclick="closeM('assignToolOverlay')">Cancel</button>
+        <button class="btn btn-danger" id="clearToolBtn" onclick="clearToolAssignment()" style="margin-right:auto;display:none;">Remove Assignment</button>
+        <button class="btn btn-save" onclick="saveToolAssignment()">Save</button>
       </div>
     </div>
   </div>
@@ -1892,7 +2032,7 @@ function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
   const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -1900,7 +2040,7 @@ function sbCanWriteTable(table){
 function sbActionForFunction(name){
   const workerFns = ['openAdd','doAdd','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','rmFile','refreshFiles'];
   const settingsFns = ['saveSettings','saveDocSets','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','addCustomDoc','applyWarningDays','openAddDocSet'];
-  const planningFns = ['saveProjects','openAddProject','saveProject','deleteProject','toggleProjectActive','editProject','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','savePA','saveRoster','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent'];
+  const planningFns = ['saveProjects','openAddProject','saveProject','deleteProject','toggleProjectActive','editProject','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','savePA','saveRoster','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent','openAddTool','editTool','saveTool','deleteTool','openAssignTool','saveToolAssignment','clearToolAssignment'];
   if(workerFns.includes(name)) return 'workerDocs';
   if(settingsFns.includes(name)) return 'settings';
   if(planningFns.includes(name)) return 'planning';
@@ -3868,6 +4008,18 @@ function rebuildModal(id){
         ${currentVeh(id,refDate)?'Edit':'Assign'} Vehicle
       </button>
     </div>
+    ${(()=>{const tool=currentTool(id,refDate);const toolItem=tool?tools.find(t=>t.id===tool.toolId):null;return `<div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">🔧 TOOLS</div>
+      ${tool&&toolItem
+        ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(toolItem.name)}</div>
+           ${toolItem.serial?`<div style="font-size:11px;color:var(--text-l);margin-top:2px;">S/N: ${esc(toolItem.serial)}</div>`:''}
+           <div style="font-size:11px;margin-top:4px;">Return: <strong>${tool.endDate||'—'}</strong> ${resStatusBadge(tool.endDate)}</div>`
+        : `<div style="font-size:12px;color:var(--text-l);">No tool assigned</div>`
+      }
+      <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignTool('${id}','${tool?.id||''}')">
+        ${tool?'Edit':'Assign'} Tool
+      </button>
+    </div>`;})()}
   </div>`;
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">🏢 Agency / Company Name</div>
@@ -5231,6 +5383,12 @@ let vehHistory = {};
 let accomCharges = [];
 let vehCharges = [];
 let resourceEvents = [];
+let tools = [];
+let toolHistory = {};
+let toolCharges = [];
+let editingToolId = null;
+let assignToolWid = null;
+let assignToolEntryId = null;
 let billingOffset = 0;
 let _chargeModalState = null; // {type, assignmentId, wid, weekKey}
 
@@ -5259,6 +5417,7 @@ function saveAccomHistory(){ try{localStorage.setItem(ACCOM_HIST_KEY,JSON.string
 function saveVehHistory(){   try{localStorage.setItem(VEH_HIST_KEY,JSON.stringify(vehHistory));}catch(e){} }
 function saveAccomCharges(){ /* charges persist via Supabase only */ }
 function saveVehCharges(){   /* charges persist via Supabase only */ }
+function saveToolCharges(){  /* charges persist via Supabase only */ }
 function saveResourceEvents(){ try{localStorage.setItem('tmc_res_events',JSON.stringify(resourceEvents));}catch(e){} }
 function loadResourceEvents(){ try{const d=localStorage.getItem('tmc_res_events');if(d)resourceEvents=JSON.parse(d);}catch(e){} }
 loadResources();
@@ -5266,17 +5425,18 @@ loadResourceEvents();
 
 function addResourceEvent(resType){
   const isProp = resType==='property';
-  const id = isProp ? editingPropId : editingVehicleId;
+  const isTool = resType==='tool';
+  const id = isProp ? editingPropId : isTool ? editingToolId : editingVehicleId;
   if(!id){ alert('Save the resource first.'); return; }
-  const dateEl = document.getElementById(isProp?'propEventDate':'vehEventDate');
-  const typeEl = document.getElementById(isProp?'propEventType':'vehEventType');
-  const descEl = document.getElementById(isProp?'propEventDesc':'vehEventDesc');
+  const dateEl = document.getElementById(isProp?'propEventDate':isTool?'toolEventDate':'vehEventDate');
+  const typeEl = document.getElementById(isProp?'propEventType':isTool?'toolEventType':'vehEventType');
+  const descEl = document.getElementById(isProp?'propEventDesc':isTool?'toolEventDesc':'vehEventDesc');
   const eventDate = dateEl.value;
   const description = descEl.value.trim();
   if(!eventDate || !description){ alert('Please enter a date and description.'); return; }
   const entry = {
     id: crypto.randomUUID(),
-    resourceType: isProp ? 'property' : 'vehicle',
+    resourceType: isProp ? 'property' : isTool ? 'tool' : 'vehicle',
     resourceId: id,
     eventDate,
     eventType: typeEl.value,
@@ -5287,8 +5447,8 @@ function addResourceEvent(resType){
   resourceEvents.push(entry);
   saveResourceEvents();
   descEl.value = '';
-  renderResourceEventList(isProp ? 'property' : 'vehicle', id);
-  renderResourceEventLog(isProp ? 'accom' : 'vehicle');
+  renderResourceEventList(isProp ? 'property' : isTool ? 'tool' : 'vehicle', id);
+  renderResourceEventLog(isProp ? 'accom' : isTool ? 'tool' : 'vehicle');
   if(sbClient && sbSession){
     sbClient.from('resource_events').upsert({
       id: entry.id, resource_type: entry.resourceType, resource_id: entry.resourceId,
@@ -5299,7 +5459,7 @@ function addResourceEvent(resType){
 }
 
 function renderResourceEventList(resType, resourceId){
-  const listEl = document.getElementById(resType==='property'?'propEventList':'vehEventList');
+  const listEl = document.getElementById(resType==='property'?'propEventList':resType==='tool'?'toolEventList':'vehEventList');
   if(!listEl) return;
   const events = resourceEvents.filter(e=>e.resourceType===resType&&e.resourceId===resourceId)
     .sort((a,b)=>b.eventDate.localeCompare(a.eventDate));
@@ -5315,20 +5475,21 @@ function renderResourceEventList(resType, resourceId){
 
 function renderResourceEventLog(tabType){
   const isProp = tabType==='accom';
-  const resType = isProp ? 'property' : 'vehicle';
-  const bodyEl = document.getElementById(isProp?'accomEventLogBody':'vehEventLogBody');
-  const cntEl = document.getElementById(isProp?'accomEventLogCount':'vehEventLogCount');
-  const emptyEl = document.getElementById(isProp?'noAccomEvents':'noVehEvents');
+  const isTool = tabType==='tool';
+  const resType = isProp ? 'property' : isTool ? 'tool' : 'vehicle';
+  const bodyEl = isProp ? document.getElementById('accomEventLogBody') : isTool ? document.getElementById('toolEventLogBody') : document.getElementById('vehEventLogBody');
+  const cntEl = isProp ? document.getElementById('accomEventLogCount') : isTool ? document.getElementById('toolEventLogCount') : document.getElementById('vehEventLogCount');
+  const emptyEl = isProp ? document.getElementById('noAccomEvents') : isTool ? document.getElementById('noToolEvents') : document.getElementById('noVehEvents');
   if(!bodyEl) return;
   const events = resourceEvents.filter(e=>e.resourceType===resType)
     .sort((a,b)=>b.eventDate.localeCompare(a.eventDate));
   if(cntEl) cntEl.textContent = events.length + ' event' + (events.length!==1?'s':'');
   if(!events.length){ bodyEl.innerHTML=''; if(emptyEl)emptyEl.style.display='block'; return; }
   if(emptyEl) emptyEl.style.display='none';
-  const resources = isProp ? properties : vehicles;
+  const resources = isProp ? properties : isTool ? tools : vehicles;
   bodyEl.innerHTML = events.map(e=>{
     const res = resources.find(r=>r.id===e.resourceId);
-    const resName = isProp ? res?.name : (res?.desc || [res?.make,res?.model].filter(Boolean).join(' ') || 'Unknown');
+    const resName = isProp ? res?.name : isTool ? (res?.name||'Unknown') : (res?.desc || [res?.make,res?.model].filter(Boolean).join(' ') || 'Unknown');
     return `<tr>
       <td style="font-size:12px;white-space:nowrap;">${e.eventDate}</td>
       <td style="font-size:12px;font-weight:600;color:var(--navy);">${esc(resName||'Unknown')}</td>
@@ -5665,8 +5826,10 @@ function switchResTab(tab){
   currentResTab = tab;
   document.getElementById('resViewAccom').style.display   = tab==='accom'  ?'block':'none';
   document.getElementById('resViewVehicle').style.display = tab==='vehicle'?'block':'none';
+  document.getElementById('resViewTool').style.display    = tab==='tool'   ?'block':'none';
   document.getElementById('resTabAccom').className  = 'vtab'+(tab==='accom'  ?' active':'');
   document.getElementById('resTabVehicle').className = 'vtab'+(tab==='vehicle'?' active':'');
+  document.getElementById('resTabTool').className   = 'vtab'+(tab==='tool'   ?' active':'');
   renderResources();
 }
 
@@ -5675,8 +5838,10 @@ function renderResources(){
   // Render zoom buttons into header elements
   renderZoomBtns('accomZoomBtns', ganttZoom, 'setGanttZoom');
   renderZoomBtns('vehicleZoomBtns', ganttZoom, 'setGanttZoom');
-  if(currentResTab==='accom')   { renderAccomSummary(); renderProperties(); renderBillingTracker('accom'); renderResourceEventLog('accom'); }
-  else                          { renderVehicleSummary(); renderFleet(); renderBillingTracker('vehicle'); renderResourceEventLog('vehicle'); }
+  renderZoomBtns('toolZoomBtns', ganttZoom, 'setGanttZoom');
+  if(currentResTab==='accom')        { renderAccomSummary(); renderProperties(); renderBillingTracker('accom'); renderResourceEventLog('accom'); }
+  else if(currentResTab==='vehicle') { renderVehicleSummary(); renderFleet(); renderBillingTracker('vehicle'); renderResourceEventLog('vehicle'); }
+  else                               { renderTools(); renderBillingTracker('tool'); renderResourceEventLog('tool'); }
 }
 
 // ── Gantt helpers ──
@@ -5768,22 +5933,25 @@ function billingColumns(){
 }
 function renderBillingTracker(type){
   const isAccom = type==='accom';
-  const card = document.getElementById(isAccom?'accomBillingCard':'vehBillingCard');
-  const grid = document.getElementById(isAccom?'accomBillingGrid':'vehBillingGrid');
-  const cnt  = document.getElementById(isAccom?'accomBillingCount':'vehBillingCount');
+  const isTool  = type==='tool';
+  const card = isAccom ? document.getElementById('accomBillingCard') : isTool ? document.getElementById('toolBillingCard') : document.getElementById('vehBillingCard');
+  const grid = isAccom ? document.getElementById('accomBillingGrid') : isTool ? document.getElementById('toolBillingGrid') : document.getElementById('vehBillingGrid');
+  const cnt  = isAccom ? document.getElementById('accomBillingCount') : isTool ? document.getElementById('toolBillingCount') : document.getElementById('vehBillingCount');
   if(!card||!grid) return;
 
   // Gather chargeable assignments
   const entries=[];
   workers.forEach(w=>{
-    const hist = isAccom ? (accomHistory[w.id]||[]) : (vehHistory[w.id]||[]);
+    const hist = isAccom ? (accomHistory[w.id]||[]) : isTool ? (toolHistory[w.id]||[]) : (vehHistory[w.id]||[]);
     hist.forEach(a=>{
       if(!a.chargeToOperative) return;
       const resource = isAccom
         ? properties.find(p=>p.id===a.propId)
-        : vehicles.find(v=>v.id===a.vehicleId);
+        : isTool
+          ? tools.find(t=>t.id===a.toolId)
+          : vehicles.find(v=>v.id===a.vehicleId);
       entries.push({wid:w.id, workerName:w.name, assignmentId:a.id,
-        label: isAccom ? (resource?.name||'Unknown') : (resource?.desc||'Unknown')+(resource?.reg?' · '+resource.reg:''),
+        label: isAccom ? (resource?.name||'Unknown') : isTool ? (resource?.name||'Unknown') : (resource?.desc||'Unknown')+(resource?.reg?' · '+resource.reg:''),
         startDate:a.startDate, endDate:a.endDate,
         weeklyAmt: a.weeklyChargeAmount||null
       });
@@ -5795,14 +5963,14 @@ function renderBillingTracker(type){
   cnt.textContent = entries.length+' chargeable assignment'+(entries.length!==1?'s':'');
 
   const cols = billingColumns();
-  const charges = isAccom ? accomCharges : vehCharges;
+  const charges = isAccom ? accomCharges : isTool ? toolCharges : vehCharges;
   const canEdit = sbUserRole==='admin'||sbUserRole==='planner';
   const today = new Date(); today.setHours(0,0,0,0);
 
   // Build table
   let html=`<table style="border-collapse:collapse;width:100%;table-layout:auto;">
     <thead><tr>
-      <th style="background:var(--navy-d);color:#fff;font-size:11px;font-weight:600;padding:7px 10px;text-align:left;border-right:2px solid var(--border);position:sticky;left:0;z-index:2;min-width:180px;">Worker / ${isAccom?'Property':'Vehicle'}</th>`;
+      <th style="background:var(--navy-d);color:#fff;font-size:11px;font-weight:600;padding:7px 10px;text-align:left;border-right:2px solid var(--border);position:sticky;left:0;z-index:2;min-width:180px;">Worker / ${isAccom?'Property':isTool?'Tool':'Vehicle'}</th>`;
   cols.forEach(col=>{
     const wk=isoWeekKey(col);
     const isNow=wk===isoWeekKey(today);
@@ -5862,7 +6030,7 @@ function renderBillingTracker(type){
 function openChargeModal(type, assignmentId, wid, weekKey){
   if(sbUserRole!=='admin'&&sbUserRole!=='planner'){alert('Admin or Planner role required.');return;}
   _chargeModalState={type,assignmentId,wid,weekKey};
-  const charges = type==='accom'?accomCharges:vehCharges;
+  const charges = type==='accom'?accomCharges:type==='tool'?toolCharges:vehCharges;
   const existing = charges.find(c=>c.assignmentId===assignmentId&&c.weekKey===weekKey);
   document.getElementById('chargeEntryTitle').textContent = existing?.charged?'Edit Charge':'Mark as Charged';
   document.getElementById('chargeEntrySubtitle').textContent = `Week: ${weekKey}`;
@@ -5874,19 +6042,19 @@ function openChargeModal(type, assignmentId, wid, weekKey){
 async function saveChargeEntry(){
   if(!_chargeModalState) return;
   const {type,assignmentId,weekKey}=_chargeModalState;
-  const charges = type==='accom'?accomCharges:vehCharges;
+  const charges = type==='accom'?accomCharges:type==='tool'?toolCharges:vehCharges;
   const id=`${assignmentId}__${weekKey}`;
   const invoiceNumber=document.getElementById('chargeInvoiceNum').value.trim()||null;
   const invoiceAmount=parseFloat(document.getElementById('chargeInvoiceAmt').value)||null;
   const existing=charges.findIndex(c=>c.id===id);
   const entry={id,assignmentId,weekKey,charged:true,invoiceNumber,invoiceAmount,chargedAt:new Date().toISOString(),chargedBy:sbSession?.user?.email||''};
   if(existing>=0) charges[existing]=entry; else charges.push(entry);
-  if(type==='accom') saveAccomCharges(); else saveVehCharges();
+  if(type==='accom') saveAccomCharges(); else if(type==='tool') saveToolCharges(); else saveVehCharges();
   closeM('chargeEntryOverlay');
   renderResources();
   // Write to Supabase immediately
   if(sbClient&&sbSession){
-    const table=type==='accom'?'accommodation_charges':'vehicle_charges';
+    const table=type==='accom'?'accommodation_charges':type==='tool'?'tool_charges':'vehicle_charges';
     const row={id,assignment_id:assignmentId,week_key:weekKey,charged:true,invoice_number:invoiceNumber,invoice_amount:invoiceAmount,charged_at:entry.chargedAt,charged_by:entry.chargedBy,active:true};
     sbClient.from(table).upsert(row).then(({error})=>{if(error)console.warn('[TMC] charge upsert failed:',error.message);});
   }
@@ -5894,26 +6062,27 @@ async function saveChargeEntry(){
 async function removeCharge(){
   if(!_chargeModalState) return;
   const {type,assignmentId,weekKey}=_chargeModalState;
-  const charges=type==='accom'?accomCharges:vehCharges;
+  const charges=type==='accom'?accomCharges:type==='tool'?toolCharges:vehCharges;
   const id=`${assignmentId}__${weekKey}`;
   const idx=charges.findIndex(c=>c.id===id);
   if(idx>=0) charges.splice(idx,1);
-  if(type==='accom') saveAccomCharges(); else saveVehCharges();
+  if(type==='accom') saveAccomCharges(); else if(type==='tool') saveToolCharges(); else saveVehCharges();
   closeM('chargeEntryOverlay');
   renderResources();
   if(sbClient&&sbSession){
-    const table=type==='accom'?'accommodation_charges':'vehicle_charges';
+    const table=type==='accom'?'accommodation_charges':type==='tool'?'tool_charges':'vehicle_charges';
     sbClient.from(table).update({active:false}).eq('id',id).then(({error})=>{if(error)console.warn('[TMC] charge remove failed:',error.message);});
   }
 }
 function openBillingDetail(type, assignmentId, wid){
   const isAccom = type==='accom';
+  const isTool  = type==='tool';
   const w = workers.find(x=>x.id===wid);
-  const hist = isAccom ? (accomHistory[wid]||[]) : (vehHistory[wid]||[]);
+  const hist = isAccom ? (accomHistory[wid]||[]) : isTool ? (toolHistory[wid]||[]) : (vehHistory[wid]||[]);
   const a = hist.find(x=>x.id===assignmentId);
   if(!a) return;
-  const resource = isAccom ? properties.find(p=>p.id===a.propId) : vehicles.find(v=>v.id===a.vehicleId);
-  const charges = isAccom ? accomCharges : vehCharges;
+  const resource = isAccom ? properties.find(p=>p.id===a.propId) : isTool ? tools.find(t=>t.id===a.toolId) : vehicles.find(v=>v.id===a.vehicleId);
+  const charges = isAccom ? accomCharges : isTool ? toolCharges : vehCharges;
   const today = new Date(); today.setHours(0,0,0,0);
 
   // Build list of all weeks from startDate to min(endDate, today)
@@ -5935,7 +6104,10 @@ function openBillingDetail(type, assignmentId, wid){
   if(isAccom&&resource){
     resourceDetail=`<div style="font-size:12px;color:var(--text-m);margin-top:2px;">${esc(resource.address||'')}</div>`;
     if(resource.costPerNight) resourceDetail+=`<div style="font-size:12px;color:var(--text-m);">€${parseFloat(resource.costPerNight).toFixed(2)}/night</div>`;
-  } else if(!isAccom&&resource){
+  } else if(isTool&&resource){
+    if(resource.serial) resourceDetail=`<div style="font-size:12px;color:var(--text-m);margin-top:2px;">S/N: ${esc(resource.serial)}</div>`;
+    if(a.weeklyChargeAmount) resourceDetail+=`<div style="font-size:12px;color:var(--text-m);">€${parseFloat(a.weeklyChargeAmount).toFixed(2)}/week charge</div>`;
+  } else if(!isAccom&&!isTool&&resource){
     resourceDetail=`<div style="font-size:12px;color:var(--text-m);">${[resource.make,resource.model,resource.colour].filter(Boolean).join(' ')||''}</div>`;
     if(a.weeklyChargeAmount) resourceDetail+=`<div style="font-size:12px;color:var(--text-m);">€${parseFloat(a.weeklyChargeAmount).toFixed(2)}/week charge</div>`;
   }
@@ -5957,13 +6129,14 @@ function openBillingDetail(type, assignmentId, wid){
       </div>`).join('')
     : '';
 
+  const resourceLabel = isAccom ? (resource?.name||'Unknown') : isTool ? (resource?.name||'Unknown') : ((resource?.desc||'Unknown')+(resource?.reg?' · '+resource.reg:''));
   document.getElementById('bdTitle').textContent = w?.name||wid;
-  document.getElementById('bdSubtitle').textContent = (isAccom?'Accommodation':'Vehicle')+' · '+(resource ? (isAccom?resource.name:(resource.desc+(resource.reg?' · '+resource.reg:''))) : 'Unknown');
+  document.getElementById('bdSubtitle').textContent = (isAccom?'Accommodation':isTool?'Tool':'Vehicle')+' · '+resourceLabel;
   document.getElementById('bdBody').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
-        <div style="font-size:10px;font-weight:700;color:var(--text-l);margin-bottom:4px;">${isAccom?'PROPERTY':'VEHICLE'}</div>
-        <div style="font-size:13px;font-weight:600;color:var(--navy);">${resource?(isAccom?esc(resource.name):esc(resource.desc+(resource.reg?' · '+resource.reg:''))):'Unknown'}</div>
+        <div style="font-size:10px;font-weight:700;color:var(--text-l);margin-bottom:4px;">${isAccom?'PROPERTY':isTool?'TOOL':'VEHICLE'}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(resourceLabel)}</div>
         ${resourceDetail}
       </div>
       <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;">
@@ -6529,6 +6702,157 @@ function clearVehicleAssignment(){
 }
 
 
+// ─── Tools ────────────────────────────────────────────────────────────────────
+const TOOL_KEY='tmc_tools';
+const TOOL_HIST_KEY='tmc_tool_history';
+function saveTools(){ try{localStorage.setItem(TOOL_KEY,JSON.stringify(tools));}catch(e){} }
+function saveToolHistory(){ try{localStorage.setItem(TOOL_HIST_KEY,JSON.stringify(toolHistory));}catch(e){} }
+
+function currentTool(wid, refDate){
+  const hist = toolHistory[wid]||[];
+  if(!hist.length) return null;
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=ref);
+  if(active.length) return active[active.length-1];
+  return hist[hist.length-1];
+}
+
+function openAddTool(){
+  editingToolId=null;
+  document.getElementById('toolModalTitle').textContent='Add Tool';
+  ['toolName','toolDesc','toolSerial','toolNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('toolEventSection').style.display='none';
+  document.getElementById('toolEventList').innerHTML='';
+  document.getElementById('toolOverlay').classList.add('open');
+}
+function editTool(id){
+  const t=tools.find(x=>x.id===id); if(!t) return;
+  editingToolId=id;
+  document.getElementById('toolModalTitle').textContent='Edit Tool';
+  document.getElementById('toolName').value=t.name;
+  document.getElementById('toolDesc').value=t.desc||'';
+  document.getElementById('toolSerial').value=t.serial||'';
+  document.getElementById('toolNotes').value=t.notes||'';
+  document.getElementById('toolEventSection').style.display='block';
+  renderResourceEventList('tool', id);
+  document.getElementById('toolOverlay').classList.add('open');
+}
+function saveTool(){
+  const name=document.getElementById('toolName').value.trim();
+  if(!name){alert('Please enter a tool name.');return;}
+  if(editingToolId){
+    const t=tools.find(x=>x.id===editingToolId);
+    if(t){ t.name=name; t.desc=document.getElementById('toolDesc').value.trim(); t.serial=document.getElementById('toolSerial').value.trim(); t.notes=document.getElementById('toolNotes').value.trim(); }
+  } else {
+    tools.push({id:crypto.randomUUID(),name,desc:document.getElementById('toolDesc').value.trim(),serial:document.getElementById('toolSerial').value.trim(),notes:document.getElementById('toolNotes').value.trim()});
+  }
+  saveTools(); sbScheduleSync(); closeM('toolOverlay'); renderResources();
+}
+function deleteTool(id){
+  const t=tools.find(x=>x.id===id);
+  confirmDeleteAction('Delete this tool? Existing tool assignments will be archived.', async ()=>{
+    if(t) archiveDeletedItem('tool', t.name, {tool:t});
+    tools=tools.filter(x=>x.id!==id);
+    Object.keys(toolHistory).forEach(wid=>{ toolHistory[wid]=(toolHistory[wid]||[]).filter(a=>a.toolId!==id); });
+    saveTools(); saveToolHistory(); sbScheduleSync(); closeM('toolOverlay'); renderResources(); renderDeletedItems();
+  });
+}
+
+function openAssignTool(wid, entryId){
+  assignToolWid=wid; assignToolEntryId=entryId||null;
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const hist=toolHistory[wid]||[];
+  const entry=entryId?hist.find(a=>a.id===entryId):null;
+  document.getElementById('assignToolTitle').textContent=entry?`Edit Tool — ${w.name}`:`Assign Tool — ${w.name}`;
+  document.getElementById('assignToolSub').textContent=`${w.ref||''} · ${w.type==='zzp'?'ZZP':'Employed'}`;
+  const sel=document.getElementById('assignToolSel');
+  sel.innerHTML='<option value="">— Select tool —</option>'+tools.map(t=>`<option value="${t.id}"${entry?.toolId===t.id?' selected':''}>${esc(t.name)}${t.serial?' ('+t.serial+')':''}</option>`).join('');
+  document.getElementById('assignToolStart').value=entry?.startDate||'';
+  document.getElementById('assignToolEnd').value=entry?.endDate||'';
+  document.getElementById('assignToolNotes').value=entry?.notes||'';
+  document.getElementById('assignToolCharge').checked=entry?.chargeToOperative||false;
+  const amtRow=document.getElementById('toolChargeAmtRow');
+  document.getElementById('assignToolChargeAmt').value=entry?.weeklyChargeAmount||'';
+  if(amtRow) amtRow.style.display=entry?.chargeToOperative?'block':'none';
+  document.getElementById('clearToolBtn').style.display=entry?'inline-flex':'none';
+  document.getElementById('assignToolOverlay').classList.add('open');
+}
+function saveToolAssignment(){
+  const toolId=document.getElementById('assignToolSel').value;
+  if(!toolId){alert('Please select a tool.');return;}
+  if(!toolHistory[assignToolWid]) toolHistory[assignToolWid]=[];
+  const charge=document.getElementById('assignToolCharge').checked;
+  const chargeAmt=charge?(parseFloat(document.getElementById('assignToolChargeAmt').value)||null):null;
+  if(assignToolEntryId){
+    const entry=toolHistory[assignToolWid].find(a=>a.id===assignToolEntryId);
+    if(entry){ entry.toolId=toolId; entry.startDate=document.getElementById('assignToolStart').value; entry.endDate=document.getElementById('assignToolEnd').value; entry.notes=document.getElementById('assignToolNotes').value.trim(); entry.chargeToOperative=charge; entry.weeklyChargeAmount=chargeAmt; }
+  } else {
+    toolHistory[assignToolWid].push({id:crypto.randomUUID(),toolId,startDate:document.getElementById('assignToolStart').value,endDate:document.getElementById('assignToolEnd').value,notes:document.getElementById('assignToolNotes').value.trim(),chargeToOperative:charge,weeklyChargeAmount:chargeAmt});
+  }
+  saveToolHistory(); sbScheduleSync(); closeM('assignToolOverlay'); renderResources();
+  if(curW===assignToolWid) rebuildModal(curW);
+}
+function clearToolAssignment(){
+  const entry=(toolHistory[assignToolWid]||[]).find(a=>a.id===assignToolEntryId);
+  confirmDeleteAction('Remove this tool assignment?', ()=>{
+    if(entry) archiveDeletedItem('tool_assignment', `Tool assignment ${entry.id}`, {wid:assignToolWid,entry});
+    if(assignToolEntryId) toolHistory[assignToolWid]=(toolHistory[assignToolWid]||[]).filter(a=>a.id!==assignToolEntryId);
+    saveToolHistory(); closeM('assignToolOverlay'); renderResources(); renderDeletedItems();
+    if(curW===assignToolWid) rebuildModal(curW);
+  });
+}
+
+function renderToolSummary(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let count=0;
+  workers.forEach(w=>{ const h=toolHistory[w.id]||[]; h.forEach(a=>{ if(!a.endDate||new Date(a.endDate)>=today) count++; }); });
+  const el=document.getElementById('toolSummaryCount');
+  if(el) el.textContent=count+' active assignment'+(count!==1?'s':'');
+}
+
+function renderTools(){
+  const el=document.getElementById('toolGantt'); if(!el) return;
+  renderToolSummary();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const cols=ganttColumns(ganttZoom, ganttOffset);
+
+  if(!tools.length){ el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-l);font-size:13px;">No tools registered. Click + Add Tool to get started.</div>'; return; }
+
+  let html='<table class="res-table"><thead><tr><th style="min-width:160px;">Tool</th>';
+  cols.forEach(colDate=>{ html+=`<th style="text-align:center;font-size:11px;white-space:nowrap;">${colLabel(colDate,ganttZoom)}</th>`; });
+  html+='</tr></thead><tbody>';
+
+  tools.forEach(t=>{
+    html+=`<tr><td><div style="font-weight:600;font-size:13px;color:var(--navy);">${esc(t.name)}</div>${t.serial?`<div style="font-size:11px;color:var(--text-l);">${esc(t.serial)}</div>`:''}<div style="display:flex;gap:4px;margin-top:4px;"><button class="btn" style="font-size:10px;padding:2px 8px;" onclick="editTool('${t.id}')">Edit</button><button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deleteTool('${t.id}')">✕</button></div></td>`;
+    cols.forEach(colDate=>{
+      const colStart=new Date(colDate); colStart.setHours(0,0,0,0);
+      const colEnd=new Date(colDate.getTime()+colDuration(colDate,ganttZoom)-1);
+      const assignments=[];
+      workers.forEach(w=>{
+        (toolHistory[w.id]||[]).forEach(a=>{
+          if(a.toolId!==t.id) return;
+          const aStart=a.startDate?new Date(a.startDate):null;
+          const aEnd=a.endDate?new Date(a.endDate):null;
+          if(aStart) aStart.setHours(0,0,0,0); if(aEnd) aEnd.setHours(23,59,59,999);
+          const inRange=(!aStart||aStart<=colEnd)&&(!aEnd||aEnd>=colStart);
+          if(inRange) assignments.push({w,a});
+        });
+      });
+      if(assignments.length){
+        const bg=assignments.length>1?'#fef3c7':'#dcfce7';
+        const textCol=assignments.length>1?'#92400e':'#166534';
+        const names=assignments.map(x=>x.w.name).join(', ');
+        html+=`<td style="text-align:center;background:${bg};cursor:pointer;" title="${esc(names)}" onclick="openAssignTool('${assignments[0].w.id}','${assignments[0].a.id}')"><span style="font-size:11px;font-weight:600;color:${textCol};">${esc(assignments.length>1?assignments.length+' workers':assignments[0].w.name.split(' ')[0])}</span></td>`;
+      } else {
+        html+=`<td style="text-align:center;color:var(--text-l);font-size:11px;">—</td>`;
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
+
 // ─── Deleted Items / Restore History ─────────────────────────────────────────
 function toggleDeletedItemsPanel(){
   const body=document.getElementById('deletedItemsBody');
@@ -7002,6 +7326,12 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   if(resourceEvents.length){ try{ await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true}))); }catch(e){ console.warn('[TMC] resource_events sync skipped — run migrations/add_resource_events.sql to enable:', e.message); } }
+  try{
+    await sbUpsertRows('tools', tools.map(t=>({id:t.id,name:t.name,description:t.desc||'',serial_number:t.serial||'',notes:t.notes||'',active:true})));
+    const ta=[]; Object.keys(toolHistory||{}).forEach(wid=>(toolHistory[wid]||[]).forEach(a=>{ ta.push({id:a.id,worker_id:wid,tool_id:a.toolId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
+    await sbUpsertRows('tool_assignments',ta);
+    await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
+  }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -7204,7 +7534,7 @@ async function sbLoadAll(){
     }catch(e){ tableErr(name,e); return fallback; }
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
@@ -7223,7 +7553,10 @@ async function sbLoadAll(){
       q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), []),
       q('accommodation_charges', sbClient.from('accommodation_charges').select('*').eq('active',true), []),
       q('vehicle_charges', sbClient.from('vehicle_charges').select('*').eq('active',true), []),
-      q('resource_events', sbClient.from('resource_events').select('*').eq('active',true).order('event_date',{ascending:false}), [])
+      q('resource_events', sbClient.from('resource_events').select('*').eq('active',true).order('event_date',{ascending:false}), []),
+      q('tools', sbClient.from('tools').select('*').eq('active',true).order('name'), []),
+      q('tool_assignments', sbClient.from('tool_assignments').select('*').eq('active',true), []),
+      q('tool_charges', sbClient.from('tool_charges').select('*').eq('active',true), [])
     ]);
 
     if(workerData === null){
@@ -7260,6 +7593,9 @@ async function sbLoadAll(){
     vehCharges=(vehChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     resourceEvents=(resEventsData||[]).map(e=>({id:e.id,resourceType:e.resource_type,resourceId:e.resource_id,eventDate:e.event_date,eventType:e.event_type,description:e.description,createdAt:e.created_at,createdBy:e.created_by||''}));
     saveResourceEvents();
+    tools=(toolData||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||'',notes:t.notes||''}));
+    toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
+    toolCharges=(toolChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};
@@ -7292,7 +7628,7 @@ async function sbLoadAll(){
 
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
 function sbInstallWrappers(){
-  ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent'].forEach(sbWrap);
+  ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent','openAddTool','editTool','saveTool','deleteTool','openAssignTool','saveToolAssignment','clearToolAssignment'].forEach(sbWrap);
   const oldPA=window.downloadPAContract; window.downloadPAContract=function(id){ const a=projectAssignments.find(x=>x.id===id),f=a?.contractFile; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldPA(id); };
   window.attachF=async function(wid,did,input){
     if(!requireAction('workerDocs','upload worker documents')){ input.value=''; return; }
