@@ -1508,11 +1508,11 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
   </div>
 </div>
 
-<!-- ADD WORKER MODAL -->
+<!-- ADD / EDIT WORKER MODAL -->
 <div class="overlay" id="addOverlay">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:540px;">
     <div class="modal-header">
-      <div><div class="modal-title">Add Worker</div><div class="modal-subtitle">Register a new worker and assign a compliance document set</div></div>
+      <div><div class="modal-title" id="addModalTitle">Add Worker</div><div class="modal-subtitle" id="addModalSubtitle">Register a new worker and assign a compliance document set</div></div>
       <button class="modal-close" onclick="closeM('addOverlay')">✕</button>
     </div>
     <div class="modal-body">
@@ -1520,6 +1520,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <div class="form-field"><label class="form-label">Full Name</label><input class="form-input" id="fName" placeholder="First Last"/></div>
         <div class="form-field"><label class="form-label">BSN / KVK Reference</label><input class="form-input" id="fRef" placeholder="e.g. NL-2024-001"/></div>
         <div class="form-field"><label class="form-label">Agency / Company Name</label><input class="form-input" id="fAgency" placeholder="e.g. Bouw Uitzendbureau BV"/></div>
+        <div class="form-field"><label class="form-label">Email Address</label><input class="form-input" id="fEmail" type="email" placeholder="worker@example.com"/></div>
         <div class="form-field"><label class="form-label">Worker Type</label>
           <select class="form-select" id="fType">
             <option value="zzp">ZZP (Self-employed)</option>
@@ -1535,10 +1536,11 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <select class="form-select" id="fDocSet"></select>
           <div style="font-size:11px;color:var(--text-l);margin-top:4px;">Determines which compliance documents are required for this worker.</div>
         </div>
+        <div class="form-field full"><label class="form-label">Notes</label><textarea class="form-input" id="fNotes" rows="2" placeholder="Any additional notes…" style="resize:vertical;"></textarea></div>
       </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('addOverlay')">Cancel</button>
-        <button class="btn btn-save"   onclick="doAdd()">Save Worker</button>
+        <button class="btn btn-save" id="addModalSaveBtn" onclick="doAddOrEditWorker()">Save Worker</button>
       </div>
     </div>
   </div>
@@ -2854,7 +2856,10 @@ function renderTable(){
       <td><span class="score-num" style="color:${sc(s)};font-size:12px;font-weight:600;">${s}%</span></td>
       <td title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
-      <td><button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn" style="font-size:11px;padding:3px 9px;margin-right:4px;" onclick="openEditWorker('${w.id}')" title="Edit worker profile">Edit</button>
+        <button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button>
+      </td>
     </tr>`;
   }).join('');
   renderStats();
@@ -3837,18 +3842,47 @@ function refreshScore(wid){
   if(curW===wid) rebuildModal(wid);
 }
 
-// ─── Add Worker ───────────────────────────────────────────────────────────────
-function openAdd(){
-  // Populate document set dropdown
+// ─── Add / Edit Worker ────────────────────────────────────────────────────────
+let editingWorkerId = null;
+
+function _populateWorkerModal(){
   const sel = document.getElementById('fDocSet');
   sel.innerHTML = docSets.map(s=>`<option value="${s.id}">${esc(s.name)}${s.country?' ('+s.country+')':''}</option>`).join('');
-  // Default: match type to built-in set
-  document.getElementById('fType').addEventListener('change', function(){
-    sel.value = this.value==='zzp' ? SET_NL_ZZP : SET_NL_BLUE;
-  }, {once:false});
+  return sel;
+}
+function openAdd(){
+  editingWorkerId = null;
+  document.getElementById('addModalTitle').textContent = 'Add Worker';
+  document.getElementById('addModalSubtitle').textContent = 'Register a new worker and assign a compliance document set';
+  document.getElementById('addModalSaveBtn').textContent = 'Save Worker';
+  const sel = _populateWorkerModal();
   sel.value = SET_NL_ZZP;
+  ['fName','fRef','fAgency','fEmail','fNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('fType').value = 'zzp';
+  document.getElementById('fNat').value = 'NL';
+  document.getElementById('fType').onchange = ()=>{ sel.value = document.getElementById('fType').value==='zzp'?SET_NL_ZZP:SET_NL_BLUE; };
   document.getElementById('addOverlay').classList.add('open');
 }
+function openEditWorker(wid){
+  const w = workers.find(x=>x.id===wid); if(!w) return;
+  editingWorkerId = wid;
+  document.getElementById('addModalTitle').textContent = 'Edit Worker';
+  document.getElementById('addModalSubtitle').textContent = 'Update worker profile details';
+  document.getElementById('addModalSaveBtn').textContent = 'Save Changes';
+  const sel = _populateWorkerModal();
+  document.getElementById('fName').value = w.name || '';
+  document.getElementById('fRef').value = w.ref || '';
+  document.getElementById('fAgency').value = w.agency || '';
+  document.getElementById('fEmail').value = w.email || '';
+  document.getElementById('fNotes').value = w.notes || '';
+  document.getElementById('fType').value = w.type || 'zzp';
+  document.getElementById('fNat').value = w.nat || 'NL';
+  sel.value = w.docSetId || SET_NL_ZZP;
+  document.getElementById('fType').onchange = null;
+  document.getElementById('addOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fName').focus(), 50);
+}
+function doAddOrEditWorker(){ if(editingWorkerId) doEditWorker(); else doAdd(); }
 async function doAdd(){
   if(!requireAction('workers','add worker')) return;
   const name=document.getElementById('fName').value.trim();
@@ -3858,6 +3892,8 @@ async function doAdd(){
   const type=document.getElementById('fType').value, nat=document.getElementById('fNat').value;
   const ref=(document.getElementById('fRef')?.value||'').trim();
   const agency=(document.getElementById('fAgency')?.value||'').trim();
+  const email=(document.getElementById('fEmail')?.value||'').trim();
+  const notes=(document.getElementById('fNotes')?.value||'').trim();
   if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
@@ -3866,23 +3902,55 @@ async function doAdd(){
   try{
     sbSetStatus('Supabase: adding worker…', true);
     const {error}=await sbClient.from('workers').insert({
-      id:newId,
-      full_name:name,
-      worker_type:type,
-      reference:ref,
-      nationality:nat||'',
-      agency_name:agency||null,
-      document_set_id:dbDocSetId,
-      active:true,
+      id:newId, full_name:name, worker_type:type, reference:ref||null,
+      nationality:nat||'', agency_name:agency||null, email:email||null,
+      notes:notes||null, document_set_id:dbDocSetId, active:true,
       updated_at:new Date().toISOString()
     });
     if(error) throw error;
-    closeM('addOverlay'); document.getElementById('fName').value=''; document.getElementById('fAgency').value='';
+    closeM('addOverlay');
     await sbLoadAll();
     sbSetStatus('Supabase: worker added', true);
   }catch(e){
     alert('Worker was not added to Supabase: '+(e.message||e));
     sbSetStatus('Supabase: add worker failed', false);
+  }
+}
+async function doEditWorker(){
+  if(!requireAction('workers','edit worker')) return;
+  if(!sbClient || !sbSession){alert('Supabase is not connected.');return;}
+  const w = workers.find(x=>x.id===editingWorkerId); if(!w) return;
+  const name=(document.getElementById('fName').value||'').trim();
+  if(!name){alert('Please enter a name.');return;}
+  if(name.length > 120){alert('Name must be 120 characters or fewer.');return;}
+  if(workers.some(x=>x.id!==editingWorkerId&&x.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
+  const type=document.getElementById('fType').value;
+  const nat=document.getElementById('fNat').value;
+  const ref=(document.getElementById('fRef')?.value||'').trim();
+  const agency=(document.getElementById('fAgency')?.value||'').trim();
+  const email=(document.getElementById('fEmail')?.value||'').trim();
+  const notes=(document.getElementById('fNotes')?.value||'').trim();
+  const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
+  const isUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
+  const dbDocSetId=isUuid?docSetId:null;
+  // Update in-memory immediately for fast UI response
+  w.name=name; w.type=type; w.nat=nat; w.ref=ref;
+  w.agency=agency; w.email=email; w.notes=notes; w.docSetId=dbDocSetId||undefined;
+  closeM('addOverlay'); editingWorkerId=null;
+  renderTable(); renderStats(); if(curW) rebuildModal(curW);
+  try{
+    sbSetStatus('Supabase: saving worker…', true);
+    const {error}=await sbClient.from('workers').update({
+      full_name:name, worker_type:type, nationality:nat||'',
+      reference:ref||null, agency_name:agency||null, email:email||null,
+      notes:notes||null, document_set_id:dbDocSetId,
+      updated_at:new Date().toISOString()
+    }).eq('id',w.id);
+    if(error) throw error;
+    sbSetStatus('Supabase: worker updated', true);
+  }catch(e){
+    alert('Worker profile was not saved to Supabase: '+(e.message||e));
+    sbSetStatus('Supabase: update failed', false);
   }
 }
 
@@ -6300,7 +6368,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
@@ -6537,7 +6605,7 @@ async function sbLoadAll(){
       workers=[];
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
-      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
+      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
       (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
