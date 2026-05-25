@@ -4012,11 +4012,14 @@ async function initWorkerPortal(workerId){
   if(!wpWorkerEmail && wpWorkerObj?.email) wpWorkerEmail=wpWorkerObj.email;
   // Load this worker's submissions
   await wpLoadSubmissions();
-  // Show portal, hide admin UI
+  // Show portal, hide admin UI and any login prompts/locks
+  sbLockScreen(false);
+  sbShowLoginPrompt(false);
+  document.getElementById('sbLoginOverlay')?.classList.remove('open');
   document.getElementById('workerPortal').style.display='block';
   document.querySelector('.wrap')?.style?.setProperty('display','none');
   document.querySelector('.toolbar')?.style?.setProperty('display','none');
-  document.getElementById('sbAuthBar').style.display='flex';
+  document.getElementById('sbAuthBar').style.display='none';
   // Update header
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
