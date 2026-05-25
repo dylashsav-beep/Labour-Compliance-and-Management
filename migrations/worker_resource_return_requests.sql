@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS worker_resource_return_requests (
   file_size bigint,
   mime_type text,
   notes text,
+  proposed_date date,
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected')),
   submitted_at timestamptz DEFAULT now(),
   submitted_by_email text,
@@ -29,7 +30,7 @@ CREATE OR REPLACE FUNCTION submit_resource_return(
   p_email text, p_worker_id uuid, p_resource_type text, p_assignment_id uuid,
   p_file_path text DEFAULT NULL, p_file_name text DEFAULT NULL,
   p_file_size bigint DEFAULT NULL, p_mime_type text DEFAULT NULL,
-  p_notes text DEFAULT NULL
+  p_notes text DEFAULT NULL, p_proposed_date date DEFAULT NULL
 ) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER AS $func$
 DECLARE v_id uuid;
 BEGIN
@@ -37,11 +38,16 @@ BEGIN
     RAISE EXCEPTION 'Email does not match worker profile';
   END IF;
   INSERT INTO worker_resource_return_requests
-    (worker_id, resource_type, assignment_id, file_path, file_name, file_size, mime_type, notes, submitted_by_email, status)
+    (worker_id, resource_type, assignment_id, file_path, file_name, file_size, mime_type,
+     notes, proposed_date, submitted_by_email, status)
   VALUES
-    (p_worker_id, p_resource_type, p_assignment_id, p_file_path, p_file_name, p_file_size, p_mime_type, p_notes, p_email, 'pending')
+    (p_worker_id, p_resource_type, p_assignment_id, p_file_path, p_file_name, p_file_size,
+     p_mime_type, p_notes, p_proposed_date, p_email, 'pending')
   RETURNING id INTO v_id;
   RETURN v_id;
 END;
 $func$;
-GRANT EXECUTE ON FUNCTION submit_resource_return(text, uuid, text, uuid, text, text, bigint, text, text) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION submit_resource_return(text, uuid, text, uuid, text, text, bigint, text, text, date) TO anon, authenticated;
+
+-- If table already exists, add the proposed_date column:
+-- ALTER TABLE worker_resource_return_requests ADD COLUMN IF NOT EXISTS proposed_date date;

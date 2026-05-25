@@ -1726,10 +1726,10 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <div class="form-field"><label class="form-label">Issue Date</label><input type="date" class="form-input" id="assignToolStart"/></div>
         <div class="form-field"><label class="form-label">Return Date</label><input type="date" class="form-input" id="assignToolEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignToolNotes" placeholder="Condition notes, project use…"/></div>
-        <div class="form-field"><label class="form-label">Proof of Issue (optional)</label>
+        <div class="form-field full"><label class="form-label">Proof of Issue (optional)</label>
           <input type="file" class="form-input" id="assignToolIssueFile" accept=".pdf,.jpg,.jpeg,.png"/>
           <div id="assignToolIssueFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
-        <div class="form-field"><label class="form-label">Proof of Return (optional)</label>
+        <div class="form-field full"><label class="form-label">Proof of Return (optional)</label>
           <input type="file" class="form-input" id="assignToolReturnFile" accept=".pdf,.jpg,.jpeg,.png"/>
           <div id="assignToolReturnFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
       </div>
@@ -4576,8 +4576,11 @@ function wpOpenReturnRequest(resourceType, assignmentId, ev){
   const btn=ev?.target;
   const card=btn?.closest('.wp-assign-card');
   if(!card) return;
+  const today=new Date().toISOString().slice(0,10);
   const formHtml=`<div class="wp-return-form" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Submit Return / Close Out</div>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Submit Return / Close Out</div>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Proposed return / close-out date</label>
+      <input type="date" class="form-input" id="wpReturnDate_${assignmentId}" value="${today}" style="font-size:13px;min-height:44px;"/></div>
     <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Attach proof photo / document</label>
       <input type="file" id="wpReturnFile_${assignmentId}" accept=".pdf,.jpg,.jpeg,.png" class="form-input" style="font-size:13px;"/></div>
     <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Notes (optional)</label>
@@ -4596,6 +4599,7 @@ async function wpSubmitReturn(resourceType, assignmentId){
   const fileInput=document.getElementById(`wpReturnFile_${assignmentId}`);
   const file=fileInput?.files?.[0]||null;
   const notes=(document.getElementById(`wpReturnNote_${assignmentId}`)?.value||'').trim()||null;
+  const proposedDate=(document.getElementById(`wpReturnDate_${assignmentId}`)?.value||'').trim()||new Date().toISOString().slice(0,10);
 
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
@@ -4612,7 +4616,8 @@ async function wpSubmitReturn(resourceType, assignmentId){
     const {error}=await sbClient.rpc('submit_resource_return',{
       p_email:wpWorkerEmail, p_worker_id:wpWorkerId, p_resource_type:resourceType,
       p_assignment_id:assignmentId, p_file_path:filePath||null, p_file_name:fileName||null,
-      p_file_size:fileSize||null, p_mime_type:mimeType||null, p_notes:notes||null
+      p_file_size:fileSize||null, p_mime_type:mimeType||null, p_notes:notes||null,
+      p_proposed_date:proposedDate||null
     });
     if(error) throw error;
     alert('Return request submitted! Your manager will review and confirm the closure.');
@@ -4761,11 +4766,14 @@ function renderAdminReturnRequests(){
         <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${typeLabel} Return</div>
         <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}${r.submitted_by_email?' by '+esc(r.submitted_by_email):''}</div>
         <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
+          ${r.proposed_date?`<span>Proposed return date: <strong>${r.proposed_date}</strong></span>`:''}
           ${r.file_name?`<span>File: <strong>${esc(r.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${r.file_path}','${esc(r.file_name)}')">View</button></span>`:'<span style="color:var(--text-l);">No file attached</span>'}
           ${r.notes?`<span>Notes: ${esc(r.notes)}</span>`:''}
         </div>
-        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
-          <input type="text" class="form-input" id="rreqNotes_${r.id}" placeholder="Review notes (optional)" style="width:220px;font-size:11px;"/>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <label style="font-size:11px;font-weight:600;color:var(--text-m);">End date to set:</label>
+          <input type="date" class="form-input" id="rreqDate_${r.id}" value="${r.proposed_date||new Date().toISOString().slice(0,10)}" style="width:150px;font-size:11px;padding:3px 6px;"/>
+          <input type="text" class="form-input" id="rreqNotes_${r.id}" placeholder="Review notes (optional)" style="width:180px;font-size:11px;"/>
         </div>
       </div>
       <div class="pending-sub-actions">
@@ -4778,7 +4786,7 @@ function renderAdminReturnRequests(){
 async function approveReturnRequest(reqId){
   const r=adminReturnRequests.find(x=>x.id===reqId); if(!r) return;
   const reviewNotes=(document.getElementById(`rreqNotes_${reqId}`)?.value||'').trim();
-  const today=new Date().toISOString().slice(0,10);
+  const endDate=(document.getElementById(`rreqDate_${reqId}`)?.value||'').trim()||new Date().toISOString().slice(0,10);
   const tableMap={accommodation:'accommodation_assignments',vehicle:'vehicle_assignments',tool:'tool_assignments'};
   const table=tableMap[r.resource_type];
   try{
@@ -4787,18 +4795,29 @@ async function approveReturnRequest(reqId){
       status:'approved',reviewed_at:new Date().toISOString(),
       reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null
     }).eq('id',reqId);
-    // Update the assignment end_date to today if it has no end date or end date is in the future
+    // Update the assignment end_date to the admin-confirmed date
     if(table){
-      await sbClient.from(table).update({end_date:today}).eq('id',r.assignment_id);
+      const updateObj={end_date:endDate};
+      // For tool assignments, also save the return proof file
+      if(r.resource_type==='tool'&&r.file_path){
+        updateObj.return_file_path=r.file_path;
+        updateObj.return_file_name=r.file_name||null;
+      }
+      await sbClient.from(table).update(updateObj).eq('id',r.assignment_id);
       // Update in-memory too
       if(r.resource_type==='accommodation'){
-        Object.values(accomHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        Object.values(accomHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id)a.endDate=endDate;}));
         saveAccomHistory();
       } else if(r.resource_type==='vehicle'){
-        Object.values(vehHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        Object.values(vehHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id)a.endDate=endDate;}));
         saveVehHistory();
       } else if(r.resource_type==='tool'){
-        Object.values(toolHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        Object.values(toolHistory||{}).forEach(arr=>arr.forEach(a=>{
+          if(a.id===r.assignment_id){
+            a.endDate=endDate;
+            if(r.file_path){a.returnFilePath=r.file_path;a.returnFileName=r.file_name||null;}
+          }
+        }));
         saveToolHistory();
       }
     }
