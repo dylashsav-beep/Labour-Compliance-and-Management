@@ -158,6 +158,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `schedule_daily_digest.sql` | ⏳ Pending | pg_cron schedule for daily email digest (replace placeholders first) |
 | `worker_portal_anon_rpc.sql` | ⏳ Pending | SECURITY DEFINER RPC functions for worker direct-login portal |
 | `worker_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing anon workers to upload to worker-submissions/ |
+| `add_doc_set_item_info_fields.sql` | ⏳ Pending | Adds info_text and info_url columns to document_set_items |
 
 ---
 
