@@ -156,6 +156,8 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_resource_events.sql` | ⏳ Pending | resource_events table for property/vehicle event log |
 | `rename_aansp_insurance.sql` | ✅ Run | Renamed insurance doc in document_set_items |
 | `schedule_daily_digest.sql` | ⏳ Pending | pg_cron schedule for daily email digest (replace placeholders first) |
+| `worker_portal_anon_rpc.sql` | ⏳ Pending | SECURITY DEFINER RPC functions for worker direct-login portal |
+| `worker_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing anon workers to upload to worker-submissions/ |
 
 ---
 

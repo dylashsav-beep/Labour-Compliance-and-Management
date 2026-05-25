@@ -6969,7 +6969,7 @@ async function sbLoadProfile(){
       const {data: adminCheck} = await sbClient.from('profiles').select('id').eq('role','admin').eq('active',true).limit(1).maybeSingle();
       isFirstAdmin = !adminCheck;
     } catch(e) { console.warn('[TMC] Admin existence check failed:', e); }
-    const defaultRole = isFirstAdmin ? 'admin' : 'viewer';
+    const defaultRole = isFirstAdmin ? 'admin' : 'no_access';
     let created = null;
     try {
       const {data: upserted, error: upsertErr} = await sbClient.from('profiles').upsert({
@@ -6977,7 +6977,7 @@ async function sbLoadProfile(){
         email: sbSession.user.email,
         full_name: sbSession.user.user_metadata?.full_name || sbSession.user.email?.split('@')[0] || '',
         role: defaultRole,
-        active: true,
+        active: isFirstAdmin,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {onConflict:'id'}).select().maybeSingle();
@@ -7044,14 +7044,24 @@ async function renderRolesPanel(){
   const users = data || [];
   const activeAdminCount = users.filter(u => u.role === 'admin' && u.active !== false).length;
   const roleOptions=['admin','planner','compliance','viewer','no_access'];
+  const pendingCount = users.filter(u => u.role === 'no_access' && u.active === false).length;
+  if(pendingCount > 0){
+    body.closest('.card')?.querySelector('.pending-approval-banner')?.remove();
+    const banner = document.createElement('div');
+    banner.className = 'pending-approval-banner';
+    banner.style.cssText = 'background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:#92400e;font-weight:600;';
+    banner.textContent = `${pendingCount} account${pendingCount>1?'s':''} pending approval — assign a role below to grant access.`;
+    body.closest('table')?.before(banner);
+  }
   body.innerHTML=users.map(u=>{
     const isMe = u.id === sbSession?.user?.id;
     const isOwner = u.email === 'dylan@tmconstruction.nl';
     const isOnlyActiveAdmin = !isOwner && isMe && u.role === 'admin' && u.active !== false && activeAdminCount <= 1;
     const locked = isOwner || isOnlyActiveAdmin;
+    const isPending = u.role === 'no_access' && u.active === false;
     const lockTitle = isOwner ? 'Owner account — permanently Admin, cannot be changed.' : (isOnlyActiveAdmin ? 'You are the only active admin. Add another admin before changing your own role or deactivating yourself.' : (isMe ? 'Be careful changing your own role' : ''));
-    const lockNote = isOwner ? '<div style="font-size:11px;color:var(--sky);margin-top:3px;font-weight:600;">⭐ Owner — permanent Admin</div>' : (isOnlyActiveAdmin ? '<div style="font-size:11px;color:var(--amber);margin-top:3px;font-weight:600;">Locked: last active admin</div>' : '');
-    return `<tr>
+    const lockNote = isOwner ? '<div style="font-size:11px;color:var(--sky);margin-top:3px;font-weight:600;">⭐ Owner — permanent Admin</div>' : (isOnlyActiveAdmin ? '<div style="font-size:11px;color:var(--amber);margin-top:3px;font-weight:600;">Locked: last active admin</div>' : (isPending ? '<div style="font-size:11px;color:#b45309;margin-top:3px;font-weight:700;">⏳ Pending approval</div>' : ''));
+    return `<tr style="${isPending?'background:#fffbeb;':''}">
       <td><strong>${esc(u.full_name||u.email||u.id)}</strong><div style="font-size:11px;color:var(--text-l);">${esc(u.email||'')}</div>${lockNote}</td>
       <td><select class="form-select" style="width:150px;padding:5px 8px;" onchange="updateUserRole('${u.id}',this.value)" ${locked?'disabled':''} title="${esc(lockTitle)}">${roleOptions.map(r=>`<option value="${r}" ${(isOwner?'admin':u.role)===r?'selected':''}>${ROLE_LABELS[r]}</option>`).join('')}</select></td>
       <td><label class="tog" title="${esc(lockTitle)}"><input type="checkbox" ${(isOwner||u.active!==false)?'checked':''} ${locked?'disabled':''} onchange="updateUserActive('${u.id}',this.checked)"><span class="tog-slider"></span></label></td>
@@ -7336,9 +7346,9 @@ async function sbAfterAuth(){
     sbReady=false;
     document.getElementById('sbLoginOverlay')?.classList.remove('open');
     sbLockScreen(false);
-    sbSetStatus('Supabase: no access — role: '+sbRoleLabel(), false);
+    sbSetStatus('Supabase: pending approval', false);
     const hint = sbLastWorkerLoadProblem ? `<br><small style="color:var(--red);">${esc(sbLastWorkerLoadProblem)}</small>` : '';
-    sbShowLoginPrompt(true, `<strong>No active app role.</strong> Signed in as <em>${esc(user.email)}</em> with role <strong>${esc(sbRoleLabel())}</strong> (inactive). Ask an admin to activate your account in Settings → User Roles.${hint}`);
+    sbShowLoginPrompt(true, `<strong>Account pending approval.</strong> You have signed in successfully as <em>${esc(user.email)}</em>, but your account is awaiting admin approval before you can access the dashboard. Please contact your administrator.${hint}`);
     applyRoleUI();
     return;
   }
