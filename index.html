@@ -259,13 +259,14 @@ td{padding:10px 14px;vertical-align:middle;}
 .overlay.open{display:flex;}
 .modal{background:#fff;border-radius:8px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.16);animation:min .18s ease;}
 #fileViewerOverlay{z-index:600;}
-#fileViewerOverlay .modal{max-width:900px;max-height:95vh;display:flex;flex-direction:column;overflow:hidden;}
+#fileViewerOverlay .modal{max-width:960px;width:95vw;height:90vh;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
 #fileViewerOverlay .modal-header{flex-shrink:0;}
-#fileViewerFrame{flex:1;width:100%;border:none;min-height:0;height:70vh;}
-#fileViewerImg{max-width:100%;max-height:70vh;object-fit:contain;display:block;margin:auto;}
-.fv-body{flex:1;display:flex;flex-direction:column;align-items:stretch;padding:0;overflow:hidden;background:#374151;}
+.fv-body{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#374151;}
+#fileViewerFrame{flex:1;width:100%;height:100%;border:none;min-height:0;display:block;}
+#fileViewerImg{max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto;}
+.fv-img-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:16px;background:#1e293b;min-height:0;overflow:auto;}
 .fv-unsupported{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;color:#94a3b8;font-size:14px;background:#1e293b;}
-@media(max-width:600px){#fileViewerOverlay .modal{max-height:100vh;border-radius:0;}#fileViewerFrame{height:60vh;}}
+@media(max-width:600px){#fileViewerOverlay .modal{width:100vw;height:100vh;max-height:100vh;border-radius:0;}}
 @keyframes min{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-d);border-radius:8px 8px 0 0;}
 .modal-title{font-size:15px;font-weight:600;color:#fff;}
@@ -6780,7 +6781,7 @@ function openFileViewer(url, name, downloadFn){
   if(_isPdf(name)){
     body.innerHTML=`<iframe id="fileViewerFrame" src="${url}" type="application/pdf"></iframe>`;
   } else if(_isImage(name)){
-    body.innerHTML=`<div style="padding:16px;background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:200px;"><img id="fileViewerImg" src="${url}" alt="${esc(name||'')}" loading="lazy"/></div>`;
+    body.innerHTML=`<div class="fv-img-wrap"><img id="fileViewerImg" src="${url}" alt="${esc(name||'')}" loading="lazy"/></div>`;
   } else {
     body.innerHTML=`<div class="fv-unsupported"><div style="font-size:48px;">📄</div><div>${esc(name||'File')}</div><div style="font-size:12px;">Preview not available for this file type.</div>${downloadFn?`<button class="btn btn-save" onclick="document.getElementById('fileViewerDlBtn').click()">Download file</button>`:''}</div>`;
   }
