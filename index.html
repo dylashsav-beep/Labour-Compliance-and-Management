@@ -782,11 +782,13 @@ body.wp-mode #sbAuthBar{display:none!important;}
     <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">Documents</button>
     <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Assignments</button>
     <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
+    <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
   </div>
   <div class="wp-body">
     <div id="wpViewDocs"></div>
     <div id="wpViewAssign" style="display:none;"></div>
     <div id="wpViewProfile" style="display:none;"></div>
+    <div id="wpViewResources" style="display:none;"></div>
   </div>
 </div>
 
@@ -837,6 +839,13 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <span id="pendingSubCount" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;"></span>
       </div>
       <div id="pendingSubList"></div>
+    </div>
+    <div id="returnRequestsSection" style="display:none;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:#1a2035;">Pending Return Requests</span>
+        <span id="returnRequestsCount" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;"></span>
+      </div>
+      <div id="returnRequestsList"></div>
     </div>
     <div class="filter-bar">
       <span class="filter-label">Type:</span>
@@ -1368,6 +1377,16 @@ body.wp-mode #sbAuthBar{display:none!important;}
             <button class="week-arrow" onclick="shiftGantt(1)" style="color:#fff;border:1px solid rgba(255,255,255,.2);">&#8594;</button>
           </div>
         </div>
+        <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fafbfc;">
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="toolSortSel" onchange="resGanttSort=this.value;renderResources()">
+            <option value="worker">Sort: Worker A–Z</option>
+            <option value="resource">Group by Tool</option>
+          </select>
+          <select style="padding:4px 8px;border:1px solid var(--border);border-radius:5px;font-size:12px;background:#fff;color:var(--text);cursor:pointer;" id="toolProjectFilter" onchange="resGanttProjectFilter=this.value;renderResources()">
+            <option value="all">All projects</option>
+          </select>
+          <span id="toolRefWeekLabel" style="font-size:12px;font-weight:600;color:var(--navy);padding:3px 10px;border:1px solid var(--navy-l);border-radius:6px;background:#eef2ff;white-space:nowrap;margin-left:auto;"></span>
+        </div>
         <div style="overflow-x:auto;" id="toolGanttWrap">
           <div id="toolGantt" style="min-width:900px;"></div>
         </div>
@@ -1707,6 +1726,12 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <div class="form-field"><label class="form-label">Issue Date</label><input type="date" class="form-input" id="assignToolStart"/></div>
         <div class="form-field"><label class="form-label">Return Date</label><input type="date" class="form-input" id="assignToolEnd"/></div>
         <div class="form-field full"><label class="form-label">Notes (optional)</label><input class="form-input" id="assignToolNotes" placeholder="Condition notes, project use…"/></div>
+        <div class="form-field"><label class="form-label">Proof of Issue (optional)</label>
+          <input type="file" class="form-input" id="assignToolIssueFile" accept=".pdf,.jpg,.jpeg,.png"/>
+          <div id="assignToolIssueFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
+        <div class="form-field"><label class="form-label">Proof of Return (optional)</label>
+          <input type="file" class="form-input" id="assignToolReturnFile" accept=".pdf,.jpg,.jpeg,.png"/>
+          <div id="assignToolReturnFileExisting" style="font-size:11px;color:var(--text-m);margin-top:3px;display:none;"></div></div>
       </div>
       <div class="form-field full">
         <label class="form-label">Charge to operative?</label>
@@ -4172,6 +4197,13 @@ let wpSubmissions = []; // pending submissions for current worker (worker mode) 
 let wpActiveTab = 'docs';
 let wpDocFilter = 'missing'; // 'missing' | 'expiring' | 'ok' | 'all'
 let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
+let wpAccomAssignments = [];
+let wpVehAssignments = [];
+let wpToolAssignments = [];
+let wpProperties = [];
+let wpVehicles = [];
+let wpTools = [];
+let wpReturnRequests = [];
 
 // Role selection screen
 function sbShowRoleSelect(){
@@ -4249,6 +4281,14 @@ function wpLoadPortalData(data){
   projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
   projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:null}));
   wpSubmissions=data.submissions||[];
+  // Resource assignments for worker portal
+  wpAccomAssignments=(data.accom_assignments||[]).map(a=>({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpVehAssignments=(data.veh_assignments||[]).map(a=>({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpToolAssignments=(data.tool_assignments||[]).map(a=>({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpProperties=(data.properties||[]).map(p=>({id:p.id,name:p.name,address:p.address||''}));
+  wpVehicles=(data.vehicles||[]).map(v=>({id:v.id,desc:v.description||'',reg:v.registration_plate||''}));
+  wpTools=(data.tools||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||''}));
+  wpReturnRequests=(data.return_requests||[]);
 }
 
 // Worker portal init — called from sbAfterAuth when worker login detected
@@ -4289,17 +4329,20 @@ async function wpLoadSubmissions(){
     const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail});
     if(error) throw error;
     wpSubmissions=(data?.submissions)||[];
+    wpReturnRequests=(data?.return_requests)||[];
   }catch(e){ console.warn('[TMC] wpLoadSubmissions:',e.message); }
 }
 function wpSwitch(tab){
   wpActiveTab=tab;
-  ['docs','assign','profile'].forEach(t=>{
+  const tabMap={docs:'Docs',assign:'Assign',profile:'Profile',resources:'Resources'};
+  ['docs','assign','profile','resources'].forEach(t=>{
     document.getElementById('wpView'+t.charAt(0).toUpperCase()+t.slice(1))?.style?.setProperty('display',tab===t?'block':'none');
-    document.getElementById('wpTab'+(t==='docs'?'Docs':t==='assign'?'Assign':'Profile'))?.classList?.toggle('active',tab===t);
+    document.getElementById('wpTab'+(tabMap[t]))?.classList?.toggle('active',tab===t);
   });
   if(tab==='docs') renderWPDocs();
   if(tab==='assign') renderWPAssignments();
   if(tab==='profile') renderWPProfile();
+  if(tab==='resources') renderWPResources();
 }
 
 // ── Worker portal: My Documents ──
@@ -4472,6 +4515,116 @@ async function saveWPProfile(){
   }catch(e){alert('Could not save profile: '+e.message);}
 }
 
+// ── Worker portal: Resources tab ──
+function renderWPResources(){
+  const el=document.getElementById('wpViewResources'); if(!el) return;
+  const today=new Date().toISOString().slice(0,10);
+
+  function resStatusBadgeWP(endDate){
+    if(!endDate) return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Active</span>';
+    if(endDate<today) return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">Ended</span>';
+    return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">Returning soon</span>';
+  }
+
+  const pendingReturnIds=new Set((wpReturnRequests||[]).map(r=>r.assignment_id));
+
+  function assignmentSection(icon, title, assignments, getResourceName, getResourceDetail, resourceType){
+    if(!assignments.length) return `<div class="wp-section-title">${icon} ${title}</div><div style="color:var(--text-l);font-size:13px;padding:8px 0 16px;">No ${title.toLowerCase()} on record.</div>`;
+    let html=`<div class="wp-section-title">${icon} ${title}</div>`;
+    assignments.forEach(a=>{
+      const name=getResourceName(a);
+      const detail=getResourceDetail(a);
+      const hasPending=pendingReturnIds.has(a.id);
+      const isActive=!a.endDate||a.endDate>=today;
+      html+=`<div class="wp-assign-card" style="margin-bottom:12px;">
+        <div class="wp-assign-title">${esc(name)} ${resStatusBadgeWP(a.endDate)}</div>
+        <div class="wp-assign-meta">
+          ${detail?`<div>${esc(detail)}</div>`:''}
+          <div>From: <strong>${a.startDate||'—'}</strong>${a.endDate?` → <strong>${a.endDate}</strong>`:' → <strong>Ongoing</strong>'}</div>
+          ${a.notes?`<div style="margin-top:4px;color:var(--text-m);">${esc(a.notes)}</div>`:''}
+        </div>
+        ${isActive?hasPending
+          ?`<div style="margin-top:8px;padding:4px 10px;border-radius:8px;background:#fef3c7;color:#b45309;font-size:12px;font-weight:600;display:inline-block;">Return proof submitted — awaiting review</div>`
+          :`<button class="wp-doc-btn" style="margin-top:8px;" onclick="wpOpenReturnRequest('${resourceType}','${a.id}',event)">Submit return / close out</button>`
+        :''}
+      </div>`;
+    });
+    return html;
+  }
+
+  let html='';
+  html+=assignmentSection('🏠','Accommodation',wpAccomAssignments,
+    a=>{const p=wpProperties.find(x=>x.id===a.propId); return p?.name||'Property';},
+    a=>{const p=wpProperties.find(x=>x.id===a.propId); return p?.address||'';},
+    'accommodation');
+  html+=assignmentSection('🚗','Vehicles',wpVehAssignments,
+    a=>{const v=wpVehicles.find(x=>x.id===a.vehicleId); return v?`${v.desc||''}${v.reg?' ('+v.reg+')':''}`.trim()||'Vehicle':'Vehicle';},
+    a=>'',
+    'vehicle');
+  html+=assignmentSection('🔧','Tools',wpToolAssignments,
+    a=>{const t=wpTools.find(x=>x.id===a.toolId); return t?.name||'Tool';},
+    a=>{const t=wpTools.find(x=>x.id===a.toolId); return t?.serial?'S/N: '+t.serial:'';},
+    'tool');
+
+  el.innerHTML=html||'<p style="color:var(--text-l);">No resource assignments found.</p>';
+}
+
+function wpOpenReturnRequest(resourceType, assignmentId, ev){
+  // Remove any existing return forms first
+  document.querySelectorAll('.wp-return-form').forEach(el=>el.remove());
+  document.querySelectorAll('.wp-assign-card [data-return-btn]').forEach(b=>b.style.display='');
+  const btn=ev?.target;
+  const card=btn?.closest('.wp-assign-card');
+  if(!card) return;
+  const formHtml=`<div class="wp-return-form" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Submit Return / Close Out</div>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Attach proof photo / document</label>
+      <input type="file" id="wpReturnFile_${assignmentId}" accept=".pdf,.jpg,.jpeg,.png" class="form-input" style="font-size:13px;"/></div>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Notes (optional)</label>
+      <input type="text" class="form-input" id="wpReturnNote_${assignmentId}" placeholder="Any notes for the reviewer…" style="font-size:13px;"/></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="wp-doc-btn" onclick="wpSubmitReturn('${resourceType}','${assignmentId}')">Submit for review</button>
+      <button class="wp-doc-btn" style="background:#f1f5f9;color:#475569;" onclick="this.closest('.wp-return-form').remove();document.querySelector('[data-return-btn=\\'${assignmentId}\\']')?.style?.setProperty('display','');">Cancel</button>
+    </div>
+  </div>`;
+  card.insertAdjacentHTML('beforeend', formHtml);
+  if(btn) btn.style.display='none';
+}
+
+async function wpSubmitReturn(resourceType, assignmentId){
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert('Not signed in.');return;}
+  const fileInput=document.getElementById(`wpReturnFile_${assignmentId}`);
+  const file=fileInput?.files?.[0]||null;
+  const notes=(document.getElementById(`wpReturnNote_${assignmentId}`)?.value||'').trim()||null;
+
+  let filePath=null,fileName=null,fileSize=null,mimeType=null;
+  if(file){
+    const ext=file.name.split('.').pop();
+    filePath=`worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
+    try{
+      const {error}=await sbClient.storage.from('tmc-documents').upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
+      if(error) throw error;
+      fileName=file.name; fileSize=file.size; mimeType=file.type;
+    }catch(e){ console.warn('[TMC] return file upload failed:',e.message); alert('File upload failed: '+e.message+'\n\nYou can still submit without a file.'); filePath=null; }
+  }
+
+  try{
+    const {error}=await sbClient.rpc('submit_resource_return',{
+      p_email:wpWorkerEmail, p_worker_id:wpWorkerId, p_resource_type:resourceType,
+      p_assignment_id:assignmentId, p_file_path:filePath||null, p_file_name:fileName||null,
+      p_file_size:fileSize||null, p_mime_type:mimeType||null, p_notes:notes||null
+    });
+    if(error) throw error;
+    alert('Return request submitted! Your manager will review and confirm the closure.');
+    // Reload portal data
+    try{
+      const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail});
+      if(!e2&&data) wpLoadPortalData(data);
+    }catch(e){ console.warn('[TMC] wpSubmitReturn reload:',e.message); }
+    renderWPResources();
+  }catch(e){ alert('Could not submit: '+e.message); }
+}
+
 // ── Admin: pending submissions review ──
 async function loadAdminPendingSubmissions(){
   if(!sbClient||!sbSession) return;
@@ -4569,6 +4722,102 @@ async function rejectSubmission(subId){
     }).eq('id',subId);
     wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
     renderAdminPendingSubmissions();
+  }catch(e){alert('Reject failed: '+e.message);}
+}
+
+// ── Admin: Resource return requests ──
+let adminReturnRequests = [];
+async function loadAdminReturnRequests(){
+  if(!sbClient||!sbSession) return;
+  if(sbUserRole!=='admin'&&sbUserRole!=='compliance') return;
+  try{
+    const {data,error}=await sbClient.from('worker_resource_return_requests')
+      .select('*').eq('status','pending')
+      .order('submitted_at',{ascending:false});
+    if(error) throw error;
+    adminReturnRequests=data||[];
+    renderAdminReturnRequests();
+  }catch(e){ console.warn('[TMC] loadAdminReturnRequests:',e.message); }
+}
+function renderAdminReturnRequests(){
+  const section=document.getElementById('returnRequestsSection');
+  const list=document.getElementById('returnRequestsList');
+  const count=document.getElementById('returnRequestsCount');
+  if(!section||!list||!count) return;
+  const pending=adminReturnRequests.filter(r=>r.status==='pending');
+  if(!pending.length){section.style.display='none';return;}
+  section.style.display='block';
+  count.textContent=pending.length+' pending';
+  const typeIcon={accommodation:'🏠',vehicle:'🚗',tool:'🔧'};
+  list.innerHTML=pending.map(r=>{
+    const w=workers.find(x=>x.id===r.worker_id);
+    const workerName=w?.name||r.submitted_by_email||'Unknown worker';
+    const dateStr=new Date(r.submitted_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const icon=typeIcon[r.resource_type]||'📦';
+    const typeLabel=(r.resource_type||'').charAt(0).toUpperCase()+(r.resource_type||'').slice(1);
+    return`<div class="pending-sub-card" id="rreq_${r.id}">
+      <div style="font-size:20px;">${icon}</div>
+      <div class="pending-sub-info">
+        <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${typeLabel} Return</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}${r.submitted_by_email?' by '+esc(r.submitted_by_email):''}</div>
+        <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
+          ${r.file_name?`<span>File: <strong>${esc(r.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${r.file_path}','${esc(r.file_name)}')">View</button></span>`:'<span style="color:var(--text-l);">No file attached</span>'}
+          ${r.notes?`<span>Notes: ${esc(r.notes)}</span>`:''}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <input type="text" class="form-input" id="rreqNotes_${r.id}" placeholder="Review notes (optional)" style="width:220px;font-size:11px;"/>
+        </div>
+      </div>
+      <div class="pending-sub-actions">
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveReturnRequest('${r.id}')">✓ Approve & Close</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="rejectReturnRequest('${r.id}')">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function approveReturnRequest(reqId){
+  const r=adminReturnRequests.find(x=>x.id===reqId); if(!r) return;
+  const reviewNotes=(document.getElementById(`rreqNotes_${reqId}`)?.value||'').trim();
+  const today=new Date().toISOString().slice(0,10);
+  const tableMap={accommodation:'accommodation_assignments',vehicle:'vehicle_assignments',tool:'tool_assignments'};
+  const table=tableMap[r.resource_type];
+  try{
+    // Mark return request approved
+    await sbClient.from('worker_resource_return_requests').update({
+      status:'approved',reviewed_at:new Date().toISOString(),
+      reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null
+    }).eq('id',reqId);
+    // Update the assignment end_date to today if it has no end date or end date is in the future
+    if(table){
+      await sbClient.from(table).update({end_date:today}).eq('id',r.assignment_id);
+      // Update in-memory too
+      if(r.resource_type==='accommodation'){
+        Object.values(accomHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        saveAccomHistory();
+      } else if(r.resource_type==='vehicle'){
+        Object.values(vehHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        saveVehHistory();
+      } else if(r.resource_type==='tool'){
+        Object.values(toolHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id&&(!a.endDate||a.endDate>today))a.endDate=today;}));
+        saveToolHistory();
+      }
+    }
+    adminReturnRequests=adminReturnRequests.filter(x=>x.id!==reqId);
+    renderAdminReturnRequests();
+    renderResources();
+    if(curW) rebuildModal(curW);
+  }catch(e){alert('Approve failed: '+e.message);}
+}
+async function rejectReturnRequest(reqId){
+  const r=adminReturnRequests.find(x=>x.id===reqId); if(!r) return;
+  const reviewNotes=(document.getElementById(`rreqNotes_${reqId}`)?.value||'').trim();
+  try{
+    await sbClient.from('worker_resource_return_requests').update({
+      status:'rejected',reviewed_at:new Date().toISOString(),
+      reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null
+    }).eq('id',reqId);
+    adminReturnRequests=adminReturnRequests.filter(x=>x.id!==reqId);
+    renderAdminReturnRequests();
   }catch(e){alert('Reject failed: '+e.message);}
 }
 
@@ -6775,19 +7024,61 @@ function openAssignTool(wid, entryId){
   document.getElementById('assignToolChargeAmt').value=entry?.weeklyChargeAmount||'';
   if(amtRow) amtRow.style.display=entry?.chargeToOperative?'block':'none';
   document.getElementById('clearToolBtn').style.display=entry?'inline-flex':'none';
+  // Reset file inputs
+  const issueFileEl=document.getElementById('assignToolIssueFile');
+  const returnFileEl=document.getElementById('assignToolReturnFile');
+  if(issueFileEl) issueFileEl.value='';
+  if(returnFileEl) returnFileEl.value='';
+  // Show existing proof file names
+  const issueExistEl=document.getElementById('assignToolIssueFileExisting');
+  const returnExistEl=document.getElementById('assignToolReturnFileExisting');
+  if(issueExistEl){
+    if(entry?.issueFileName){
+      issueExistEl.style.display='block';
+      issueExistEl.innerHTML=`Existing: <strong>${esc(entry.issueFileName)}</strong>${entry.issueFilePath?` <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${entry.issueFilePath}','${esc(entry.issueFileName)}')">View</button>`:''}`;
+    } else { issueExistEl.style.display='none'; issueExistEl.innerHTML=''; }
+  }
+  if(returnExistEl){
+    if(entry?.returnFileName){
+      returnExistEl.style.display='block';
+      returnExistEl.innerHTML=`Existing: <strong>${esc(entry.returnFileName)}</strong>${entry.returnFilePath?` <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${entry.returnFilePath}','${esc(entry.returnFileName)}')">View</button>`:''}`;
+    } else { returnExistEl.style.display='none'; returnExistEl.innerHTML=''; }
+  }
   document.getElementById('assignToolOverlay').classList.add('open');
 }
-function saveToolAssignment(){
+async function saveToolAssignment(){
   const toolId=document.getElementById('assignToolSel').value;
   if(!toolId){alert('Please select a tool.');return;}
   if(!toolHistory[assignToolWid]) toolHistory[assignToolWid]=[];
   const charge=document.getElementById('assignToolCharge').checked;
   const chargeAmt=charge?(parseFloat(document.getElementById('assignToolChargeAmt').value)||null):null;
+  const issueFile=document.getElementById('assignToolIssueFile')?.files?.[0]||null;
+  const returnFile=document.getElementById('assignToolReturnFile')?.files?.[0]||null;
+
+  async function uploadProofFile(file, assignmentId, kind){
+    if(!file||!sbClient) return {path:null,name:null};
+    const ext=file.name.split('.').pop();
+    const path=`tool-assignments/${toolId}/${assignmentId}/${kind}.${ext}`;
+    try{
+      const {error}=await sbClient.storage.from('tmc-documents').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
+      if(error) throw error;
+      return {path,name:file.name};
+    }catch(e){ console.warn('[TMC] tool proof upload failed:',e.message); return {path:null,name:null}; }
+  }
+
   if(assignToolEntryId){
     const entry=toolHistory[assignToolWid].find(a=>a.id===assignToolEntryId);
-    if(entry){ entry.toolId=toolId; entry.startDate=document.getElementById('assignToolStart').value; entry.endDate=document.getElementById('assignToolEnd').value; entry.notes=document.getElementById('assignToolNotes').value.trim(); entry.chargeToOperative=charge; entry.weeklyChargeAmount=chargeAmt; }
+    if(entry){
+      entry.toolId=toolId; entry.startDate=document.getElementById('assignToolStart').value; entry.endDate=document.getElementById('assignToolEnd').value; entry.notes=document.getElementById('assignToolNotes').value.trim(); entry.chargeToOperative=charge; entry.weeklyChargeAmount=chargeAmt;
+      if(issueFile){ const r=await uploadProofFile(issueFile,entry.id,'issue'); if(r.path){entry.issueFilePath=r.path;entry.issueFileName=r.name;} }
+      if(returnFile){ const r=await uploadProofFile(returnFile,entry.id,'return'); if(r.path){entry.returnFilePath=r.path;entry.returnFileName=r.name;} }
+    }
   } else {
-    toolHistory[assignToolWid].push({id:crypto.randomUUID(),toolId,startDate:document.getElementById('assignToolStart').value,endDate:document.getElementById('assignToolEnd').value,notes:document.getElementById('assignToolNotes').value.trim(),chargeToOperative:charge,weeklyChargeAmount:chargeAmt});
+    const newId=crypto.randomUUID();
+    const newEntry={id:newId,toolId,startDate:document.getElementById('assignToolStart').value,endDate:document.getElementById('assignToolEnd').value,notes:document.getElementById('assignToolNotes').value.trim(),chargeToOperative:charge,weeklyChargeAmount:chargeAmt,issueFilePath:null,issueFileName:null,returnFilePath:null,returnFileName:null};
+    if(issueFile){ const r=await uploadProofFile(issueFile,newId,'issue'); if(r.path){newEntry.issueFilePath=r.path;newEntry.issueFileName=r.name;} }
+    if(returnFile){ const r=await uploadProofFile(returnFile,newId,'return'); if(r.path){newEntry.returnFilePath=r.path;newEntry.returnFileName=r.name;} }
+    toolHistory[assignToolWid].push(newEntry);
   }
   saveToolHistory(); sbScheduleSync(); closeM('assignToolOverlay'); renderResources();
   if(curW===assignToolWid) rebuildModal(curW);
@@ -6811,46 +7102,50 @@ function renderToolSummary(){
 }
 
 function renderTools(){
-  const el=document.getElementById('toolGantt'); if(!el) return;
   renderToolSummary();
-  const today=new Date(); today.setHours(0,0,0,0);
-  const cols=ganttColumns(ganttZoom, ganttOffset);
-
-  if(!tools.length){ el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-l);font-size:13px;">No tools registered. Click + Add Tool to get started.</div>'; return; }
-
-  let html='<table class="res-table"><thead><tr><th style="min-width:160px;">Tool</th>';
-  cols.forEach(colDate=>{ html+=`<th style="text-align:center;font-size:11px;white-space:nowrap;">${colLabel(colDate,ganttZoom)}</th>`; });
-  html+='</tr></thead><tbody>';
-
-  tools.forEach(t=>{
-    html+=`<tr><td><div style="font-weight:600;font-size:13px;color:var(--navy);">${esc(t.name)}</div>${t.serial?`<div style="font-size:11px;color:var(--text-l);">${esc(t.serial)}</div>`:''}<div style="display:flex;gap:4px;margin-top:4px;"><button class="btn" style="font-size:10px;padding:2px 8px;" onclick="editTool('${t.id}')">Edit</button><button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deleteTool('${t.id}')">✕</button></div></td>`;
-    cols.forEach(colDate=>{
-      const colStart=new Date(colDate); colStart.setHours(0,0,0,0);
-      const colEnd=new Date(colDate.getTime()+colDuration(colDate,ganttZoom)-1);
-      const assignments=[];
-      workers.forEach(w=>{
-        (toolHistory[w.id]||[]).forEach(a=>{
-          if(a.toolId!==t.id) return;
-          const aStart=a.startDate?new Date(a.startDate):null;
-          const aEnd=a.endDate?new Date(a.endDate):null;
-          if(aStart) aStart.setHours(0,0,0,0); if(aEnd) aEnd.setHours(23,59,59,999);
-          const inRange=(!aStart||aStart<=colEnd)&&(!aEnd||aEnd>=colStart);
-          if(inRange) assignments.push({w,a});
-        });
-      });
-      if(assignments.length){
-        const bg=assignments.length>1?'#fef3c7':'#dcfce7';
-        const textCol=assignments.length>1?'#92400e':'#166534';
-        const names=assignments.map(x=>x.w.name).join(', ');
-        html+=`<td style="text-align:center;background:${bg};cursor:pointer;" title="${esc(names)}" onclick="openAssignTool('${assignments[0].w.id}','${assignments[0].a.id}')"><span style="font-size:11px;font-weight:600;color:${textCol};">${esc(assignments.length>1?assignments.length+' workers':assignments[0].w.name.split(' ')[0])}</span></td>`;
-      } else {
-        html+=`<td style="text-align:center;color:var(--text-l);font-size:11px;">—</td>`;
-      }
+  const entries=[];
+  workers.forEach(w=>{
+    (toolHistory[w.id]||[]).forEach(a=>{
+      const t=tools.find(x=>x.id===a.toolId);
+      entries.push({wid:w.id,id:a.id,label:t?(t.name+(t.serial?' ('+t.serial+')':'')):'Unknown',resourceId:a.toolId,startDate:a.startDate,endDate:a.endDate,
+        onclickFn:(id)=>openAssignTool(w.id,a.id)});
     });
-    html+='</tr>';
   });
-  html+='</tbody></table>';
-  el.innerHTML=html;
+  const refMon=addWeeks(weekMonday(new Date()),ganttOffset), refSun=weekSunday(refMon);
+  let filteredEntries=entries;
+  if(resGanttProjectFilter!=='all'){
+    const widsOnProj=new Set(projectAssignments.filter(a=>{
+      if(a.projectId!==resGanttProjectFilter||!a.startDate) return false;
+      const s=new Date(a.startDate);s.setHours(0,0,0,0);
+      const e=a.endDate?new Date(a.endDate):null;if(e)e.setHours(23,59,59,999);
+      return s<=refSun&&(!e||e>=refMon);
+    }).map(a=>a.wid));
+    filteredEntries=entries.filter(e=>widsOnProj.has(e.wid));
+  }
+  let workerOrder=[...new Set(filteredEntries.map(e=>e.wid))];
+  if(resGanttSort==='resource'){
+    workerOrder.sort((a,b)=>{
+      const la=(filteredEntries.find(e=>e.wid===a)?.label||'').toLowerCase();
+      const lb=(filteredEntries.find(e=>e.wid===b)?.label||'').toLowerCase();
+      return la.localeCompare(lb);
+    });
+  } else {
+    workerOrder.sort((a,b)=>(workers.find(x=>x.id===a)?.name||'').localeCompare(workers.find(x=>x.id===b)?.name||''));
+  }
+  _populateResProjectFilter('toolProjectFilter',refMon,refSun);
+  const sortSel=document.getElementById('toolSortSel'); if(sortSel) sortSel.value=resGanttSort;
+  const refLbl=document.getElementById('toolRefWeekLabel');
+  if(refLbl){const wn=isoWeekKey(refMon).split('-W')[1];const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});refLbl.textContent=`Ref: W${wn} · ${fmt(refMon)} – ${fmt(weekSunday(refMon))}`;}
+
+  const workerMeta=wid=>{
+    const proj=getWorkerProjectForWeek(wid);
+    return proj?`<div style="margin-top:3px;overflow:hidden;"><span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;display:inline-block;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${esc(proj.name)}">${esc(proj.name)}</span></div>`:'';
+  };
+  renderGantt('toolGantt','toolSummaryCount','noToolAssign',filteredEntries,'tool',ganttZoom,ganttOffset,'setGanttZoom','shiftGantt','resetGantt',bd=>{
+    const a=(toolHistory[bd.wid]||[]).find(x=>x.id===bd.id);
+    if(a){a.startDate=bd.startDate;a.endDate=bd.endDate;saveToolHistory();sbScheduleSync();}
+    renderResources();
+  },workerOrder,workerMeta);
 }
 
 // ─── Deleted Items / Restore History ─────────────────────────────────────────
@@ -7328,7 +7623,7 @@ async function sbPersistAll(force=false){
   if(resourceEvents.length){ try{ await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true}))); }catch(e){ console.warn('[TMC] resource_events sync skipped — run migrations/add_resource_events.sql to enable:', e.message); } }
   try{
     await sbUpsertRows('tools', tools.map(t=>({id:t.id,name:t.name,description:t.desc||'',serial_number:t.serial||'',notes:t.notes||'',active:true})));
-    const ta=[]; Object.keys(toolHistory||{}).forEach(wid=>(toolHistory[wid]||[]).forEach(a=>{ ta.push({id:a.id,worker_id:wid,tool_id:a.toolId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
+    const ta=[]; Object.keys(toolHistory||{}).forEach(wid=>(toolHistory[wid]||[]).forEach(a=>{ ta.push({id:a.id,worker_id:wid,tool_id:a.toolId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,issue_file_path:a.issueFilePath||null,issue_file_name:a.issueFileName||null,return_file_path:a.returnFilePath||null,return_file_name:a.returnFileName||null,active:true}); }));
     await sbUpsertRows('tool_assignments',ta);
     await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
@@ -7594,7 +7889,7 @@ async function sbLoadAll(){
     resourceEvents=(resEventsData||[]).map(e=>({id:e.id,resourceType:e.resource_type,resourceId:e.resource_id,eventDate:e.event_date,eventType:e.event_type,description:e.description,createdAt:e.created_at,createdBy:e.created_by||''}));
     saveResourceEvents();
     tools=(toolData||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||'',notes:t.notes||''}));
-    toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
+    toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null,issueFilePath:a.issue_file_path||null,issueFileName:a.issue_file_name||null,returnFilePath:a.return_file_path||null,returnFileName:a.return_file_name||null}); });
     toolCharges=(toolChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
@@ -7720,7 +8015,7 @@ async function sbUpdatePassword(){
   }
 }
 async function sbLogout(){
-  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null;
+  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null; wpAccomAssignments=[]; wpVehAssignments=[]; wpToolAssignments=[]; wpProperties=[]; wpVehicles=[]; wpTools=[]; wpReturnRequests=[];
   document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
@@ -7790,7 +8085,7 @@ async function sbAfterAuth(){
     applyRoleUI();
     return;
   }
-  if(sbUserRole==='admin'||sbUserRole==='compliance') loadAdminPendingSubmissions();
+  if(sbUserRole==='admin'||sbUserRole==='compliance'){ loadAdminPendingSubmissions(); loadAdminReturnRequests(); }
   sbStartRealtime();
   sbShowLoginPrompt(false);
   sbSetStatus('Supabase: connected — role: '+sbRoleLabel(), true);
