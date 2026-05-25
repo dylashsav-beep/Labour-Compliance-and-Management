@@ -650,6 +650,11 @@ body.wp-mode #sbAuthBar{display:none!important;}
 .wp-empty-filter{text-align:center;padding:32px 16px;color:var(--text-l);font-size:14px;}
 .wp-doc-row{padding:16px 0;border-bottom:1px solid var(--border,#e2e8f0);}
 .wp-doc-top{display:flex;align-items:flex-start;gap:12px;}
+.doc-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e0e7ff;color:#4f46e5;font-size:11px;font-weight:800;border:none;cursor:pointer;flex-shrink:0;line-height:1;vertical-align:middle;margin-left:5px;}
+.doc-info-btn:hover,.doc-info-btn:focus{background:#c7d2fe;}
+.doc-link-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#4f46e5;text-decoration:none;padding:2px 7px;border-radius:10px;background:#e0e7ff;margin-left:5px;vertical-align:middle;white-space:nowrap;}
+.doc-link-btn:hover{background:#c7d2fe;text-decoration:none;}
+.doc-info-tooltip{font-size:12px;color:var(--text-m);background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:6px;line-height:1.5;}
 .wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;}
 .wp-doc-info{flex:1;min-width:0;}
 .wp-doc-name{font-size:15px;font-weight:700;color:#1a2035;line-height:1.3;}
@@ -2319,6 +2324,8 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
     category: doc.cat || doc.category || '',
     icon: doc.icon || '📌',
     tip: doc.tip || '',
+    info_text: doc.infoText || null,
+    info_url: doc.infoUrl || null,
     required: !!doc.req && !doc.archived,
     built_in: !!doc.builtIn,
     archived: !!doc.archived,
@@ -3890,7 +3897,7 @@ function rebuildModal(id){
         <div class="doc-item-row">
           <div class="doc-icon">${d.icon}</div>
           <div class="doc-info">
-            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}</div>
+            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.infoText?`<button class="doc-info-btn" title="${esc(d.infoText)}" onclick="this.nextElementSibling?.classList.toggle('open')">i</button><span class="doc-info-tooltip" style="display:none;" onclick="this.classList.toggle('open')">${esc(d.infoText)}</span>`:''}${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 Link</a>`:''}</div>
             <div class="doc-tip">${d.tip}</div>
           </div>
           <div class="doc-controls">
@@ -4076,7 +4083,7 @@ function wpLoadPortalData(data){
   docSets.forEach(s=>docSetItems[s.id]=[]);
   (data.doc_set_items||[]).forEach(d=>{
     if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[];
-    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
+    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
   });
   tmplForWorker(workerObj).forEach(d=>workerObj.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});
   (data.worker_docs||[]).forEach(d=>{ workerObj.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]}; });
@@ -4193,6 +4200,7 @@ function renderWPDocs(){
             </div>
             ${hasPending?`<div class="wp-pending-badge" style="margin-top:6px;">Awaiting admin review</div>`:''}
             ${d.tip?`<div class="wp-doc-meta" style="margin-top:4px;font-style:italic;">${esc(d.tip)}</div>`:''}
+            ${d.infoText||d.infoUrl?`<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;">${d.infoText?`<button class="doc-info-btn" onclick="var s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none'">i</button><div class="doc-info-tooltip" style="display:none;width:100%;">${esc(d.infoText)}</div>`:''} ${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 More info / form</a>`:''}</div>`:''}
           </div>
         </div>
         ${isOpen?`<div class="wp-submit-form">
@@ -4861,6 +4869,14 @@ function renderDocSetCard(s){
                 <label style="font-size:10px;color:var(--text-l);">Description</label>
                 <input id="editDoc_tip_${s.id}_${d.id}" class="form-input" value="${esc(d.tip||'')}" style="width:220px;" placeholder="Brief description"/>
               </div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">ℹ Info note <span style="font-weight:400;">(shown as tooltip)</span></label>
+                <textarea id="editDoc_info_${s.id}_${d.id}" class="form-input" style="width:240px;height:52px;resize:vertical;font-size:12px;" placeholder="Explain what this document is or what's accepted…">${esc(d.infoText||'')}</textarea>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-l);">🔗 Info / form link</label>
+                <input id="editDoc_url_${s.id}_${d.id}" class="form-input" value="${esc(d.infoUrl||'')}" style="width:220px;" placeholder="https://…" type="url"/>
+              </div>
               <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save</button>
               <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
             </div>
@@ -5091,8 +5107,10 @@ async function saveDocItemEdit(setId,docId){
   const newCat=catMatchEdit||rawNewCat;
   const newTip=(document.getElementById(`editDoc_tip_${setId}_${docId}`)?.value||'').trim()||newName;
   const newIcon=(document.getElementById(`editDoc_icon_${setId}_${docId}`)?.value||'').trim()||doc.icon||'📌';
-  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon};
-  doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon;
+  const newInfoText=(document.getElementById(`editDoc_info_${setId}_${docId}`)?.value||'').trim()||null;
+  const newInfoUrl=(document.getElementById(`editDoc_url_${setId}_${docId}`)?.value||'').trim()||null;
+  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon,infoText:doc.infoText,infoUrl:doc.infoUrl};
+  doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon; doc.infoText=newInfoText; doc.infoUrl=newInfoUrl;
   try{
     await sbRemoteUpsertDocSetItem(setId,doc);
   }catch(e){
@@ -6958,7 +6976,7 @@ async function sbPersistAll(force=false){
   if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:'main',warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'compliance@tmconstruction.nl',updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true})));
   const dsi=[];
-  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true}); }));
+  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true}); }));
   await sbUpsertRows('document_set_items',dsi);
   await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',description:p.desc||'',active:p.active!==false})));
   await sbUpsertRows('workers', workers.map(w=>{
@@ -7223,7 +7241,7 @@ async function sbLoadAll(){
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
-      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
+      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
     }
     if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
 
