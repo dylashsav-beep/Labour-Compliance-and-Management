@@ -633,6 +633,12 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;}
 .wp-body{max-width:680px;margin:0 auto;padding:20px 16px;}
 .wp-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-l,#94a3b8);margin:20px 0 10px;}
+body.wp-mode #sbAuthBar{display:none!important;}
+.wp-filter-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+.wp-filter-tab{padding:11px 6px;border-radius:8px;border:2px solid var(--border,#e2e8f0);background:#fff;font-size:13px;font-weight:600;color:var(--text-m,#475569);cursor:pointer;min-height:44px;text-align:center;transition:border-color .12s,background .12s,color .12s;}
+.wp-filter-tab.active{background:#4f46e5;color:#fff;border-color:#4f46e5;}
+.wp-filter-tab:active{opacity:.8;}
+.wp-empty-filter{text-align:center;padding:32px 16px;color:var(--text-l);font-size:14px;}
 .wp-doc-row{padding:16px 0;border-bottom:1px solid var(--border,#e2e8f0);}
 .wp-doc-top{display:flex;align-items:flex-start;gap:12px;}
 .wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;}
@@ -681,7 +687,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
         <button class="sbRoleBtn" onclick="sbSelectRole('worker')">
           <div class="sbRoleIcon">👷</div>
           <div>
-            <div class="sbRoleTitle">Personal Compliance</div>
+            <div class="sbRoleTitle">My Documents</div>
             <div class="sbRoleDesc">View and update your own documents &amp; profile</div>
           </div>
         </button>
@@ -3973,6 +3979,7 @@ let wpWorkerObj = null;
 let wpWorkerEmail = null; // email used to log in (direct login path)
 let wpSubmissions = []; // pending submissions for current worker (worker mode) or all pending (admin mode)
 let wpActiveTab = 'docs';
+let wpDocFilter = 'missing'; // 'missing' | 'expiring' | 'ok' | 'all'
 let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
 
 // Role selection screen
@@ -4001,7 +4008,7 @@ function sbShowOtpPanel(){
   document.getElementById('sbSignInPanel').classList.add('hidden');
   document.getElementById('sbOtpPanel').classList.add('open');
   const t=document.getElementById('sbLoginTitle'),s=document.getElementById('sbLoginSub');
-  if(t) t.textContent='Personal Compliance';
+  if(t) t.textContent='My Documents';
   if(s) s.textContent='Enter your work email address to sign in';
   sbMsg('');
   setTimeout(()=>document.getElementById('sbOtpEmail')?.focus(),80);
@@ -4071,6 +4078,8 @@ async function initWorkerPortal(workerId){
   document.querySelector('header')?.style?.setProperty('display','none');
   document.getElementById('sbAuthBar').style.display='none';
   document.getElementById('sbLoginPrompt').style.display='none';
+  document.body.classList.add('wp-mode');
+  wpDocFilter='missing';
   // Update header
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
@@ -4103,18 +4112,36 @@ function wpSwitch(tab){
 }
 
 // ── Worker portal: My Documents ──
+function wpSetDocFilter(f){ wpDocFilter=f; renderWPDocs(); }
 function renderWPDocs(){
   const el=document.getElementById('wpViewDocs'); if(!el) return;
   const w=wpWorkerObj; if(!w){el.innerHTML='<p>Worker profile not found.</p>';return;}
   const today=new Date();
   const tmpl=tmplForWorker(w);
-  const cats=[...new Set(tmpl.map(d=>d.cat||'General'))];
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
 
-  let html='';
+  // Filter tabs
+  const filterLabels={missing:'Missing',expiring:'Expiring Soon',ok:'Valid'};
+  const filterCounts={missing:0,expiring:0,ok:0};
+  tmpl.forEach(d=>{ const st=docStatusAt(w.docs?.[d.id],today); if(filterCounts[st]!==undefined) filterCounts[st]++; });
+  let html=`<div class="wp-filter-tabs">`;
+  ['missing','expiring','ok'].forEach(f=>{
+    html+=`<button class="wp-filter-tab${wpDocFilter===f?' active':''}" onclick="wpSetDocFilter('${f}')">${filterLabels[f]}<br><span style="font-size:11px;font-weight:400;">${filterCounts[f]}</span></button>`;
+  });
+  html+=`</div>`;
+
+  // Filtered docs
+  const filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)===wpDocFilter);
+  if(!filtered.length){
+    const emptyMsg={missing:'No missing documents',expiring:'No documents expiring soon',ok:'No valid documents'}[wpDocFilter]||'No documents';
+    html+=`<div class="wp-empty-filter">${emptyMsg}</div>`;
+    el.innerHTML=html; return;
+  }
+
+  const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
   cats.forEach(cat=>{
     html+=`<div class="wp-section-title">${esc(cat)}</div>`;
-    tmpl.filter(d=>(d.cat||'General')===cat).forEach(d=>{
+    filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{
       const docData=w.docs?.[d.id];
       const st=docStatusAt(docData,today);
       const stColor={ok:'#276749',expiring:'#b45309',missing:'#c53030'}[st]||'#64748b';
@@ -4162,7 +4189,7 @@ function renderWPDocs(){
       </div>`;
     });
   });
-  el.innerHTML=html||'<p style="color:var(--text-l);">No documents in your compliance set.</p>';
+  el.innerHTML=html;
 }
 function wpToggleSubmit(docKey){
   wpDocSubmitOpen[docKey]=!wpDocSubmitOpen[docKey];
@@ -7272,6 +7299,7 @@ async function sbUpdatePassword(){
 }
 async function sbLogout(){
   wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null;
+  document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
   document.querySelector('.toolbar')?.style?.removeProperty('display');
