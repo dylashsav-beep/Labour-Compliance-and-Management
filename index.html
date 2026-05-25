@@ -1892,7 +1892,7 @@ function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
   const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -5231,6 +5231,12 @@ let vehHistory = {};
 let accomCharges = [];
 let vehCharges = [];
 let resourceEvents = [];
+let tools = [];
+let toolHistory = {};
+let toolCharges = [];
+let editingToolId = null;
+let assignToolWid = null;
+let assignToolEntryId = null;
 let billingOffset = 0;
 let _chargeModalState = null; // {type, assignmentId, wid, weekKey}
 
@@ -6528,6 +6534,156 @@ function clearVehicleAssignment(){
   });
 }
 
+
+// ─── Tools ────────────────────────────────────────────────────────────────────
+const TOOL_KEY='tmc_tools';
+const TOOL_HIST_KEY='tmc_tool_history';
+function saveTools(){ try{localStorage.setItem(TOOL_KEY,JSON.stringify(tools));}catch(e){} }
+function saveToolHistory(){ try{localStorage.setItem(TOOL_HIST_KEY,JSON.stringify(toolHistory));}catch(e){} }
+
+function currentTool(wid, refDate){
+  const hist = toolHistory[wid]||[];
+  if(!hist.length) return null;
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  const active = hist.filter(a=>!a.endDate || new Date(a.endDate)>=ref);
+  if(active.length) return active[active.length-1];
+  return hist[hist.length-1];
+}
+
+function openAddTool(){
+  editingToolId=null;
+  document.getElementById('toolModalTitle').textContent='Add Tool';
+  ['toolName','toolDesc','toolSerial','toolNotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('toolEventSection').style.display='none';
+  document.getElementById('toolEventList').innerHTML='';
+  document.getElementById('toolOverlay').classList.add('open');
+}
+function editTool(id){
+  const t=tools.find(x=>x.id===id); if(!t) return;
+  editingToolId=id;
+  document.getElementById('toolModalTitle').textContent='Edit Tool';
+  document.getElementById('toolName').value=t.name;
+  document.getElementById('toolDesc').value=t.desc||'';
+  document.getElementById('toolSerial').value=t.serial||'';
+  document.getElementById('toolNotes').value=t.notes||'';
+  document.getElementById('toolEventSection').style.display='block';
+  renderResourceEventList('tool', id);
+  document.getElementById('toolOverlay').classList.add('open');
+}
+function saveTool(){
+  const name=document.getElementById('toolName').value.trim();
+  if(!name){alert('Please enter a tool name.');return;}
+  if(editingToolId){
+    const t=tools.find(x=>x.id===editingToolId);
+    if(t){ t.name=name; t.desc=document.getElementById('toolDesc').value.trim(); t.serial=document.getElementById('toolSerial').value.trim(); t.notes=document.getElementById('toolNotes').value.trim(); }
+  } else {
+    tools.push({id:crypto.randomUUID(),name,desc:document.getElementById('toolDesc').value.trim(),serial:document.getElementById('toolSerial').value.trim(),notes:document.getElementById('toolNotes').value.trim()});
+  }
+  saveTools(); sbScheduleSync(); closeM('toolOverlay'); renderResources();
+}
+function deleteTool(id){
+  const t=tools.find(x=>x.id===id);
+  confirmDeleteAction('Delete this tool? Existing tool assignments will be archived.', async ()=>{
+    if(t) archiveDeletedItem('tool', t.name, {tool:t});
+    tools=tools.filter(x=>x.id!==id);
+    Object.keys(toolHistory).forEach(wid=>{ toolHistory[wid]=(toolHistory[wid]||[]).filter(a=>a.toolId!==id); });
+    saveTools(); saveToolHistory(); sbScheduleSync(); closeM('toolOverlay'); renderResources(); renderDeletedItems();
+  });
+}
+
+function openAssignTool(wid, entryId){
+  assignToolWid=wid; assignToolEntryId=entryId||null;
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const hist=toolHistory[wid]||[];
+  const entry=entryId?hist.find(a=>a.id===entryId):null;
+  document.getElementById('assignToolTitle').textContent=entry?`Edit Tool — ${w.name}`:`Assign Tool — ${w.name}`;
+  document.getElementById('assignToolSub').textContent=`${w.ref||''} · ${w.type==='zzp'?'ZZP':'Employed'}`;
+  const sel=document.getElementById('assignToolSel');
+  sel.innerHTML='<option value="">— Select tool —</option>'+tools.map(t=>`<option value="${t.id}"${entry?.toolId===t.id?' selected':''}>${esc(t.name)}${t.serial?' ('+t.serial+')':''}</option>`).join('');
+  document.getElementById('assignToolStart').value=entry?.startDate||'';
+  document.getElementById('assignToolEnd').value=entry?.endDate||'';
+  document.getElementById('assignToolNotes').value=entry?.notes||'';
+  document.getElementById('assignToolCharge').checked=entry?.chargeToOperative||false;
+  const amtRow=document.getElementById('toolChargeAmtRow');
+  document.getElementById('assignToolChargeAmt').value=entry?.weeklyChargeAmount||'';
+  if(amtRow) amtRow.style.display=entry?.chargeToOperative?'block':'none';
+  document.getElementById('clearToolBtn').style.display=entry?'inline-flex':'none';
+  document.getElementById('assignToolOverlay').classList.add('open');
+}
+function saveToolAssignment(){
+  const toolId=document.getElementById('assignToolSel').value;
+  if(!toolId){alert('Please select a tool.');return;}
+  if(!toolHistory[assignToolWid]) toolHistory[assignToolWid]=[];
+  const charge=document.getElementById('assignToolCharge').checked;
+  const chargeAmt=charge?(parseFloat(document.getElementById('assignToolChargeAmt').value)||null):null;
+  if(assignToolEntryId){
+    const entry=toolHistory[assignToolWid].find(a=>a.id===assignToolEntryId);
+    if(entry){ entry.toolId=toolId; entry.startDate=document.getElementById('assignToolStart').value; entry.endDate=document.getElementById('assignToolEnd').value; entry.notes=document.getElementById('assignToolNotes').value.trim(); entry.chargeToOperative=charge; entry.weeklyChargeAmount=chargeAmt; }
+  } else {
+    toolHistory[assignToolWid].push({id:crypto.randomUUID(),toolId,startDate:document.getElementById('assignToolStart').value,endDate:document.getElementById('assignToolEnd').value,notes:document.getElementById('assignToolNotes').value.trim(),chargeToOperative:charge,weeklyChargeAmount:chargeAmt});
+  }
+  saveToolHistory(); sbScheduleSync(); closeM('assignToolOverlay'); renderResources();
+  if(curW===assignToolWid) rebuildModal(curW);
+}
+function clearToolAssignment(){
+  const entry=(toolHistory[assignToolWid]||[]).find(a=>a.id===assignToolEntryId);
+  confirmDeleteAction('Remove this tool assignment?', ()=>{
+    if(entry) archiveDeletedItem('tool_assignment', `Tool assignment ${entry.id}`, {wid:assignToolWid,entry});
+    if(assignToolEntryId) toolHistory[assignToolWid]=(toolHistory[assignToolWid]||[]).filter(a=>a.id!==assignToolEntryId);
+    saveToolHistory(); closeM('assignToolOverlay'); renderResources(); renderDeletedItems();
+    if(curW===assignToolWid) rebuildModal(curW);
+  });
+}
+
+function renderToolSummary(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  let count=0;
+  workers.forEach(w=>{ const h=toolHistory[w.id]||[]; h.forEach(a=>{ if(!a.endDate||new Date(a.endDate)>=today) count++; }); });
+  const el=document.getElementById('toolSummaryCount');
+  if(el) el.textContent=count+' active assignment'+(count!==1?'s':'');
+}
+
+function renderTools(){
+  const el=document.getElementById('toolGantt'); if(!el) return;
+  renderToolSummary();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const cols=ganttColumns(ganttZoom, ganttOffset);
+
+  if(!tools.length){ el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text-l);font-size:13px;">No tools registered. Click + Add Tool to get started.</div>'; return; }
+
+  let html='<table class="res-table"><thead><tr><th style="min-width:160px;">Tool</th>';
+  cols.forEach(c=>{ html+=`<th style="text-align:center;font-size:11px;white-space:nowrap;">${c.label}</th>`; });
+  html+='</tr></thead><tbody>';
+
+  tools.forEach(t=>{
+    html+=`<tr><td><div style="font-weight:600;font-size:13px;color:var(--navy);">${esc(t.name)}</div>${t.serial?`<div style="font-size:11px;color:var(--text-l);">${esc(t.serial)}</div>`:''}<div style="display:flex;gap:4px;margin-top:4px;"><button class="btn" style="font-size:10px;padding:2px 8px;" onclick="editTool('${t.id}')">Edit</button><button class="btn btn-danger" style="font-size:10px;padding:2px 8px;" onclick="deleteTool('${t.id}')">✕</button></div></td>`;
+    cols.forEach(c=>{
+      const colStart=c.start; const colEnd=c.end;
+      const assignments=[];
+      workers.forEach(w=>{
+        (toolHistory[w.id]||[]).forEach(a=>{
+          if(a.toolId!==t.id) return;
+          const aStart=a.startDate?new Date(a.startDate):null;
+          const aEnd=a.endDate?new Date(a.endDate):null;
+          if(aStart) aStart.setHours(0,0,0,0); if(aEnd) aEnd.setHours(23,59,59,999);
+          const inRange=(!aStart||aStart<=colEnd)&&(!aEnd||aEnd>=colStart);
+          if(inRange) assignments.push({w,a});
+        });
+      });
+      if(assignments.length){
+        const bg=assignments.length>1?'#fef3c7':'#dcfce7';
+        const textCol=assignments.length>1?'#92400e':'#166534';
+        const names=assignments.map(x=>x.w.name).join(', ');
+        html+=`<td style="text-align:center;background:${bg};cursor:pointer;" title="${esc(names)}" onclick="openAssignTool('${assignments[0].w.id}','${assignments[0].a.id}')"><span style="font-size:11px;font-weight:600;color:${textCol};">${esc(assignments.length>1?assignments.length+' workers':assignments[0].w.name.split(' ')[0])}</span></td>`;
+      } else {
+        html+=`<td style="text-align:center;color:var(--text-l);font-size:11px;">—</td>`;
+      }
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  el.innerHTML=html;
+}
 
 // ─── Deleted Items / Restore History ─────────────────────────────────────────
 function toggleDeletedItemsPanel(){
