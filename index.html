@@ -258,6 +258,14 @@ td{padding:10px 14px;vertical-align:middle;}
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
 .overlay.open{display:flex;}
 .modal{background:#fff;border-radius:8px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.16);animation:min .18s ease;}
+#fileViewerOverlay{z-index:600;}
+#fileViewerOverlay .modal{max-width:900px;max-height:95vh;display:flex;flex-direction:column;overflow:hidden;}
+#fileViewerOverlay .modal-header{flex-shrink:0;}
+#fileViewerFrame{flex:1;width:100%;border:none;min-height:0;height:70vh;}
+#fileViewerImg{max-width:100%;max-height:70vh;object-fit:contain;display:block;margin:auto;}
+.fv-body{flex:1;display:flex;flex-direction:column;align-items:stretch;padding:0;overflow:hidden;background:#374151;}
+.fv-unsupported{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:40px;color:#94a3b8;font-size:14px;background:#1e293b;}
+@media(max-width:600px){#fileViewerOverlay .modal{max-height:100vh;border-radius:0;}#fileViewerFrame{height:60vh;}}
 @keyframes min{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-d);border-radius:8px 8px 0 0;}
 .modal-title{font-size:15px;font-weight:600;color:#fff;}
@@ -773,6 +781,20 @@ body.wp-mode #sbAuthBar{display:none!important;}
     <div id="wpViewDocs"></div>
     <div id="wpViewAssign" style="display:none;"></div>
     <div id="wpViewProfile" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- File viewer lightbox -->
+<div class="overlay" id="fileViewerOverlay" onclick="if(event.target===this)closeFileViewer()">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="fileViewerTitle" style="word-break:break-all;max-width:calc(100% - 120px);"></span>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="btn btn-save" id="fileViewerDlBtn" style="font-size:12px;padding:5px 12px;">↓ Download</button>
+        <button class="modal-close" onclick="closeFileViewer()">✕</button>
+      </div>
+    </div>
+    <div class="fv-body" id="fileViewerBody"></div>
   </div>
 </div>
 
@@ -3957,7 +3979,14 @@ function attachF(wid,did,input){
   }));
   Promise.all(promises).then(nf=>{fileStore[wid][did].push(...nf);refreshFiles(wid,did);input.value='';});
 }
-function dlFile(wid,did,idx){const f=fileStore[wid]&&fileStore[wid][did]&&fileStore[wid][did][idx];if(!f||!f.dataUrl)return;const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();}
+function dlFile(wid,did,idx){
+  const f=fileStore[wid]&&fileStore[wid][did]&&fileStore[wid][did][idx];
+  if(!f) return;
+  if(f.file_path||f.storagePath){ sbSignedDownload(f.file_path||f.storagePath,f.name); return; }
+  if(!f.dataUrl) return;
+  const doDownload=()=>{const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();};
+  openFileViewer(f.dataUrl,f.name,doDownload);
+}
 function rmFile(wid,did,idx){
   const f=fileStore[wid]&&fileStore[wid][did]&&fileStore[wid][did][idx];
   if(!f) return;
@@ -4317,7 +4346,7 @@ function renderAdminPendingSubmissions(){
         <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
           ${s.expiry_date?`<span>Expiry: <strong>${s.expiry_date}</strong></span>`:''}
           ${s.issue_date?`<span>Issue: <strong>${s.issue_date}</strong></span>`:''}
-          ${s.file_name?`<span>File: <strong>${esc(s.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${s.file_path}','${esc(s.file_name)}')">Download</button></span>`:''}
+          ${s.file_name?`<span>File: <strong>${esc(s.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${s.file_path}','${esc(s.file_name)}')">View</button></span>`:''}
           ${s.notes?`<span>Notes: ${esc(s.notes)}</span>`:''}
         </div>
         <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
@@ -5369,7 +5398,7 @@ function renderDocuments(){
       const catLabel = DOC_CAT_LABELS[d.category]||d.category;
       const filePart = d.file_name?`<div class="doc-file-info"><span>📎</span><span>${esc(d.file_name)}</span>${d.file_size?`<span>(${Math.round(d.file_size/1024)}KB)</span>`:''}</div>`:'';
       const canEdit = canAction('workerDocs');
-      const dlBtn = d.file_path?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="downloadCompDoc('${d.id}')">Download</button>`:'';
+      const dlBtn = d.file_path?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="downloadCompDoc('${d.id}')">View</button>`:'';
       const editBtn = canEdit?`<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openEditCompDoc('${d.id}')">Edit</button>`:'';
       const delBtn = canEdit?`<button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteCompDoc('${d.id}')">Delete</button>`:'';
       const byPart = d.uploaded_by?`<span style="font-size:11px;color:var(--text-l);">by ${esc(d.uploaded_by)}</span>`:'';
@@ -6735,18 +6764,45 @@ async function sbUploadDataUrl(path, file){
   if(error) throw error;
   return path;
 }
+function _fileExt(name){ return (name||'').split('.').pop().toLowerCase(); }
+function _isImage(name){ return ['jpg','jpeg','png','gif','webp','bmp','svg'].includes(_fileExt(name)); }
+function _isPdf(name){ return _fileExt(name)==='pdf'; }
+
+function openFileViewer(url, name, downloadFn){
+  const overlay=document.getElementById('fileViewerOverlay');
+  const body=document.getElementById('fileViewerBody');
+  const title=document.getElementById('fileViewerTitle');
+  const dlBtn=document.getElementById('fileViewerDlBtn');
+  if(!overlay||!body) return;
+  title.textContent=name||'Document';
+  dlBtn.onclick=downloadFn||null;
+  dlBtn.style.display=downloadFn?'':'none';
+  if(_isPdf(name)){
+    body.innerHTML=`<iframe id="fileViewerFrame" src="${url}" type="application/pdf"></iframe>`;
+  } else if(_isImage(name)){
+    body.innerHTML=`<div style="padding:16px;background:#1e293b;display:flex;align-items:center;justify-content:center;min-height:200px;"><img id="fileViewerImg" src="${url}" alt="${esc(name||'')}" loading="lazy"/></div>`;
+  } else {
+    body.innerHTML=`<div class="fv-unsupported"><div style="font-size:48px;">📄</div><div>${esc(name||'File')}</div><div style="font-size:12px;">Preview not available for this file type.</div>${downloadFn?`<button class="btn btn-save" onclick="document.getElementById('fileViewerDlBtn').click()">Download file</button>`:''}</div>`;
+  }
+  overlay.classList.add('open');
+}
+function closeFileViewer(){
+  const overlay=document.getElementById('fileViewerOverlay');
+  if(overlay) overlay.classList.remove('open');
+  const body=document.getElementById('fileViewerBody');
+  if(body) body.innerHTML=''; // release blob URLs / iframe src
+}
+
 async function sbSignedDownload(path, name){
   if(!sbClient||!path) return false;
-  const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 60);
-  if(error){alert('Could not create download link: '+error.message);return false;}
-  try{
-    const resp=await fetch(data.signedUrl);
-    const blob=await resp.blob();
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download=name||'download';
+  const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 300);
+  if(error){alert('Could not create link: '+error.message);return false;}
+  const signedUrl=data.signedUrl;
+  const doDownload=()=>{
+    const a=document.createElement('a');a.href=signedUrl;a.download=name||'download';a.target='_blank';
     document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),10000);
-  }catch(e){ window.open(data.signedUrl,'_blank'); }
+  };
+  openFileViewer(signedUrl, name, doDownload);
   return true;
 }
 
@@ -7218,7 +7274,6 @@ async function sbLoadAll(){
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
 function sbInstallWrappers(){
   ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent'].forEach(sbWrap);
-  const oldDlFile=window.dlFile; window.dlFile=function(wid,did,idx){ const f=fileStore[wid]?.[did]?.[idx]; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldDlFile(wid,did,idx); };
   const oldPA=window.downloadPAContract; window.downloadPAContract=function(id){ const a=projectAssignments.find(x=>x.id===id),f=a?.contractFile; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldPA(id); };
   window.attachF=async function(wid,did,input){
     if(!requireAction('workerDocs','upload worker documents')){ input.value=''; return; }
