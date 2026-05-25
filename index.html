@@ -601,24 +601,6 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .doc-scope-radio label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-m);font-weight:500;}
 
 /* ── Worker Portal ──────────────────────────────── */
-#workerPortal{display:none;min-height:100vh;background:var(--bg,#f1f5f9);}
-.wp-header{background:#1a2035;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
-.wp-header-title{font-size:14px;font-weight:700;color:#fff;}
-.wp-header-name{font-size:13px;color:#94a3b8;}
-.wp-status-banner{padding:12px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border,#e2e8f0);}
-.wp-tabs{display:flex;gap:0;border-bottom:2px solid var(--border,#e2e8f0);background:#fff;padding:0 24px;}
-.wp-tab{padding:10px 20px;font-size:13px;font-weight:600;color:var(--text-l,#94a3b8);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
-.wp-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;}
-.wp-body{max-width:860px;margin:0 auto;padding:24px 16px;}
-.wp-doc-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border,#e2e8f0);}
-.wp-doc-icon{font-size:20px;flex-shrink:0;padding-top:2px;}
-.wp-doc-info{flex:1;min-width:0;}
-.wp-doc-name{font-size:13px;font-weight:600;color:#1a2035;}
-.wp-doc-meta{font-size:11px;color:var(--text-l,#94a3b8);margin-top:2px;}
-.wp-doc-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
-.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:8px;padding:12px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;}
-.wp-pending-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;}
-.wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-l,#94a3b8);margin:18px 0 8px;}
 /* OTP panel in login overlay */
 .sbOtpPanel{display:none;}
 .sbOtpPanel.open{display:block;}
@@ -626,6 +608,51 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .pending-sub-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;}
 .pending-sub-info{flex:1;min-width:0;}
 .pending-sub-actions{display:flex;gap:6px;flex-shrink:0;}
+
+/* ── Worker portal mobile-first styles ── */
+#workerPortal{display:none;min-height:100vh;background:var(--bg,#f1f5f9);-webkit-overflow-scrolling:touch;}
+.wp-header{background:#1a2035;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
+.wp-header-left{min-width:0;}
+.wp-header-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;}
+.wp-header-name{font-size:12px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.wp-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.wp-signout-btn{background:#334155;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;}
+.wp-signout-btn:active{background:#475569;}
+.wp-status-banner{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border,#e2e8f0);background:#fff;flex-wrap:wrap;}
+.wp-status-text{font-size:14px;font-weight:600;}
+.wp-tabs{display:flex;gap:0;border-bottom:2px solid var(--border,#e2e8f0);background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.wp-tab{flex:1;min-width:80px;padding:14px 8px;font-size:14px;font-weight:600;color:var(--text-l,#94a3b8);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;}
+.wp-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;}
+.wp-body{max-width:680px;margin:0 auto;padding:20px 16px;}
+.wp-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-l,#94a3b8);margin:20px 0 10px;}
+.wp-doc-row{padding:16px 0;border-bottom:1px solid var(--border,#e2e8f0);}
+.wp-doc-top{display:flex;align-items:flex-start;gap:12px;}
+.wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;}
+.wp-doc-info{flex:1;min-width:0;}
+.wp-doc-name{font-size:15px;font-weight:700;color:#1a2035;line-height:1.3;}
+.wp-doc-meta{font-size:13px;color:var(--text-l,#94a3b8);margin-top:4px;line-height:1.5;}
+.wp-doc-btn{display:block;width:100%;margin-top:12px;padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:44px;}
+.wp-doc-btn:active{background:#4338ca;}
+.wp-doc-btn.cancel{background:#e2e8f0;color:#475569;}
+.wp-doc-btn.cancel:active{background:#cbd5e1;}
+.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:10px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:12px;}
+.wp-submit-form label{font-size:12px;font-weight:600;color:var(--text-m,#475569);display:block;margin-bottom:4px;}
+.wp-submit-form input,.wp-submit-form .form-input{width:100%;box-sizing:border-box;min-height:44px;font-size:15px;}
+.wp-submit-form input[type=file]{min-height:44px;padding:8px;}
+.wp-submit-row{display:flex;gap:10px;}
+.wp-submit-row .wp-doc-btn{flex:1;}
+.wp-pending-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;margin-top:4px;}
+.wp-assign-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;}
+.wp-assign-title{font-size:15px;font-weight:700;color:#1a2035;margin-bottom:6px;}
+.wp-assign-meta{font-size:13px;color:var(--text-l);line-height:1.6;}
+.wp-profile-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px 16px;}
+.wp-profile-title{font-size:16px;font-weight:700;color:#1a2035;margin-bottom:16px;}
+.wp-profile-field{margin-bottom:14px;}
+.wp-profile-field label{font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:5px;}
+.wp-profile-field input,.wp-profile-field textarea{width:100%;box-sizing:border-box;min-height:44px;font-size:15px;}
+.wp-profile-save{width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;min-height:50px;margin-top:6px;}
+.wp-profile-save:active{background:#4338ca;}
+.wp-readonly-field{background:var(--bg,#f1f5f9);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text-m,#475569);min-height:44px;display:flex;align-items:center;}
 
 </style>
 </head>
@@ -656,7 +683,8 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <button class="btn btn-cancel" onclick="sbShowSignIn()">Back</button>
         </div>
         <div id="sbOtpCodeWrap" style="display:none;margin-top:12px;">
-          <div class="form-field"><label class="form-label">6-digit code from your email</label><input class="form-input" id="sbOtpCode" type="text" placeholder="123456" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')sbVerifyOtp()"/></div>
+          <div class="sbLoginHint" style="margin-bottom:10px;">Check your email — you can either <strong>click the link</strong> in the email, or <strong>enter the 6-digit code</strong> below. The code expires in 1 hour.</div>
+          <div class="form-field"><label class="form-label">6-digit code from your email</label><input class="form-input" id="sbOtpCode" type="text" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')sbVerifyOtp()"/></div>
           <div class="sbLoginActions" style="margin-top:8px;">
             <button class="btn btn-save" onclick="sbVerifyOtp()">Verify &amp; sign in</button>
             <button class="btn btn-cancel" onclick="sbSendOtp()">Resend code</button>
@@ -703,19 +731,19 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 <!-- WORKER PORTAL -->
 <div id="workerPortal">
   <div class="wp-header">
-    <div>
-      <div class="wp-header-title">TMC Compliance — Worker Portal</div>
+    <div class="wp-header-left">
+      <div class="wp-header-title">TMC Worker Portal</div>
       <div class="wp-header-name" id="wpHeaderName"></div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
+    <div class="wp-header-right">
       <span id="wpStatusBadge"></span>
-      <button class="btn btn-cancel" style="font-size:12px;" onclick="sbLogout()">Sign out</button>
+      <button class="wp-signout-btn" onclick="sbLogout()">Sign out</button>
     </div>
   </div>
   <div class="wp-tabs">
-    <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">My Documents</button>
-    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">My Assignments</button>
-    <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">My Profile</button>
+    <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">Documents</button>
+    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Assignments</button>
+    <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
   </div>
   <div class="wp-body">
     <div id="wpViewDocs"></div>
@@ -3942,7 +3970,7 @@ async function sbSendOtp(){
   sbMsg('Sending code…');
   try{
     const c=sbInitClient();
-    const {error}=await c.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+    const {error}=await c.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
     if(error) throw error;
     document.getElementById('sbOtpCodeWrap').style.display='block';
     sbMsg('Code sent — check your email inbox.');
@@ -3986,7 +4014,7 @@ async function initWorkerPortal(workerId){
     const st=goStatusAt(w,new Date());
     const stLabel={go:'✓ GO',warning:'⚠ Warning',nogo:'✕ No-Go'}[st]||'—';
     const stColor={go:'#276749',warning:'#b45309',nogo:'#c53030'}[st]||'#64748b';
-    document.getElementById('wpStatusBadge').innerHTML=`<span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:#fff;background:${stColor};">${stLabel}</span>`;
+    document.getElementById('wpStatusBadge').innerHTML=`<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;color:#fff;background:${stColor};">${stLabel}</span>`;
   }
   wpSwitch('docs');
 }
@@ -4032,40 +4060,41 @@ function renderWPDocs(){
       const isOpen=wpDocSubmitOpen[d.id];
 
       html+=`<div class="wp-doc-row">
-        <div class="wp-doc-icon">${d.icon||'📄'}</div>
-        <div class="wp-doc-info">
-          <div class="wp-doc-name">${esc(d.name)} ${d.req?'<span style="font-size:10px;color:#c53030;font-weight:700;">Required</span>':''}</div>
-          <div class="wp-doc-meta">
-            Status: <strong style="color:${stColor};">${stLabel}</strong>
-            ${docData?.expiry?` · Expires: ${expiryStr}`:''}
-            ${hasPending?` · <span class="wp-pending-badge">Submission pending review</span>`:''}
+        <div class="wp-doc-top">
+          <div class="wp-doc-icon">${d.icon||'📄'}</div>
+          <div class="wp-doc-info">
+            <div class="wp-doc-name">${esc(d.name)}${d.req?' <span style="font-size:11px;color:#c53030;font-weight:700;">Required</span>':''}</div>
+            <div class="wp-doc-meta">
+              Status: <strong style="color:${stColor};">${stLabel}</strong>
+              ${docData?.expiry?`<br>Expires: ${expiryStr}`:''}
+            </div>
+            ${hasPending?`<div class="wp-pending-badge" style="margin-top:6px;">Awaiting admin review</div>`:''}
+            ${d.tip?`<div class="wp-doc-meta" style="margin-top:4px;font-style:italic;">${esc(d.tip)}</div>`:''}
           </div>
-          ${d.tip?`<div class="wp-doc-meta" style="margin-top:3px;font-style:italic;">${esc(d.tip)}</div>`:''}
-          ${isOpen?`<div class="wp-submit-form">
-            <div style="display:flex;flex-direction:column;gap:3px;">
-              <label style="font-size:10px;color:var(--text-l);">Expiry date</label>
-              <input type="date" class="form-input" id="wpExp_${d.id}" style="width:150px;" value="${docData?.expiry||''}"/>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:3px;">
-              <label style="font-size:10px;color:var(--text-l);">Issue date (optional)</label>
-              <input type="date" class="form-input" id="wpIss_${d.id}" style="width:150px;" value="${docData?.issue||''}"/>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:3px;">
-              <label style="font-size:10px;color:var(--text-l);">Attach document</label>
-              <input type="file" class="form-input" id="wpFile_${d.id}" style="width:220px;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:3px;">
-              <label style="font-size:10px;color:var(--text-l);">Notes (optional)</label>
-              <input type="text" class="form-input" id="wpNote_${d.id}" style="width:180px;" placeholder="Any notes…"/>
-            </div>
-            <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="submitWPDoc('${d.id}')">Submit for review</button>
-            <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
-          </div>`:''}
         </div>
-        <div class="wp-doc-actions">
-          ${!isOpen&&!hasPending?`<button class="btn" style="font-size:11px;padding:3px 9px;" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
-          ${hasPending?`<span style="font-size:11px;color:var(--text-l);">Awaiting review</span>`:''}
-        </div>
+        ${isOpen?`<div class="wp-submit-form">
+          <div>
+            <label>Expiry date</label>
+            <input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/>
+          </div>
+          <div>
+            <label>Issue date (optional)</label>
+            <input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/>
+          </div>
+          <div>
+            <label>Attach document (optional)</label>
+            <input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/>
+          </div>
+          <div>
+            <label>Notes (optional)</label>
+            <input type="text" class="form-input" id="wpNote_${d.id}" placeholder="Any notes for the reviewer…"/>
+          </div>
+          <div class="wp-submit-row">
+            <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">Submit for review</button>
+            <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
+          </div>
+        </div>`:''}
+        ${!isOpen&&!hasPending?`<button class="wp-doc-btn" style="margin-top:10px;" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
       </div>`;
     });
   });
@@ -4123,17 +4152,14 @@ function renderWPAssignments(){
   el.innerHTML=myPAs.map(a=>{
     const proj=projectStore.find(p=>p.id===a.projectId);
     const isCurrent=(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now);
-    return`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:13px;font-weight:700;color:#1a2035;">${esc(proj?.name||'Unknown project')}</span>
-        ${isCurrent?'<span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Current</span>':''}
+    return`<div class="wp-assign-card">
+      <div class="wp-assign-title">${esc(proj?.name||'Unknown project')}${isCurrent?' <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Current</span>':''}</div>
+      <div class="wp-assign-meta">
+        ${proj?.client?`<div>Client: <strong>${esc(proj.client)}</strong></div>`:''}
+        <div>Period: <strong>${a.startDate||'?'} → ${a.endDate||'ongoing'}</strong></div>
+        ${a.rate?`<div>Rate: <strong>${a.rate} / ${a.rateType||'day'}</strong></div>`:''}
+        ${a.notes?`<div style="margin-top:6px;color:var(--text-m);">${esc(a.notes)}</div>`:''}
       </div>
-      <div style="font-size:12px;color:var(--text-l);">
-        ${proj?.client?`Client: ${esc(proj.client)} · `:''}
-        ${a.startDate||'?'} → ${a.endDate||'ongoing'}
-        ${a.rate?` · ${a.rate}/${a.rateType||'day'}`:''}
-      </div>
-      ${a.notes?`<div style="font-size:12px;color:var(--text-m);margin-top:4px;">${esc(a.notes)}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -4142,18 +4168,14 @@ function renderWPAssignments(){
 function renderWPProfile(){
   const el=document.getElementById('wpViewProfile'); if(!el) return;
   const w=wpWorkerObj; if(!w){el.innerHTML='<p>Profile not found.</p>';return;}
-  el.innerHTML=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px 22px;max-width:520px;">
-    <div style="font-size:15px;font-weight:700;color:#1a2035;margin-bottom:14px;">My Profile</div>
-    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
-      <div class="form-field"><label class="form-label">Full Name</label><input class="form-input" id="wpProfName" value="${esc(w.name||'')}" readonly style="background:var(--bg);cursor:default;"/></div>
-      <div class="form-field"><label class="form-label">Worker Type</label><input class="form-input" value="${w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker'}" readonly style="background:var(--bg);cursor:default;"/></div>
-      <div class="form-field"><label class="form-label">Email Address</label><input class="form-input" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="your@email.com"/></div>
-      <div class="form-field"><label class="form-label">Nationality</label><input class="form-input" value="${esc(w.nat||'')}" readonly style="background:var(--bg);cursor:default;"/></div>
-      <div class="form-field full"><label class="form-label">Notes / Additional info</label><textarea class="form-input" id="wpProfNotes" rows="2" style="resize:vertical;">${esc(w.notes||'')}</textarea></div>
-    </div>
-    <div style="margin-top:12px;">
-      <button class="btn btn-primary" onclick="saveWPProfile()">Save changes</button>
-    </div>
+  el.innerHTML=`<div class="wp-profile-card">
+    <div class="wp-profile-title">My Profile</div>
+    <div class="wp-profile-field"><label>Full Name</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
+    <div class="wp-profile-field"><label>Worker Type</label><div class="wp-readonly-field">${w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker'}</div></div>
+    <div class="wp-profile-field"><label>Nationality</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
+    <div class="wp-profile-field"><label>Email Address</label><input class="form-input wp-profile-field" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="your@email.com"/></div>
+    <div class="wp-profile-field"><label>Notes / Additional info</label><textarea class="form-input" id="wpProfNotes" rows="3" style="resize:vertical;width:100%;box-sizing:border-box;font-size:15px;">${esc(w.notes||'')}</textarea></div>
+    <button class="wp-profile-save" onclick="saveWPProfile()">Save changes</button>
   </div>`;
 }
 async function saveWPProfile(){
