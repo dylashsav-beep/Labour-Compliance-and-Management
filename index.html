@@ -750,6 +750,14 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 
   <!-- WORKERS VIEW -->
   <div id="viewWorkers">
+    <!-- Admin: pending worker submissions (hidden until there are items) -->
+    <div id="pendingSubmissionsSection" style="display:none;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:13px;font-weight:700;color:#1a2035;">Pending Worker Submissions</span>
+        <span id="pendingSubCount" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;"></span>
+      </div>
+      <div id="pendingSubList"></div>
+    </div>
     <div class="filter-bar">
       <span class="filter-label">Type:</span>
       <div style="display:flex;gap:4px;">
@@ -3911,6 +3919,357 @@ function refreshScore(wid){
   if(curW===wid) rebuildModal(wid);
 }
 
+// ─── Worker Portal ────────────────────────────────────────────────────────────
+let wpWorkerId = null;
+let wpWorkerObj = null;
+let wpSubmissions = []; // pending submissions for current worker (worker mode) or all pending (admin mode)
+let wpActiveTab = 'docs';
+let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
+
+// OTP login
+function sbShowOtpPanel(){
+  document.getElementById('sbSignInPanel').classList.add('hidden');
+  document.getElementById('sbOtpPanel').classList.add('open');
+  const t=document.getElementById('sbLoginTitle'),s=document.getElementById('sbLoginSub');
+  if(t) t.textContent='Worker Sign-In';
+  if(s) s.textContent='Enter your email to receive a one-time sign-in code';
+  sbMsg('');
+  setTimeout(()=>document.getElementById('sbOtpEmail')?.focus(),80);
+}
+async function sbSendOtp(){
+  const email=(document.getElementById('sbOtpEmail')?.value||'').trim();
+  if(!email){sbMsg('Please enter your email address.',true);return;}
+  sbMsg('Sending code…');
+  try{
+    const c=sbInitClient();
+    const {error}=await c.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+    if(error) throw error;
+    document.getElementById('sbOtpCodeWrap').style.display='block';
+    sbMsg('Code sent — check your email inbox.');
+  }catch(e){
+    sbMsg('Could not send code: '+(e.message||'Unknown error')+'. Make sure your email matches your worker profile.',true);
+  }
+}
+async function sbVerifyOtp(){
+  const email=(document.getElementById('sbOtpEmail')?.value||'').trim();
+  const token=(document.getElementById('sbOtpCode')?.value||'').trim();
+  if(!token){sbMsg('Please enter the 6-digit code from your email.',true);return;}
+  sbMsg('Verifying…');
+  try{
+    const c=sbInitClient();
+    const {data,error}=await c.auth.verifyOtp({email,token,type:'email'});
+    if(error) throw error;
+    sbSession=data?.session||null;
+    if(!sbSession){sbMsg('Verification accepted but no session created.',true);return;}
+    await sbAfterAuth();
+  }catch(e){
+    sbMsg('Verification failed: '+(e.message||'Invalid or expired code.'),true);
+  }
+}
+
+// Worker portal init — called from sbAfterAuth when worker login detected
+async function initWorkerPortal(workerId){
+  wpWorkerId=workerId;
+  wpWorkerObj=workers.find(w=>w.id===workerId)||null;
+  // Load this worker's submissions
+  await wpLoadSubmissions();
+  // Show portal, hide admin UI
+  document.getElementById('workerPortal').style.display='block';
+  document.querySelector('.wrap')?.style?.setProperty('display','none');
+  document.querySelector('.toolbar')?.style?.setProperty('display','none');
+  document.getElementById('sbAuthBar').style.display='flex';
+  // Update header
+  const w=wpWorkerObj;
+  document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
+  // Status badge
+  if(w){
+    const st=goStatusAt(w,new Date());
+    const stLabel={go:'✓ GO',warning:'⚠ Warning',nogo:'✕ No-Go'}[st]||'—';
+    const stColor={go:'#276749',warning:'#b45309',nogo:'#c53030'}[st]||'#64748b';
+    document.getElementById('wpStatusBadge').innerHTML=`<span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;color:#fff;background:${stColor};">${stLabel}</span>`;
+  }
+  wpSwitch('docs');
+}
+async function wpLoadSubmissions(){
+  if(!sbClient||!sbSession) return;
+  try{
+    const q=sbClient.from('worker_document_submissions').select('*').eq('active',true).eq('status','pending');
+    if(wpWorkerId) q.eq('worker_id',wpWorkerId);
+    const {data}=await q.order('submitted_at',{ascending:false});
+    wpSubmissions=data||[];
+  }catch(e){ console.warn('[TMC] wpLoadSubmissions:',e.message); }
+}
+function wpSwitch(tab){
+  wpActiveTab=tab;
+  ['docs','assign','profile'].forEach(t=>{
+    document.getElementById('wpView'+t.charAt(0).toUpperCase()+t.slice(1))?.style?.setProperty('display',tab===t?'block':'none');
+    document.getElementById('wpTab'+(t==='docs'?'Docs':t==='assign'?'Assign':'Profile'))?.classList?.toggle('active',tab===t);
+  });
+  if(tab==='docs') renderWPDocs();
+  if(tab==='assign') renderWPAssignments();
+  if(tab==='profile') renderWPProfile();
+}
+
+// ── Worker portal: My Documents ──
+function renderWPDocs(){
+  const el=document.getElementById('wpViewDocs'); if(!el) return;
+  const w=wpWorkerObj; if(!w){el.innerHTML='<p>Worker profile not found.</p>';return;}
+  const today=new Date();
+  const tmpl=tmplForWorker(w);
+  const cats=[...new Set(tmpl.map(d=>d.cat||'General'))];
+  const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
+
+  let html='';
+  cats.forEach(cat=>{
+    html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+    tmpl.filter(d=>(d.cat||'General')===cat).forEach(d=>{
+      const docData=w.docs?.[d.id];
+      const st=docStatusAt(docData,today);
+      const stColor={ok:'#276749',expiring:'#b45309',missing:'#c53030'}[st]||'#64748b';
+      const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:'Missing'}[st]||'—';
+      const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+      const hasPending=!!pendingMap[d.id];
+      const isOpen=wpDocSubmitOpen[d.id];
+
+      html+=`<div class="wp-doc-row">
+        <div class="wp-doc-icon">${d.icon||'📄'}</div>
+        <div class="wp-doc-info">
+          <div class="wp-doc-name">${esc(d.name)} ${d.req?'<span style="font-size:10px;color:#c53030;font-weight:700;">Required</span>':''}</div>
+          <div class="wp-doc-meta">
+            Status: <strong style="color:${stColor};">${stLabel}</strong>
+            ${docData?.expiry?` · Expires: ${expiryStr}`:''}
+            ${hasPending?` · <span class="wp-pending-badge">Submission pending review</span>`:''}
+          </div>
+          ${d.tip?`<div class="wp-doc-meta" style="margin-top:3px;font-style:italic;">${esc(d.tip)}</div>`:''}
+          ${isOpen?`<div class="wp-submit-form">
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <label style="font-size:10px;color:var(--text-l);">Expiry date</label>
+              <input type="date" class="form-input" id="wpExp_${d.id}" style="width:150px;" value="${docData?.expiry||''}"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <label style="font-size:10px;color:var(--text-l);">Issue date (optional)</label>
+              <input type="date" class="form-input" id="wpIss_${d.id}" style="width:150px;" value="${docData?.issue||''}"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <label style="font-size:10px;color:var(--text-l);">Attach document</label>
+              <input type="file" class="form-input" id="wpFile_${d.id}" style="width:220px;" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;">
+              <label style="font-size:10px;color:var(--text-l);">Notes (optional)</label>
+              <input type="text" class="form-input" id="wpNote_${d.id}" style="width:180px;" placeholder="Any notes…"/>
+            </div>
+            <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="submitWPDoc('${d.id}')">Submit for review</button>
+            <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
+          </div>`:''}
+        </div>
+        <div class="wp-doc-actions">
+          ${!isOpen&&!hasPending?`<button class="btn" style="font-size:11px;padding:3px 9px;" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
+          ${hasPending?`<span style="font-size:11px;color:var(--text-l);">Awaiting review</span>`:''}
+        </div>
+      </div>`;
+    });
+  });
+  el.innerHTML=html||'<p style="color:var(--text-l);">No documents in your compliance set.</p>';
+}
+function wpToggleSubmit(docKey){
+  wpDocSubmitOpen[docKey]=!wpDocSubmitOpen[docKey];
+  renderWPDocs();
+}
+async function submitWPDoc(docKey){
+  if(!sbClient||!sbSession||!wpWorkerId){alert('Not connected.');return;}
+  const expiryDate=(document.getElementById(`wpExp_${docKey}`)?.value||'').trim()||null;
+  const issueDate=(document.getElementById(`wpIss_${docKey}`)?.value||'').trim()||null;
+  const notes=(document.getElementById(`wpNote_${docKey}`)?.value||'').trim()||null;
+  const fileInput=document.getElementById(`wpFile_${docKey}`);
+  const file=fileInput?.files?.[0]||null;
+  if(!expiryDate&&!file){alert('Please enter an expiry date or attach a file before submitting.');return;}
+
+  let filePath=null,fileName=null,fileSize=null,mimeType=null;
+  if(file){
+    const ext=file.name.split('.').pop();
+    filePath=`worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
+    try{
+      const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
+      if(error) throw error;
+      fileName=file.name; fileSize=file.size; mimeType=file.type;
+    }catch(e){alert('File upload failed: '+e.message);return;}
+  }
+
+  try{
+    const {error}=await sbClient.from('worker_document_submissions').insert({
+      worker_id:wpWorkerId, doc_key:docKey,
+      submitted_by_email:sbSession.user.email,
+      expiry_date:expiryDate||null, issue_date:issueDate||null,
+      notes,file_name:fileName,file_path:filePath,file_size:fileSize,mime_type:mimeType,
+      status:'pending',active:true
+    });
+    if(error) throw error;
+  }catch(e){
+    // Clean up uploaded file if DB insert fails
+    if(filePath) sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
+    alert('Could not submit: '+e.message); return;
+  }
+  wpDocSubmitOpen[docKey]=false;
+  await wpLoadSubmissions();
+  renderWPDocs();
+}
+
+// ── Worker portal: My Assignments ──
+function renderWPAssignments(){
+  const el=document.getElementById('wpViewAssign'); if(!el) return;
+  const myPAs=projectAssignments.filter(a=>a.wid===wpWorkerId).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  if(!myPAs.length){el.innerHTML='<p style="color:var(--text-l);font-size:13px;padding:12px 0;">No assignments on record.</p>';return;}
+  const now=new Date().toISOString().slice(0,10);
+  el.innerHTML=myPAs.map(a=>{
+    const proj=projectStore.find(p=>p.id===a.projectId);
+    const isCurrent=(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now);
+    return`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:700;color:#1a2035;">${esc(proj?.name||'Unknown project')}</span>
+        ${isCurrent?'<span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Current</span>':''}
+      </div>
+      <div style="font-size:12px;color:var(--text-l);">
+        ${proj?.client?`Client: ${esc(proj.client)} · `:''}
+        ${a.startDate||'?'} → ${a.endDate||'ongoing'}
+        ${a.rate?` · ${a.rate}/${a.rateType||'day'}`:''}
+      </div>
+      ${a.notes?`<div style="font-size:12px;color:var(--text-m);margin-top:4px;">${esc(a.notes)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── Worker portal: My Profile ──
+function renderWPProfile(){
+  const el=document.getElementById('wpViewProfile'); if(!el) return;
+  const w=wpWorkerObj; if(!w){el.innerHTML='<p>Profile not found.</p>';return;}
+  el.innerHTML=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:20px 22px;max-width:520px;">
+    <div style="font-size:15px;font-weight:700;color:#1a2035;margin-bottom:14px;">My Profile</div>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="form-field"><label class="form-label">Full Name</label><input class="form-input" id="wpProfName" value="${esc(w.name||'')}" readonly style="background:var(--bg);cursor:default;"/></div>
+      <div class="form-field"><label class="form-label">Worker Type</label><input class="form-input" value="${w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker'}" readonly style="background:var(--bg);cursor:default;"/></div>
+      <div class="form-field"><label class="form-label">Email Address</label><input class="form-input" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="your@email.com"/></div>
+      <div class="form-field"><label class="form-label">Nationality</label><input class="form-input" value="${esc(w.nat||'')}" readonly style="background:var(--bg);cursor:default;"/></div>
+      <div class="form-field full"><label class="form-label">Notes / Additional info</label><textarea class="form-input" id="wpProfNotes" rows="2" style="resize:vertical;">${esc(w.notes||'')}</textarea></div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn btn-primary" onclick="saveWPProfile()">Save changes</button>
+    </div>
+  </div>`;
+}
+async function saveWPProfile(){
+  if(!sbClient||!sbSession||!wpWorkerId) return;
+  const email=(document.getElementById('wpProfEmail')?.value||'').trim();
+  const notes=(document.getElementById('wpProfNotes')?.value||'').trim();
+  const w=wpWorkerObj; if(!w) return;
+  w.email=email; w.notes=notes;
+  try{
+    const {error}=await sbClient.from('workers').update({email:email||null,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',wpWorkerId);
+    if(error) throw error;
+    sbSetStatus('Profile saved',true);
+    renderWPProfile();
+  }catch(e){alert('Could not save profile: '+e.message);}
+}
+
+// ── Admin: pending submissions review ──
+async function loadAdminPendingSubmissions(){
+  if(!sbClient||!sbSession) return;
+  if(sbUserRole!=='admin'&&sbUserRole!=='compliance') return;
+  try{
+    const {data}=await sbClient.from('worker_document_submissions')
+      .select('*').eq('active',true).eq('status','pending')
+      .order('submitted_at',{ascending:false});
+    wpSubmissions=data||[];
+    renderAdminPendingSubmissions();
+  }catch(e){ console.warn('[TMC] loadAdminPendingSubmissions:',e.message); }
+}
+function renderAdminPendingSubmissions(){
+  const section=document.getElementById('pendingSubmissionsSection');
+  const list=document.getElementById('pendingSubList');
+  const count=document.getElementById('pendingSubCount');
+  if(!section||!list||!count) return;
+  const pending=wpSubmissions.filter(s=>s.status==='pending');
+  if(!pending.length){section.style.display='none';return;}
+  section.style.display='block';
+  count.textContent=pending.length+' pending';
+  list.innerHTML=pending.map(s=>{
+    const w=workers.find(x=>x.id===s.worker_id);
+    const workerName=w?.name||s.submitted_by_email||'Unknown worker';
+    const docItems=(docSetItems[w?.docSetId]||[]);
+    const docItem=docItems.find(d=>d.id===s.doc_key)||{name:s.doc_key,icon:'📄'};
+    const dateStr=new Date(s.submitted_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    return`<div class="pending-sub-card" id="psub_${s.id}">
+      <div style="font-size:20px;">${docItem.icon||'📄'}</div>
+      <div class="pending-sub-info">
+        <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${esc(docItem.name)}</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}</div>
+        <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
+          ${s.expiry_date?`<span>Expiry: <strong>${s.expiry_date}</strong></span>`:''}
+          ${s.issue_date?`<span>Issue: <strong>${s.issue_date}</strong></span>`:''}
+          ${s.file_name?`<span>File: <strong>${esc(s.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${s.file_path}','${esc(s.file_name)}')">Download</button></span>`:''}
+          ${s.notes?`<span>Notes: ${esc(s.notes)}</span>`:''}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
+          <input type="text" class="form-input" id="previewNotes_${s.id}" placeholder="Review notes (optional)" style="width:220px;font-size:11px;"/>
+        </div>
+      </div>
+      <div class="pending-sub-actions">
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveSubmission('${s.id}')">✓ Approve</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="rejectSubmission('${s.id}')">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function approveSubmission(subId){
+  const sub=wpSubmissions.find(s=>s.id===subId); if(!sub) return;
+  const reviewNotes=(document.getElementById(`previewNotes_${subId}`)?.value||'').trim();
+  const w=workers.find(x=>x.id===sub.worker_id);
+  try{
+    // Update the worker_document record
+    if(w && sbCanWriteTable('worker_documents')){
+      const docId=`${sub.worker_id}__${sub.doc_key}`;
+      const updates={worker_id:sub.worker_id,doc_key:sub.doc_key,status:'ok',active:true,updated_at:new Date().toISOString()};
+      if(sub.expiry_date) updates.expiry_date=sub.expiry_date;
+      if(sub.issue_date) updates.issue_date=sub.issue_date;
+      const {error}=await sbClient.from('worker_documents').upsert({id:docId,...updates});
+      if(error) throw error;
+      // Update in-memory worker doc
+      if(!w.docs) w.docs={};
+      if(!w.docs[sub.doc_key]) w.docs[sub.doc_key]={};
+      if(sub.expiry_date) w.docs[sub.doc_key].expiry=sub.expiry_date;
+      if(sub.issue_date) w.docs[sub.doc_key].issue=sub.issue_date;
+      w.docs[sub.doc_key].status='ok';
+      // If there's a file, create a worker_document_files entry
+      if(sub.file_path&&sbCanWriteTable('worker_document_files')){
+        const {error:fe}=await sbClient.from('worker_document_files').insert({
+          worker_id:sub.worker_id,worker_document_id:docId,
+          file_name:sub.file_name,file_path:sub.file_path,
+          size_bytes:sub.file_size||0,mime_type:sub.mime_type||'',active:true
+        });
+        if(fe) console.warn('[TMC] approveSubmission: file record failed:',fe.message);
+      }
+    }
+    // Mark submission reviewed
+    await sbClient.from('worker_document_submissions').update({
+      status:'approved',reviewed_at:new Date().toISOString(),
+      reviewed_by:sbSession.user.email,review_notes:reviewNotes||null
+    }).eq('id',subId);
+    wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
+    renderAdminPendingSubmissions(); renderTable(); if(curW) rebuildModal(curW);
+  }catch(e){alert('Approve failed: '+e.message);}
+}
+async function rejectSubmission(subId){
+  const sub=wpSubmissions.find(s=>s.id===subId); if(!sub) return;
+  const reviewNotes=(document.getElementById(`previewNotes_${subId}`)?.value||'').trim();
+  try{
+    await sbClient.from('worker_document_submissions').update({
+      status:'rejected',reviewed_at:new Date().toISOString(),
+      reviewed_by:sbSession.user.email,review_notes:reviewNotes||null
+    }).eq('id',subId);
+    wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
+    renderAdminPendingSubmissions();
+  }catch(e){alert('Reject failed: '+e.message);}
+}
+
 // ─── Add / Edit Worker ────────────────────────────────────────────────────────
 let editingWorkerId = null;
 
@@ -6828,7 +7187,13 @@ async function sbUpdatePassword(){
     sbMsg('Could not update password: ' + (e.message || e), true);
   }
 }
-async function sbLogout(){ if(sbClient) await sbClient.auth.signOut(); location.reload(); }
+async function sbLogout(){
+  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[];
+  document.getElementById('workerPortal').style.display='none';
+  document.querySelector('.wrap')?.style?.removeProperty('display');
+  document.querySelector('.toolbar')?.style?.removeProperty('display');
+  if(sbClient) await sbClient.auth.signOut(); location.reload();
+}
 async function sbAfterAuth(){
   const c=sbInitClient();
   const live = c ? await c.auth.getSession() : {data:{session:null}};
@@ -6862,6 +7227,20 @@ async function sbAfterAuth(){
     applyRoleUI();
     return;
   }
+  // Detect worker portal mode: no staff profile → check if email matches a worker
+  if(sbUserRole==='viewer'&&!sbProfile?.role){
+    try{
+      const {data:wMatch}=await sbClient.from('workers').select('id,full_name,email').eq('email',user.email).eq('active',true).maybeSingle();
+      if(wMatch){
+        sbUserRole='worker';
+        document.getElementById('sbLoginOverlay')?.classList.remove('open');
+        // Minimal load for worker: just enough to render the portal
+        await sbLoadAll();
+        await initWorkerPortal(wMatch.id);
+        return; // Don't proceed to admin UI
+      }
+    }catch(e){ console.warn('[TMC] Worker portal check:',e.message); }
+  }
   sbReady=true;
   document.getElementById('sbLoginOverlay')?.classList.remove('open');
   sbLockScreen(false);
@@ -6876,6 +7255,7 @@ async function sbAfterAuth(){
     applyRoleUI();
     return;
   }
+  if(sbUserRole==='admin'||sbUserRole==='compliance') loadAdminPendingSubmissions();
   sbStartRealtime();
   sbShowLoginPrompt(false);
   sbSetStatus('Supabase: connected — role: '+sbRoleLabel(), true);
