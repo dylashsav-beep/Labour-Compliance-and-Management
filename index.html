@@ -577,6 +577,14 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .sbForgotBtn:hover{color:var(--navy-l)}
 .sbResetPanel{display:none}.sbResetPanel.open{display:block}.sbSignInPanel.hidden{display:none}
 .sbLoginHint{font-size:11px;color:var(--text-l);line-height:1.4;margin-top:8px;background:var(--sky-xl);border:1px solid var(--sky-l);border-radius:5px;padding:8px 10px}
+.sbRolePanel{display:none}.sbRolePanel.open{display:block}
+.sbRoleBtn{display:flex;align-items:center;gap:16px;padding:18px 16px;border:2px solid var(--border);border-radius:10px;background:#fff;cursor:pointer;text-align:left;width:100%;transition:border-color .15s,background .15s;margin-bottom:12px;}
+.sbRoleBtn:last-child{margin-bottom:0}
+.sbRoleBtn:hover{border-color:var(--navy);background:var(--sky-xl);}
+.sbRoleBtn:active{background:var(--sky-l);}
+.sbRoleIcon{font-size:32px;flex-shrink:0;line-height:1;}
+.sbRoleTitle{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:3px;}
+.sbRoleDesc{font-size:12px;color:var(--text-l);line-height:1.4;}
 .role-hide{display:none!important}.role-disabled{opacity:.45;pointer-events:none}.role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;background:var(--sky-xl);border:1px solid var(--sky-l);color:var(--navy)}
 #tmcConfirmOkBtn{display:inline-flex!important;visibility:visible!important;align-items:center;justify-content:center;}
 #tmcConfirmOkBtn.role-hide{display:inline-flex!important;}
@@ -659,9 +667,27 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 <body>
 <div id="sbLoginOverlay">
   <div class="sbLoginCard">
-    <div class="sbLoginHead"><div id="sbLoginTitle">TMC Compliance Login</div><div id="sbLoginSub">Secure company dashboard</div></div>
+    <div class="sbLoginHead"><div id="sbLoginTitle">TMC Compliance</div><div id="sbLoginSub">Select how you'd like to sign in</div></div>
     <div class="sbLoginBody">
-      <div class="sbSignInPanel" id="sbSignInPanel">
+      <!-- Role selection panel (shown first) -->
+      <div class="sbRolePanel open" id="sbRolePanel">
+        <button class="sbRoleBtn" onclick="sbSelectRole('management')">
+          <div class="sbRoleIcon">🏢</div>
+          <div>
+            <div class="sbRoleTitle">Management</div>
+            <div class="sbRoleDesc">Office staff, project managers &amp; compliance officers</div>
+          </div>
+        </button>
+        <button class="sbRoleBtn" onclick="sbSelectRole('worker')">
+          <div class="sbRoleIcon">👷</div>
+          <div>
+            <div class="sbRoleTitle">Personal Compliance</div>
+            <div class="sbRoleDesc">View and update your own documents &amp; profile</div>
+          </div>
+        </button>
+      </div>
+      <!-- Management login panel -->
+      <div class="sbSignInPanel hidden" id="sbSignInPanel">
         <div class="form-grid" style="grid-template-columns:1fr;">
           <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="sbEmail" type="email" placeholder="name@company.com" autocomplete="email"></div>
           <div class="form-field"><label class="form-label">Password</label><input class="form-input" id="sbPassword" type="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter') sbLogin()"></div>
@@ -670,17 +696,17 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <button class="btn btn-save" id="sbLoginBtn" onclick="sbLogin()">Sign in</button>
           <button class="btn btn-cancel" id="sbSignupBtn" type="button" onclick="sbSignup()">Create account</button>
           <button class="sbForgotBtn" type="button" onclick="sbForgotPassword()">Forgot password?</button>
-          <button class="sbForgotBtn" type="button" onclick="sbShowOtpPanel()">Worker sign-in (email code) →</button>
+          <button class="sbForgotBtn" type="button" onclick="sbShowRoleSelect()">← Back</button>
         </div>
       </div>
-      <!-- Worker OTP panel -->
+      <!-- Worker sign-in panel -->
       <div class="sbOtpPanel" id="sbOtpPanel">
         <div class="form-grid" style="grid-template-columns:1fr;">
           <div class="form-field"><label class="form-label">Your work email address</label><input class="form-input" id="sbOtpEmail" type="email" placeholder="your@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')sbWorkerDirectLogin()"/></div>
         </div>
         <div class="sbLoginActions">
           <button class="btn btn-save" id="sbSendOtpBtn" onclick="sbWorkerDirectLogin()">Sign in</button>
-          <button class="btn btn-cancel" onclick="sbShowSignIn()">Back</button>
+          <button class="btn btn-cancel" onclick="sbShowRoleSelect()">← Back</button>
         </div>
       </div>
       <div class="sbResetPanel" id="sbResetPanel">
@@ -1848,10 +1874,12 @@ function sbMsg(msg, isErr=false){ const el=document.getElementById('sbLoginMsg')
 function sbLockScreen(on){ document.body.classList.toggle('sb-auth-lock', !!on); }
 function sbShowSignIn(){
   sbLockScreen(true);
+  document.getElementById('sbRolePanel')?.classList.remove('open');
   document.getElementById('sbSignInPanel')?.classList.remove('hidden');
   document.getElementById('sbResetPanel')?.classList.remove('open');
+  document.getElementById('sbOtpPanel')?.classList.remove('open');
   const t=document.getElementById('sbLoginTitle'), sub=document.getElementById('sbLoginSub');
-  if(t) t.textContent='TMC Compliance Login';
+  if(t) t.textContent='Management Login';
   if(sub) sub.textContent='Secure company dashboard';
   sbMsg('');
 }
@@ -3947,13 +3975,34 @@ let wpSubmissions = []; // pending submissions for current worker (worker mode) 
 let wpActiveTab = 'docs';
 let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
 
+// Role selection screen
+function sbShowRoleSelect(){
+  document.getElementById('sbRolePanel').classList.add('open');
+  document.getElementById('sbSignInPanel').classList.add('hidden');
+  document.getElementById('sbOtpPanel').classList.remove('open');
+  document.getElementById('sbResetPanel').classList.remove('open');
+  const t=document.getElementById('sbLoginTitle'),s=document.getElementById('sbLoginSub');
+  if(t) t.textContent='TMC Compliance';
+  if(s) s.textContent="Select how you'd like to sign in";
+  sbMsg('');
+}
+function sbSelectRole(type){
+  document.getElementById('sbRolePanel').classList.remove('open');
+  sbMsg('');
+  if(type==='management'){
+    sbShowSignIn();
+  } else {
+    sbShowOtpPanel();
+  }
+}
 // Worker direct login (no email verification required)
 function sbShowOtpPanel(){
+  document.getElementById('sbRolePanel').classList.remove('open');
   document.getElementById('sbSignInPanel').classList.add('hidden');
   document.getElementById('sbOtpPanel').classList.add('open');
   const t=document.getElementById('sbLoginTitle'),s=document.getElementById('sbLoginSub');
-  if(t) t.textContent='Worker Sign-In';
-  if(s) s.textContent='Enter your work email address to access your portal';
+  if(t) t.textContent='Personal Compliance';
+  if(s) s.textContent='Enter your work email address to sign in';
   sbMsg('');
   setTimeout(()=>document.getElementById('sbOtpEmail')?.focus(),80);
 }
@@ -7323,8 +7372,7 @@ async function sbBoot(){
     sbReady=false; sbUserRole='no_access'; sbUserActive=false;
     document.getElementById('sbUser').innerHTML='';
     sbSetStatus('Supabase: login required',false);
-    sbShowLoginPrompt(true, '<strong>Login required.</strong> You are not signed in. The login screen should be visible.');
-    sbShowSignIn();
+    sbShowRoleSelect();
     document.getElementById('sbLoginOverlay')?.classList.add('open');
     applyRoleUI();
   }
