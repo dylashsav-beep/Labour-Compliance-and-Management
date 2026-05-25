@@ -679,14 +679,14 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <div class="form-field"><label class="form-label">Your email address</label><input class="form-input" id="sbOtpEmail" type="email" placeholder="your@email.com" autocomplete="email"/></div>
         </div>
         <div class="sbLoginActions">
-          <button class="btn btn-save" onclick="sbSendOtp()">Send code</button>
+          <button class="btn btn-save" id="sbSendOtpBtn" onclick="sbSendOtp()">Send code</button>
           <button class="btn btn-cancel" onclick="sbShowSignIn()">Back</button>
         </div>
         <div id="sbOtpCodeWrap" style="display:none;margin-top:12px;">
           <div class="sbLoginHint" style="margin-bottom:10px;">Check your email — you can either <strong>click the link</strong> in the email, or <strong>enter the 6-digit code</strong> below. The code expires in 1 hour.</div>
           <div class="form-field"><label class="form-label">6-digit code from your email</label><input class="form-input" id="sbOtpCode" type="text" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')sbVerifyOtp()"/></div>
           <div class="sbLoginActions" style="margin-top:8px;">
-            <button class="btn btn-save" onclick="sbVerifyOtp()">Verify &amp; sign in</button>
+            <button class="btn btn-save" id="sbVerifyOtpBtn" onclick="sbVerifyOtp()">Verify &amp; sign in</button>
             <button class="btn btn-cancel" onclick="sbSendOtp()">Resend code</button>
           </div>
         </div>
@@ -6939,7 +6939,7 @@ function applyRoleUI(){
   const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.toggle('role-hide', !canWorkers);
   const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.toggle('role-hide', !canPlanning);
   const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display=canRoles?'block':'none'; renderDeletedItems();
-  if(sbUserRole === 'viewer' || sbUserRole === 'no_access') document.querySelectorAll('.btn-save,.btn-danger').forEach(el=>{ if(el.id!=='tmcConfirmOkBtn') el.classList.add('role-hide'); }); document.getElementById('tmcConfirmOkBtn')?.classList.remove('role-hide');
+  if(sbUserRole === 'viewer' || sbUserRole === 'no_access') document.querySelectorAll('.btn-save,.btn-danger').forEach(el=>{ if(!['tmcConfirmOkBtn','sbSendOtpBtn','sbVerifyOtpBtn'].includes(el.id)) el.classList.add('role-hide'); }); document.getElementById('tmcConfirmOkBtn')?.classList.remove('role-hide');
   if(sbUserRole === 'planner') document.querySelectorAll('#viewSettings .btn-save,#viewSettings .btn-danger').forEach(el=>{ if(!canSettings) el.classList.add('role-hide'); });
   if(sbUserRole === 'compliance') document.querySelectorAll('#viewRoster .btn-save,#viewRoster .btn-danger,#viewProjects .btn-save,#viewProjects .btn-danger,#viewResources .btn-save,#viewResources .btn-danger').forEach(el=>el.classList.add('role-hide'));
 }
