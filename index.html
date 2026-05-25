@@ -676,19 +676,11 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
       <!-- Worker OTP panel -->
       <div class="sbOtpPanel" id="sbOtpPanel">
         <div class="form-grid" style="grid-template-columns:1fr;">
-          <div class="form-field"><label class="form-label">Your email address</label><input class="form-input" id="sbOtpEmail" type="email" placeholder="your@email.com" autocomplete="email"/></div>
+          <div class="form-field"><label class="form-label">Your work email address</label><input class="form-input" id="sbOtpEmail" type="email" placeholder="your@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')sbWorkerDirectLogin()"/></div>
         </div>
         <div class="sbLoginActions">
-          <button class="btn btn-save" id="sbSendOtpBtn" onclick="sbSendOtp()">Send code</button>
+          <button class="btn btn-save" id="sbSendOtpBtn" onclick="sbWorkerDirectLogin()">Sign in</button>
           <button class="btn btn-cancel" onclick="sbShowSignIn()">Back</button>
-        </div>
-        <div id="sbOtpCodeWrap" style="display:none;margin-top:12px;">
-          <div class="sbLoginHint" style="margin-bottom:10px;">Check your email — you can either <strong>click the link</strong> in the email, or <strong>enter the 6-digit code</strong> below. The code expires in 1 hour.</div>
-          <div class="form-field"><label class="form-label">6-digit code from your email</label><input class="form-input" id="sbOtpCode" type="text" placeholder="123456" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')sbVerifyOtp()"/></div>
-          <div class="sbLoginActions" style="margin-top:8px;">
-            <button class="btn btn-save" id="sbVerifyOtpBtn" onclick="sbVerifyOtp()">Verify &amp; sign in</button>
-            <button class="btn btn-cancel" onclick="sbSendOtp()">Resend code</button>
-          </div>
         </div>
       </div>
       <div class="sbResetPanel" id="sbResetPanel">
@@ -3950,55 +3942,74 @@ function refreshScore(wid){
 // ─── Worker Portal ────────────────────────────────────────────────────────────
 let wpWorkerId = null;
 let wpWorkerObj = null;
+let wpWorkerEmail = null; // email used to log in (direct login path)
 let wpSubmissions = []; // pending submissions for current worker (worker mode) or all pending (admin mode)
 let wpActiveTab = 'docs';
 let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
 
-// OTP login
+// Worker direct login (no email verification required)
 function sbShowOtpPanel(){
   document.getElementById('sbSignInPanel').classList.add('hidden');
   document.getElementById('sbOtpPanel').classList.add('open');
   const t=document.getElementById('sbLoginTitle'),s=document.getElementById('sbLoginSub');
   if(t) t.textContent='Worker Sign-In';
-  if(s) s.textContent='Enter your email to receive a one-time sign-in code';
+  if(s) s.textContent='Enter your work email address to access your portal';
   sbMsg('');
   setTimeout(()=>document.getElementById('sbOtpEmail')?.focus(),80);
 }
-async function sbSendOtp(){
-  const email=(document.getElementById('sbOtpEmail')?.value||'').trim();
+async function sbWorkerDirectLogin(){
+  const email=(document.getElementById('sbOtpEmail')?.value||'').trim().toLowerCase();
   if(!email){sbMsg('Please enter your email address.',true);return;}
-  sbMsg('Sending code…');
+  sbMsg('Signing in…');
   try{
     const c=sbInitClient();
-    const {error}=await c.auth.signInWithOtp({email,options:{shouldCreateUser:false,emailRedirectTo:window.location.origin+window.location.pathname}});
+    const {data:portalData,error}=await c.rpc('get_worker_portal',{p_email:email});
     if(error) throw error;
-    document.getElementById('sbOtpCodeWrap').style.display='block';
-    sbMsg('Code sent — check your email inbox.');
+    if(!portalData){
+      sbMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);
+      return;
+    }
+    sbUserRole='worker';
+    wpWorkerEmail=email;
+    wpLoadPortalData(portalData);
+    document.getElementById('sbLoginOverlay')?.classList.remove('open');
+    await initWorkerPortal(portalData.worker.id);
   }catch(e){
-    sbMsg('Could not send code: '+(e.message||'Unknown error')+'. Make sure your email matches your worker profile.',true);
+    sbUserRole='no_access';
+    sbMsg('Could not sign in: '+(e.message||e),true);
   }
 }
-async function sbVerifyOtp(){
-  const email=(document.getElementById('sbOtpEmail')?.value||'').trim();
-  const token=(document.getElementById('sbOtpCode')?.value||'').trim();
-  if(!token){sbMsg('Please enter the 6-digit code from your email.',true);return;}
-  sbMsg('Verifying…');
-  try{
-    const c=sbInitClient();
-    const {data,error}=await c.auth.verifyOtp({email,token,type:'email'});
-    if(error) throw error;
-    sbSession=data?.session||null;
-    if(!sbSession){sbMsg('Verification accepted but no session created.',true);return;}
-    await sbAfterAuth();
-  }catch(e){
-    sbMsg('Verification failed: '+(e.message||'Invalid or expired code.'),true);
-  }
+function wpLoadPortalData(data){
+  const w=data.worker;
+  const workerObj={id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:true,docs:{}};
+  workers=[workerObj];
+  docSets=(data.doc_sets||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
+  docSetItems={};
+  docSets.forEach(s=>docSetItems[s.id]=[]);
+  (data.doc_set_items||[]).forEach(d=>{
+    if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[];
+    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
+  });
+  tmplForWorker(workerObj).forEach(d=>workerObj.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});
+  (data.worker_docs||[]).forEach(d=>{ workerObj.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]}; });
+  fileStore[w.id]={};
+  tmplForWorker(workerObj).forEach(d=>fileStore[w.id][d.id]=[]);
+  (data.worker_doc_files||[]).forEach(f=>{
+    const doc=(data.worker_docs||[]).find(x=>x.id===f.worker_document_id);
+    const did=doc?.doc_key;
+    if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); }
+  });
+  projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
+  projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:null}));
+  wpSubmissions=data.submissions||[];
 }
 
 // Worker portal init — called from sbAfterAuth when worker login detected
 async function initWorkerPortal(workerId){
   wpWorkerId=workerId;
   wpWorkerObj=workers.find(w=>w.id===workerId)||null;
+  if(!wpWorkerEmail && sbSession?.user?.email) wpWorkerEmail=sbSession.user.email;
+  if(!wpWorkerEmail && wpWorkerObj?.email) wpWorkerEmail=wpWorkerObj.email;
   // Load this worker's submissions
   await wpLoadSubmissions();
   // Show portal, hide admin UI
@@ -4019,12 +4030,11 @@ async function initWorkerPortal(workerId){
   wpSwitch('docs');
 }
 async function wpLoadSubmissions(){
-  if(!sbClient||!sbSession) return;
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   try{
-    const q=sbClient.from('worker_document_submissions').select('*').eq('active',true).eq('status','pending');
-    if(wpWorkerId) q.eq('worker_id',wpWorkerId);
-    const {data}=await q.order('submitted_at',{ascending:false});
-    wpSubmissions=data||[];
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail});
+    if(error) throw error;
+    wpSubmissions=(data?.submissions)||[];
   }catch(e){ console.warn('[TMC] wpLoadSubmissions:',e.message); }
 }
 function wpSwitch(tab){
@@ -4105,7 +4115,7 @@ function wpToggleSubmit(docKey){
   renderWPDocs();
 }
 async function submitWPDoc(docKey){
-  if(!sbClient||!sbSession||!wpWorkerId){alert('Not connected.');return;}
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert('Not signed in.');return;}
   const expiryDate=(document.getElementById(`wpExp_${docKey}`)?.value||'').trim()||null;
   const issueDate=(document.getElementById(`wpIss_${docKey}`)?.value||'').trim()||null;
   const notes=(document.getElementById(`wpNote_${docKey}`)?.value||'').trim()||null;
@@ -4121,20 +4131,17 @@ async function submitWPDoc(docKey){
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
       fileName=file.name; fileSize=file.size; mimeType=file.type;
-    }catch(e){alert('File upload failed: '+e.message);return;}
+    }catch(e){alert('File upload failed: '+e.message+'\n\nYou can still submit without a file — attach it separately if needed.');filePath=null;}
   }
 
   try{
-    const {error}=await sbClient.from('worker_document_submissions').insert({
-      worker_id:wpWorkerId, doc_key:docKey,
-      submitted_by_email:sbSession.user.email,
-      expiry_date:expiryDate||null, issue_date:issueDate||null,
-      notes,file_name:fileName,file_path:filePath,file_size:fileSize,mime_type:mimeType,
-      status:'pending',active:true
+    const {data,error}=await sbClient.rpc('submit_worker_document',{
+      p_email:wpWorkerEmail, p_worker_id:wpWorkerId, p_doc_key:docKey,
+      p_expiry_date:expiryDate||null, p_issue_date:issueDate||null, p_notes:notes||null,
+      p_file_path:filePath||null, p_file_name:fileName||null, p_file_size:fileSize||null, p_mime_type:mimeType||null
     });
     if(error) throw error;
   }catch(e){
-    // Clean up uploaded file if DB insert fails
     if(filePath) sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
     alert('Could not submit: '+e.message); return;
   }
@@ -4179,13 +4186,13 @@ function renderWPProfile(){
   </div>`;
 }
 async function saveWPProfile(){
-  if(!sbClient||!sbSession||!wpWorkerId) return;
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   const email=(document.getElementById('wpProfEmail')?.value||'').trim();
   const notes=(document.getElementById('wpProfNotes')?.value||'').trim();
   const w=wpWorkerObj; if(!w) return;
   w.email=email; w.notes=notes;
   try{
-    const {error}=await sbClient.from('workers').update({email:email||null,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',wpWorkerId);
+    const {error}=await sbClient.rpc('save_worker_profile',{p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_new_email:email||null,p_notes:notes||null});
     if(error) throw error;
     sbSetStatus('Profile saved',true);
     renderWPProfile();
@@ -7210,13 +7217,14 @@ async function sbUpdatePassword(){
   }
 }
 async function sbLogout(){
-  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[];
+  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null;
   document.getElementById('workerPortal').style.display='none';
   document.querySelector('.wrap')?.style?.removeProperty('display');
   document.querySelector('.toolbar')?.style?.removeProperty('display');
   if(sbClient) await sbClient.auth.signOut(); location.reload();
 }
 async function sbAfterAuth(){
+  if(sbUserRole==='worker') return; // direct-login worker portal handles its own state
   const c=sbInitClient();
   const live = c ? await c.auth.getSession() : {data:{session:null}};
   sbSession = live?.data?.session || sbSession || null;
