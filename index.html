@@ -4370,7 +4370,7 @@ async function doEditWorker(){
     sbSetStatus('Supabase: saving worker…', true);
     const {error}=await sbClient.from('workers').update({
       full_name:name, worker_type:type, nationality:nat||'',
-      reference:ref||null, agency_name:agency||null, email:email||null,
+      reference:ref||'', agency_name:agency||null, email:email||null,
       notes:notes||null, document_set_id:dbDocSetId,
       updated_at:new Date().toISOString()
     }).eq('id',w.id);
