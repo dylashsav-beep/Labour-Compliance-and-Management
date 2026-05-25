@@ -600,6 +600,33 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .doc-scope-radio{display:flex;gap:12px;align-items:center;margin-top:4px;}
 .doc-scope-radio label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-m);font-weight:500;}
 
+/* ── Worker Portal ──────────────────────────────── */
+#workerPortal{display:none;min-height:100vh;background:var(--bg,#f1f5f9);}
+.wp-header{background:#1a2035;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.wp-header-title{font-size:14px;font-weight:700;color:#fff;}
+.wp-header-name{font-size:13px;color:#94a3b8;}
+.wp-status-banner{padding:12px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border,#e2e8f0);}
+.wp-tabs{display:flex;gap:0;border-bottom:2px solid var(--border,#e2e8f0);background:#fff;padding:0 24px;}
+.wp-tab{padding:10px 20px;font-size:13px;font-weight:600;color:var(--text-l,#94a3b8);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;}
+.wp-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;}
+.wp-body{max-width:860px;margin:0 auto;padding:24px 16px;}
+.wp-doc-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border,#e2e8f0);}
+.wp-doc-icon{font-size:20px;flex-shrink:0;padding-top:2px;}
+.wp-doc-info{flex:1;min-width:0;}
+.wp-doc-name{font-size:13px;font-weight:600;color:#1a2035;}
+.wp-doc-meta{font-size:11px;color:var(--text-l,#94a3b8);margin-top:2px;}
+.wp-doc-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:8px;padding:12px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;}
+.wp-pending-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;}
+.wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-l,#94a3b8);margin:18px 0 8px;}
+/* OTP panel in login overlay */
+.sbOtpPanel{display:none;}
+.sbOtpPanel.open{display:block;}
+/* Admin pending submissions */
+.pending-sub-card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:12px;}
+.pending-sub-info{flex:1;min-width:0;}
+.pending-sub-actions{display:flex;gap:6px;flex-shrink:0;}
+
 </style>
 </head>
 <body>
@@ -616,6 +643,24 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
           <button class="btn btn-save" id="sbLoginBtn" onclick="sbLogin()">Sign in</button>
           <button class="btn btn-cancel" id="sbSignupBtn" type="button" onclick="sbSignup()">Create account</button>
           <button class="sbForgotBtn" type="button" onclick="sbForgotPassword()">Forgot password?</button>
+          <button class="sbForgotBtn" type="button" onclick="sbShowOtpPanel()">Worker sign-in (email code) →</button>
+        </div>
+      </div>
+      <!-- Worker OTP panel -->
+      <div class="sbOtpPanel" id="sbOtpPanel">
+        <div class="form-grid" style="grid-template-columns:1fr;">
+          <div class="form-field"><label class="form-label">Your email address</label><input class="form-input" id="sbOtpEmail" type="email" placeholder="your@email.com" autocomplete="email"/></div>
+        </div>
+        <div class="sbLoginActions">
+          <button class="btn btn-save" onclick="sbSendOtp()">Send code</button>
+          <button class="btn btn-cancel" onclick="sbShowSignIn()">Back</button>
+        </div>
+        <div id="sbOtpCodeWrap" style="display:none;margin-top:12px;">
+          <div class="form-field"><label class="form-label">6-digit code from your email</label><input class="form-input" id="sbOtpCode" type="text" placeholder="123456" maxlength="6" inputmode="numeric" onkeydown="if(event.key==='Enter')sbVerifyOtp()"/></div>
+          <div class="sbLoginActions" style="margin-top:8px;">
+            <button class="btn btn-save" onclick="sbVerifyOtp()">Verify &amp; sign in</button>
+            <button class="btn btn-cancel" onclick="sbSendOtp()">Resend code</button>
+          </div>
         </div>
       </div>
       <div class="sbResetPanel" id="sbResetPanel">
@@ -654,6 +699,30 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 </header>
 <div id="sbAuthBar" style="display:none;"><div class="sbAuthLeft"><span class="sbPill" id="sbStatus" onclick="sbOpenLogin()" style="cursor:pointer;">Supabase: offline</span> <span id="sbUser"></span></div><div class="sbAuthRight"><button class="btn btn-save" id="sbAuthLoginBtn" onclick="sbOpenLogin()">Sign in</button><button class="btn btn-cancel" id="sbAuthSyncBtn" onclick="sbForceSync()">Sync now</button><button class="btn btn-cancel" id="sbAuthLogoutBtn" onclick="sbLogout()">Log out</button></div></div>
 <div id="sbLoginPrompt"><div><strong>Login required.</strong> Sign in to enable Add Worker, Assignments, document editing and saving to Supabase.</div><button class="btn btn-save" onclick="sbOpenLogin()">Sign in</button></div>
+
+<!-- WORKER PORTAL -->
+<div id="workerPortal">
+  <div class="wp-header">
+    <div>
+      <div class="wp-header-title">TMC Compliance — Worker Portal</div>
+      <div class="wp-header-name" id="wpHeaderName"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span id="wpStatusBadge"></span>
+      <button class="btn btn-cancel" style="font-size:12px;" onclick="sbLogout()">Sign out</button>
+    </div>
+  </div>
+  <div class="wp-tabs">
+    <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">My Documents</button>
+    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">My Assignments</button>
+    <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">My Profile</button>
+  </div>
+  <div class="wp-body">
+    <div id="wpViewDocs"></div>
+    <div id="wpViewAssign" style="display:none;"></div>
+    <div id="wpViewProfile" style="display:none;"></div>
+  </div>
+</div>
 
 <div class="wrap">
   <div class="stats-row" id="statsBar"></div>
