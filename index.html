@@ -1332,7 +1332,10 @@ body.wp-mode #sbAuthBar{display:none!important;}
   <div class="modal">
     <div class="modal-header">
       <div><input class="modal-title-input" id="mName" value="—" onblur="saveWorkerName(curW,this.value)" onkeydown="if(event.key==='Enter')this.blur()"/><div class="modal-subtitle" id="mMeta">—</div></div>
-      <button class="modal-close" onclick="closeM('detailOverlay')">✕</button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <button class="btn" style="font-size:12px;padding:5px 12px;background:#334155;color:#fff;border:1px solid #475569;" onclick="openEditWorker(curW)" title="Edit worker profile">Edit</button>
+        <button class="modal-close" onclick="closeM('detailOverlay')">✕</button>
+      </div>
     </div>
     <div class="modal-body" id="mBody"></div>
   </div>
@@ -2988,7 +2991,6 @@ function renderTable(){
       <td title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td style="white-space:nowrap;">
-        <button class="btn" style="font-size:11px;padding:3px 9px;margin-right:4px;" onclick="openEditWorker('${w.id}')" title="Edit worker profile">Edit</button>
         <button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button>
       </td>
     </tr>`;
