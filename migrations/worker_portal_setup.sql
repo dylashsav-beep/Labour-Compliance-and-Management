@@ -1,7 +1,11 @@
 -- Worker self-service portal setup
 -- Run in Supabase → Database → SQL Editor
+-- NOTE: This supersedes add_worker_email.sql — no need to run that separately.
 
--- Submissions table: worker-submitted doc updates awaiting admin review
+-- Step 1: Add email column to workers (safe to run even if already exists)
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS email text;
+
+-- Step 2: Submissions table: worker-submitted doc updates awaiting admin review
 CREATE TABLE IF NOT EXISTS worker_document_submissions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   worker_id uuid NOT NULL REFERENCES workers(id),
