@@ -351,6 +351,12 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .footer-text{font-size:12px;color:var(--text-l);}
 .rate-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;background:#f0f4ff;border:1px solid #c7d2fe;color:var(--navy-l);}
 .contract-pill{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;background:var(--green-l);border:1px solid var(--green-b);color:var(--green);cursor:pointer;}
+.kebab-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:18px;color:var(--text-m);line-height:1;transition:background .12s,border-color .12s;}
+.kebab-btn:hover{background:var(--bg);border-color:var(--text-l);}
+.pmenu-dropdown{position:fixed;z-index:400;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);padding:4px 0;min-width:165px;}
+.pmenu-item{display:block;width:100%;text-align:left;padding:8px 14px;background:none;border:none;cursor:pointer;font-size:13px;color:var(--navy);font-family:inherit;white-space:nowrap;}
+.pmenu-item:hover{background:var(--bg);}
+.pmenu-sep{height:1px;background:var(--border);margin:4px 0;}
 .contract-pill.missing{background:var(--red-l);border-color:var(--red-b);color:var(--red);cursor:default;}
 
 /* GANTT CHART */
@@ -5018,6 +5024,35 @@ async function doEditWorker(){
 }
 
 // ─── Projects View ────────────────────────────────────────────────────────────
+let _projMenuId = null;
+function openProjMenu(id, evt){
+  evt.stopPropagation();
+  const existing = document.getElementById('projMenuDropdown');
+  if(existing){ existing.remove(); if(_projMenuId===id){_projMenuId=null;return;} }
+  _projMenuId = id;
+  const p = projectStore.find(x=>x.id===id); if(!p) return;
+  const btn = evt.currentTarget;
+  const rect = btn.getBoundingClientRect();
+  const d = document.createElement('div');
+  d.id = 'projMenuDropdown'; d.className = 'pmenu-dropdown';
+  d.style.top  = (rect.bottom + 4) + 'px';
+  d.style.right = (window.innerWidth - rect.right) + 'px';
+  const items = [];
+  if(p.active) items.push(`<button class="pmenu-item" style="color:#4f46e5;font-weight:600;" onclick="closeProjMenu();openAddProjectAssignment(null,'${id}')">+ Assign Worker</button>`);
+  items.push(`<button class="pmenu-item" onclick="closeProjMenu();editProject('${id}')">Edit</button>`);
+  items.push(`<div class="pmenu-sep"></div>`);
+  items.push(`<button class="pmenu-item" onclick="closeProjMenu();toggleProjectActive('${id}')">${p.active?'Set Inactive':'Set Active'}</button>`);
+  items.push(`<button class="pmenu-item" style="color:var(--red);" onclick="closeProjMenu();deleteProject('${id}')">Delete</button>`);
+  d.innerHTML = items.join('');
+  document.body.appendChild(d);
+  setTimeout(()=>document.addEventListener('click', closeProjMenu, {once:true}), 0);
+}
+function closeProjMenu(){
+  const el = document.getElementById('projMenuDropdown');
+  if(el) el.remove();
+  _projMenuId = null;
+}
+
 function renderProjects(){
   const tb = document.getElementById('projBody');
   const count = document.getElementById('projCount');
@@ -5034,9 +5069,9 @@ function renderProjects(){
       .filter(a=>a.projectId===p.id && (!a.endDate||new Date(a.endDate)>=today))
       .map(a=>a.wid))];
     const wNames = activeWorkers.map(wid=>{ const w=workers.find(x=>x.id===wid); return w?w.name:wid; });
-    const activeBadge = p.active
-      ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;background:var(--green-l);color:var(--green);border:1px solid var(--green-b);">● Active</span>`
-      : `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:4px;font-size:11px;font-weight:600;background:var(--bg);color:var(--text-l);border:1px solid var(--border);">○ Inactive</span>`;
+    const statusDot = p.active
+      ? `<span title="Active" style="font-size:13px;color:var(--green);">●</span>`
+      : `<span title="Inactive" style="font-size:13px;color:var(--text-l);">●</span>`;
     const docCount = complianceDocs.filter(d=>d.active!==false&&d.scope_type==='project'&&d.scope_id===p.id).length;
     const docBadge = docCount>0?`<span class="doc-count-badge" title="${docCount} compliance document${docCount!==1?'s':''}">${docCount}</span>`:'';
     return `<tr style="${!p.active?'opacity:.65':''}">
@@ -5045,13 +5080,8 @@ function renderProjects(){
       <td style="font-size:12px;color:var(--text-m);">${p.pm?esc(p.pm):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
       <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
       <td style="font-size:12px;">${wNames.length?wNames.map(n=>`<span class="project-tag">${esc(n)}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None active</span>'}</td>
-      <td>${activeBadge}</td>
-      <td><div style="display:flex;gap:6px;flex-wrap:wrap;">
-        ${p.active?`<button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="openAddProjectAssignment(null,'${p.id}')">+ Assign Worker</button>`:''}
-        <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="editProject('${p.id}')">Edit</button>
-        <button class="btn ${p.active?'btn-cancel':'btn-save'}" style="font-size:11px;padding:4px 10px;" onclick="toggleProjectActive('${p.id}')">${p.active?'Set Inactive':'Set Active'}</button>
-        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="deleteProject('${p.id}')">Delete</button>
-      </div></td>
+      <td style="text-align:center;">${statusDot}</td>
+      <td style="text-align:right;"><button class="kebab-btn" onclick="openProjMenu('${p.id}',event)" title="Actions">⋯</button></td>
     </tr>`;
   }).join('');
 }
@@ -7804,7 +7834,7 @@ function applyRoleUI(){
     });
   };
   hideByOnclick(['openAdd()','doAdd()','toggleWorkerActive','setWorkerActiveFromSelect','setDocStatus','setExpiry','setIssue','attachF','rmFile'], canWorkers);
-  hideByOnclick(['openAddProject','editProject','toggleProjectActive','openAddProjectAssignment','openEditPA','deleteProjectAssignment','saveProjectAssignment','openAddProperty','editProperty','deleteProperty','openAddVehicle','editVehicle','deleteVehicle','openAssignAccom','openAssignVehicle','saveAccomAssignment','saveVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle'], canPlanning);
+  hideByOnclick(['openAddProject','editProject','toggleProjectActive','openAddProjectAssignment','openEditPA','deleteProjectAssignment','saveProjectAssignment','openAddProperty','editProperty','deleteProperty','openAddVehicle','editVehicle','deleteVehicle','openAssignAccom','openAssignVehicle','saveAccomAssignment','saveVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','openProjMenu'], canPlanning);
   hideByOnclick(['openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays'], canSettings);
   hideByOnclick(['openAddCompDoc()','deleteCompDoc'], canWorkers);
   const addCompDocBtn=document.getElementById('addCompDocBtn'); if(addCompDocBtn) addCompDocBtn.classList.toggle('role-hide', !canWorkers);
