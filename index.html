@@ -1787,11 +1787,11 @@ body.wp-mode #sbAuthBar{display:none!important;}
           <input class="form-input" id="paNotes" placeholder="Role, scope notes…"/>
         </div>
         <div class="form-field full">
-          <label class="form-label">Contract Document</label>
-          <div id="paContractCurrent" style="display:none;margin-bottom:6px;"></div>
+          <label class="form-label">Contract Documents</label>
+          <div id="paContractCurrent" style="margin-bottom:6px;"></div>
           <label class="file-drop" style="margin-top:0;">
-            <div class="file-drop-text" id="paContractDropText">📎 Click to attach contract (PDF, DOCX)</div>
-            <input type="file" id="paContractFile" accept=".pdf,.doc,.docx" onchange="handlePAContractUpload(this)"/>
+            <div class="file-drop-text" id="paContractDropText">📎 Click to attach contract / document (PDF, DOCX)</div>
+            <input type="file" id="paContractFile" accept=".pdf,.doc,.docx" multiple onchange="handlePAContractUpload(this)"/>
           </label>
         </div>
       </div>
@@ -2162,7 +2162,7 @@ function enrichDeletedPayload(type, payload){
     meta.endDate = a.endDate || a.end_date || p.endDate || p.end_date || meta.endDate || '';
     meta.rate = a.rate ?? p.rate ?? meta.rate ?? '';
     meta.rateType = a.rateType || a.rate_type || p.rateType || p.rate_type || meta.rateType || '';
-    meta.contractFile = a.contractFile?.name || a.contract_file_name || p.contractFile?.name || p.contract_file_name || meta.contractFile || '';
+    meta.contractFile = (a.contractFiles||[])[0]?.name || a.contract_file_name || (p.contractFiles||[])[0]?.name || p.contract_file_name || meta.contractFile || '';
     if(!meta.workerName && meta.workerId) meta.workerName = meta.workerId;
     if(!meta.projectName && meta.projectId) meta.projectName = meta.projectId;
   }
@@ -2255,7 +2255,7 @@ function deletedItemDetails(it){
     const rateVal = m.rate ?? a.rate ?? p.rate;
     const rateType = m.rateType || a.rateType || a.rate_type || p.rateType || p.rate_type;
     add('Rate',rateVal ? ('€'+rateVal+(rateType?' / '+rateType:'')) : '');
-    add('Contract/PO',m.contractFile || a.contractFile?.name || a.contract_file_name || p.contractFile?.name || p.contract_file_name || 'None');
+    add('Contract/PO',m.contractFile || (a.contractFiles||[])[0]?.name || a.contract_file_name || (p.contractFiles||[])[0]?.name || p.contract_file_name || 'None');
   }
   else if(it.type==='worker_status_change'){ add('Worker',m.workerName); add('Changed from',m.changedFrom); add('Changed to',m.changedTo); add('Changed via',m.source); }
   else if(it.type==='document_set_item'){ add('Document requirement',m.documentName); add('Category',m.category); add('Set ID',m.documentSetId); }
@@ -2332,7 +2332,7 @@ function confirmDeleteAction(message, onConfirm){
     {title:'TMC Compliance', subtitle:'Protected delete confirmation', okText:'Archive'}
   );
 }
-function hasContractFile(a){ return !!(a && a.contractFile && (a.contractFile.file_path || a.contractFile.storagePath || a.contractFile.dataUrl || a.contractFile.name)); }
+function hasContractFile(a){ return !!(a && (a.contractFiles||[]).some(f=>f.file_path||f.storagePath||f.dataUrl||f.name)); }
 loadDeletedItems();
 
 // ── Built-in seed docs ──
@@ -2814,7 +2814,7 @@ function workerAssignmentSummary(wid){
   const assigns=projectAssignments.filter(a=>a.wid===wid).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
   if(!assigns.length) return '<span class="assign-none">No assignments</span>';
   const a=assigns[0]; const p=projectStore.find(x=>x.id===a.projectId);
-  return `<span class="assign-tag" style="cursor:pointer;" onclick="openEditPA('${a.id}')">${esc(p?.name||'Unknown project')} ${a.contractFile?'📎':'⚠'}</span><div style="font-size:10px;color:var(--text-l);margin-top:2px;">${a.startDate||'—'} → ${a.endDate||'Ongoing'}</div>`;
+  return `<span class="assign-tag" style="cursor:pointer;" onclick="openEditPA('${a.id}')">${esc(p?.name||'Unknown project')} ${hasContractFile(a)?'📎':'⚠'}</span><div style="font-size:10px;color:var(--text-l);margin-top:2px;">${a.startDate||'—'} → ${a.endDate||'Ongoing'}</div>`;
 }
 function renderInactiveWorkersTable(){
   const card=document.getElementById('inactiveWorkersCard'), body=document.getElementById('inactiveWorkersTBody'), count=document.getElementById('inactiveWorkersCount');
@@ -3172,7 +3172,7 @@ function renderTable(){
       return s<=wkSun2&&e>=wkMon2;
     });
     const weekPAHtml=weekPAs.length
-      ?weekPAs.map(a=>{const p=projectStore.find(x=>x.id===a.projectId);return`<span class="assign-tag" title="${a.contractFile?'Contract attached':'No contract attached'}" style="cursor:pointer;" onclick="openEditPA('${a.id}')">${esc(p?.name||'?')} ${a.contractFile?'📎':'⚠'}</span>`;}).join('')
+      ?weekPAs.map(a=>{const p=projectStore.find(x=>x.id===a.projectId);return`<span class="assign-tag" title="${hasContractFile(a)?'Contract attached':'No contract attached'}" style="cursor:pointer;" onclick="openEditPA('${a.id}')">${esc(p?.name||'?')} ${hasContractFile(a)?'📎':'⚠'}</span>`;}).join('')
       :`<span class="assign-none">Not assigned</span>`;
     const workerActive = w.active !== false;
     return `<tr style="${!workerActive?'opacity:.58;background:#fafafa;':''}">
@@ -3219,7 +3219,7 @@ const PA_KEY = 'tmc_proj_assign_v1';
 let projectAssignments = [];
 // [{id, wid, projectId, startDate, endDate, rate, rateType, notes, contractFile:{name,size,dataUrl}}]
 
-function loadPA(){ try{ const r=localStorage.getItem(PA_KEY); if(r) projectAssignments=JSON.parse(r); }catch(e){} }
+function loadPA(){ try{ const r=localStorage.getItem(PA_KEY); if(r){ projectAssignments=JSON.parse(r); projectAssignments.forEach(a=>{ if(a.contractFile&&!a.contractFiles){ a.contractFiles=[a.contractFile]; delete a.contractFile; } else if(!a.contractFiles){ a.contractFiles=[]; } }); } }catch(e){} }
 function savePA(){ try{ localStorage.setItem(PA_KEY,JSON.stringify(projectAssignments)); }catch(e){} }
 loadPA();
 
@@ -3611,9 +3611,9 @@ function renderPAGantt(){
           if(e2<today)barCls='gb-expired';
           else if((e2-today)/86400000<=settings.warningDays)barCls='gb-expiring';}
         barsData.push({id:a.id,wid:w.id,startDate:a.startDate,endDate:a.endDate,barIdx:lanes.get(a.id)||0,
-          label:proj?.name||'?',contractIcon:a.contractFile?'<span style="color:#276749;font-weight:600;margin-right:3px;">✓</span>':'<span style="margin-right:3px;">⚠</span>',barCls,
+          label:proj?.name||'?',contractIcon:hasContractFile(a)?'<span style="color:#276749;font-weight:600;margin-right:3px;">✓</span>':'<span style="margin-right:3px;">⚠</span>',barCls,
           bgStyle:barCls==='gb-active'?`background:${pColor};`:'',
-          title:`${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${a.contractFile?'Contract attached':'No contract'}`,
+          title:`${esc(proj?.name||'?')} | ${a.startDate||'—'} → ${a.endDate||'ongoing'} | ${a.rate?'€'+a.rate+'/'+a.rateType:''} | ${hasContractFile(a)?((a.contractFiles||[]).length+' file(s) attached'):'No contract'}`,
           onclick:id=>openEditPA(id),rowEl});
       });
     });
@@ -3643,7 +3643,8 @@ function renderPAList(){
     const proj=projectStore.find(p=>p.id===a.projectId);
     const [bg,col]=w?avc(w.id):['#eef','#114'];
     const st=ganttBarClass(a.startDate,a.endDate);
-    const noContract=!a.contractFile;
+    const noContract=!hasContractFile(a);
+    const fileCount=(a.contractFiles||[]).length;
     return `<tr style="${dim?'opacity:.7;':''}">
       <td><div class="worker-cell">
         ${w?`<div class="avatar" style="background:${bg};color:${col};font-size:11px;">${ini(w.name)}</div>
@@ -3654,8 +3655,8 @@ function renderPAList(){
       <td style="font-size:12px;">${a.startDate||'—'}</td>
       <td style="font-size:12px;">${a.endDate||'Ongoing'}</td>
       <td>${a.rate?`<span class="rate-tag">€${parseFloat(a.rate).toFixed(2)} ${rateLabel[a.rateType]||''}</span>`:'<span style="color:var(--text-l);font-size:11px;">—</span>'}</td>
-      <td>${a.contractFile
-        ?`<span class="contract-pill" onclick="downloadPAContract('${a.id}')" title="Download contract">📎 ${esc(a.contractFile.name)}</span>`
+      <td>${!noContract
+        ?`<span class="contract-pill" onclick="openEditPA('${a.id}')" title="View files">📎 ${fileCount} file${fileCount!==1?'s':''}</span>`
         :`<span class="contract-pill missing" title="${dim?'Completed assignment has no contract on file — this needs attention':'Contract missing'}">⚠ ${dim?'No contract — flag':'Missing'}</span>`
       }</td>
       <td><span style="font-size:11px;font-weight:600;color:${stColors[st]||'var(--text-m)'};">● ${stLabels[st]||st}</span></td>
@@ -3667,10 +3668,51 @@ function renderPAList(){
   let html='';
   if(active.length) html+=sectionHdr(`Active & Upcoming · ${active.length}`)+active.map(a=>rowHtml(a,false)).join('');
   if(completed.length){
-    const flagged=completed.filter(a=>!a.contractFile).length;
+    const flagged=completed.filter(a=>!hasContractFile(a)).length;
     html+=sectionHdr(`Completed · ${completed.length}${flagged?` · ⚠ ${flagged} missing contract`:''}`, flagged?'#c53030':'var(--text-m)')+completed.map(a=>rowHtml(a,true)).join('');
   }
   tb.innerHTML=html;
+}
+
+// ─── PA file list renderer ────────────────────────────────────────────────────
+function renderPAFileList(){
+  const cur = document.getElementById('paContractCurrent'); if(!cur) return;
+  const a = editingPAId ? projectAssignments.find(x=>x.id===editingPAId) : null;
+  const existing = (a?.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
+  const isProtected = !!editingPAId && hasContractFile(a);
+  let html = '';
+  existing.forEach(f=>{
+    const key = f.dbId||f.file_path||f.name;
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(f.name)}<span style="color:var(--text-l);font-size:10px;margin-left:5px;">${fsz(f.size)}</span></span>
+      <button type="button" style="background:none;border:none;font-size:11px;color:#4f46e5;cursor:pointer;flex-shrink:0;" onclick="paViewFile('${key}','${esc(f.name)}')">View</button>
+      <button type="button" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="paRemoveExistingFile('${key}')">Remove</button>
+    </div>`;
+  });
+  paNewFiles.forEach((f,i)=>{
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:4px;">
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(f.name)}<span style="color:var(--text-l);font-size:10px;margin-left:5px;">${fsz(f.size)} · pending upload</span></span>
+      <button type="button" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="paRemoveNewFile(${i})">Remove</button>
+    </div>`;
+  });
+  cur.innerHTML = html;
+  const hasAny = existing.length > 0 || paNewFiles.length > 0;
+  document.getElementById('paContractDropText').textContent = hasAny ? '📎 Add another document' : '📎 Click to attach contract / document (PDF, DOCX)';
+}
+function paViewFile(key, name){
+  const a = editingPAId ? projectAssignments.find(x=>x.id===editingPAId) : null;
+  const f = (a?.contractFiles||[]).find(x=>(x.dbId||x.file_path||x.name)===key);
+  if(!f) return;
+  if(f.file_path||f.storagePath){ sbSignedDownload(f.file_path||f.storagePath, f.name); return; }
+  if(f.dataUrl){ const doDownload=()=>{const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();}; openFileViewer(f.dataUrl,f.name,doDownload); }
+}
+function paRemoveExistingFile(key){
+  paRemovedFileIds.push(key);
+  renderPAFileList();
+}
+function paRemoveNewFile(idx){
+  paNewFiles.splice(idx,1);
+  renderPAFileList();
 }
 
 // ─── Protected assignment helpers ─────────────────────────────────────────────
@@ -3692,10 +3734,12 @@ function setPAProtectedMode(isProtected){
 
 // ─── Project Assignment CRUD ──────────────────────────────────────────────────
 let editingPAId = null;
-let paContractData = null; // temp storage during modal
+let paContractData = null; // legacy compat — use paNewFiles below
+let paNewFiles = [];       // files queued for upload during this modal session
+let paRemovedFileIds = []; // dbIds of existing files to archive on save
 
 function openAddProjectAssignment(presetWid, presetProjId){
-  editingPAId = null; paContractData = null;
+  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = [];
   document.getElementById('paModalTitle').textContent = 'New Worker Assignment';
   document.getElementById('paModalSub').textContent   = 'Assign a worker to a project with a contract and rate';
   document.getElementById('paDeleteBtn').style.display = 'none';
@@ -3718,11 +3762,11 @@ function openAddProjectAssignment(presetWid, presetProjId){
 
 function openEditPA(id){
   const a = projectAssignments.find(x=>x.id===id); if(!a) return;
-  editingPAId = id; paContractData = a.contractFile||null;
+  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = [];
   document.getElementById('paModalTitle').textContent = 'Edit Worker Assignment';
   document.getElementById('paModalSub').textContent   = '';
   document.getElementById('paDeleteBtn').style.display = 'inline-flex';
-  document.getElementById('paDeleteBtn').textContent = hasContractFile(a) ? 'Archive Assignment + Contract' : 'Archive Assignment';
+  document.getElementById('paDeleteBtn').textContent = hasContractFile(a) ? 'Archive Assignment + Files' : 'Archive Assignment';
   const ws = document.getElementById('paWorker');
   ws.innerHTML = '<option value="">— Select worker —</option>' +
     workers.map(w=>`<option value="${w.id}"${w.id===a.wid?' selected':''}>${esc(w.name)}${w.active===false?' · inactive':''}</option>`).join('');
@@ -3734,71 +3778,81 @@ function openEditPA(id){
   document.getElementById('paRate').value     = a.rate||'';
   document.getElementById('paRateType').value = a.rateType||'day';
   document.getElementById('paNotes').value    = a.notes||'';
-  // Show existing contract
-  const cur = document.getElementById('paContractCurrent');
-  if(a.contractFile){
-    cur.style.display='block';
-    cur.innerHTML=`<div class="contract-pill" onclick="downloadPAContract('${id}')">📎 ${esc(a.contractFile.name)} <span style="font-size:10px;opacity:.7;">(${fsz(a.contractFile.size)})</span></div>
-      ${hasContractFile(a)?'<span style="font-size:11px;color:var(--text-l);margin-left:6px;">Stored and retained if archived</span>':'<button style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;margin-left:6px;" onclick="paContractData=null;document.getElementById(\'paContractCurrent\').style.display=\'none\';">Remove</button>'}`;
-    document.getElementById('paContractDropText').textContent='📎 Replace contract file';
-  } else {
-    cur.style.display='none';
-    document.getElementById('paContractDropText').textContent='📎 Click to attach contract (PDF, DOCX)';
-  }
+  // Show existing files list
+  renderPAFileList();
   setPAProtectedMode(hasContractFile(a));
   document.getElementById('paOverlay').classList.add('open');
 }
 
 function handlePAContractUpload(input){
   if(!requireAction('planning','upload assignment contracts')){ input.value=''; return; }
-  const file = input.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e=>{
-    paContractData = {name:file.name, size:file.size, type:file.type, dataUrl:e.target.result};
-    document.getElementById('paContractDropText').textContent = `📎 ${file.name} (${fsz(file.size)})`;
-  };
-  reader.readAsDataURL(file);
+  Array.from(input.files||[]).forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      paNewFiles.push({name:file.name, size:file.size, type:file.type, dataUrl:e.target.result});
+      renderPAFileList();
+    };
+    reader.readAsDataURL(file);
+  });
   input.value='';
 }
 
 async function saveProjectAssignment(){
-  if(editingPAId){
-    const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
-    if(idx>-1 && hasContractFile(projectAssignments[idx])){
-      // Contracted assignments are legally protected in the UI: only dates may be changed.
-      projectAssignments[idx].startDate = document.getElementById('paStart').value;
-      projectAssignments[idx].endDate   = document.getElementById('paEnd').value;
-      savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW); return;
+  const assignmentId = editingPAId || crypto.randomUUID();
+
+  // Upload any newly queued files to Storage
+  const uploadedNew = [];
+  for(const f of paNewFiles){
+    let out = f;
+    if(f.dataUrl && sbClient && sbSession){
+      try{
+        const path=`assignments/${assignmentId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
+        await sbUploadDataUrl(path, f);
+        out = {name:f.name, size:f.size, type:f.type, file_path:path, storagePath:path};
+      }catch(e){ console.warn('[TMC] contract upload failed:', e.message); }
+    }
+    uploadedNew.push(out);
+  }
+
+  // Archive removed files in DB
+  for(const key of paRemovedFileIds){
+    if(sbClient && sbSession && sbCanWriteTable('project_assignment_files')){
+      // key is dbId (e.g. "uuid__contract") or file_path — try both
+      await sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
+      await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
     }
   }
-  const wid       = document.getElementById('paWorker').value;
-  const projectId = document.getElementById('paProject').value;
-  if(!wid)       { alert('Please select a worker.');  return; }
-  if(!projectId) { alert('Please select a project.'); return; }
-  const assignmentId = editingPAId || crypto.randomUUID();
-  let contractFile = paContractData;
-  // L2: Upload contract to Storage immediately rather than deferring to sbPersistAll
-  if(contractFile && contractFile.dataUrl && sbClient && sbSession){
-    try{
-      const path=`assignments/${assignmentId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(contractFile.name)}`;
-      await sbUploadDataUrl(path, contractFile);
-      contractFile = {name:contractFile.name, size:contractFile.size, type:contractFile.type, file_path:path, storagePath:path};
-    }catch(e){ console.warn('[TMC] contract immediate upload failed:', e.message); }
-  }
-  const obj = {
-    wid, projectId,
-    startDate:    document.getElementById('paStart').value,
-    endDate:      document.getElementById('paEnd').value,
-    rate:         document.getElementById('paRate').value,
-    rateType:     document.getElementById('paRateType').value,
-    notes:        document.getElementById('paNotes').value.trim(),
-    contractFile
-  };
+
   if(editingPAId){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
-    if(idx>-1) projectAssignments[idx] = {id:editingPAId,...obj};
+    if(idx > -1){
+      const a = projectAssignments[idx];
+      const isProtected = hasContractFile(a);
+      // Keep existing files minus removed ones, then add new uploads
+      const remaining = (a.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
+      const allFiles = [...remaining, ...uploadedNew];
+      if(isProtected){
+        // Protected: only dates and files can change
+        projectAssignments[idx].startDate = document.getElementById('paStart').value;
+        projectAssignments[idx].endDate   = document.getElementById('paEnd').value;
+        projectAssignments[idx].contractFiles = allFiles;
+        savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW); return;
+      }
+      projectAssignments[idx] = {id:editingPAId, wid:document.getElementById('paWorker').value,
+        projectId:document.getElementById('paProject').value,
+        startDate:document.getElementById('paStart').value, endDate:document.getElementById('paEnd').value,
+        rate:document.getElementById('paRate').value, rateType:document.getElementById('paRateType').value,
+        notes:document.getElementById('paNotes').value.trim(), contractFiles:allFiles};
+    }
   } else {
-    projectAssignments.push({id:assignmentId,...obj});
+    const wid = document.getElementById('paWorker').value;
+    const projectId = document.getElementById('paProject').value;
+    if(!wid)       { alert('Please select a worker.');  return; }
+    if(!projectId) { alert('Please select a project.'); return; }
+    projectAssignments.push({id:assignmentId, wid, projectId,
+      startDate:document.getElementById('paStart').value, endDate:document.getElementById('paEnd').value,
+      rate:document.getElementById('paRate').value, rateType:document.getElementById('paRateType').value,
+      notes:document.getElementById('paNotes').value.trim(), contractFiles:uploadedNew});
   }
   savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW);
 }
@@ -3809,7 +3863,7 @@ function deleteProjectAssignment(){
   if(!a) return;
   const w = workers.find(x=>x.id===a.wid);
   const proj = projectStore.find(x=>x.id===a.projectId);
-  const f = a.contractFile || null;
+  const f = (a.contractFiles||[])[0] || null;
   const hasContract = hasContractFile(a);
   const archivePayload = {
     ...a,
@@ -3839,9 +3893,10 @@ function deleteProjectAssignment(){
 
 function downloadPAContract(id){
   const a = projectAssignments.find(x=>x.id===id);
-  if(!a?.contractFile?.dataUrl) return;
+  const f = (a?.contractFiles||[])[0];
+  if(!f?.dataUrl) return;
   const el = document.createElement('a');
-  el.href = a.contractFile.dataUrl; el.download = a.contractFile.name; el.click();
+  el.href = f.dataUrl; el.download = f.name; el.click();
 }
 
 // ─── Worker Detail Modal ──────────────────────────────────────────────────────
@@ -4003,7 +4058,7 @@ function rebuildModal(id){
         ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(cpaProj.name)}</div>
            ${cpa.rate?`<div style="font-size:11px;margin-top:2px;"><span class="rate-tag">€${parseFloat(cpa.rate).toFixed(2)} ${rateLabel[cpa.rateType]||''}</span></div>`:''}
            <div style="font-size:11px;margin-top:4px;">${cpa.startDate||'—'} → ${cpa.endDate||'Ongoing'} ${resStatusBadge(cpa.endDate)}</div>
-           <div style="font-size:11px;margin-top:3px;">${cpa.contractFile?`<span class="contract-pill" onclick="downloadPAContract('${cpa.id}')">📎 ${esc(cpa.contractFile.name)}</span>`:'<span class="contract-pill missing">⚠ No contract</span>'}</div>`
+           <div style="font-size:11px;margin-top:3px;">${hasContractFile(cpa)?`<span class="contract-pill" onclick="openEditPA('${cpa.id}')">📎 ${(cpa.contractFiles||[]).length} file${(cpa.contractFiles||[]).length!==1?'s':''}</span>`:'<span class="contract-pill missing">⚠ No contract</span>'}</div>`
         : `<div style="font-size:12px;color:var(--text-l);">Not assigned</div>`
       }
       <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAddProjectAssignment('${id}')">
@@ -4285,7 +4340,7 @@ function wpLoadPortalData(data){
     if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); }
   });
   projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
-  projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:null}));
+  projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:[]}));
   wpSubmissions=data.submissions||[];
   // Resource assignments for worker portal
   wpAccomAssignments=(data.accom_assignments||[]).map(a=>({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
@@ -7315,11 +7370,11 @@ async function exportWorkerFiles(){
     }
 
     // Assignment contract files
-    for(const a of projectAssignments.filter(x=>x.wid===w.id&&x.contractFile)){
+    for(const a of projectAssignments.filter(x=>x.wid===w.id&&hasContractFile(x))){
       const projName=safe(projectNameById(a.projectId)||'Unknown Project');
       const dates=[a.startDate,a.endDate].filter(Boolean).join(' to ');
       const label=projName+(dates?' ('+dates+')':'');
-      toExport.push({safeW,folderPath:'Assignments/'+label,file:a.contractFile});
+      (a.contractFiles||[]).forEach(f=>toExport.push({safeW,folderPath:'Assignments/'+label,file:f}));
     }
   }
   if(!toExport.length){alert('No files found for the workers in the current filter.');return;}
@@ -7533,12 +7588,13 @@ async function sbUploadEmbeddedFiles(){
       }
     }
   }
-  // Project assignment contracts
+  // Project assignment contract files (upload any still holding dataUrl)
   for(const a of projectAssignments||[]){
-    const f=a.contractFile;
-    if(f && !f.file_path && f.dataUrl){
-      const path=`assignments/${a.id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
-      await sbUploadDataUrl(path,f); f.file_path=path; f.storagePath=path; delete f.dataUrl;
+    for(const f of a.contractFiles||[]){
+      if(f && !f.file_path && f.dataUrl){
+        const path=`assignments/${a.id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
+        await sbUploadDataUrl(path,f); f.file_path=path; f.storagePath=path; delete f.dataUrl;
+      }
     }
   }
 }
@@ -7636,7 +7692,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('roster_week_allocations',rosterRows);
   const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true}));
   await sbUpsertRows('project_assignments',paRows);
-  const paf=[]; projectAssignments.forEach(a=>{const f=a.contractFile;if(f&&(f.file_path||f.storagePath))paf.push({id:`${a.id}__contract`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true});});
+  const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); });
   await sbUpsertRows('project_assignment_files',paf);
   await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true})));
   await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true})));
@@ -7903,8 +7959,8 @@ async function sbLoadAll(){
     Object.keys(fileStore).forEach(k=>delete fileStore[k]); workers.forEach(w=>{fileStore[w.id]={}; tmplForWorker(w).forEach(d=>fileStore[w.id][d.id]=[]);});
     (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
-    const paFiles={}; (pafData||[]).forEach(f=>paFiles[f.project_assignment_id]={name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path});
-    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFile:paFiles[a.id]||null}));
+    const paFiles={}; (pafData||[]).forEach(f=>{ if(!paFiles[f.project_assignment_id]) paFiles[f.project_assignment_id]=[]; paFiles[f.project_assignment_id].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,dbId:f.id}); });
+    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:paFiles[a.id]||[]}));
     properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
     accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
@@ -7949,7 +8005,7 @@ async function sbLoadAll(){
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
 function sbInstallWrappers(){
   ['saveSettings','saveDocSets','saveProjects','saveRoster','savePA','saveProperties','saveVehicles','saveAccomHistory','saveVehHistory','setDocStatus','setExpiry','setIssue','rmFile','openAdd','doAdd','toggleWorkerActive','openAddProject','editProject','toggleProjectActive','deleteProject','saveProject','openAddDocSet','saveDocSet','deleteDocSet','addDocItem','deleteDocItem','addDocSetItem','removeDocSetItem','archiveDocSetItem','restoreArchivedDocSetItem','applyWarningDays','openAddProjectAssignment','openEditPA','saveProjectAssignment','deleteProjectAssignment','openAddProperty','editProperty','saveProperty','deleteProperty','openAddVehicle','editVehicle','saveVehicle','deleteVehicle','openAssignAccom','saveAccomAssignment','clearAccomAssignment','openAssignVehicle','saveVehicleAssignment','clearVehicleAssignment','saveAssignWorkerToAccom','saveAssignWorkerToVehicle','addResourceEvent','openAddTool','editTool','saveTool','deleteTool','openAssignTool','saveToolAssignment','clearToolAssignment'].forEach(sbWrap);
-  const oldPA=window.downloadPAContract; window.downloadPAContract=function(id){ const a=projectAssignments.find(x=>x.id===id),f=a?.contractFile; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldPA(id); };
+  const oldPA=window.downloadPAContract; window.downloadPAContract=function(id){ const a=projectAssignments.find(x=>x.id===id),f=(a?.contractFiles||[])[0]; if(f?.file_path||f?.storagePath) return sbSignedDownload(f.file_path||f.storagePath,f.name); return oldPA(id); };
   window.attachF=async function(wid,did,input){
     if(!requireAction('workerDocs','upload worker documents')){ input.value=''; return; }
     if(!fileStore[wid])fileStore[wid]={}; if(!fileStore[wid][did])fileStore[wid][did]=[];
