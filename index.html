@@ -4090,7 +4090,7 @@ function rebuildModal(id){
         <div class="doc-expand${isOpen?' open':''}" id="dexp_${key}">
           <div class="expand-grid">
             <div><div class="expand-label">Issue Date</div><input type="date" class="expand-input" value="${doc.issueDate||''}" onchange="setIssue('${id}','${d.id}',this.value)"/></div>
-            <div><div class="expand-label">Expiry Date</div><input type="date" class="expand-input" value="${doc.date||''}" onchange="setExpiry('${id}','${d.id}',this.value)"/></div>
+            <div><div class="expand-label">Expiry Date</div><input type="date" class="expand-input" value="${doc.date||''}" onchange="_setExpiryInline('${id}','${d.id}',this.value)" onblur="setExpiry('${id}','${d.id}',this.value)"/></div>
           </div>
           <div class="expand-label" style="margin-bottom:4px;">Attached Files</div>
           <div class="file-list" id="fl_${key}">${files}</div>
@@ -4116,7 +4116,8 @@ function setDocStatus(wid,did,val){
   if(val!=='missing'){expandedDoc=key;const ex=document.getElementById(`dexp_${key}`);if(ex)ex.classList.add('open');}
   refreshScore(wid);renderTable();
 }
-function setExpiry(wid,did,val){
+function _setExpiryInline(wid,did,val){
+  // Updates state + inline DOM only — no modal rebuild, safe to call on every keystroke
   const w=workers.find(x=>x.id===wid);if(!w||!w.docs[did])return;
   w.docs[did].date=val;
   if(val){
@@ -4132,6 +4133,10 @@ function setExpiry(wid,did,val){
   if(di){let tag=di.querySelector('.expiry-tag');
     if(val){if(tag)tag.textContent='Expires: '+val;else{const ctrl=di.querySelector('.doc-controls');if(ctrl)ctrl.insertAdjacentHTML('afterbegin',`<span class="expiry-tag">Expires: ${val}</span>`);}}
     else if(tag)tag.remove();}
+}
+function setExpiry(wid,did,val){
+  // Called on blur (typing) or change (date picker) — does full refresh after date is finalised
+  _setExpiryInline(wid,did,val);
   refreshScore(wid);renderTable();
 }
 function setIssue(wid,did,val){const w=workers.find(x=>x.id===wid);if(!w||!w.docs[did])return;w.docs[did].issueDate=val;}
