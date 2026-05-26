@@ -3152,11 +3152,12 @@ function renderTable(){
   }
   document.getElementById('noRes').style.display='none';
 
-  // Chips use time-aware status for the viewed week
-  const chips=w=>tmpl(w).filter(d=>d.req).slice(0,5).map(d=>{
-    const st=docStatusAt(w.docs[d.id], refDate);
-    return `<span class="chip ${st}" title="${d.name}" onclick="openWorker('${w.id}')"><span class="chip-dot"></span>${d.icon} ${d.name.split(' ')[0]}</span>`;
-  }).join('');
+  // Chips: only show missing/expiring docs — green/ok docs are hidden to reduce clutter
+  const chips=w=>{
+    const problem=tmpl(w).filter(d=>d.req).map(d=>({d,st:docStatusAt(w.docs[d.id],refDate)})).filter(({st})=>st!=='ok');
+    if(!problem.length) return '<span style="font-size:11px;color:var(--green);font-weight:600;">✓ All good</span>';
+    return problem.slice(0,5).map(({d,st})=>`<span class="chip ${st}" title="${d.name}" onclick="openWorker('${w.id}')"><span class="chip-dot"></span>${d.icon} ${d.name.split(' ')[0]}</span>`).join('');
+  };
 
   const goLabels={go:'✓ Go',warning:'⚠ Warning',nogo:'✕ No-Go'};
   const goTips={go:'All required documents on file',warning:'On site — one or more documents expiring soon',nogo:'Missing required documents — cannot work on site'};
@@ -3183,7 +3184,7 @@ function renderTable(){
       <td id="assigncell_${w.id}">${weekPAHtml}</td>
       <td><div class="doc-chips">${chips(w)}</div></td>
       <td><span class="score-num" style="color:${sc(s)};font-size:12px;font-weight:600;">${s}%</span></td>
-      <td title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
+      <td style="white-space:nowrap;" title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;white-space:nowrap;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td style="white-space:nowrap;">
         <button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button>
