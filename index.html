@@ -5063,29 +5063,65 @@ function closeProjMenu(){
   if(el) el.remove();
   _projMenuId = null;
 }
+let _projWorkersState = null; // {projId, assignments, today, fmtDate, statusOf}
+let _projWorkersMode  = 'all'; // 'all' | 'unique'
+
 function showProjWorkerHistory(projId){
   const p = projectStore.find(x=>x.id===projId); if(!p) return;
   const assignments = projectAssignments.filter(a=>a.projectId===projId)
     .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
-  document.getElementById('projWorkersTitle').textContent = esc(p.name);
-  document.getElementById('projWorkersSub').textContent =
-    assignments.length + ' assignment' + (assignments.length!==1?'s':'') +
-    ' · ' + new Set(assignments.map(a=>a.wid)).size + ' unique worker' +
-    (new Set(assignments.map(a=>a.wid)).size!==1?'s':'');
   const today = new Date(); today.setHours(0,0,0,0);
   const fmtDate = d => d ? new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : '—';
   const statusOf = a => {
     const s = a.startDate ? new Date(a.startDate) : null;
     const e = a.endDate   ? new Date(a.endDate)   : null;
-    if(s && s > today) return {label:'Planned', color:'var(--sky)'};
-    if(!e || e >= today) return {label:'Active',  color:'var(--green)'};
-    return {label:'Completed', color:'var(--text-l)'};
+    if(s && s > today) return {label:'Planned',   color:'var(--sky)'};
+    if(!e || e >= today) return {label:'Active',   color:'var(--green)'};
+    return                      {label:'Completed',color:'var(--text-l)'};
   };
-  let html = '';
-  if(!assignments.length){
-    html = '<div style="padding:32px;text-align:center;color:var(--text-l);font-size:13px;">No assignments found for this project.</div>';
+  _projWorkersState = {p, assignments, today, fmtDate, statusOf};
+  _projWorkersMode  = 'all';
+  const uniqueCount = new Set(assignments.map(a=>a.wid)).size;
+  document.getElementById('projWorkersTitle').textContent = esc(p.name);
+  document.getElementById('projWorkersSub').textContent =
+    assignments.length + ' assignment' + (assignments.length!==1?'s':'') +
+    ' · ' + uniqueCount + ' unique worker' + (uniqueCount!==1?'s':'');
+  _renderProjWorkersBody();
+  document.getElementById('projWorkersOverlay').classList.add('open');
+}
+
+function _setProjWorkersMode(mode){
+  _projWorkersMode = mode;
+  _renderProjWorkersBody();
+}
+
+function _renderProjWorkersBody(){
+  const {p, assignments, fmtDate, statusOf} = _projWorkersState;
+  const mode = _projWorkersMode;
+
+  // Toggle bar
+  const toggleBar = `<div style="display:flex;gap:6px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);">
+    <button onclick="_setProjWorkersMode('all')" style="font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;border:1px solid ${mode==='all'?'#4f46e5':'var(--border)'};background:${mode==='all'?'#4f46e5':'#fff'};color:${mode==='all'?'#fff':'var(--navy)'};cursor:pointer;">All Assignments</button>
+    <button onclick="_setProjWorkersMode('unique')" style="font-size:12px;font-weight:600;padding:5px 14px;border-radius:6px;border:1px solid ${mode==='unique'?'#4f46e5':'var(--border)'};background:${mode==='unique'?'#4f46e5':'#fff'};color:${mode==='unique'?'#fff':'var(--navy)'};cursor:pointer;">Unique Workers</button>
+  </div>`;
+
+  let rows;
+  if(mode === 'unique'){
+    // One row per worker — pick their most recent assignment by start date
+    const byWorker = {};
+    assignments.forEach(a=>{
+      if(!byWorker[a.wid] || (a.startDate||'') > (byWorker[a.wid].startDate||'')) byWorker[a.wid] = a;
+    });
+    rows = Object.values(byWorker).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
   } else {
-    html = '<table style="width:100%;border-collapse:collapse;">'
+    rows = [...assignments].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  }
+
+  let tableHtml = '';
+  if(!rows.length){
+    tableHtml = '<div style="padding:32px;text-align:center;color:var(--text-l);font-size:13px;">No assignments found for this project.</div>';
+  } else {
+    tableHtml = '<table style="width:100%;border-collapse:collapse;">'
       + '<thead><tr style="background:var(--bg);border-bottom:2px solid var(--border);">'
       + '<th style="padding:10px 16px;font-size:11px;font-weight:700;color:var(--text-m);text-align:left;text-transform:uppercase;letter-spacing:.04em;">Worker</th>'
       + '<th style="padding:10px 16px;font-size:11px;font-weight:700;color:var(--text-m);text-align:left;text-transform:uppercase;letter-spacing:.04em;">From</th>'
@@ -5093,12 +5129,12 @@ function showProjWorkerHistory(projId){
       + '<th style="padding:10px 16px;font-size:11px;font-weight:700;color:var(--text-m);text-align:left;text-transform:uppercase;letter-spacing:.04em;">Status</th>'
       + '<th style="padding:10px 16px;font-size:11px;font-weight:700;color:var(--text-m);text-align:left;text-transform:uppercase;letter-spacing:.04em;">Rate</th>'
       + '</tr></thead><tbody>';
-    assignments.forEach((a,i)=>{
+    rows.forEach((a,i)=>{
       const w = workers.find(x=>x.id===a.wid);
       const [bg,col] = w ? avc(w.id) : ['#e2e8f0','#475569'];
       const st = statusOf(a);
       const rate = a.rate ? `€${parseFloat(a.rate).toFixed(2)} / ${a.rateType||'day'}` : '—';
-      html += `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg);':''}">
+      tableHtml += `<tr style="border-bottom:1px solid var(--border);${i%2===1?'background:var(--bg);':''}">
         <td style="padding:10px 16px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="avatar" style="background:${bg};color:${col};width:28px;height:28px;font-size:11px;flex-shrink:0;">${w?ini(w.name):'?'}</div>
@@ -5114,10 +5150,9 @@ function showProjWorkerHistory(projId){
         <td style="padding:10px 16px;font-size:12px;color:var(--text-m);">${rate}</td>
       </tr>`;
     });
-    html += '</tbody></table>';
+    tableHtml += '</tbody></table>';
   }
-  document.getElementById('projWorkersBody').innerHTML = html;
-  document.getElementById('projWorkersOverlay').classList.add('open');
+  document.getElementById('projWorkersBody').innerHTML = toggleBar + tableHtml;
 }
 
 function renderProjects(){
