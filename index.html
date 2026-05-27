@@ -3571,14 +3571,10 @@ function renderPAGantt(){
   ganttWorkerOrder.forEach(wid=>{
     const w=workers.find(x=>x.id===wid); if(!w) return;
     if(!filteredWids.has(w.id))return;
-    const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
-    const {lanes,laneCount}=packLanes(wA);
-    // Row height based only on lanes used by currently-visible bars (avoids gaps from off-screen assignments)
-    const wAVisible=filteredPA.filter(a=>a.wid===w.id);
-    const maxUsedLane=wAVisible.reduce((m,a)=>Math.max(m,lanes.get(a.id)??0),-1);
-    const effectiveLanes=maxUsedLane>=0?maxUsedLane+1:1;
+    const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
+    const {laneCount}=packLanes(wA);
     const [bg,col]=avc(w.id);
-    const rowH=Math.max(44,effectiveLanes*28+8);
+    const rowH=Math.max(44,laneCount*28+8);
     html+=`<tr data-wid="${w.id}"><td class="gantt-worker-cell" style="vertical-align:top;padding-top:8px;height:${rowH}px;">
       <div style="display:flex;align-items:flex-start;gap:8px;">
         <div class="avatar" style="background:${bg};color:${col};width:26px;height:26px;font-size:10px;flex-shrink:0;">${ini(w.name)}</div>
@@ -3609,7 +3605,7 @@ function renderPAGantt(){
     ganttWorkerOrder.forEach(wid=>{
       const w=workers.find(x=>x.id===wid);if(!w)return;
       if(!filteredWids.has(w.id))return;
-      const wA=allFilteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
+      const wA=filteredPA.filter(a=>a.wid===w.id);if(!wA.length)return;
       const rowEl=tbl.querySelector(`tr[data-wid="${w.id}"]`);if(!rowEl)return;
       const {lanes}=packLanes(wA);
       wA.forEach(a=>{
