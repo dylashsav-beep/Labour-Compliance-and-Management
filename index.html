@@ -4981,7 +4981,7 @@ async function doAdd(){
   try{
     sbSetStatus('Supabase: adding worker…', true);
     const {error}=await sbClient.from('workers').insert({
-      id:newId, full_name:name, worker_type:type, reference:ref||null,
+      id:newId, full_name:name, worker_type:type, reference:ref||'',
       nationality:nat||'', agency_name:agency||null, email:email||null,
       notes:notes||null, document_set_id:dbDocSetId, active:true,
       updated_at:new Date().toISOString()
