@@ -5489,7 +5489,7 @@ function renderDocSetCard(s){
         const editingThis=docItemEditActive[s.id+'__'+d.id];
         if(editingThis){
           html+=`<div class="doc-settings-row" id="${rowId}" style="flex-direction:column;gap:0;padding:10px 12px 12px;background:var(--sky-xl);">
-            <div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:8px;">Edit document field${d.builtIn?' <span style="font-size:10px;font-weight:400;color:var(--text-l);">(built-in — rename only, cannot delete)</span>':''}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:8px;">Edit document field</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
               <div style="display:flex;flex-direction:column;gap:3px;">
                 <label style="font-size:10px;color:var(--text-l);">Icon</label>
@@ -5537,13 +5537,10 @@ function renderDocSetCard(s){
                 <span class="tog-slider"></span>
               </label>
               ${canEdit&&!d.archived?`<button class="btn" style="font-size:11px;padding:3px 8px;" onclick="openDocItemEdit('${s.id}','${d.id}')" title="Edit name, category or description">✏️ Edit</button>`:''}
-              ${d.custom
-                ? `${d.archived
-                      ? `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="restoreArchivedDocSetItem('${s.id}','${d.id}')" title="Restore archived question">Restore</button>`
-                      : `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="archiveDocSetItem('${s.id}','${d.id}')" title="Archive question but keep it visible for history">Archive</button>`}
-                   <button class="btn btn-danger" style="font-size:11px;padding:3px 8px;" onclick="removeDocSetItem('${s.id}','${d.id}')" title="Delete question from active set and archive all worker data">Delete</button>`
-                :`<span style="font-size:11px;color:var(--text-l);opacity:.45;" title="Built-in document — cannot be removed">🔒</span>`
-              }
+              ${d.archived
+                ? `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="restoreArchivedDocSetItem('${s.id}','${d.id}')" title="Restore archived question">Restore</button>`
+                : `<button class="btn btn-cancel" style="font-size:11px;padding:3px 8px;" onclick="archiveDocSetItem('${s.id}','${d.id}')" title="Archive question but keep it visible for history">Archive</button>`}
+              <button class="btn btn-danger" style="font-size:11px;padding:3px 8px;" onclick="removeDocSetItem('${s.id}','${d.id}')" title="Delete question from active set and archive all worker data">Delete</button>
             </div>
           </div>`;
         }
