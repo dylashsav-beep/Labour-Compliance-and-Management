@@ -212,7 +212,15 @@ GRANT EXECUTE ON FUNCTION get_worker_portal(text) TO anon, authenticated;
 
 
 -- ---------------------------------------------------------------------------
--- 5. DOCUMENT SET ITEM INFO FIELDS
+-- 5. WORKER PHONE NUMBER COLUMN
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE workers
+  ADD COLUMN IF NOT EXISTS phone text;
+
+
+-- ---------------------------------------------------------------------------
+-- 6. DOCUMENT SET ITEM INFO FIELDS
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE document_set_items
@@ -221,7 +229,7 @@ ALTER TABLE document_set_items
 
 
 -- ---------------------------------------------------------------------------
--- 6. STORAGE POLICY — ALLOW ANON WORKERS TO UPLOAD PROOF FILES
+-- 7. STORAGE POLICY — ALLOW ANON WORKERS TO UPLOAD PROOF FILES
 -- ---------------------------------------------------------------------------
 
 DO $$ BEGIN
