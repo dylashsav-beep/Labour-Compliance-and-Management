@@ -1852,6 +1852,7 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <div class="form-field"><label class="form-label">BSN / KVK Reference</label><input class="form-input" id="fRef" placeholder="e.g. NL-2024-001"/></div>
         <div class="form-field"><label class="form-label">Agency / Company Name</label><input class="form-input" id="fAgency" placeholder="e.g. Bouw Uitzendbureau BV"/></div>
         <div class="form-field"><label class="form-label">Email Address</label><input class="form-input" id="fEmail" type="email" placeholder="worker@example.com"/></div>
+        <div class="form-field"><label class="form-label">Phone Number</label><input class="form-input" id="fPhone" type="tel" placeholder="e.g. +31 6 12345678"/></div>
         <div class="form-field"><label class="form-label">Worker Type</label>
           <select class="form-select" id="fType">
             <option value="zzp">ZZP (Self-employed)</option>
@@ -3966,9 +3967,21 @@ async function saveWorkerNotes(wid, notes){
   if(w.notes === trimmed) return;
   w.notes = trimmed;
   renderTable();
+  sbScheduleSync();
   if(sbClient && sbSession && sbCanWriteTable('workers')){
     const {error}=await sbClient.from('workers').update({notes:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
     if(error){ console.warn('[TMC] saveWorkerNotes failed:', error.message); }
+  }
+}
+async function saveWorkerPhone(wid, phone){
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const trimmed = (phone||'').trim();
+  if(w.phone === trimmed) return;
+  w.phone = trimmed;
+  sbScheduleSync();
+  if(sbClient && sbSession && sbCanWriteTable('workers')){
+    const {error}=await sbClient.from('workers').update({phone:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error){ console.warn('[TMC] saveWorkerPhone failed:', error.message); }
   }
 }
 async function saveWorkerAgency(wid, agency){
@@ -3976,6 +3989,7 @@ async function saveWorkerAgency(wid, agency){
   const trimmed = (agency||'').trim();
   if(w.agency === trimmed) return;
   w.agency = trimmed;
+  sbScheduleSync();
   if(sbClient && sbSession && sbCanWriteTable('workers')){
     const {error}=await sbClient.from('workers').update({agency_name:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
     if(error){ console.warn('[TMC] saveWorkerAgency failed:', error.message); }
@@ -4125,6 +4139,10 @@ function rebuildModal(id){
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">🏢 Agency / Company Name</div>
     <input id="workerAgencyInput_${id}" type="text" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="e.g. Bouw Uitzendbureau BV" value="${esc(w.agency||'')}" onblur="saveWorkerAgency('${id}',this.value)"/>
+  </div>`;
+  html+=`<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📞 Phone Number</div>
+    <input id="workerPhoneInput_${id}" type="tel" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="e.g. +31 6 12345678" value="${esc(w.phone||'')}" onblur="saveWorkerPhone('${id}',this.value)"/>
   </div>`;
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📝 Notes / Comments</div>
@@ -4341,7 +4359,7 @@ async function sbWorkerDirectLogin(){
 }
 function wpLoadPortalData(data){
   const w=data.worker;
-  const workerObj={id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:true,docs:{}};
+  const workerObj={id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:true,docs:{}};
   workers=[workerObj];
   docSets=(data.doc_sets||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
   docSetItems={};
@@ -4936,7 +4954,7 @@ function openAdd(){
   document.getElementById('addModalSaveBtn').textContent = 'Save Worker';
   const sel = _populateWorkerModal();
   sel.value = SET_NL_ZZP;
-  ['fName','fRef','fAgency','fEmail','fNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['fName','fRef','fAgency','fEmail','fPhone','fNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('fType').value = 'zzp';
   document.getElementById('fNat').value = 'NL';
   document.getElementById('fType').onchange = ()=>{ sel.value = document.getElementById('fType').value==='zzp'?SET_NL_ZZP:SET_NL_BLUE; };
@@ -4953,6 +4971,7 @@ function openEditWorker(wid){
   document.getElementById('fRef').value = w.ref || '';
   document.getElementById('fAgency').value = w.agency || '';
   document.getElementById('fEmail').value = w.email || '';
+  document.getElementById('fPhone').value = w.phone || '';
   document.getElementById('fNotes').value = w.notes || '';
   document.getElementById('fType').value = w.type || 'zzp';
   document.getElementById('fNat').value = w.nat || 'NL';
@@ -4972,6 +4991,7 @@ async function doAdd(){
   const ref=(document.getElementById('fRef')?.value||'').trim();
   const agency=(document.getElementById('fAgency')?.value||'').trim();
   const email=(document.getElementById('fEmail')?.value||'').trim();
+  const phone=(document.getElementById('fPhone')?.value||'').trim();
   const notes=(document.getElementById('fNotes')?.value||'').trim();
   if(workers.some(w=>w.name.toLowerCase()===name.toLowerCase())){alert('A worker with this name already exists.');return;}
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
@@ -4983,7 +5003,7 @@ async function doAdd(){
     const {error}=await sbClient.from('workers').insert({
       id:newId, full_name:name, worker_type:type, reference:ref||'',
       nationality:nat||'', agency_name:agency||null, email:email||null,
-      notes:notes||null, document_set_id:dbDocSetId, active:true,
+      phone:phone||null, notes:notes||null, document_set_id:dbDocSetId, active:true,
       updated_at:new Date().toISOString()
     });
     if(error) throw error;
@@ -5008,13 +5028,14 @@ async function doEditWorker(){
   const ref=(document.getElementById('fRef')?.value||'').trim();
   const agency=(document.getElementById('fAgency')?.value||'').trim();
   const email=(document.getElementById('fEmail')?.value||'').trim();
+  const phone=(document.getElementById('fPhone')?.value||'').trim();
   const notes=(document.getElementById('fNotes')?.value||'').trim();
   const docSetId=document.getElementById('fDocSet').value||SET_NL_ZZP;
   const isUuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(docSetId);
   const dbDocSetId=isUuid?docSetId:null;
   // Update in-memory immediately for fast UI response
   w.name=name; w.type=type; w.nat=nat; w.ref=ref;
-  w.agency=agency; w.email=email; w.notes=notes; w.docSetId=dbDocSetId||undefined;
+  w.agency=agency; w.email=email; w.phone=phone; w.notes=notes; w.docSetId=dbDocSetId||undefined;
   closeM('addOverlay'); editingWorkerId=null;
   renderTable(); renderStats(); if(curW) rebuildModal(curW);
   try{
@@ -5022,7 +5043,7 @@ async function doEditWorker(){
     const {error}=await sbClient.from('workers').update({
       full_name:name, worker_type:type, nationality:nat||'',
       reference:ref||'', agency_name:agency||null, email:email||null,
-      notes:notes||null, document_set_id:dbDocSetId,
+      phone:phone||null, notes:notes||null, document_set_id:dbDocSetId,
       updated_at:new Date().toISOString()
     }).eq('id',w.id);
     if(error) throw error;
@@ -7819,7 +7840,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
@@ -8075,7 +8096,7 @@ async function sbLoadAll(){
       workers=[];
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
-      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
+      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{}}));
       if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
       (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
