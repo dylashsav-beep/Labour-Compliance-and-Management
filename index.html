@@ -742,8 +742,8 @@ body.wp-mode #sbAuthBar{display:none!important;}
 .wp-doc-row{position:relative;}
 .wp-doc-row:has(.wp-card-actions){padding-right:80px;}
 .wp-card-actions{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:6px;z-index:1;}
-.wp-card-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;font-size:15px;cursor:pointer;text-decoration:none;transition:background .15s;line-height:1;padding:0;flex-shrink:0;}
-.wp-card-icon-btn:hover,.wp-card-icon-btn:active{background:#e2e8f0;}
+.wp-card-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;padding:0;flex-shrink:0;}
+.wp-card-icon-btn:hover,.wp-card-icon-btn:active{background:#e2e8f0;color:#1e293b;}
 .wp-info-panel{font-size:13px;color:#334155;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.6;}
 
 </style>
@@ -4620,7 +4620,7 @@ function renderWPDocs(){
     const isOpen=wpDocSubmitOpen[d.id];
     const reqBadge=d.req?`<span class="wp-req-badge">Required</span>`:`<span class="wp-opt-badge">Optional</span>`;
     const safeId=d.id.replace(/[^a-zA-Z0-9_-]/g,'_');
-    const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="Help &amp; info" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'">&#x2139;&#xFE0F;</button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="More info / form">&#x1F517;</a>`:''}</div>`:'';
+    const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="Help &amp; info" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="Open form / link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
     const infoPanel=d.infoText?`<div class="wp-info-panel" id="wpit_${safeId}" style="display:none;">${esc(d.infoText)}</div>`:'';
     return `<div class="wp-doc-row">
       ${infoIcons}
