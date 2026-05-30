@@ -449,6 +449,22 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .archived-doc-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b);margin-left:5px;vertical-align:middle;}
 
 .inactive-workers-card{margin-top:-12px;margin-bottom:24px;border-left:4px solid var(--text-l);}
+/* ── Settings sidebar layout ────────────────────────────────────────── */
+.settings-layout{display:grid;grid-template-columns:192px 1fr;gap:24px;align-items:start;}
+@media(max-width:700px){.settings-layout{grid-template-columns:1fr;}}
+.settings-sidebar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:2px;position:sticky;top:76px;}
+.sset-nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:6px;background:transparent;color:var(--text-m);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;width:100%;font-family:'Inter',sans-serif;}
+.sset-nav:hover{background:var(--sky-xl);color:var(--navy);}
+.sset-nav.active{background:var(--sky-xl);color:var(--navy);font-weight:600;}
+.sset-nav svg{flex-shrink:0;opacity:.65;}
+.sset-nav.active svg,.sset-nav:hover svg{opacity:1;}
+.sset-panel-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--border);}
+.org-color-swatch{width:28px;height:28px;border-radius:6px;border:2px solid transparent;cursor:pointer;transition:transform .12s,border-color .12s;flex-shrink:0;outline:none;}
+.org-color-swatch:hover{transform:scale(1.18);}
+.org-color-swatch.swatch-active{border-color:var(--text);}
+.org-logo-thumb{width:64px;height:64px;object-fit:contain;border-radius:8px;border:1px solid var(--border);background:#fff;}
+.org-logo-ph{width:64px;height:64px;border-radius:8px;border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-l);background:var(--bg);}
+.save-toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.18);pointer-events:none;transition:opacity .3s;}
 .inactive-workers-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;border:none;background:transparent;color:#fff;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;text-align:left;}
 .inactive-workers-toggle span:last-child{font-size:11px;color:var(--sky-l);font-weight:500;}
 .inactive-workers-body{display:none;}
@@ -816,9 +832,9 @@ body.wp-mode #sbAuthBar{display:none!important;}
     <div class="header-inner">
       <div class="logo">
         <div class="logo-mark" aria-label="TM Construction logo">
-          <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcKICAgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIgogICB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIgogICB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgdmlld0JveD0iMCAwIDY3NS4yMjY2OCA1NDkuODEzMzUiCiAgIGhlaWdodD0iNTQ5LjgxMzM1IgogICB3aWR0aD0iNjc1LjIyNjY4IgogICB4bWw6c3BhY2U9InByZXNlcnZlIgogICBpZD0ic3ZnMiIKICAgdmVyc2lvbj0iMS4xIj48bWV0YWRhdGEKICAgICBpZD0ibWV0YWRhdGE4Ij48cmRmOlJERj48Y2M6V29yawogICAgICAgICByZGY6YWJvdXQ9IiI+PGRjOmZvcm1hdD5pbWFnZS9zdmcreG1sPC9kYzpmb3JtYXQ+PGRjOnR5cGUKICAgICAgICAgICByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIiAvPjwvY2M6V29yaz48L3JkZjpSREY+PC9tZXRhZGF0YT48ZGVmcwogICAgIGlkPSJkZWZzNiIgLz48ZwogICAgIHRyYW5zZm9ybT0ibWF0cml4KDEuMzMzMzMzMywwLDAsLTEuMzMzMzMzMywwLDU0OS44MTMzMykiCiAgICAgaWQ9ImcxMCI+PGcKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMC4xKSIKICAgICAgIGlkPSJnMTIiPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMTQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Ik0gMzI0MS40NCwzMTkyLjM4IDE2MjAuNjMsNDEyMy42MSAwLDMxODkuMjkgNDg2LjQ0MSwyOTgzLjU4IDE2MjAuODEsMzYzOS4yIGwgMTEzNC4yLC02NTIuNTUgNDg2LjQzLDIwNS43MyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDE2IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDI3NTUuMDEsMjQ5MC42IC0xMTM0LjM4LDY1MC41MiAtMTEzNC4xODksLTY1My41OSA0OTYuMDQ3LC0yMDkuNTcgNjM4LjMyMiwzNjcuMjIgNjM4LjE1LC0zNjQuMTUgNDk2LjA1LDIwOS41NyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDE4IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTpub25lIgogICAgICAgICBkPSJNIDI3NTUuMDEsMTQ5Ni41OCAxNjIwLjYzLDIxNDkuMDIgNDg2LjQ0MSwxNDkzLjUgMTA1MS43LDEyNTUuMDkgbCA1NjkuMTEsMzI2Ljg1IDU2OC45NCwtMzIzLjc3IDU2NS4yNiwyMzguNDEiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgyMCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzZiYTdkZjtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0iTSA0ODYuNDQxLDI5ODMuNTggViAyNDg3LjUzIEwgOTgyLjQ4OCwyMjc3Ljk2IDQ4Ni40NDEsMTk5MS40OCBWIDE0OTMuNSBMIDEwNTEuNywxMjU1LjA5IDAsNjQ3LjUzOSBWIDMxODkuMjkgbCA0ODYuNDQxLC0yMDUuNzEiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgyMiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzZiYTdkZjtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzMjQxLjQ0LDE5OTEuOTggdiAxMjAwLjQgTCAyNzU1LjAxLDI5ODYuNjUgViAyNDkwLjYgbCAtNDk2LjA1LC0yMDkuNTcgNDk2LjA1LC0yODYuNDggViAxNDk2LjU4IEwgMjE4OS43NSwxMjU4LjE3IDMyNDEuNDQsNjUwLjYwOSB2IDk4NC42MTEgaCAtMjU0LjQ4IHYgMzU2Ljc2IGggMjU0LjQ4IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMzA4Ny42MSwxOTAyLjc5IGggNzYwLjIgViAxNzI2LjcgSCAzNTY5Ljc5IFYgNjUwLjg1MiBoIC0yMDYgViAxNzI2LjcgaCAtMjc2LjE4IHYgMTc2LjA5IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjYiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMzk2My4wOSwxOTAyLjc5IGggMzA1LjUzIGwgMjQ4LjI0LC05MDIuNSAyNTQuNjIsOTAyLjUgaCAyOTIuNzMgViA2NTAuODUyIEggNDg3MC45NyBWIDE3MTkuMzYgTCA0NTc1LjI3LDY1MC44NTIgSCA0NDI1LjU5IEwgNDEzNS4zNywxNzIwLjI4IFYgNjUwLjg1MiBIIDM5NjMuMDkgViAxOTAyLjc5IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjgiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMjc3LjIzLDE0OS4yNjIgNDcuODEzLC0xMC43MzEgQyAzMDIuMTU2LDQ2LjE3OTcgMjUwLjQ2OSwwIDE2OS45NTMsMCAxMTcuMDM5LDAgNzUuNTAzOSwyMS4zNzExIDQ1LjM3NSw2NC4wODk4IDE1LjIzMDUsMTA2Ljg1MiAwLjE1NjI1LDE1OS4zOTEgMC4xNTYyNSwyMjEuNzcgYyAwLDY0LjM3OCAxNS43MzgyNSwxMTYuMTIxIDQ3LjE5NTM1LDE1NS4xNzEgMzEuNDgwNCwzOS4wNTkgNzMuNjY4NCw1OC41OTggMTI2LjU5NzQsNTguNTk4IDc4LjQ2NSwwIDEyOC44MjEsLTQ0Ljg1OSAxNTEuMDk0LC0xMzQuNTUxIGwgLTQ5LjMzNiwtOS44MTYgYyAtMTcuOTg0LDY2LjYwOSAtNTIuMDE2LDk5LjkxIC0xMDIuMDc0LDk5LjkxIC0zNi45ODEsMCAtNjUuNjM3LC0xNS40NjEgLTg1Ljk2ODksLTQ2LjQyMiBDIDY3LjMzMiwzMTMuNjkxIDU3LjE3MTksMjcwLjIzIDU3LjE3MTksMjE0LjI1IGMgMCwtNTEuMzA5IDEwLjQyNTgsLTkyLjQyMiAzMS4yNjU2LC0xMjMuMzcxMSAyMC44Mzk1LC0zMC45NTcgNDguNDI1NSwtNDYuNDM3NSA4Mi43NDI1LC00Ni40Mzc1IDUzLjMzMiwwIDg4LjY4MywzNC45Mzc1IDEwNi4wNSwxMDQuODIwNiIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDMwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDU0OS43NDYsNDIuNjA5NCBjIDM2LjU3NCwwIDY1LjE4LDE2LjY3MTkgODUuODA5LDUwIDIwLjY0NCwzMy4zMzk2IDMwLjk3Miw3Ni4yODE2IDMwLjk3MiwxMjguODM5NiAwLDU0IC0xMC42OTEsOTYuMDEyIC0zMi4wMzksMTI2LjA4MiAtMjEuMzQ3LDMwLjA1OSAtNDkuNzAzLDQ1LjA3OCAtODUuMDU0LDQ1LjA3OCAtMzUuNzU4LDAgLTY0LjE2NCwtMTYuMjM4IC04NS4yLC00OC43NjkgLTIxLjA1LC0zMi41MTIgLTMxLjU2MiwtNzUuMDUxIC0zMS41NjIsLTEyNy42MjEgMCwtNTEuMzIxIDEwLjYxNywtOTMuMDkgMzEuODU5LC0xMjUuMjg5MyAyMS4yNTgsLTMyLjIxODggNDkuNjUzLC00OC4zMjAzIDg1LjIxNSwtNDguMzIwMyB6IE0gNTQ4LjUyLDAgYyAtNTMuNzM1LDAgLTk1LjYyNSwyMC45MTAyIC0xMjUuNjY1LDYyLjczMDUgLTMwLjA0Miw0MS44MDA1IC00NS4wNjIsOTMuMDc4NSAtNDUuMDYyLDE1My44MDg1IDAsNjMuMzkxIDE1Ljc0MiwxMTUuNzMxIDQ3LjE5OSwxNTcuMDQzIDMxLjQ3Nyw0MS4yODkgNzMuMTU2LDYxLjk1NyAxMjUuMDUxLDYxLjk1NyA1MS43MDMsMCA5My4xODcsLTIwLjMwMSAxMjQuNDM3LC02MC44OTEgMzEuMjcsLTQwLjU5NyA0Ni45MDcsLTkxLjc2OSA0Ni45MDcsLTE1My41MTkgMCwtNTkuMjg5IC0xNS4xODQsLTExMC45NjkgLTQ1LjUyLC0xNTUuMDM5MiBDIDY0NS41MjcsMjIuMDMxMyA2MDMuMDc4LDAgNTQ4LjUyLDAiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgzMiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAxMDk0LjA0LDguNTgyMDMgaCAtNTAuODggTCA4MjYuNzc3LDM3My4zMDEgbCAwLjYxNCwtMjcuNTkgYyAwLjYxMywtMTAuNDEgMC45MjksLTE5LjIxMSAwLjkyOSwtMjYuMzUyIFYgOC41ODIwMyBIIDc4Ni4wMTIgViA0MjYuOTQxIGggNjUuNTk3IGwgMjAyLjI4MSwtMzQwLjkyOTMgLTAuNjIsMjkuMTA5MyBjIC0wLjQsMTEuNDE4IC0wLjYxLDIxLjUyNyAtMC42MSwzMC4zMiB2IDI4MS41IGggNDEuMzggViA4LjU4MjAzIiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMzQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMTE2MC42NiwxMTkuMjMgNDcuMiwxMC43MzEgYyAxOS4wMSwtNTcuMDExOCA2MC4xOCwtODUuNTE5NiAxMjMuNTIsLTg1LjUxOTYgMzMuMDksMCA1OC4wMyw3LjAxOTUgNzQuNzksMjEuMDc4MSAxNi43MywxNC4wMzEzIDI1LjEzLDMyLjgzOTkgMjUuMTMsNTYuNDI5NSAwLDE3LjgzMiAtNi40LDMyLjE4IC0xOS4xNiw0My4wNjMgLTEyLjc2LDEwLjg2NyAtMjcuNTEsMTguMzQ3IC00NC4yNSwyMi40NDkgbCAtODMuNzEsMjAuNjQxIGMgLTIxLjY2LDUuNTA3IC0zOS4zOCwxMi4yMDcgLTUzLjE3LDIwLjA4OSAtMTMuNzksNy44NzkgLTI1LjUsMjAgLTM1LjExLDM2LjM2OCAtOS42LDE2LjM4MiAtMTQuNDEsMzUuMDg5IC0xNC40MSw1Ni4xNzEgMCwzNC45ODkgMTMuMTksNjIuODcyIDM5LjU0LDgzLjY0OSAyNi4zNywyMC43NjIgNjAuMTksMzEuMTYgMTAxLjQ2LDMxLjE2IDc2LDAgMTI1Ljk3LC0zNC40NDkgMTQ5Ljg4LC0xMDMuMzAxIGwgLTQ3LjUyLC0xNC4wOSBjIC01LjUsMjQuNTI0IC0xOC40OSw0My4wNTEgLTM4LjkyLDU1LjYyMiAtMjAuNDIsMTIuNTcgLTQyLjE5LDE4LjgzOSAtNjUuMjcsMTguODM5IC0yMi44OSwwIC00My4yOCwtNi4wNSAtNjEuMTUsLTE4LjE2IC0xNy44OCwtMTIuMTA5IC0yNi44MiwtMjkuMjM4IC0yNi44MiwtNTEuNDE4IDAsLTMxIDIyLjY1LC01MS45NDkgNjcuOTcsLTYyLjgxMiBsIDc4LjIyLC0xOC4zNDggYyA3MS41MiwtMTcuMTYgMTA3LjI4LC01NS42OTEgMTA3LjI4LC0xMTUuNTcgMCwtMzYuMTc5OSAtMTMuNDUsLTY2LjI2OTcgLTQwLjMxLC05MC4yODE1IEMgMTQxOC45OCwxMiAxMzgxLjEyLDAgMTMzMi4yOSwwIDEyNDUuNjYsMCAxMTg4LjQ1LDM5LjczODMgMTE2MC42NiwxMTkuMjMiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgzNiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAxNjk5LjkyLDguNTgyMDMgaCAtNTIuNCBWIDM4MC45OCBoIC0xMTkuODUgdiA0NS45NjEgaCAyOTIuNCBWIDM4MC45OCBIIDE2OTkuOTIgViA4LjU4MjAzIiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMzgiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMTkzMS4zOSwyMzIuMzMyIGggMTA5LjQxIGMgMjguODIsMCA1MC4zMiw3LjYwOSA2NC41MiwyMi44MTYgMTQuMjIsMTUuMjMxIDIxLjMxLDMzLjg4MyAyMS4zMSw1NS45NDIgMCwyMi4wODIgLTcuNTIsMzkuMjMgLTIyLjU0LDUxLjUgLTE1LDEyLjI1IC0zMy45NiwxOC4zOSAtNTYuODMsMTguMzkgSCAxOTMxLjM5IFogTSAyMTgzLjMzLDguNTgyMDMgSCAyMTI4LjQgTCAyMDUxLjI1LDE4OS43MyBIIDE5MzEuMzkgViA4LjU4MjAzIGggLTQ5LjA0IFYgNDI2Ljk0MSBoIDE2NC45MSBjIDQ0Ljc0LDAgNzcuODgsLTEyLjIxMSA5OS40NCwtMzYuNjMyIDIxLjU2LC0yNC40MTEgMzIuMzQsLTUxLjExOCAzMi4zNCwtODAuMTM3IDAsLTIyLjI2MiAtNi4wMywtNDMuNjMzIC0xOC4wOSwtNjQuMDcgLTEyLjA2LC0yMC40MTEgLTMxLjk3LC0zNS4wMiAtNTkuNzcsLTQzLjgwMSBMIDIxODMuMzMsOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDQwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDI0ODEuNzUsNDI2Ljk0MSBoIDQzLjUyIFYgMTUzLjY3MiBjIDAsLTU0LjgwMDkgLTEzLjQ0LC05NC4xMjEyIC00MC4zMSwtMTE3Ljk0MTUgQyAyNDU4LjA5LDExLjkyMTkgMjQyMi45LDAgMjM3OS4zOCwwIGMgLTQ4LjQyLDAgLTg0LjI4LDEyLjI2OTUgLTEwNy41OCwzNi44MDg2IC0yMy4yOSwyNC41NDMgLTM0Ljk1LDYzLjQ5MjQgLTM0Ljk1LDExNi44NjM0IHYgMjczLjI2OSBoIDUyLjQxIFYgMTUzLjYyOSBjIDAsLTMyLjUwOCAzLjc5LC01NS40MTAyIDExLjM0LC02OC42OTkzIDcuNTcsLTEzLjMwMDggMTkuMDEsLTIzLjEwOTQgMzQuMzMsLTI5LjQ0MTQgMTUuMzIsLTYuMzQ3NyAzMS4zNywtOS41MDc4IDQ4LjEzLC05LjUwNzggMzIuMjksMCA1Ni43OSw4LjQ2ODcgNzMuNTYsMjUuNDYwOSAxNi43NCwxNi45Njg4IDI1LjEzLDQ0LjM2NzYgMjUuMTMsODIuMTg3NiB2IDI3My4zMTIiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0MiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAyODY2LjI5LDE0OS4yNjIgNDcuODEsLTEwLjczMSBDIDI4OTEuMjEsNDYuMTc5NyAyODM5LjUyLDAgMjc1OSwwIGMgLTUyLjkxLDAgLTk0LjQ0LDIxLjM3MTEgLTEyNC41OCw2NC4wODk4IC0zMC4xMyw0Mi43NjIyIC00NS4yMSw5NS4zMDEyIC00NS4yMSwxNTcuNjgwMiAwLDY0LjM3OCAxNS43NCwxMTYuMTIxIDQ3LjIsMTU1LjE3MSAzMS40OCwzOS4wNTkgNzMuNjYsNTguNTk4IDEyNi41OSw1OC41OTggNzguNDYsMCAxMjguODMsLTQ0Ljg1OSAxNTEuMSwtMTM0LjU1MSBsIC00OS4zNCwtOS44MTYgYyAtMTcuOTgsNjYuNjA5IC01Mi4wMiw5OS45MSAtMTAyLjA4LDk5LjkxIC0zNi45OCwwIC02NS42MywtMTUuNDYxIC04NS45NiwtNDYuNDIyIC0yMC4zMywtMzAuOTY5IC0zMC41LC03NC40MyAtMzAuNSwtMTMwLjQxIDAsLTUxLjMwOSAxMC40MywtOTIuNDIyIDMxLjI3LC0xMjMuMzcxMSAyMC44NCwtMzAuOTU3IDQ4LjQzLC00Ni40Mzc1IDgyLjc0LC00Ni40Mzc1IDUzLjMzLDAgODguNjksMzQuOTM3NSAxMDYuMDYsMTA0LjgyMDYiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0NCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzMTEzLjQzLDguNTgyMDMgaCAtNTIuNDEgViAzODAuOTggaCAtMTE5Ljg1IHYgNDUuOTYxIGggMjkyLjQgViAzODAuOTggSCAzMTEzLjQzIFYgOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDQ2IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDMzNTQuMzQsOC41ODIwMyBoIC01Mi40MyBWIDQyNi45NDEgaCA1Mi40MyBWIDguNTgyMDMiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0OCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzNjA0LjQxLDQyLjYwOTQgYyAzNi41OSwwIDY1LjE5LDE2LjY3MTkgODUuODEsNTAgMjAuNjYsMzMuMzM5NiAzMC45OCw3Ni4yODE2IDMwLjk4LDEyOC44Mzk2IDAsNTQgLTEwLjY5LDk2LjAxMiAtMzIuMDQsMTI2LjA4MiAtMjEuMzUsMzAuMDU5IC00OS43MSw0NS4wNzggLTg1LjA2LDQ1LjA3OCAtMzUuNzUsMCAtNjQuMTYsLTE2LjIzOCAtODUuMTksLTQ4Ljc2OSAtMjEuMDUsLTMyLjUxMiAtMzEuNTcsLTc1LjA1MSAtMzEuNTcsLTEyNy42MjEgMCwtNTEuMzIxIDEwLjYyLC05My4wOSAzMS44NywtMTI1LjI4OTMgMjEuMjUsLTMyLjIxODggNDkuNjUsLTQ4LjMyMDMgODUuMiwtNDguMzIwMyB6IE0gMzYwMy4xOSwwIGMgLTUzLjc0LDAgLTk1LjYyLDIwLjkxMDIgLTEyNS42Niw2Mi43MzA1IC0zMC4wNCw0MS44MDA1IC00NS4wNyw5My4wNzg1IC00NS4wNywxNTMuODA4NSAwLDYzLjM5MSAxNS43NCwxMTUuNzMxIDQ3LjIxLDE1Ny4wNDMgMzEuNDcsNDEuMjg5IDczLjE1LDYxLjk1NyAxMjUuMDUsNjEuOTU3IDUxLjcsMCA5My4xOCwtMjAuMzAxIDEyNC40MywtNjAuODkxIDMxLjI3LC00MC41OTcgNDYuOSwtOTEuNzY5IDQ2LjksLTE1My41MTkgMCwtNTkuMjg5IC0xNS4xNywtMTEwLjk2OSAtNDUuNTEsLTE1NS4wMzkyIEMgMzcwMC4yLDIyLjAzMTMgMzY1Ny43NSwwIDM2MDMuMTksMCIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDUwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDQxNTYuNzksOC41ODIwMyBoIC01MC44OCBsIC0yMTYuMzgsMzY0LjcxODk3IDAuNjEsLTI3LjU5IGMgMC42MSwtMTAuNDEgMC45MywtMTkuMjExIDAuOTMsLTI2LjM1MiBWIDguNTgyMDMgaCAtNDIuMzEgViA0MjYuOTQxIGggNjUuNiBsIDIwMi4yOCwtMzQwLjkyOTMgLTAuNjIsMjkuMTA5MyBjIC0wLjQxLDExLjQxOCAtMC42MSwyMS41MjcgLTAuNjEsMzAuMzIgdiAyODEuNSBoIDQxLjM4IFYgOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDUyIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDQ0NTAuNjMsNTQuNTU4NiBoIDExMi4xOCBjIDI3LjM3LDAgNDguNTMsNi42NDA2IDYzLjQ0LDE5LjkyOTcgMTQuOTIsMTMuMjYxNyAyMi4zOCwzMC41MzE3IDIyLjM4LDUxLjc5MjcgMCwxNC45MSAtMy4zOCwyOC43NTggLTEwLjExLDQxLjUyIC02Ljc0LDEyLjc3NyAtMTYuMjUsMjIuNjQgLTI4LjUxLDI5LjU3OCAtMTIuMjYsNi45NDkgLTMwLjU2LDEwLjQzIC01NC44NiwxMC40MyBoIC0xMDQuNTIgeiBtIDAsMTkzLjA4OTQgaCA5MS4wNCBjIDM3Ljc4LDAgNjMuMDMsNy4yMDQgNzUuNjksMjEuNjE0IDEyLjY4LDE0LjQxIDE5LjAxLDMxLjMwOCAxOS4wMSw1MC43MTggMCwxOS4yMTEgLTYuOCwzNC43MzkgLTIwLjM4LDQ2LjU5IC0xMy41OSwxMS44NDggLTMzLjg3LDE3Ljc3IC02MC44NCwxNy43NyBIIDQ0NTAuNjMgWiBNIDQ0MDAuMDYsOC41ODIwMyBWIDQyNi45NDEgaCAxNjUuNTIgYyA0MS42NywwIDcyLjU3LC0xMC4yMTEgOTIuNjksLTMwLjYxMyAyMC4xNCwtMjAuNDE4IDMwLjIxLC00NC4xMDkgMzAuMjEsLTcxLjA1OCAwLC00Ny4zNzIgLTI0Ljc0LC03OC44MDkgLTc0LjE4LC05NC4zMjEgMjkuNDMsLTcuNTcgNTEuMjksLTIxLjA3IDY1LjU4LC00MC40ODggMTQuMzEsLTE5LjQxIDIxLjQ2LC00MS40MjIgMjEuNDYsLTY1Ljk0MSAwLC0zMi45MzAyIC0xMS4wOCwtNjAuNDgwOSAtMzMuMjUsLTgyLjY2MDYgQyA0NjQ1LjkyLDE5LjY3OTcgNDYxMS43NCw4LjU4MjAzIDQ1NjUuNTgsOC41ODIwMyBoIC0xNjUuNTIiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg1NCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0iTSA1MDY0LjIxLDQyNi45NDEgNDkyMy4yOCw4LjU4MjAzIGggLTUwLjY1IEwgNDczMS42Niw0MjYuOTQxIGggNTQuODkgbCAxMTYuNiwtMzQ1LjEwMTIgMTE1LjQ3LDM0NS4xMDEyIGggNDUuNTkiIC8+PC9nPjwvZz48L3N2Zz4=" alt="TM Construction BV logo">
+          <img id="headerLogoImg" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcKICAgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIgogICB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIgogICB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiCiAgIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgdmlld0JveD0iMCAwIDY3NS4yMjY2OCA1NDkuODEzMzUiCiAgIGhlaWdodD0iNTQ5LjgxMzM1IgogICB3aWR0aD0iNjc1LjIyNjY4IgogICB4bWw6c3BhY2U9InByZXNlcnZlIgogICBpZD0ic3ZnMiIKICAgdmVyc2lvbj0iMS4xIj48bWV0YWRhdGEKICAgICBpZD0ibWV0YWRhdGE4Ij48cmRmOlJERj48Y2M6V29yawogICAgICAgICByZGY6YWJvdXQ9IiI+PGRjOmZvcm1hdD5pbWFnZS9zdmcreG1sPC9kYzpmb3JtYXQ+PGRjOnR5cGUKICAgICAgICAgICByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIiAvPjwvY2M6V29yaz48L3JkZjpSREY+PC9tZXRhZGF0YT48ZGVmcwogICAgIGlkPSJkZWZzNiIgLz48ZwogICAgIHRyYW5zZm9ybT0ibWF0cml4KDEuMzMzMzMzMywwLDAsLTEuMzMzMzMzMywwLDU0OS44MTMzMykiCiAgICAgaWQ9ImcxMCI+PGcKICAgICAgIHRyYW5zZm9ybT0ic2NhbGUoMC4xKSIKICAgICAgIGlkPSJnMTIiPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMTQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Ik0gMzI0MS40NCwzMTkyLjM4IDE2MjAuNjMsNDEyMy42MSAwLDMxODkuMjkgNDg2LjQ0MSwyOTgzLjU4IDE2MjAuODEsMzYzOS4yIGwgMTEzNC4yLC02NTIuNTUgNDg2LjQzLDIwNS43MyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDE2IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDI3NTUuMDEsMjQ5MC42IC0xMTM0LjM4LDY1MC41MiAtMTEzNC4xODksLTY1My41OSA0OTYuMDQ3LC0yMDkuNTcgNjM4LjMyMiwzNjcuMjIgNjM4LjE1LC0zNjQuMTUgNDk2LjA1LDIwOS41NyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDE4IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTpub25lIgogICAgICAgICBkPSJNIDI3NTUuMDEsMTQ5Ni41OCAxNjIwLjYzLDIxNDkuMDIgNDg2LjQ0MSwxNDkzLjUgMTA1MS43LDEyNTUuMDkgbCA1NjkuMTEsMzI2Ljg1IDU2OC45NCwtMzIzLjc3IDU2NS4yNiwyMzguNDEiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgyMCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzZiYTdkZjtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0iTSA0ODYuNDQxLDI5ODMuNTggViAyNDg3LjUzIEwgOTgyLjQ4OCwyMjc3Ljk2IDQ4Ni40NDEsMTk5MS40OCBWIDE0OTMuNSBMIDEwNTEuNywxMjU1LjA5IDAsNjQ3LjUzOSBWIDMxODkuMjkgbCA0ODYuNDQxLC0yMDUuNzEiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgyMiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzZiYTdkZjtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzMjQxLjQ0LDE5OTEuOTggdiAxMjAwLjQgTCAyNzU1LjAxLDI5ODYuNjUgViAyNDkwLjYgbCAtNDk2LjA1LC0yMDkuNTcgNDk2LjA1LC0yODYuNDggViAxNDk2LjU4IEwgMjE4OS43NSwxMjU4LjE3IDMyNDEuNDQsNjUwLjYwOSB2IDk4NC42MTEgaCAtMjU0LjQ4IHYgMzU2Ljc2IGggMjU0LjQ4IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMzA4Ny42MSwxOTAyLjc5IGggNzYwLjIgViAxNzI2LjcgSCAzNTY5Ljc5IFYgNjUwLjg1MiBoIC0yMDYgViAxNzI2LjcgaCAtMjc2LjE4IHYgMTc2LjA5IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjYiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMzk2My4wOSwxOTAyLjc5IGggMzA1LjUzIGwgMjQ4LjI0LC05MDIuNSAyNTQuNjIsOTAyLjUgaCAyOTIuNzMgViA2NTAuODUyIEggNDg3MC45NyBWIDE3MTkuMzYgTCA0NTc1LjI3LDY1MC44NTIgSCA0NDI1LjU5IEwgNDEzNS4zNywxNzIwLjI4IFYgNjUwLjg1MiBIIDM5NjMuMDkgViAxOTAyLjc5IiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMjgiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMjc3LjIzLDE0OS4yNjIgNDcuODEzLC0xMC43MzEgQyAzMDIuMTU2LDQ2LjE3OTcgMjUwLjQ2OSwwIDE2OS45NTMsMCAxMTcuMDM5LDAgNzUuNTAzOSwyMS4zNzExIDQ1LjM3NSw2NC4wODk4IDE1LjIzMDUsMTA2Ljg1MiAwLjE1NjI1LDE1OS4zOTEgMC4xNTYyNSwyMjEuNzcgYyAwLDY0LjM3OCAxNS43MzgyNSwxMTYuMTIxIDQ3LjE5NTM1LDE1NS4xNzEgMzEuNDgwNCwzOS4wNTkgNzMuNjY4NCw1OC41OTggMTI2LjU5NzQsNTguNTk4IDc4LjQ2NSwwIDEyOC44MjEsLTQ0Ljg1OSAxNTEuMDk0LC0xMzQuNTUxIGwgLTQ5LjMzNiwtOS44MTYgYyAtMTcuOTg0LDY2LjYwOSAtNTIuMDE2LDk5LjkxIC0xMDIuMDc0LDk5LjkxIC0zNi45ODEsMCAtNjUuNjM3LC0xNS40NjEgLTg1Ljk2ODksLTQ2LjQyMiBDIDY3LjMzMiwzMTMuNjkxIDU3LjE3MTksMjcwLjIzIDU3LjE3MTksMjE0LjI1IGMgMCwtNTEuMzA5IDEwLjQyNTgsLTkyLjQyMiAzMS4yNjU2LC0xMjMuMzcxMSAyMC44Mzk1LC0zMC45NTcgNDguNDI1NSwtNDYuNDM3NSA4Mi43NDI1LC00Ni40Mzc1IDUzLjMzMiwwIDg4LjY4MywzNC45Mzc1IDEwNi4wNSwxMDQuODIwNiIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDMwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDU0OS43NDYsNDIuNjA5NCBjIDM2LjU3NCwwIDY1LjE4LDE2LjY3MTkgODUuODA5LDUwIDIwLjY0NCwzMy4zMzk2IDMwLjk3Miw3Ni4yODE2IDMwLjk3MiwxMjguODM5NiAwLDU0IC0xMC42OTEsOTYuMDEyIC0zMi4wMzksMTI2LjA4MiAtMjEuMzQ3LDMwLjA1OSAtNDkuNzAzLDQ1LjA3OCAtODUuMDU0LDQ1LjA3OCAtMzUuNzU4LDAgLTY0LjE2NCwtMTYuMjM4IC04NS4yLC00OC43NjkgLTIxLjA1LC0zMi41MTIgLTMxLjU2MiwtNzUuMDUxIC0zMS41NjIsLTEyNy42MjEgMCwtNTEuMzIxIDEwLjYxNywtOTMuMDkgMzEuODU5LC0xMjUuMjg5MyAyMS4yNTgsLTMyLjIxODggNDkuNjUzLC00OC4zMjAzIDg1LjIxNSwtNDguMzIwMyB6IE0gNTQ4LjUyLDAgYyAtNTMuNzM1LDAgLTk1LjYyNSwyMC45MTAyIC0xMjUuNjY1LDYyLjczMDUgLTMwLjA0Miw0MS44MDA1IC00NS4wNjIsOTMuMDc4NSAtNDUuMDYyLDE1My44MDg1IDAsNjMuMzkxIDE1Ljc0MiwxMTUuNzMxIDQ3LjE5OSwxNTcuMDQzIDMxLjQ3Nyw0MS4yODkgNzMuMTU2LDYxLjk1NyAxMjUuMDUxLDYxLjk1NyA1MS43MDMsMCA5My4xODcsLTIwLjMwMSAxMjQuNDM3LC02MC44OTEgMzEuMjcsLTQwLjU5NyA0Ni45MDcsLTkxLjc2OSA0Ni45MDcsLTE1My41MTkgMCwtNTkuMjg5IC0xNS4xODQsLTExMC45NjkgLTQ1LjUyLC0xNTUuMDM5MiBDIDY0NS41MjcsMjIuMDMxMyA2MDMuMDc4LDAgNTQ4LjUyLDAiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgzMiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAxMDk0LjA0LDguNTgyMDMgaCAtNTAuODggTCA4MjYuNzc3LDM3My4zMDEgbCAwLjYxNCwtMjcuNTkgYyAwLjYxMywtMTAuNDEgMC45MjksLTE5LjIxMSAwLjkyOSwtMjYuMzUyIFYgOC41ODIwMyBIIDc4Ni4wMTIgViA0MjYuOTQxIGggNjUuNTk3IGwgMjAyLjI4MSwtMzQwLjkyOTMgLTAuNjIsMjkuMTA5MyBjIC0wLjQsMTEuNDE4IC0wLjYxLDIxLjUyNyAtMC42MSwzMC4zMiB2IDI4MS41IGggNDEuMzggViA4LjU4MjAzIiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMzQiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMTE2MC42NiwxMTkuMjMgNDcuMiwxMC43MzEgYyAxOS4wMSwtNTcuMDExOCA2MC4xOCwtODUuNTE5NiAxMjMuNTIsLTg1LjUxOTYgMzMuMDksMCA1OC4wMyw3LjAxOTUgNzQuNzksMjEuMDc4MSAxNi43MywxNC4wMzEzIDI1LjEzLDMyLjgzOTkgMjUuMTMsNTYuNDI5NSAwLDE3LjgzMiAtNi40LDMyLjE4IC0xOS4xNiw0My4wNjMgLTEyLjc2LDEwLjg2NyAtMjcuNTEsMTguMzQ3IC00NC4yNSwyMi40NDkgbCAtODMuNzEsMjAuNjQxIGMgLTIxLjY2LDUuNTA3IC0zOS4zOCwxMi4yMDcgLTUzLjE3LDIwLjA4OSAtMTMuNzksNy44NzkgLTI1LjUsMjAgLTM1LjExLDM2LjM2OCAtOS42LDE2LjM4MiAtMTQuNDEsMzUuMDg5IC0xNC40MSw1Ni4xNzEgMCwzNC45ODkgMTMuMTksNjIuODcyIDM5LjU0LDgzLjY0OSAyNi4zNywyMC43NjIgNjAuMTksMzEuMTYgMTAxLjQ2LDMxLjE2IDc2LDAgMTI1Ljk3LC0zNC40NDkgMTQ5Ljg4LC0xMDMuMzAxIGwgLTQ3LjUyLC0xNC4wOSBjIC01LjUsMjQuNTI0IC0xOC40OSw0My4wNTEgLTM4LjkyLDU1LjYyMiAtMjAuNDIsMTIuNTcgLTQyLjE5LDE4LjgzOSAtNjUuMjcsMTguODM5IC0yMi44OSwwIC00My4yOCwtNi4wNSAtNjEuMTUsLTE4LjE2IC0xNy44OCwtMTIuMTA5IC0yNi44MiwtMjkuMjM4IC0yNi44MiwtNTEuNDE4IDAsLTMxIDIyLjY1LC01MS45NDkgNjcuOTcsLTYyLjgxMiBsIDc4LjIyLC0xOC4zNDggYyA3MS41MiwtMTcuMTYgMTA3LjI4LC01NS42OTEgMTA3LjI4LC0xMTUuNTcgMCwtMzYuMTc5OSAtMTMuNDUsLTY2LjI2OTcgLTQwLjMxLC05MC4yODE1IEMgMTQxOC45OCwxMiAxMzgxLjEyLDAgMTMzMi4yOSwwIDEyNDUuNjYsMCAxMTg4LjQ1LDM5LjczODMgMTE2MC42NiwxMTkuMjMiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGgzNiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAxNjk5LjkyLDguNTgyMDMgaCAtNTIuNCBWIDM4MC45OCBoIC0xMTkuODUgdiA0NS45NjEgaCAyOTIuNCBWIDM4MC45OCBIIDE2OTkuOTIgViA4LjU4MjAzIiAvPjxwYXRoCiAgICAgICAgIGlkPSJwYXRoMzgiCiAgICAgICAgIHN0eWxlPSJmaWxsOiMyNDQ5OTE7ZmlsbC1vcGFjaXR5OjE7ZmlsbC1ydWxlOm5vbnplcm87c3Ryb2tlOm5vbmUiCiAgICAgICAgIGQ9Im0gMTkzMS4zOSwyMzIuMzMyIGggMTA5LjQxIGMgMjguODIsMCA1MC4zMiw3LjYwOSA2NC41MiwyMi44MTYgMTQuMjIsMTUuMjMxIDIxLjMxLDMzLjg4MyAyMS4zMSw1NS45NDIgMCwyMi4wODIgLTcuNTIsMzkuMjMgLTIyLjU0LDUxLjUgLTE1LDEyLjI1IC0zMy45NiwxOC4zOSAtNTYuODMsMTguMzkgSCAxOTMxLjM5IFogTSAyMTgzLjMzLDguNTgyMDMgSCAyMTI4LjQgTCAyMDUxLjI1LDE4OS43MyBIIDE5MzEuMzkgViA4LjU4MjAzIGggLTQ5LjA0IFYgNDI2Ljk0MSBoIDE2NC45MSBjIDQ0Ljc0LDAgNzcuODgsLTEyLjIxMSA5OS40NCwtMzYuNjMyIDIxLjU2LC0yNC40MTEgMzIuMzQsLTUxLjExOCAzMi4zNCwtODAuMTM3IDAsLTIyLjI2MiAtNi4wMywtNDMuNjMzIC0xOC4wOSwtNjQuMDcgLTEyLjA2LC0yMC40MTEgLTMxLjk3LC0zNS4wMiAtNTkuNzcsLTQzLjgwMSBMIDIxODMuMzMsOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDQwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDI0ODEuNzUsNDI2Ljk0MSBoIDQzLjUyIFYgMTUzLjY3MiBjIDAsLTU0LjgwMDkgLTEzLjQ0LC05NC4xMjEyIC00MC4zMSwtMTE3Ljk0MTUgQyAyNDU4LjA5LDExLjkyMTkgMjQyMi45LDAgMjM3OS4zOCwwIGMgLTQ4LjQyLDAgLTg0LjI4LDEyLjI2OTUgLTEwNy41OCwzNi44MDg2IC0yMy4yOSwyNC41NDMgLTM0Ljk1LDYzLjQ5MjQgLTM0Ljk1LDExNi44NjM0IHYgMjczLjI2OSBoIDUyLjQxIFYgMTUzLjYyOSBjIDAsLTMyLjUwOCAzLjc5LC01NS40MTAyIDExLjM0LC02OC42OTkzIDcuNTcsLTEzLjMwMDggMTkuMDEsLTIzLjEwOTQgMzQuMzMsLTI5LjQ0MTQgMTUuMzIsLTYuMzQ3NyAzMS4zNywtOS41MDc4IDQ4LjEzLC05LjUwNzggMzIuMjksMCA1Ni43OSw4LjQ2ODcgNzMuNTYsMjUuNDYwOSAxNi43NCwxNi45Njg4IDI1LjEzLDQ0LjM2NzYgMjUuMTMsODIuMTg3NiB2IDI3My4zMTIiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0MiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAyODY2LjI5LDE0OS4yNjIgNDcuODEsLTEwLjczMSBDIDI4OTEuMjEsNDYuMTc5NyAyODM5LjUyLDAgMjc1OSwwIGMgLTUyLjkxLDAgLTk0LjQ0LDIxLjM3MTEgLTEyNC41OCw2NC4wODk4IC0zMC4xMyw0Mi43NjIyIC00NS4yMSw5NS4zMDEyIC00NS4yMSwxNTcuNjgwMiAwLDY0LjM3OCAxNS43NCwxMTYuMTIxIDQ3LjIsMTU1LjE3MSAzMS40OCwzOS4wNTkgNzMuNjYsNTguNTk4IDEyNi41OSw1OC41OTggNzguNDYsMCAxMjguODMsLTQ0Ljg1OSAxNTEuMSwtMTM0LjU1MSBsIC00OS4zNCwtOS44MTYgYyAtMTcuOTgsNjYuNjA5IC01Mi4wMiw5OS45MSAtMTAyLjA4LDk5LjkxIC0zNi45OCwwIC02NS42MywtMTUuNDYxIC04NS45NiwtNDYuNDIyIC0yMC4zMywtMzAuOTY5IC0zMC41LC03NC40MyAtMzAuNSwtMTMwLjQxIDAsLTUxLjMwOSAxMC40MywtOTIuNDIyIDMxLjI3LC0xMjMuMzcxMSAyMC44NCwtMzAuOTU3IDQ4LjQzLC00Ni40Mzc1IDgyLjc0LC00Ni40Mzc1IDUzLjMzLDAgODguNjksMzQuOTM3NSAxMDYuMDYsMTA0LjgyMDYiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0NCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzMTEzLjQzLDguNTgyMDMgaCAtNTIuNDEgViAzODAuOTggaCAtMTE5Ljg1IHYgNDUuOTYxIGggMjkyLjQgViAzODAuOTggSCAzMTEzLjQzIFYgOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDQ2IgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDMzNTQuMzQsOC41ODIwMyBoIC01Mi40MyBWIDQyNi45NDEgaCA1Mi40MyBWIDguNTgyMDMiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg0OCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0ibSAzNjA0LjQxLDQyLjYwOTQgYyAzNi41OSwwIDY1LjE5LDE2LjY3MTkgODUuODEsNTAgMjAuNjYsMzMuMzM5NiAzMC45OCw3Ni4yODE2IDMwLjk4LDEyOC44Mzk2IDAsNTQgLTEwLjY5LDk2LjAxMiAtMzIuMDQsMTI2LjA4MiAtMjEuMzUsMzAuMDU5IC00OS43MSw0NS4wNzggLTg1LjA2LDQ1LjA3OCAtMzUuNzUsMCAtNjQuMTYsLTE2LjIzOCAtODUuMTksLTQ4Ljc2OSAtMjEuMDUsLTMyLjUxMiAtMzEuNTcsLTc1LjA1MSAtMzEuNTcsLTEyNy42MjEgMCwtNTEuMzIxIDEwLjYyLC05My4wOSAzMS44NywtMTI1LjI4OTMgMjEuMjUsLTMyLjIxODggNDkuNjUsLTQ4LjMyMDMgODUuMiwtNDguMzIwMyB6IE0gMzYwMy4xOSwwIGMgLTUzLjc0LDAgLTk1LjYyLDIwLjkxMDIgLTEyNS42Niw2Mi43MzA1IC0zMC4wNCw0MS44MDA1IC00NS4wNyw5My4wNzg1IC00NS4wNywxNTMuODA4NSAwLDYzLjM5MSAxNS43NCwxMTUuNzMxIDQ3LjIxLDE1Ny4wNDMgMzEuNDcsNDEuMjg5IDczLjE1LDYxLjk1NyAxMjUuMDUsNjEuOTU3IDUxLjcsMCA5My4xOCwtMjAuMzAxIDEyNC40MywtNjAuODkxIDMxLjI3LC00MC41OTcgNDYuOSwtOTEuNzY5IDQ2LjksLTE1My41MTkgMCwtNTkuMjg5IC0xNS4xNywtMTEwLjk2OSAtNDUuNTEsLTE1NS4wMzkyIEMgMzcwMC4yLDIyLjAzMTMgMzY1Ny43NSwwIDM2MDMuMTksMCIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDUwIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDQxNTYuNzksOC41ODIwMyBoIC01MC44OCBsIC0yMTYuMzgsMzY0LjcxODk3IDAuNjEsLTI3LjU5IGMgMC42MSwtMTAuNDEgMC45MywtMTkuMjExIDAuOTMsLTI2LjM1MiBWIDguNTgyMDMgaCAtNDIuMzEgViA0MjYuOTQxIGggNjUuNiBsIDIwMi4yOCwtMzQwLjkyOTMgLTAuNjIsMjkuMTA5MyBjIC0wLjQxLDExLjQxOCAtMC42MSwyMS41MjcgLTAuNjEsMzAuMzIgdiAyODEuNSBoIDQxLjM4IFYgOC41ODIwMyIgLz48cGF0aAogICAgICAgICBpZD0icGF0aDUyIgogICAgICAgICBzdHlsZT0iZmlsbDojMjQ0OTkxO2ZpbGwtb3BhY2l0eToxO2ZpbGwtcnVsZTpub256ZXJvO3N0cm9rZTpub25lIgogICAgICAgICBkPSJtIDQ0NTAuNjMsNTQuNTU4NiBoIDExMi4xOCBjIDI3LjM3LDAgNDguNTMsNi42NDA2IDYzLjQ0LDE5LjkyOTcgMTQuOTIsMTMuMjYxNyAyMi4zOCwzMC41MzE3IDIyLjM4LDUxLjc5MjcgMCwxNC45MSAtMy4zOCwyOC43NTggLTEwLjExLDQxLjUyIC02Ljc0LDEyLjc3NyAtMTYuMjUsMjIuNjQgLTI4LjUxLDI5LjU3OCAtMTIuMjYsNi45NDkgLTMwLjU2LDEwLjQzIC01NC44NiwxMC40MyBoIC0xMDQuNTIgeiBtIDAsMTkzLjA4OTQgaCA5MS4wNCBjIDM3Ljc4LDAgNjMuMDMsNy4yMDQgNzUuNjksMjEuNjE0IDEyLjY4LDE0LjQxIDE5LjAxLDMxLjMwOCAxOS4wMSw1MC43MTggMCwxOS4yMTEgLTYuOCwzNC43MzkgLTIwLjM4LDQ2LjU5IC0xMy41OSwxMS44NDggLTMzLjg3LDE3Ljc3IC02MC44NCwxNy43NyBIIDQ0NTAuNjMgWiBNIDQ0MDAuMDYsOC41ODIwMyBWIDQyNi45NDEgaCAxNjUuNTIgYyA0MS42NywwIDcyLjU3LC0xMC4yMTEgOTIuNjksLTMwLjYxMyAyMC4xNCwtMjAuNDE4IDMwLjIxLC00NC4xMDkgMzAuMjEsLTcxLjA1OCAwLC00Ny4zNzIgLTI0Ljc0LC03OC44MDkgLTc0LjE4LC05NC4zMjEgMjkuNDMsLTcuNTcgNTEuMjksLTIxLjA3IDY1LjU4LC00MC40ODggMTQuMzEsLTE5LjQxIDIxLjQ2LC00MS40MjIgMjEuNDYsLTY1Ljk0MSAwLC0zMi45MzAyIC0xMS4wOCwtNjAuNDgwOSAtMzMuMjUsLTgyLjY2MDYgQyA0NjQ1LjkyLDE5LjY3OTcgNDYxMS43NCw4LjU4MjAzIDQ1NjUuNTgsOC41ODIwMyBoIC0xNjUuNTIiIC8+PHBhdGgKICAgICAgICAgaWQ9InBhdGg1NCIKICAgICAgICAgc3R5bGU9ImZpbGw6IzI0NDk5MTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6bm9uemVybztzdHJva2U6bm9uZSIKICAgICAgICAgZD0iTSA1MDY0LjIxLDQyNi45NDEgNDkyMy4yOCw4LjU4MjAzIGggLTUwLjY1IEwgNDczMS42Niw0MjYuOTQxIGggNTQuODkgbCAxMTYuNiwtMzQ1LjEwMTIgMTE1LjQ3LDM0NS4xMDEyIGggNDUuNTkiIC8+PC9nPjwvZz48L3N2Zz4=" alt="TM Construction BV logo">
         </div>
-        <div class="logo-name">TMC Compliance<span>TM Construction BV</span></div>
+        <div class="logo-name">TMC Compliance<span id="headerOrgName">TM Construction BV</span></div>
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions">
@@ -1132,105 +1148,193 @@ body.wp-mode #sbAuthBar{display:none!important;}
 
   <!-- SETTINGS VIEW -->
   <div id="viewSettings" style="display:none;">
-    <div style="max-width:900px;">
+    <div class="settings-layout">
 
-      <!-- Warning Period -->
-      <div class="settings-card" style="margin-bottom:20px;">
-        <div class="settings-card-header">
-          <div class="settings-card-title">⏱ Warning Period</div>
-          <div class="settings-card-desc">How many days before a document expires it should show as Warning rather than Go.</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <input type="range" id="warnRange" min="7" max="180" step="1" value="60"
-              oninput="document.getElementById('warnVal').textContent=this.value"
-              onchange="applyWarningDays(this.value)"
-              style="width:220px;accent-color:var(--navy);cursor:pointer;">
-            <span style="font-size:18px;font-weight:700;color:var(--navy);min-width:36px;" id="warnVal">60</span>
-            <span style="font-size:13px;color:var(--text-m);">days</span>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="warnPresets"></div>
-        </div>
-        <div style="margin-top:10px;font-size:12px;color:var(--text-l);" id="warnDesc"></div>
+      <!-- ── Sidebar nav ───────────────────────────────────────────────── -->
+      <div class="settings-sidebar">
+        <button class="sset-nav active" data-s="org" onclick="switchSettingsSection('org')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          Organisation
+        </button>
+        <button class="sset-nav" data-s="compliance" onclick="switchSettingsSection('compliance')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Compliance
+        </button>
+        <button class="sset-nav" data-s="docsets" onclick="switchSettingsSection('docsets')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Document Sets
+        </button>
+        <button class="sset-nav" data-s="users" onclick="switchSettingsSection('users')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Users & Roles
+        </button>
+        <button class="sset-nav" data-s="archive" onclick="switchSettingsSection('archive')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+          Archive
+        </button>
       </div>
 
+      <!-- ── Content panels ────────────────────────────────────────────── -->
+      <div style="min-width:0;">
 
-      <!-- Compliance Email Report -->
-      <div class="settings-card" id="complianceReportCard" style="margin-bottom:20px;">
-        <div class="settings-card-header">
-          <div class="settings-card-title">📧 Compliance Email Report</div>
-          <div class="settings-card-desc">Create a report of active workers currently in Warning or No-Go status and prepare an email to compliance.</div>
-        </div>
-        <div id="complianceReportGrid" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
-          <div class="form-field">
-            <label class="form-label">Report recipient</label>
-            <input class="form-input" id="complianceReportEmail" type="email" value="compliance@tmconstruction.nl" onchange="setComplianceReportEmail(this.value)"/>
-          </div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="btn btn-primary" onclick="openComplianceEmailReport()">Prepare Email</button>
-            <button class="btn btn-cancel" onclick="copyComplianceReport()">Copy Report</button>
-            <button class="btn btn-cancel" onclick="downloadComplianceReportCsv()">Download CSV</button>
-          </div>
-        </div>
-        <div id="complianceReportSummary" style="font-size:12px;color:var(--text-m);margin-bottom:8px;"></div>
-        <div id="complianceReportPreview" style="max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.45;white-space:pre-wrap;"></div>
-      </div>
+        <!-- ORGANISATION -->
+        <div id="sset-org" class="sset-panel">
+          <div class="sset-panel-title">Organisation</div>
 
-      <!-- User Roles -->
-      <div class="settings-card" id="rolesCard" style="margin-bottom:20px;display:none;">
-        <div class="settings-card-header">
-          <div class="settings-card-title">👥 Users & Roles</div>
-          <div class="settings-card-desc">Admin only. New users are read-only Viewers until you change their role here.</div>
-        </div>
-        <div class="table-scroll">
-          <table>
-            <thead><tr>
-              <th class="no-sort">User</th>
-              <th class="no-sort">Role</th>
-              <th class="no-sort">Active</th>
-              <th class="no-sort">Access summary</th>
-            </tr></thead>
-            <tbody id="rolesBody"><tr><td colspan="4" style="color:var(--text-l);">Roles load after login.</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Document Sets -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
-        <div>
-          <div style="font-size:14px;font-weight:600;color:var(--text);">Document Sets</div>
-          <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Each set defines which documents a worker must have. Assign sets to workers when adding them. Built-in sets cannot be deleted but can be customised.</div>
-        </div>
-        <button class="btn btn-primary" onclick="openAddDocSet()">+ New Document Set</button>
-      </div>
-      <div id="docSetsContainer"></div>
-
-      <!-- Deleted Items / Restore History -->
-      <div class="settings-card collapsed" id="deletedItemsCard" style="margin-top:20px;display:none;">
-        <div class="settings-card-header deleted-items-header" onclick="toggleDeletedItemsPanel()">
-          <div>
-            <div class="settings-card-title">🛡 Deleted Items / Restore History</div>
-            <div class="settings-card-desc">Deleted records are archived here before they are removed from the active dashboard. Files are not deleted from storage; only removed from the active view.</div>
-          </div>
-          <span class="deleted-items-chevron" id="deletedItemsChevron">▼</span>
-        </div>
-        <div class="deleted-items-body" id="deletedItemsBody">
-          <div class="del-toolbar">
-            <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)">
-            <div class="del-filters" id="delFilters">
-              <button class="del-filter-btn active" data-filter="all" onclick="delFilterChange('all')">All</button>
-              <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Documents</button>
-              <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Worker Assignments</button>
-              <button class="del-filter-btn" data-filter="accommodation" onclick="delFilterChange('accommodation')">Accommodation</button>
-              <button class="del-filter-btn" data-filter="vehicles" onclick="delFilterChange('vehicles')">Vehicles</button>
-              <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance Docs</button>
+          <!-- Name -->
+          <div class="settings-card" style="margin-bottom:16px;">
+            <div class="settings-card-title">Name</div>
+            <div class="settings-card-desc">Displayed in the header and on all reports.</div>
+            <div style="display:flex;gap:10px;align-items:flex-end;margin-top:14px;">
+              <div class="form-field" style="flex:1;margin:0;">
+                <input class="form-input" id="orgNameInput" type="text" placeholder="Organisation name" style="font-size:15px;">
+              </div>
+              <button class="btn btn-primary" onclick="saveOrgName()">Save</button>
             </div>
           </div>
-          <div id="deletedItemsList"></div>
-        </div>
-      </div>
 
-    </div><!-- end settings inner max-width div -->
+          <!-- Brand colour -->
+          <div class="settings-card" style="margin-bottom:16px;">
+            <div class="settings-card-title">Brand Colour</div>
+            <div class="settings-card-desc">Applied to the header, navigation highlights, and primary accents throughout the app.</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap;">
+              <input type="color" id="orgColorPicker" title="Pick colour" style="width:44px;height:36px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px 3px;background:#fff;" oninput="previewOrgColor(this.value)">
+              <div id="orgColorSwatches" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;"></div>
+              <div style="display:flex;gap:6px;margin-left:auto;">
+                <button class="btn btn-cancel" onclick="resetOrgColor()">Reset</button>
+                <button class="btn btn-primary" onclick="saveOrgColor()">Apply colour</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logo -->
+          <div class="settings-card">
+            <div class="settings-card-title">Logo</div>
+            <div class="settings-card-desc">Shown in the top-left header. PNG or SVG recommended, square, min 64 × 64 px, max 2 MB.</div>
+            <div style="display:flex;align-items:center;gap:20px;margin-top:16px;flex-wrap:wrap;">
+              <div>
+                <img id="orgLogoPreview" class="org-logo-thumb" src="" alt="Logo preview" style="display:none;">
+                <div id="orgLogoPh" class="org-logo-ph">No logo</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;">
+                <label class="btn btn-outline" style="cursor:pointer;margin:0;display:inline-flex;align-items:center;gap:6px;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  <span id="orgLogoUploadLabel">Upload logo</span>
+                  <input type="file" accept="image/*" style="display:none;" onchange="uploadOrgLogo(this)">
+                </label>
+                <button class="btn btn-cancel" id="orgLogoRemoveBtn" onclick="removeOrgLogo()" style="display:none;">Remove logo</button>
+              </div>
+            </div>
+          </div>
+        </div><!-- /sset-org -->
+
+        <!-- COMPLIANCE -->
+        <div id="sset-compliance" class="sset-panel" style="display:none;">
+          <div class="sset-panel-title">Compliance</div>
+
+          <!-- Warning Period -->
+          <div class="settings-card" style="margin-bottom:16px;">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Warning Period</div>
+              <div class="settings-card-desc">How many days before a document expires it should show as Warning rather than Go.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <input type="range" id="warnRange" min="7" max="180" step="1" value="60"
+                  oninput="document.getElementById('warnVal').textContent=this.value"
+                  onchange="applyWarningDays(this.value)"
+                  style="width:220px;accent-color:var(--navy);cursor:pointer;">
+                <span style="font-size:18px;font-weight:700;color:var(--navy);min-width:36px;" id="warnVal">60</span>
+                <span style="font-size:13px;color:var(--text-m);">days</span>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;" id="warnPresets"></div>
+            </div>
+            <div style="margin-top:10px;font-size:12px;color:var(--text-l);" id="warnDesc"></div>
+          </div>
+
+          <!-- Compliance Email Report -->
+          <div class="settings-card" id="complianceReportCard">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Compliance Email Report</div>
+              <div class="settings-card-desc">Create a report of active workers currently in Warning or No-Go status and prepare an email to compliance.</div>
+            </div>
+            <div id="complianceReportGrid" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
+              <div class="form-field">
+                <label class="form-label">Report recipient</label>
+                <input class="form-input" id="complianceReportEmail" type="email" value="compliance@tmconstruction.nl" onchange="setComplianceReportEmail(this.value)"/>
+              </div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="openComplianceEmailReport()">Prepare Email</button>
+                <button class="btn btn-cancel" onclick="copyComplianceReport()">Copy Report</button>
+                <button class="btn btn-cancel" onclick="downloadComplianceReportCsv()">Download CSV</button>
+              </div>
+            </div>
+            <div id="complianceReportSummary" style="font-size:12px;color:var(--text-m);margin-bottom:8px;"></div>
+            <div id="complianceReportPreview" style="max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.45;white-space:pre-wrap;"></div>
+          </div>
+        </div><!-- /sset-compliance -->
+
+        <!-- DOCUMENT SETS -->
+        <div id="sset-docsets" class="sset-panel" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;padding-bottom:14px;border-bottom:2px solid var(--border);">
+            <div>
+              <div style="font-size:17px;font-weight:700;color:var(--text);">Document Sets</div>
+              <div style="font-size:12px;color:var(--text-l);margin-top:3px;">Each set defines which documents a worker must have. Built-in sets can be customised but not deleted.</div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddDocSet()">+ New Document Set</button>
+          </div>
+          <div id="docSetsContainer"></div>
+        </div><!-- /sset-docsets -->
+
+        <!-- USERS & ROLES -->
+        <div id="sset-users" class="sset-panel" style="display:none;">
+          <div class="sset-panel-title">Users & Roles</div>
+          <div class="settings-card" id="rolesCard">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Team members</div>
+              <div class="settings-card-desc">Admin only. New users are read-only Viewers until their role is changed here.</div>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr>
+                  <th class="no-sort">User</th>
+                  <th class="no-sort">Role</th>
+                  <th class="no-sort">Active</th>
+                  <th class="no-sort">Access summary</th>
+                </tr></thead>
+                <tbody id="rolesBody"><tr><td colspan="4" style="color:var(--text-l);">Roles load after login.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /sset-users -->
+
+        <!-- ARCHIVE -->
+        <div id="sset-archive" class="sset-panel" style="display:none;">
+          <div class="sset-panel-title">Archive</div>
+          <div class="settings-card" id="deletedItemsCard">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Deleted Items / Restore History</div>
+              <div class="settings-card-desc">Deleted records are archived here. Files remain in storage; only the active view reference is removed.</div>
+            </div>
+            <div id="deletedItemsBody" class="deleted-items-body open" style="margin-top:0;border-top:none;max-height:600px;">
+              <div class="del-toolbar">
+                <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)">
+                <div class="del-filters" id="delFilters">
+                  <button class="del-filter-btn active" data-filter="all" onclick="delFilterChange('all')">All</button>
+                  <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Documents</button>
+                  <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Worker Assignments</button>
+                  <button class="del-filter-btn" data-filter="accommodation" onclick="delFilterChange('accommodation')">Accommodation</button>
+                  <button class="del-filter-btn" data-filter="vehicles" onclick="delFilterChange('vehicles')">Vehicles</button>
+                  <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance Docs</button>
+                </div>
+              </div>
+              <div id="deletedItemsList"></div>
+            </div>
+          </div>
+        </div><!-- /sset-archive -->
+
+      </div><!-- /content panels -->
+    </div><!-- /settings-layout -->
   </div><!-- end viewSettings -->
 
   <!-- RESOURCES VIEW -->
@@ -5457,20 +5561,190 @@ function deleteProject(id){
 
 // ─── Settings View ────────────────────────────────────────────────────────────
 function renderSettings(){
-  // Warning days
-  const slider=document.getElementById('warnRange');
-  const val=document.getElementById('warnVal');
-  if(slider){slider.value=settings.warningDays;val.textContent=settings.warningDays;}
-  const presets=[14,30,60,90];
-  const presetsEl=document.getElementById('warnPresets');
-  if(presetsEl) presetsEl.innerHTML=presets.map(d=>
-    `<button class="preset-btn${settings.warningDays===d?' active':''}" onclick="applyWarningDays(${d})">${d} days</button>`
-  ).join('');
-  updateWarnDesc();
-  renderComplianceReportSettings();
-  renderDocSets();
-  renderRolesPanel();
-  applyRoleUI();
+  applyOrgBranding();
+  // Render active section content
+  const active = document.querySelector('.sset-nav.active')?.dataset?.s || 'org';
+  if(active==='compliance'){
+    const slider=document.getElementById('warnRange');
+    const val=document.getElementById('warnVal');
+    if(slider){slider.value=settings.warningDays;val.textContent=settings.warningDays;}
+    const presets=[14,30,60,90];
+    const presetsEl=document.getElementById('warnPresets');
+    if(presetsEl) presetsEl.innerHTML=presets.map(d=>
+      `<button class="preset-btn${settings.warningDays===d?' active':''}" onclick="applyWarningDays(${d})">${d} days</button>`
+    ).join('');
+    updateWarnDesc();
+    renderComplianceReportSettings();
+  }
+  if(active==='docsets') renderDocSets();
+  if(active==='users'){ renderRolesPanel(); applyRoleUI(); }
+  if(active==='archive') renderDeletedItems?.();
+}
+
+function switchSettingsSection(name){
+  document.querySelectorAll('.sset-panel').forEach(p=>p.style.display='none');
+  document.querySelectorAll('.sset-nav').forEach(b=>b.classList.remove('active'));
+  const panel=document.getElementById('sset-'+name);
+  if(panel) panel.style.display='';
+  const btn=document.querySelector(`.sset-nav[data-s="${name}"]`);
+  if(btn) btn.classList.add('active');
+  // Lazy-render section content
+  if(name==='compliance'){
+    const slider=document.getElementById('warnRange');
+    const val=document.getElementById('warnVal');
+    if(slider){slider.value=settings.warningDays;val.textContent=settings.warningDays;}
+    const presets=[14,30,60,90];
+    const presetsEl=document.getElementById('warnPresets');
+    if(presetsEl) presetsEl.innerHTML=presets.map(d=>
+      `<button class="preset-btn${settings.warningDays===d?' active':''}" onclick="applyWarningDays(${d})">${d} days</button>`
+    ).join('');
+    updateWarnDesc();
+    renderComplianceReportSettings();
+  }
+  if(name==='docsets') renderDocSets();
+  if(name==='users'){ renderRolesPanel(); applyRoleUI(); }
+  if(name==='archive') renderDeletedItems?.();
+}
+
+// ── Org branding ─────────────────────────────────────────────────────────────
+
+const ORG_COLOR_SWATCHES=['#1a3082','#112268','#0f4c81','#1d4ed8','#7c3aed','#be123c','#b45309','#15803d','#0f766e','#374151'];
+
+function applyOrgBranding(){
+  if(!currentOrg) return;
+  // Header org name
+  const nameEl=document.getElementById('headerOrgName');
+  if(nameEl) nameEl.textContent=currentOrg.name||'TM Construction BV';
+  // Document title
+  document.title=(currentOrg.name||'TMC Compliance')+' — Compliance';
+  // Primary colour
+  if(currentOrg.primary_color) _applyOrgColor(currentOrg.primary_color,false);
+  // Header logo
+  if(currentOrg.logo_url){
+    const img=document.getElementById('headerLogoImg');
+    if(img&&img.src!==currentOrg.logo_url){
+      img.src=currentOrg.logo_url;
+      img.onerror=()=>{img.src=_orgDefaultLogo();img.onerror=null;};
+    }
+  }
+  // Populate settings fields
+  const nameIn=document.getElementById('orgNameInput');
+  if(nameIn) nameIn.value=currentOrg.name||'';
+  const picker=document.getElementById('orgColorPicker');
+  if(picker) picker.value=currentOrg.primary_color||'#1a3082';
+  _renderColorSwatches(currentOrg.primary_color||'#1a3082');
+  _updateLogoPreview(currentOrg.logo_url||null);
+}
+
+function _renderColorSwatches(current){
+  const el=document.getElementById('orgColorSwatches');if(!el)return;
+  el.innerHTML=ORG_COLOR_SWATCHES.map(c=>`<button class="org-color-swatch${c===current?' swatch-active':''}" style="background:${c};" title="${c}" onclick="orgPickSwatch('${c}')"></button>`).join('');
+}
+
+function orgPickSwatch(color){
+  const picker=document.getElementById('orgColorPicker');
+  if(picker) picker.value=color;
+  _applyOrgColor(color,true);
+  _renderColorSwatches(color);
+}
+
+function previewOrgColor(color){
+  _applyOrgColor(color,true);
+  _renderColorSwatches(color);
+}
+
+function _applyOrgColor(hex,updatePicker){
+  document.documentElement.style.setProperty('--navy',hex);
+  document.documentElement.style.setProperty('--navy-d',_hexShift(hex,-22));
+  document.documentElement.style.setProperty('--navy-l',_hexShift(hex,28));
+  if(updatePicker){const p=document.getElementById('orgColorPicker');if(p)p.value=hex;}
+}
+
+async function saveOrgName(){
+  const val=(document.getElementById('orgNameInput')?.value||'').trim();
+  if(!val){alert('Organisation name cannot be empty.');return;}
+  await _persistOrgFields({name:val});
+}
+
+async function saveOrgColor(){
+  const color=document.getElementById('orgColorPicker')?.value;
+  if(!color)return;
+  _renderColorSwatches(color);
+  await _persistOrgFields({primary_color:color});
+}
+
+async function resetOrgColor(){
+  const def='#1a3082';
+  _applyOrgColor(def,true);
+  _renderColorSwatches(def);
+  await _persistOrgFields({primary_color:def});
+}
+
+async function uploadOrgLogo(input){
+  const file=input.files?.[0];if(!file)return;
+  if(!file.type.startsWith('image/')){alert('Please select an image file.');input.value='';return;}
+  if(file.size>2*1024*1024){alert('Logo must be under 2 MB.');input.value='';return;}
+  const ext=file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
+  const path=`org-logos/${currentOrgId||SITE_ORG_ID}/logo.${ext}`;
+  const lbl=document.getElementById('orgLogoUploadLabel');
+  if(lbl)lbl.textContent='Uploading…';
+  const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
+  if(upErr){alert('Upload failed: '+upErr.message);if(lbl)lbl.textContent='Upload logo';input.value='';return;}
+  const {data:{publicUrl}}=sbClient.storage.from(SB_BUCKET).getPublicUrl(path);
+  await _persistOrgFields({logo_url:publicUrl});
+  const headerImg=document.getElementById('headerLogoImg');
+  if(headerImg) headerImg.src=publicUrl;
+  if(lbl)lbl.textContent='Upload logo';
+  input.value='';
+}
+
+async function removeOrgLogo(){
+  if(!confirm('Remove the organisation logo from the header?'))return;
+  await _persistOrgFields({logo_url:null});
+  const headerImg=document.getElementById('headerLogoImg');
+  if(headerImg) headerImg.src=_orgDefaultLogo();
+}
+
+function _updateLogoPreview(url){
+  const img=document.getElementById('orgLogoPreview');
+  const ph=document.getElementById('orgLogoPh');
+  const rm=document.getElementById('orgLogoRemoveBtn');
+  if(!img||!ph)return;
+  if(url){img.src=url;img.style.display='';ph.style.display='none';if(rm)rm.style.display='';}
+  else{img.src='';img.style.display='none';ph.style.display='';if(rm)rm.style.display='none';}
+}
+
+async function _persistOrgFields(updates){
+  if(!sbClient||!sbSession){alert('Not signed in.');return;}
+  const oid=currentOrgId||SITE_ORG_ID;
+  const {error}=await sbClient.from('organisations').update({...updates,updated_at:new Date().toISOString()}).eq('id',oid);
+  if(error){alert('Save failed: '+error.message);return;}
+  currentOrg={...(currentOrg||{}), id:oid, ...updates};
+  applyOrgBranding();
+  _showSaveToast('Saved');
+}
+
+function _showSaveToast(msg){
+  let t=document.getElementById('_saveToast');
+  if(!t){t=document.createElement('div');t.id='_saveToast';t.className='save-toast';document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(t._tm);t._tm=setTimeout(()=>{t.style.opacity='0';},2200);
+}
+
+function _hexShift(hex,amt){
+  const n=parseInt(hex.replace('#',''),16);
+  const clamp=(v)=>Math.max(0,Math.min(255,v));
+  const r=clamp((n>>16)+amt),g=clamp(((n>>8)&0xFF)+amt),b=clamp((n&0xFF)+amt);
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+let _orgDefaultLogoCache=null;
+function _orgDefaultLogo(){
+  if(!_orgDefaultLogoCache){
+    const img=document.getElementById('headerLogoImg');
+    if(img&&img.src&&!currentOrg?.logo_url) _orgDefaultLogoCache=img.src;
+  }
+  return _orgDefaultLogoCache||'';
 }
 
 function updateWarnDesc(){
@@ -8191,7 +8465,7 @@ async function sbLoadProfile(){
   currentOrgId = sbProfile?.org_id || SITE_ORG_ID;
   try {
     const {data:org} = await sbClient.from('organisations').select('*').eq('id', currentOrgId).maybeSingle();
-    if(org){ currentOrg = org; document.title = org.name || 'TMC Compliance'; }
+    if(org){ currentOrg = org; applyOrgBranding(); }
   } catch(e){ console.warn('[TMC] Could not load org settings:', e.message); }
   return sbProfile;
 }
@@ -8211,7 +8485,7 @@ function applyRoleUI(){
     const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.remove('role-hide');
     const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.remove('role-hide');
     const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.remove('role-hide');
-    const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display='block';
+    const usersNav=document.querySelector('.sset-nav[data-s="users"]'); if(usersNav) usersNav.style.display='';
     renderDeletedItems();
     return;
   }
@@ -8232,7 +8506,7 @@ function applyRoleUI(){
   const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.toggle('role-hide', !(canSettings || canRoles));
   const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.toggle('role-hide', !canWorkers);
   const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.toggle('role-hide', !canPlanning);
-  const rolesCard=document.getElementById('rolesCard'); if(rolesCard) rolesCard.style.display=canRoles?'block':'none'; renderDeletedItems();
+  const usersNav=document.querySelector('.sset-nav[data-s="users"]'); if(usersNav) usersNav.style.display=canRoles?'':'none'; renderDeletedItems();
   if(sbUserRole === 'viewer' || sbUserRole === 'no_access') document.querySelectorAll('.btn-save,.btn-danger').forEach(el=>{ if(!['tmcConfirmOkBtn','sbSendOtpBtn','sbVerifyOtpBtn'].includes(el.id)) el.classList.add('role-hide'); }); document.getElementById('tmcConfirmOkBtn')?.classList.remove('role-hide');
   if(sbUserRole === 'planner') document.querySelectorAll('#viewSettings .btn-save,#viewSettings .btn-danger').forEach(el=>{ if(!canSettings) el.classList.add('role-hide'); });
   if(sbUserRole === 'compliance') document.querySelectorAll('#viewRoster .btn-save,#viewRoster .btn-danger,#viewProjects .btn-save,#viewProjects .btn-danger,#viewResources .btn-save,#viewResources .btn-danger').forEach(el=>el.classList.add('role-hide'));
