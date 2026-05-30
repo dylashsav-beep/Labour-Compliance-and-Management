@@ -770,7 +770,7 @@ body.wp-mode #sbAuthBar{display:none!important;}
       </div>
       <div class="header-spacer"></div>
       <div class="header-actions">
-        <button class="btn btn-outline" onclick="doExport()">Export CSV</button>
+        <button class="btn btn-outline" onclick="doExportXLSX()">Export XLSX</button>
         <button class="btn btn-outline" id="exportFilesBtn" onclick="exportWorkerFiles()">Export Files</button>
         <button class="btn btn-primary" id="addWorkerBtn" onclick="openAdd()">Add Worker</button>
       </div>
@@ -7510,18 +7510,109 @@ function restoreDeletedItem(id){
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
-function doExport(){
-  const wk=currentWeekKey();
-  const rows=[['ID','Name','Type','Nationality','Worker Assignment','Score','Go/No-Go']];
-  workers.forEach(w=>{
-    const st=wstatus(w);
-    const stLabel=st==='go'?'Go':st==='warning'?'Warning':'No-Go';
-    rows.push([w.id,w.name,w.type==='zzp'?'ZZP':'Employed',w.nat,getAssignments(wk,w.id).join(';')||'Not assigned',score(w)+'%',stLabel]);
-  });
-  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download=`TMC_compliance_${wk}.csv`;a.click();
+function doExportXLSX(){
+  if(typeof XLSX==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js';
+    s.onload=()=>_buildExportXLSX();
+    s.onerror=()=>alert('Could not load the export library. Check your internet connection and try again.');
+    document.head.appendChild(s);
+  } else {
+    _buildExportXLSX();
+  }
 }
+function _buildExportXLSX(){
+  const today=new Date(); today.setHours(0,0,0,0);
+  const list=filtered();
+  if(!list.length){alert('No workers in the current filter.');return;}
+
+  const wb=XLSX.utils.book_new();
+
+  // ── helper: format a doc cell value ──────────────────────────────────
+  const docCell=(w,docId)=>{
+    const doc=w.docs[docId];
+    if(!doc||doc.status==='missing') return 'Missing';
+    if(!doc.date) return 'On File';
+    const expiry=new Date(doc.date); expiry.setHours(0,0,0,0);
+    if(expiry<today) return `Expired – ${doc.date}`;
+    const days=(expiry-today)/86400000;
+    if(days<=settings.warningDays) return `Expiring – ${doc.date}`;
+    return `Valid – ${doc.date}`;
+  };
+
+  // ── helper: current project + latest rate ────────────────────────────
+  const workerProjectAndRate=(w)=>{
+    const pa=currentPA(w.id,today);
+    const proj=pa?(projectStore.find(p=>p.id===pa.projectId)?.name||'—'):'—';
+    let rate='—';
+    if(pa&&pa.rate){const r=parseFloat(pa.rate);if(!isNaN(r)) rate=`€${r.toFixed(2)}/${pa.rateType||'day'}`;}
+    return {proj,rate};
+  };
+
+  // ── base columns shared by all sheets ────────────────────────────────
+  const BASE_HDR=['Name','Reference','Type','Nationality','Agency / Company','Email','Phone','Status','GO Status','Compliance %','Current Project','Latest Rate'];
+  const baseRow=(w)=>{
+    const gs=goStatusAt(w,today);
+    const {proj,rate}=workerProjectAndRate(w);
+    return [
+      w.name,
+      w.ref||'',
+      w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',
+      w.nat||'',
+      w.agency||'',
+      w.email||'',
+      w.phone||'',
+      w.active!==false?'Active':'Inactive',
+      gs==='go'?'GO':gs==='warning'?'WARNING':'NO-GO',
+      scoreAt(w,today)+'%',
+      proj,
+      rate
+    ];
+  };
+
+  // ── helper: build a worksheet from rows array with auto col widths ────
+  const makeSheet=(rows)=>{
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    const hdr=rows[0]||[];
+    ws['!cols']=hdr.map((_,ci)=>{
+      const maxLen=Math.max(String(hdr[ci]||'').length,...rows.slice(1).map(r=>String(r[ci]||'').length));
+      return {wch:Math.min(maxLen+2,45)};
+    });
+    return ws;
+  };
+
+  // ── Sheet 1: Overview (all filtered workers, no doc columns) ─────────
+  const overviewRows=[BASE_HDR,...list.map(w=>baseRow(w))];
+  XLSX.utils.book_append_sheet(wb,makeSheet(overviewRows),'Overview');
+
+  // ── One sheet per document set ────────────────────────────────────────
+  const setGroups={};
+  list.forEach(w=>{
+    const sid=w.docSetId||'__none__';
+    if(!setGroups[sid]) setGroups[sid]=[];
+    setGroups[sid].push(w);
+  });
+
+  Object.keys(setGroups).forEach(setId=>{
+    const setWorkers=setGroups[setId];
+    const setDef=docSets.find(s=>s.id===setId);
+    const setName=setDef?setDef.name:(setId==='__none__'?'No Document Set':'Unknown Set');
+    const docItems=(docSetItems[setId]||[]).filter(d=>!d.archived);
+
+    const docHeaders=docItems.map(d=>d.name+(d.req?' *':''));
+    const headers=[...BASE_HDR,...docHeaders];
+
+    const rows=[headers,...setWorkers.map(w=>[...baseRow(w),...docItems.map(d=>docCell(w,d.id))])];
+
+    // Sheet name: max 31 chars, strip invalid chars
+    const sheetName=setName.replace(/[\/\\?\*\[\]:]/g,'').trim().slice(0,31)||'Set';
+    XLSX.utils.book_append_sheet(wb,makeSheet(rows),sheetName);
+  });
+
+  const dateStr=today.toISOString().slice(0,10);
+  XLSX.writeFile(wb,`TMC_Workers_Export_${dateStr}.xlsx`);
+}
+function doExport(){doExportXLSX();}
 
 async function exportWorkerFiles(){
   if(!sbClient||!sbSession){alert('Please sign in to export files.');return;}
