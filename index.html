@@ -640,6 +640,12 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .pending-sub-info{flex:1;min-width:0;}
 .pending-sub-actions{display:flex;gap:6px;flex-shrink:0;}
 
+/* Prevent iOS Safari auto-zoom on input focus (triggered when font-size < 16px) */
+#sbOtpPanel input,
+#workerPortal input,
+#workerPortal select,
+#workerPortal textarea{font-size:16px!important;}
+
 /* ── Worker portal mobile-first styles ── */
 #workerPortal{display:none;min-height:100vh;background:#f8fafc;-webkit-overflow-scrolling:touch;}
 .wp-header{background:#1e293b;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
