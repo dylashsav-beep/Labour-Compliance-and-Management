@@ -2099,6 +2099,10 @@ body.wp-mode #sbAuthBar{display:none!important;}
 const SUPABASE_URL = "https://gmuyvostwcqorspgzvjv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8";
 const SB_BUCKET = "tmc-documents";
+// Multi-tenancy: org identity for this deployment. Each company deployment sets its own UUID.
+const SITE_ORG_ID = '00000000-0000-0000-0001-000000000001';
+let currentOrgId = null;  // resolved after login from profile.org_id
+let currentOrg   = null;  // full organisations row (name, slug, etc.)
 let sbClient = null;
 let sbSession = null;
 let sbReady = false;
@@ -2363,7 +2367,8 @@ async function sbArchiveDeletedItemImmediate(item){
       details: item.payload?._meta || {},
       deleted_by_email: item.deletedBy || '',
       deleted_at: item.deletedAt || new Date().toISOString(),
-      restored: false
+      restored: false,
+      org_id: currentOrgId || SITE_ORG_ID
     });
     if(error){ console.warn('[TMC] deleted_items save failed:', error.message); sbSetStatus('Supabase: delete history save failed — '+error.message, false); }
   } catch(e){ console.warn('[TMC] deleted_items save threw:', e.message); sbSetStatus('Supabase: delete history save failed — '+e.message, false); }
@@ -2581,7 +2586,8 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
     archived_at: doc.archivedAt || null,
     sort_order: sortOrder,
     active: true,
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    org_id: currentOrgId || SITE_ORG_ID
   };
   const { error } = await sbClient.from('document_set_items').upsert(row);
   if(error) throw error;
@@ -4470,7 +4476,7 @@ async function sbWorkerDirectLogin(){
   sbMsg('Signing in…');
   try{
     const c=sbInitClient();
-    const {data:portalData,error}=await c.rpc('get_worker_portal',{p_email:email});
+    const {data:portalData,error}=await c.rpc('get_worker_portal',{p_email:email,p_org_id:SITE_ORG_ID});
     if(error) throw error;
     if(!portalData){
       sbMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);
@@ -4950,7 +4956,7 @@ async function approveSubmission(subId){
       const updates={worker_id:sub.worker_id,doc_key:sub.doc_key,status:'ok',active:true,updated_at:new Date().toISOString()};
       if(sub.expiry_date) updates.expiry_date=sub.expiry_date;
       if(sub.issue_date) updates.issue_date=sub.issue_date;
-      const {error}=await sbClient.from('worker_documents').upsert({id:docId,...updates});
+      const {error}=await sbClient.from('worker_documents').upsert({id:docId,...updates,org_id:currentOrgId||SITE_ORG_ID});
       if(error) throw error;
       // Update in-memory worker doc
       if(!w.docs) w.docs={};
@@ -4963,7 +4969,8 @@ async function approveSubmission(subId){
         const {error:fe}=await sbClient.from('worker_document_files').insert({
           worker_id:sub.worker_id,worker_document_id:docId,
           file_name:sub.file_name,file_path:sub.file_path,
-          size_bytes:sub.file_size||0,mime_type:sub.mime_type||'',active:true
+          size_bytes:sub.file_size||0,mime_type:sub.mime_type||'',active:true,
+          org_id:currentOrgId||SITE_ORG_ID
         });
         if(fe) console.warn('[TMC] approveSubmission: file record failed:',fe.message);
       }
@@ -5165,7 +5172,7 @@ async function doAdd(){
       id:newId, full_name:name, worker_type:type, reference:ref||'',
       nationality:nat||'', agency_name:agency||null, email:email||null,
       phone:phone||null, notes:notes||null, document_set_id:dbDocSetId, active:true,
-      updated_at:new Date().toISOString()
+      updated_at:new Date().toISOString(), org_id:currentOrgId||SITE_ORG_ID
     });
     if(error) throw error;
     closeM('addOverlay');
@@ -6097,7 +6104,8 @@ function addResourceEvent(resType){
     sbClient.from('resource_events').upsert({
       id: entry.id, resource_type: entry.resourceType, resource_id: entry.resourceId,
       event_date: entry.eventDate, event_type: entry.eventType, description: entry.description,
-      created_at: entry.createdAt, created_by: entry.createdBy, active: true
+      created_at: entry.createdAt, created_by: entry.createdBy, active: true,
+      org_id: currentOrgId || SITE_ORG_ID
     }).then(({error})=>{ if(error) console.warn('[TMC] resource event upsert failed:', error.message); });
   }
 }
@@ -6362,7 +6370,7 @@ async function saveCompDoc(){
     }
     saveComplianceDocs();
     if(sbClient&&sbSession){
-      const row={id:existing.id,title:existing.title,category:existing.category,scope_type:existing.scope_type,scope_id:existing.scope_id,scope_label:existing.scope_label||'',notes:existing.notes||'',file_name:existing.file_name||'',file_path:existing.file_path||'',file_size:existing.file_size||0,mime_type:existing.mime_type||'',uploaded_by:existing.uploaded_by||'',active:true,created_at:existing.created_at};
+      const row={id:existing.id,title:existing.title,category:existing.category,scope_type:existing.scope_type,scope_id:existing.scope_id,scope_label:existing.scope_label||'',notes:existing.notes||'',file_name:existing.file_name||'',file_path:existing.file_path||'',file_size:existing.file_size||0,mime_type:existing.mime_type||'',uploaded_by:existing.uploaded_by||'',active:true,created_at:existing.created_at,org_id:currentOrgId||SITE_ORG_ID};
       sbClient.from('compliance_documents').upsert(row).then(({error})=>{ if(error) console.warn('[TMC] compliance_documents upsert failed:',error.message); });
     }
     closeAddCompDoc(); renderDocuments(); renderProjects(); renderDeletedItems(); sbScheduleSync();
@@ -6388,7 +6396,7 @@ async function saveCompDoc(){
   complianceDocs.unshift(newDoc);
   saveComplianceDocs();
   if(sbClient&&sbSession){
-    const row={id:newDoc.id,title:newDoc.title,category:newDoc.category,scope_type:newDoc.scope_type,scope_id:newDoc.scope_id,scope_label:newDoc.scope_label||'',notes:newDoc.notes||'',file_name:newDoc.file_name||'',file_path:newDoc.file_path||'',file_size:newDoc.file_size||0,mime_type:newDoc.mime_type||'',uploaded_by:newDoc.uploaded_by||'',active:true,created_at:newDoc.created_at};
+    const row={id:newDoc.id,title:newDoc.title,category:newDoc.category,scope_type:newDoc.scope_type,scope_id:newDoc.scope_id,scope_label:newDoc.scope_label||'',notes:newDoc.notes||'',file_name:newDoc.file_name||'',file_path:newDoc.file_path||'',file_size:newDoc.file_size||0,mime_type:newDoc.mime_type||'',uploaded_by:newDoc.uploaded_by||'',active:true,created_at:newDoc.created_at,org_id:currentOrgId||SITE_ORG_ID};
     sbClient.from('compliance_documents').upsert(row).then(({error})=>{ if(error) console.warn('[TMC] compliance_documents upsert failed:',error.message); });
   }
   closeAddCompDoc(); renderDocuments(); renderProjects(); sbScheduleSync();
@@ -6699,7 +6707,7 @@ async function saveChargeEntry(){
   // Write to Supabase immediately
   if(sbClient&&sbSession){
     const table=type==='accom'?'accommodation_charges':type==='tool'?'tool_charges':'vehicle_charges';
-    const row={id,assignment_id:assignmentId,week_key:weekKey,charged:true,invoice_number:invoiceNumber,invoice_amount:invoiceAmount,charged_at:entry.chargedAt,charged_by:entry.chargedBy,active:true};
+    const row={id,assignment_id:assignmentId,week_key:weekKey,charged:true,invoice_number:invoiceNumber,invoice_amount:invoiceAmount,charged_at:entry.chargedAt,charged_by:entry.chargedBy,active:true,org_id:currentOrgId||SITE_ORG_ID};
     sbClient.from(table).upsert(row).then(({error})=>{if(error)console.warn('[TMC] charge upsert failed:',error.message);});
   }
 }
@@ -8066,6 +8074,7 @@ async function sbPersistAll(force=false){
   sbSetStatus('Supabase: syncing…', true);
   await sbUploadEmbeddedFiles();
   const userId=sbSession.user.id;
+  const oid=currentOrgId||SITE_ORG_ID;
   // Remote guards: prevent stale browser tabs/local caches from reactivating archived items or worker inactive states.
   const [inactiveDocSets,inactiveDocItems,inactiveWorkerDocs,inactiveProjectAssignments,inactiveProperties,inactiveVehicles,inactiveAccomAssignments,inactiveVehicleAssignments,remoteWorkerActive] = await Promise.all([
     sbInactiveIdSet('document_sets'),
@@ -8079,43 +8088,43 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:'main',warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'compliance@tmconstruction.nl',updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
-  await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true})));
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
-  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true}); }));
+  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   await sbUpsertRows('document_set_items',dsi);
-  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',description:p.desc||'',active:p.active!==false})));
+  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',description:p.desc||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString(),org_id:oid};
   }));
   const wdocs=[], wfiles=[];
-  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true}); }); }));
+  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
-  const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true}))));
+  const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
-  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true}));
+  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
   await sbUpsertRows('project_assignments',paRows);
-  const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); });
+  const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}); }); });
   await sbUpsertRows('project_assignment_files',paf);
-  await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true})));
-  await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true})));
-  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
-  const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true}); }));
+  await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true,org_id:oid})));
+  await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true,org_id:oid})));
+  const aa=[]; Object.keys(accomHistory||{}).forEach(wid=>(accomHistory[wid]||[]).forEach(a=>{ if(!inactiveAccomAssignments.has(a.id)) aa.push({id:a.id,worker_id:wid,property_id:a.propId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true,org_id:oid}); }));
+  const va=[]; Object.keys(vehHistory||{}).forEach(wid=>(vehHistory[wid]||[]).forEach(a=>{ if(!inactiveVehicleAssignments.has(a.id)) va.push({id:a.id,worker_id:wid,vehicle_id:a.vehicleId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,active:true,org_id:oid}); }));
   await sbUpsertRows('accommodation_assignments',aa); await sbUpsertRows('vehicle_assignments',va);
-  await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
-  await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
-  if(resourceEvents.length){ try{ await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true}))); }catch(e){ console.warn('[TMC] resource_events sync skipped — run migrations/add_resource_events.sql to enable:', e.message); } }
+  await sbUpsertRows('accommodation_charges', accomCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
+  await sbUpsertRows('vehicle_charges', vehCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
+  if(resourceEvents.length){ try{ await sbUpsertRows('resource_events', resourceEvents.map(e=>({id:e.id,resource_type:e.resourceType,resource_id:e.resourceId,event_date:e.eventDate,event_type:e.eventType,description:e.description,created_at:e.createdAt,created_by:e.createdBy||null,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] resource_events sync skipped — run migrations/add_resource_events.sql to enable:', e.message); } }
   try{
-    await sbUpsertRows('tools', tools.map(t=>({id:t.id,name:t.name,description:t.desc||'',serial_number:t.serial||'',notes:t.notes||'',active:true})));
-    const ta=[]; Object.keys(toolHistory||{}).forEach(wid=>(toolHistory[wid]||[]).forEach(a=>{ ta.push({id:a.id,worker_id:wid,tool_id:a.toolId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,issue_file_path:a.issueFilePath||null,issue_file_name:a.issueFileName||null,return_file_path:a.returnFilePath||null,return_file_name:a.returnFileName||null,active:true}); }));
+    await sbUpsertRows('tools', tools.map(t=>({id:t.id,name:t.name,description:t.desc||'',serial_number:t.serial||'',notes:t.notes||'',active:true,org_id:oid})));
+    const ta=[]; Object.keys(toolHistory||{}).forEach(wid=>(toolHistory[wid]||[]).forEach(a=>{ ta.push({id:a.id,worker_id:wid,tool_id:a.toolId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),notes:a.notes||'',charge_to_operative:a.chargeToOperative||false,weekly_charge_amount:a.weeklyChargeAmount||null,issue_file_path:a.issueFilePath||null,issue_file_name:a.issueFileName||null,return_file_path:a.returnFilePath||null,return_file_name:a.returnFileName||null,active:true,org_id:oid}); }));
     await sbUpsertRows('tool_assignments',ta);
-    await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true})));
+    await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
-  await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false})));
-  await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString()})));
+  await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false,org_id:oid})));
+  await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
   sbSetStatus('Supabase: synced', true);
 }
@@ -8176,7 +8185,14 @@ async function sbLoadProfile(){
   } else {
     sbProfile = data;
   }
-  _finalise(); return sbProfile;
+  _finalise();
+  // Resolve org for this session
+  currentOrgId = sbProfile?.org_id || SITE_ORG_ID;
+  try {
+    const {data:org} = await sbClient.from('organisations').select('*').eq('id', currentOrgId).maybeSingle();
+    if(org){ currentOrg = org; document.title = org.name || 'TMC Compliance'; }
+  } catch(e){ console.warn('[TMC] Could not load org settings:', e.message); }
+  return sbProfile;
 }
 function applyRoleUI(){
   const canWorkers = canAction('workerDocs');
@@ -8319,7 +8335,7 @@ async function sbLoadAll(){
     const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
-      q('settings', sbClient.from('settings').select('*').eq('id','main').maybeSingle(), null),
+      q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
       q('projects', sbClient.from('projects').select('*').eq('active',true).order('name'), []),
       q('workers', sbClient.from('workers').select('*').order('full_name'), null),
       q('worker_documents', sbClient.from('worker_documents').select('*').eq('active',true), []),
