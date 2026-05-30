@@ -660,12 +660,13 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
 body.wp-mode #sbAuthBar{display:none!important;}
 /* Filter tabs — status pill style, distinct from buttons */
-.wp-filter-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px;}
-.wp-filter-tab{padding:12px 6px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
+.wp-filter-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:24px;}
+.wp-filter-tab{padding:10px 4px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
 .wp-filter-tab:active{opacity:.85;}
 .wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
 .wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
 .wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
+.wp-filter-tab.active[data-f="optional"]{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
 .wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
 .wp-empty-filter{text-align:center;padding:40px 16px;color:#94a3b8;font-size:14px;}
 .wp-empty-icon{font-size:36px;margin-bottom:10px;}
@@ -681,6 +682,7 @@ body.wp-mode #sbAuthBar{display:none!important;}
 .wp-status-pill.ok{background:#dcfce7;color:#166534;}
 .wp-status-pill.expiring{background:#fef3c7;color:#92400e;}
 .wp-status-pill.missing{background:#fee2e2;color:#b91c1c;}
+.wp-status-pill.opt-neutral{background:#f1f5f9;color:#475569;}
 .wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
 .wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
 .wp-pending-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-top:8px;}
@@ -729,6 +731,7 @@ body.wp-mode #sbAuthBar{display:none!important;}
 .wp-doc-tip{font-size:12px;color:#64748b;font-style:italic;margin-top:6px;line-height:1.4;}
 .wp-doc-links{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;}
 .wp-expiry-tag{font-size:12px;color:#64748b;white-space:nowrap;}
+.wp-doc-optional-intro{font-size:13px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;line-height:1.5;}
 
 </style>
 </head>
@@ -4564,9 +4567,15 @@ function renderWPDocs(){
   const tmpl=tmplForWorker(w);
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
 
-  // Filter tab counts
-  const filterCounts={missing:0,expiring:0,ok:0};
-  tmpl.forEach(d=>{ const st=docStatusAt(w.docs?.[d.id],today); if(filterCounts[st]!==undefined) filterCounts[st]++; });
+  // Filter tab counts — missing = required only; optional = optional unsubmitted
+  const filterCounts={missing:0,expiring:0,ok:0,optional:0};
+  tmpl.forEach(d=>{
+    const st=docStatusAt(w.docs?.[d.id],today);
+    if(st==='missing'&&d.req) filterCounts.missing++;
+    else if(st==='missing'&&!d.req) filterCounts.optional++;
+    else if(st==='expiring') filterCounts.expiring++;
+    else if(st==='ok') filterCounts.ok++;
+  });
 
   let html=`<div class="wp-filter-tabs">
     <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')">
@@ -4581,13 +4590,18 @@ function renderWPDocs(){
       <span class="wp-filter-label">Valid</span>
       <span class="wp-filter-count">${filterCounts.ok}</span>
     </button>
+    <button class="wp-filter-tab${wpDocFilter==='optional'?' active':''}" data-f="optional" onclick="wpSetDocFilter('optional')">
+      <span class="wp-filter-label">Optional</span>
+      <span class="wp-filter-count">${filterCounts.optional}</span>
+    </button>
   </div>`;
 
   const renderDocCard=(d)=>{
     const docData=w.docs?.[d.id];
     const st=docStatusAt(docData,today);
-    const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:'Missing'}[st]||'—';
-    const pillClass={ok:'ok',expiring:'expiring',missing:'missing'}[st]||'';
+    const inOptionalTab=wpDocFilter==='optional';
+    const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:inOptionalTab?'Not submitted':'Missing'}[st]||'—';
+    const pillClass={ok:'ok',expiring:'expiring',missing:inOptionalTab?'opt-neutral':'missing'}[st]||'';
     const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
     const hasPending=!!pendingMap[d.id];
     const isOpen=wpDocSubmitOpen[d.id];
@@ -4623,35 +4637,32 @@ function renderWPDocs(){
     </div>`;
   };
 
-  const filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)===wpDocFilter);
-
+  let filtered;
   if(wpDocFilter==='missing'){
-    const reqDocs=filtered.filter(d=>d.req);
-    const optDocs=filtered.filter(d=>!d.req);
-    if(!filtered.length){
-      html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">✓</div><div>No missing documents</div></div>`;
-    } else {
-      if(reqDocs.length){
-        html+=`<div class="wp-req-opt-divider required"><span>Required documents</span></div>`;
-        reqDocs.forEach(d=>{ html+=renderDocCard(d); });
-      }
-      if(optDocs.length){
-        html+=`<div class="wp-req-opt-divider optional"><span>Optional documents</span></div>`;
-        optDocs.forEach(d=>{ html+=renderDocCard(d); });
-      }
-    }
+    filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)==='missing'&&d.req);
+  } else if(wpDocFilter==='optional'){
+    filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)==='missing'&&!d.req);
   } else {
-    if(!filtered.length){
-      const emptyMsg={expiring:'No documents expiring soon',ok:'All documents are up to date'}[wpDocFilter]||'No documents';
-      const emptyIcon={expiring:'🟡',ok:'✓'}[wpDocFilter]||'—';
-      html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
-    } else {
-      const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
-      cats.forEach(cat=>{
-        html+=`<div class="wp-section-title">${esc(cat)}</div>`;
-        filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
-      });
-    }
+    filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)===wpDocFilter);
+  }
+
+  if(!filtered.length){
+    const emptyMsg={missing:'No required documents missing',expiring:'No documents expiring soon',ok:'All documents are up to date',optional:'No optional documents to submit'}[wpDocFilter]||'No documents';
+    const emptyIcon={missing:'✓',expiring:'🟡',ok:'✓',optional:'✓'}[wpDocFilter]||'—';
+    html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
+  } else if(wpDocFilter==='optional'){
+    html+=`<div class="wp-doc-optional-intro">These documents are not required but can be submitted to complete your profile.</div>`;
+    const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
+    cats.forEach(cat=>{
+      html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+      filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
+    });
+  } else {
+    const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
+    cats.forEach(cat=>{
+      html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+      filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
+    });
   }
 
   el.innerHTML=html;
