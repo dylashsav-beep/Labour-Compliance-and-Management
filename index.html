@@ -7513,7 +7513,7 @@ function restoreDeletedItem(id){
 function doExportXLSX(){
   if(typeof XLSX==='undefined'){
     const s=document.createElement('script');
-    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js';
+    s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
     s.onload=()=>_buildExportXLSX();
     s.onerror=()=>alert('Could not load the export library. Check your internet connection and try again.');
     document.head.appendChild(s);
