@@ -44,7 +44,18 @@ ON CONFLICT (id) DO UPDATE SET
 
 
 -- ---------------------------------------------------------------------------
--- 2. ORG_ID HELPER FUNCTION (SECURITY DEFINER bypasses profiles RLS)
+-- 2. ADD ORG_ID TO PROFILES (must exist before current_org_id() function)
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS org_id uuid REFERENCES organisations(id);
+
+-- Assign all existing profiles to the TMC org
+UPDATE profiles SET org_id = '00000000-0000-0000-0001-000000000001' WHERE org_id IS NULL;
+
+
+-- ---------------------------------------------------------------------------
+-- 3. ORG_ID HELPER FUNCTION (SECURITY DEFINER bypasses profiles RLS)
+--    Created after org_id column exists on profiles.
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION current_org_id()
@@ -53,16 +64,6 @@ RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER AS $$
 $$;
 
 GRANT EXECUTE ON FUNCTION current_org_id() TO authenticated;
-
-
--- ---------------------------------------------------------------------------
--- 3. ADD ORG_ID TO PROFILES
--- ---------------------------------------------------------------------------
-
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS org_id uuid REFERENCES organisations(id);
-
--- Assign all existing profiles to the TMC org
-UPDATE profiles SET org_id = '00000000-0000-0000-0001-000000000001' WHERE org_id IS NULL;
 
 
 -- ---------------------------------------------------------------------------
