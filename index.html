@@ -862,11 +862,14 @@ body.wp-mode #sbAuthBar{display:none!important;}
       <div id="returnRequestsList"></div>
     </div>
     <div class="filter-bar">
-      <span class="filter-label">Type:</span>
-      <div style="display:flex;gap:4px;">
-        <button class="fbtn active" data-ft="all"  onclick="setFT('all',this)">All</button>
-        <button class="fbtn"        data-ft="zzp"  onclick="setFT('zzp',this)">ZZP</button>
-        <button class="fbtn"        data-ft="blue" onclick="setFT('blue',this)">Employed</button>
+      <div class="pf-wrap" id="dsfWrap">
+        <button class="fbtn pf-trigger" id="dsfTrigger" onclick="toggleDSFPanel(event)">
+          <span id="dsfLabel">All Doc Sets</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="dsfPanel">
+          <div class="pf-panel-head"><span>Filter by document set</span><button class="pf-clear" onclick="setFDS('all')">Clear</button></div>
+          <div class="pf-options" id="dsfGroup"></div>
+        </div>
       </div>
       <div class="filter-sep"></div>
       <span class="filter-label">Worker:</span>
@@ -2798,7 +2801,7 @@ function switchView(v){
 }
 
 // ─── Filter state (multi-select Sets, empty = show all) ──────────────────────
-let fType  = new Set();  // empty = all types
+let fDocSet= new Set();  // empty = all doc sets (stored as docSetId)
 let fStatus= new Set();  // empty = all compliance statuses
 let fProj  = new Set();  // empty = all projects
 let fActive = 'active';   // worker active filter: active | inactive | all
@@ -2821,13 +2824,66 @@ function toggleFilter(set, value, allBtn, groupSelector){
   renderTable();
 }
 
-function setFT(v,el){
-  const allBtn=document.querySelector('[data-ft="all"]');
-  toggleFilter(fType, v, allBtn, '[data-ft]:not([data-ft="all"])');
-  document.querySelectorAll('[data-ft]').forEach(b=>{
-    if(b.dataset.ft==='all') return;
-    b.classList.toggle('active', fType.has(b.dataset.ft));
-  });
+function setFT(v,el){ /* legacy no-op — replaced by doc set filter */ }
+function toggleDSFPanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('dsfPanel');
+  const trigger=document.getElementById('dsfTrigger');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
+}
+function closeDSFPanel(){
+  const panel=document.getElementById('dsfPanel');
+  const trigger=document.getElementById('dsfTrigger');
+  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(trigger) trigger.classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('dsfWrap');
+  if(wrap&&!wrap.contains(e.target)) closeDSFPanel();
+});
+function setFDS(v){
+  const id=typeof v==='string'?decodeURIComponent(v):v;
+  if(id==='all'){
+    fDocSet.clear();
+  } else {
+    if(fDocSet.has(id)) fDocSet.delete(id); else fDocSet.add(id);
+  }
+  renderDocSetFilters();
+  renderTable();
+}
+function renderDocSetFilters(){
+  const g=document.getElementById('dsfGroup');
+  const label=document.getElementById('dsfLabel');
+  const trigger=document.getElementById('dsfTrigger');
+  if(!g) return;
+  // Clean up stale ids
+  if(fDocSet.size){
+    const knownIds=new Set(docSets.map(s=>s.id));
+    fDocSet.forEach(id=>{if(id!=='__none__'&&!knownIds.has(id)) fDocSet.delete(id);});
+  }
+  if(label){
+    if(fDocSet.size===0){
+      label.innerHTML='All Doc Sets';
+      if(trigger) trigger.classList.remove('active');
+    } else {
+      label.innerHTML=`Doc Set <span class="pf-badge">${fDocSet.size}</span>`;
+      if(trigger) trigger.classList.add('active');
+    }
+  }
+  const options=docSets.map(s=>{
+    const sel=fDocSet.has(s.id);
+    const enc=encodeURIComponent(s.id);
+    return `<label class="pf-option${sel?' checked':''}" onclick="setFDS('${enc}');event.preventDefault()"><input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFDS('${enc}')">${esc(s.name)}</label>`;
+  }).join('');
+  g.innerHTML=options||`<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No document sets</div>`;
 }
 function setFA(v,el){
   fActive = v || 'active';
@@ -2906,7 +2962,7 @@ function setFP(v){
     if(fProj.has(name)) fProj.delete(name);
     else fProj.add(name);
   }
-  renderProjFilters();
+  renderProjFilters();renderDocSetFilters();
   renderTable();
 }
 
@@ -3112,7 +3168,7 @@ function filtered(){
   let l=[...workers];
   if(fActive==='active') l=l.filter(w=>w.active!==false);
   else if(fActive==='inactive') l=l.filter(w=>w.active===false);
-  if(fType.size)   l=l.filter(w=>fType.has(w.type));
+  if(fDocSet.size) l=l.filter(w=>fDocSet.has(w.docSetId||'__none__'));
   if(fStatus.size) l=l.filter(w=>fStatus.has(goStatusAt(w, refDate)));
   if(fProj.size){
     // Filter by workers who have an active project assignment for a selected project in the viewed week
@@ -5273,7 +5329,7 @@ function saveProject(){
   saveProjects();
   closeM('projOverlay');
   renderProjects();
-  renderProjFilters();  // refresh filter bar
+  renderProjFilters();renderDocSetFilters();  // refresh filter bar
   // Refresh add-worker picker if open
   const picker = document.getElementById('addProjPicker');
   if(picker) picker.innerHTML = activeProjectNames().map(p=>`<button type="button" class="proj-btn" onclick="this.classList.toggle('sel')">${p}</button>`).join('');
@@ -5283,7 +5339,7 @@ function toggleProjectActive(id){
   p.active = !p.active;
   saveProjects();
   renderProjects();
-  renderProjFilters();
+  renderProjFilters();renderDocSetFilters();
 }
 function deleteProject(id){
   const p = projectStore.find(x=>x.id===id); if(!p) return;
@@ -5296,7 +5352,7 @@ function deleteProject(id){
     projectStore = projectStore.filter(x=>x.id!==id);
     projectAssignments = projectAssignments.filter(a=>a.projectId!==id);
     saveProjects(); savePA();
-    renderProjects(); renderProjFilters(); renderRoster(); renderTable(); renderDeletedItems();
+    renderProjects(); renderProjFilters();renderDocSetFilters(); renderRoster(); renderTable(); renderDeletedItems();
     // Mark inactive in Supabase immediately — don't rely on deferred sync
     if(sbClient && sbSession && sbCanWriteTable('projects')){
       await sbClient.from('projects').update({active:false}).eq('id',id);
@@ -7480,7 +7536,7 @@ function restoreDeletedItem(id){
   const it=deletedItems.find(x=>x.id===id); if(!it) return;
   tmcConfirm('Restore this archived item?', 'The item will be returned to the active dashboard where possible. The restore action will be recorded in Supabase.', async ()=>{
   const p=it.payload||{};
-  if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters(); renderRoster(); renderTable(); if(sbClient&&sbSession&&p.project.id&&sbCanWriteTable('projects')){ sbClient.from('projects').update({active:true}).eq('id',p.project.id).then(({error})=>{if(error) console.warn('[TMC] restore project Supabase write failed:',error.message);}); (p.assignments||[]).forEach(a=>{if(a.id&&sbCanWriteTable('project_assignments')) sbClient.from('project_assignments').update({active:true}).eq('id',a.id).then(({error})=>{if(error) console.warn('[TMC] restore project assignments Supabase write failed:',error.message);});}); } }
+  if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters();renderDocSetFilters(); renderRoster(); renderTable(); if(sbClient&&sbSession&&p.project.id&&sbCanWriteTable('projects')){ sbClient.from('projects').update({active:true}).eq('id',p.project.id).then(({error})=>{if(error) console.warn('[TMC] restore project Supabase write failed:',error.message);}); (p.assignments||[]).forEach(a=>{if(a.id&&sbCanWriteTable('project_assignments')) sbClient.from('project_assignments').update({active:true}).eq('id',a.id).then(({error})=>{if(error) console.warn('[TMC] restore project assignments Supabase write failed:',error.message);});}); } }
   else if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); if(sbClient&&sbSession&&restored.id&&sbCanWriteTable('project_assignments')){ sbClient.from('project_assignments').update({active:true,archived_at:null,archived_by:null}).eq('id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment Supabase write failed:',error.message); }); if(sbCanWriteTable('project_assignment_files')) sbClient.from('project_assignment_files').update({active:true}).eq('project_assignment_id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment files Supabase write failed:',error.message); }); } }
   else if(it.type==='worker_document_file'){ if(!fileStore[p.wid])fileStore[p.wid]={}; if(!fileStore[p.wid][p.did])fileStore[p.wid][p.did]=[]; fileStore[p.wid][p.did].push(p.file); refreshFiles(p.wid,p.did); const fp=p.file?.file_path||p.file?.storagePath; if(sbClient&&sbSession&&fp&&sbCanWriteTable('worker_document_files')){ sbClient.from('worker_document_files').update({active:true}).eq('file_path',fp).then(({error})=>{ if(error) console.warn('[TMC] restore worker file Supabase write failed:',error.message); }); } }
   else if(it.type==='worker_status_change'){ const wid=p.workerId||p.wid||p._meta?.workerId; const w=workers.find(x=>x.id===wid); if(w){ w.active = p.oldActive !== false; renderTable(); renderStats(); if(curW===wid) rebuildModal(wid); sbUpdateWorkerActiveImmediate(wid, p.oldActive !== false).catch(e=>console.warn('[TMC] restore worker status Supabase write failed:',e.message)); } }
@@ -8246,7 +8302,7 @@ async function sbLoadAll(){
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     sbHasLoadedRemote = true;
-    renderProjFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
+    renderProjFilters();renderDocSetFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
       const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
       if(workerErr){
@@ -8472,7 +8528,7 @@ async function sbBoot(){
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 // loadProjects() was called at definition time above, so projectStore is ready
-renderProjFilters();
+renderProjFilters();renderDocSetFilters();
 renderWeekLabel();
 renderTable();
 applyRoleUI();
