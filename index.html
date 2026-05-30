@@ -4415,7 +4415,7 @@ function supersedFile(wid,did,idx){
   if((f.file_path||f.storagePath)&&sbClient&&sbSession&&sbCanWriteTable('worker_document_files')){
     const docId=`${wid}__${did}`;
     const fileId=`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`;
-    sbClient.from('worker_document_files').update({superseded:!!f.superseded}).eq('id',fileId)
+    sbClient.from('worker_document_files').update({superseded:!!f.superseded}).eq('id',fileId).eq('org_id',currentOrgId||SITE_ORG_ID)
       .then(({error})=>{if(error) console.warn('[TMC] supersedFile update failed:',error.message);});
   }
 }
@@ -5061,7 +5061,7 @@ async function approveReturnRequest(reqId){
     await sbClient.from('worker_resource_return_requests').update({
       status:'approved',reviewed_at:new Date().toISOString(),
       reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null
-    }).eq('id',reqId);
+    }).eq('id',reqId).eq('org_id',currentOrgId||SITE_ORG_ID);
     // Update the assignment end_date to the admin-confirmed date
     if(table){
       const updateObj={end_date:endDate};
@@ -5070,7 +5070,7 @@ async function approveReturnRequest(reqId){
         updateObj.return_file_path=r.file_path;
         updateObj.return_file_name=r.file_name||null;
       }
-      await sbClient.from(table).update(updateObj).eq('id',r.assignment_id);
+      await sbClient.from(table).update(updateObj).eq('id',r.assignment_id).eq('org_id',currentOrgId||SITE_ORG_ID);
       // Update in-memory too
       if(r.resource_type==='accommodation'){
         Object.values(accomHistory||{}).forEach(arr=>arr.forEach(a=>{if(a.id===r.assignment_id)a.endDate=endDate;}));
@@ -6723,7 +6723,7 @@ async function removeCharge(){
   renderResources();
   if(sbClient&&sbSession){
     const table=type==='accom'?'accommodation_charges':type==='tool'?'tool_charges':'vehicle_charges';
-    sbClient.from(table).update({active:false}).eq('id',id).then(({error})=>{if(error)console.warn('[TMC] charge remove failed:',error.message);});
+    sbClient.from(table).update({active:false}).eq('id',id).eq('org_id',currentOrgId||SITE_ORG_ID).then(({error})=>{if(error)console.warn('[TMC] charge remove failed:',error.message);});
   }
 }
 function openBillingDetail(type, assignmentId, wid){
@@ -8174,6 +8174,7 @@ async function sbLoadProfile(){
         full_name: sbSession.user.user_metadata?.full_name || sbSession.user.email?.split('@')[0] || '',
         role: defaultRole,
         active: isFirstAdmin,
+        org_id: currentOrgId || SITE_ORG_ID,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {onConflict:'id'}).select().maybeSingle();
@@ -8293,7 +8294,7 @@ async function updateUserRole(userId, role){
   const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
   if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account role cannot be changed.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, role, null)){ await renderRolesPanel(); return; }
-  const {data:upd,error}=await sbClient.from('profiles').update({role,updated_at:new Date().toISOString()}).eq('id',userId).select();
+  const {data:upd,error}=await sbClient.from('profiles').update({role,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID).select();
   if(error){alert(error.message);return;}
   if(!upd?.length){alert('Role was not saved — Supabase RLS blocked the update. Run migrations/fix_profiles_rls_circular.sql in Supabase SQL Editor.');return;}
   if(userId === sbSession?.user?.id) await sbLoadProfile();
@@ -8304,7 +8305,7 @@ async function updateUserActive(userId, active){
   const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
   if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account cannot be deactivated.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, null, active)){ await renderRolesPanel(); return; }
-  const {data:upd,error}=await sbClient.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',userId).select();
+  const {data:upd,error}=await sbClient.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID).select();
   if(error){alert(error.message);return;}
   if(!upd?.length){alert('Active status was not saved — Supabase RLS blocked the update. Run migrations/fix_profiles_rls_circular.sql in Supabase SQL Editor.');return;}
   if(userId === sbSession?.user?.id) await sbLoadProfile();
