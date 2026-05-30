@@ -337,6 +337,14 @@ input[type="date"].expand-input::-webkit-calendar-picker-indicator{cursor:pointe
 .file-dl,.file-rm{background:none;border:none;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:3px;transition:all .15s;line-height:1;}
 .file-dl{color:var(--sky);} .file-dl:hover{background:var(--sky-xl);color:var(--navy);}
 .file-rm{color:var(--text-l);} .file-rm:hover{color:var(--red);background:var(--red-l);}
+.file-sup-btn{background:none;border:none;cursor:pointer;font-size:10px;padding:2px 5px;border-radius:3px;transition:all .15s;line-height:1;color:var(--text-l);font-weight:600;}
+.file-sup-btn:hover{background:var(--bg);color:var(--navy);}
+.file-sup-section{margin-top:4px;}
+.file-sup-section summary{font-size:11px;color:var(--text-l);cursor:pointer;padding:4px 6px;border-radius:4px;list-style:none;display:flex;align-items:center;gap:4px;user-select:none;}
+.file-sup-section summary:hover{background:var(--bg);color:var(--navy);}
+.file-sup-section summary::before{content:'▶';font-size:9px;transition:transform .15s;}
+.file-sup-section[open] summary::before{transform:rotate(90deg);}
+.file-sup-section .file-row{background:var(--bg);opacity:.75;}
 
 /* ADD FORM */
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -4155,15 +4163,11 @@ function rebuildModal(id){
       const st=docStatusAt(doc, new Date());   // effective status for display colour
       const storedSt=doc.status||'missing';    // editable stored value for the dropdown
       const key=`${id}_${d.id}`, isOpen=expandedDoc===key;
-      const files=(fileStore[id]&&fileStore[id][d.id]||[]).map((f,fi)=>`
-        <div class="file-row">
-          <span class="file-name" title="${esc(f.name)}">${esc(f.name)}</span>
-          <span class="file-size">${fsz(f.size)}</span>
-          <div class="file-actions">
-            <button class="file-dl" onclick="dlFile('${id}','${d.id}',${fi})" title="Download">↓</button>
-            <button class="file-rm" onclick="rmFile('${id}','${d.id}',${fi})" title="Remove">✕</button>
-          </div>
-        </div>`).join('');
+      const _allFiles=(fileStore[id]&&fileStore[id][d.id]||[]).map((f,fi)=>({f,fi}));
+      const _mkFileRow=({f,fi},inSup)=>`<div class="file-row"><span class="file-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="file-size">${fsz(f.size)}</span><div class="file-actions"><button class="file-dl" onclick="dlFile('${id}','${d.id}',${fi})" title="Download">↓</button><button class="file-sup-btn" onclick="supersedFile('${id}','${d.id}',${fi})" title="${inSup?'Restore to current':'Mark as superseded'}">${inSup?'↑ Restore':'↓ Supersede'}</button><button class="file-rm" onclick="rmFile('${id}','${d.id}',${fi})" title="Remove">✕</button></div></div>`;
+      const _curFiles=_allFiles.filter(x=>!x.f.superseded);
+      const _supFiles=_allFiles.filter(x=>!!x.f.superseded);
+      const files=_curFiles.map(x=>_mkFileRow(x,false)).join('')+(_supFiles.length?`<details class="file-sup-section"><summary>${_supFiles.length} superseded file${_supFiles.length>1?'s':''}</summary>${_supFiles.map(x=>_mkFileRow(x,true)).join('')}</details>`:``)
       html+=`<div class="doc-item ${st}" id="di_${key}">
         <div class="doc-item-row">
           <div class="doc-icon">${d.icon}</div>
@@ -4259,7 +4263,7 @@ function toggleExp(wid,did){const key=`${wid}_${did}`;const el=document.getEleme
 function attachF(wid,did,input){
   if(!fileStore[wid])fileStore[wid]={};if(!fileStore[wid][did])fileStore[wid][did]=[];
   const promises=Array.from(input.files).map(f=>new Promise(res=>{
-    const reader=new FileReader();reader.onload=e=>res({name:f.name,size:f.size,type:f.type,dataUrl:e.target.result});reader.readAsDataURL(f);
+    const reader=new FileReader();reader.onload=e=>res({name:f.name,size:f.size,type:f.type,dataUrl:e.target.result,superseded:false});reader.readAsDataURL(f);
   }));
   Promise.all(promises).then(nf=>{fileStore[wid][did].push(...nf);refreshFiles(wid,did);input.value='';});
 }
@@ -4281,8 +4285,25 @@ function rmFile(wid,did,idx){
 }
 function refreshFiles(wid,did){
   const el=document.getElementById(`fl_${wid}_${did}`);if(!el)return;
-  const files=fileStore[wid]&&fileStore[wid][did]||[];
-  el.innerHTML=files.map((f,fi)=>`<div class="file-row"><span class="file-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="file-size">${fsz(f.size)}</span><div class="file-actions"><button class="file-dl" onclick="dlFile('${wid}','${did}',${fi})" title="Download">↓</button><button class="file-rm" onclick="rmFile('${wid}','${did}',${fi})" title="Remove">✕</button></div></div>`).join('');
+  const allFiles=(fileStore[wid]&&fileStore[wid][did]||[]).map((f,fi)=>({f,fi}));
+  const mkRow=({f,fi},inSup)=>`<div class="file-row"><span class="file-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="file-size">${fsz(f.size)}</span><div class="file-actions"><button class="file-dl" onclick="dlFile('${wid}','${did}',${fi})" title="Download">↓</button><button class="file-sup-btn" onclick="supersedFile('${wid}','${did}',${fi})" title="${inSup?'Restore to current':'Mark as superseded'}">${inSup?'↑ Restore':'↓ Supersede'}</button><button class="file-rm" onclick="rmFile('${wid}','${did}',${fi})" title="Remove">✕</button></div></div>`;
+  const cur=allFiles.filter(x=>!x.f.superseded);
+  const sup=allFiles.filter(x=>!!x.f.superseded);
+  el.innerHTML=cur.map(x=>mkRow(x,false)).join('')+(sup.length?`<details class="file-sup-section"><summary>${sup.length} superseded file${sup.length>1?'s':''}</summary>${sup.map(x=>mkRow(x,true)).join('')}</details>`:'');
+}
+function supersedFile(wid,did,idx){
+  const files=fileStore[wid]&&fileStore[wid][did];
+  if(!files||files[idx]===undefined) return;
+  files[idx].superseded=!files[idx].superseded;
+  refreshFiles(wid,did);
+  sbScheduleSync();
+  const f=files[idx];
+  if((f.file_path||f.storagePath)&&sbClient&&sbSession&&sbCanWriteTable('worker_document_files')){
+    const docId=`${wid}__${did}`;
+    const fileId=`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`;
+    sbClient.from('worker_document_files').update({superseded:!!f.superseded}).eq('id',fileId)
+      .then(({error})=>{if(error) console.warn('[TMC] supersedFile update failed:',error.message);});
+  }
 }
 function refreshScore(wid){
   if(curW===wid) rebuildModal(wid);
@@ -4375,7 +4396,7 @@ function wpLoadPortalData(data){
   (data.worker_doc_files||[]).forEach(f=>{
     const doc=(data.worker_docs||[]).find(x=>x.id===f.worker_document_id);
     const did=doc?.doc_key;
-    if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); }
+    if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); }
   });
   projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',active:p.active!==false}));
   projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:[]}));
@@ -7840,7 +7861,7 @@ async function sbPersistAll(force=false){
     return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString()};
   }));
   const wdocs=[], wfiles=[];
-  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true}); }); }));
+  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
@@ -8111,7 +8132,7 @@ async function sbLoadAll(){
     workers.forEach(w=>{tmplForWorker(w).forEach(d=>w.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});});
     (wdocData||[]).forEach(d=>{const w=workers.find(x=>x.id===d.worker_id); if(w){w.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]};}});
     Object.keys(fileStore).forEach(k=>delete fileStore[k]); workers.forEach(w=>{fileStore[w.id]={}; tmplForWorker(w).forEach(d=>fileStore[w.id][d.id]=[]);});
-    (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
+    (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
     const paFiles={}; (pafData||[]).forEach(f=>{ if(!paFiles[f.project_assignment_id]) paFiles[f.project_assignment_id]=[]; paFiles[f.project_assignment_id].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,dbId:f.id}); });
     projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:paFiles[a.id]||[]}));

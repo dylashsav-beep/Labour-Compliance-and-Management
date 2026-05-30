@@ -220,7 +220,15 @@ ALTER TABLE workers
 
 
 -- ---------------------------------------------------------------------------
--- 6. DOCUMENT SET ITEM INFO FIELDS
+-- 6. WORKER DOCUMENT FILE SUPERSEDED FLAG
+-- ---------------------------------------------------------------------------
+
+ALTER TABLE worker_document_files
+  ADD COLUMN IF NOT EXISTS superseded boolean NOT NULL DEFAULT false;
+
+
+-- ---------------------------------------------------------------------------
+-- 7. DOCUMENT SET ITEM INFO FIELDS
 -- ---------------------------------------------------------------------------
 
 ALTER TABLE document_set_items
@@ -229,7 +237,7 @@ ALTER TABLE document_set_items
 
 
 -- ---------------------------------------------------------------------------
--- 7. STORAGE POLICY — ALLOW ANON WORKERS TO UPLOAD PROOF FILES
+-- 8. STORAGE POLICY — ALLOW ANON WORKERS TO UPLOAD PROOF FILES
 -- ---------------------------------------------------------------------------
 
 DO $$ BEGIN
