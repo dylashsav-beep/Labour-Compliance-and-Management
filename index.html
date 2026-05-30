@@ -641,60 +641,94 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .pending-sub-actions{display:flex;gap:6px;flex-shrink:0;}
 
 /* ── Worker portal mobile-first styles ── */
-#workerPortal{display:none;min-height:100vh;background:var(--bg,#f1f5f9);-webkit-overflow-scrolling:touch;}
-.wp-header{background:#1a2035;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
+#workerPortal{display:none;min-height:100vh;background:#f8fafc;-webkit-overflow-scrolling:touch;}
+.wp-header{background:#1e293b;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
 .wp-header-left{min-width:0;}
-.wp-header-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;}
+.wp-header-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;letter-spacing:.01em;}
 .wp-header-name{font-size:12px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
 .wp-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-.wp-signout-btn{background:#334155;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;}
-.wp-signout-btn:active{background:#475569;}
-.wp-status-banner{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border,#e2e8f0);background:#fff;flex-wrap:wrap;}
+.wp-signout-btn{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
+.wp-signout-btn:active{background:rgba(255,255,255,.18);}
+.wp-status-banner{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2e8f0;background:#fff;flex-wrap:wrap;}
 .wp-status-text{font-size:14px;font-weight:600;}
-.wp-tabs{display:flex;gap:0;border-bottom:2px solid var(--border,#e2e8f0);background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.wp-tab{flex:1;min-width:80px;padding:14px 8px;font-size:14px;font-weight:600;color:var(--text-l,#94a3b8);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;}
-.wp-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;}
-.wp-body{max-width:680px;margin:0 auto;padding:20px 16px;}
-.wp-section-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-l,#94a3b8);margin:20px 0 10px;}
+/* Tabs — navigation state only, NOT action color */
+.wp-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.wp-tab{flex:1;min-width:72px;padding:14px 6px 12px;font-size:13px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
+.wp-tab.active{color:#1e293b;border-bottom-color:#1e293b;font-weight:700;}
+.wp-tab:hover:not(.active){color:#334155;}
+.wp-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;}
+.wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
 body.wp-mode #sbAuthBar{display:none!important;}
-.wp-filter-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
-.wp-filter-tab{padding:11px 6px;border-radius:8px;border:2px solid var(--border,#e2e8f0);background:#fff;font-size:13px;font-weight:600;color:var(--text-m,#475569);cursor:pointer;min-height:44px;text-align:center;transition:border-color .12s,background .12s,color .12s;}
-.wp-filter-tab.active{background:#4f46e5;color:#fff;border-color:#4f46e5;}
-.wp-filter-tab:active{opacity:.8;}
-.wp-empty-filter{text-align:center;padding:32px 16px;color:var(--text-l);font-size:14px;}
-.wp-doc-row{padding:16px 0;border-bottom:1px solid var(--border,#e2e8f0);}
+/* Filter tabs — status pill style, distinct from buttons */
+.wp-filter-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:24px;}
+.wp-filter-tab{padding:12px 6px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
+.wp-filter-tab:active{opacity:.85;}
+.wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+.wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
+.wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
+.wp-empty-filter{text-align:center;padding:40px 16px;color:#94a3b8;font-size:14px;}
+.wp-empty-icon{font-size:36px;margin-bottom:10px;}
+/* Doc rows */
+.wp-doc-row{padding:16px;background:#fff;border-radius:12px;margin-bottom:10px;border:1px solid #e2e8f0;transition:box-shadow .15s;}
+.wp-doc-row:last-child{margin-bottom:0;}
 .wp-doc-top{display:flex;align-items:flex-start;gap:12px;}
-.doc-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#e0e7ff;color:#4f46e5;font-size:11px;font-weight:800;border:none;cursor:pointer;flex-shrink:0;line-height:1;vertical-align:middle;margin-left:5px;}
-.doc-info-btn:hover,.doc-info-btn:focus{background:#c7d2fe;}
-.doc-link-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#4f46e5;text-decoration:none;padding:2px 7px;border-radius:10px;background:#e0e7ff;margin-left:5px;vertical-align:middle;white-space:nowrap;}
-.doc-link-btn:hover{background:#c7d2fe;text-decoration:none;}
-.doc-info-tooltip{font-size:12px;color:var(--text-m);background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:6px;line-height:1.5;}
-.wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;}
+.wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;width:32px;text-align:center;}
 .wp-doc-info{flex:1;min-width:0;}
-.wp-doc-name{font-size:15px;font-weight:700;color:#1a2035;line-height:1.3;}
-.wp-doc-meta{font-size:13px;color:var(--text-l,#94a3b8);margin-top:4px;line-height:1.5;}
-.wp-doc-btn{display:block;width:100%;margin-top:12px;padding:12px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:44px;}
-.wp-doc-btn:active{background:#4338ca;}
-.wp-doc-btn.cancel{background:#e2e8f0;color:#475569;}
-.wp-doc-btn.cancel:active{background:#cbd5e1;}
-.wp-submit-form{background:var(--sky-xl,#f0f9ff);border:1px solid var(--sky-l,#bae6fd);border-radius:10px;padding:14px;margin-top:12px;display:flex;flex-direction:column;gap:12px;overflow:hidden;}
-.wp-submit-form label{font-size:12px;font-weight:600;color:var(--text-m,#475569);display:block;margin-bottom:4px;}
-.wp-submit-form input,.wp-submit-form .form-input{width:100%;max-width:100%;box-sizing:border-box;min-height:44px;font-size:15px;-webkit-appearance:none;appearance:none;}
-.wp-submit-form input[type=file]{min-height:44px;padding:8px;}
+.wp-doc-name{font-size:15px;font-weight:700;color:#1e293b;line-height:1.3;margin-bottom:4px;}
+.wp-doc-meta{font-size:13px;color:#64748b;line-height:1.5;}
+.wp-status-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-top:4px;}
+.wp-status-pill.ok{background:#dcfce7;color:#166534;}
+.wp-status-pill.expiring{background:#fef3c7;color:#92400e;}
+.wp-status-pill.missing{background:#fee2e2;color:#b91c1c;}
+.wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
+.wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
+.wp-pending-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-top:8px;}
+/* Required / Optional split divider */
+.wp-req-opt-divider{display:flex;align-items:center;gap:10px;margin:20px 0 12px;}
+.wp-req-opt-divider span{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.wp-req-opt-divider::before,.wp-req-opt-divider::after{content:'';flex:1;height:1px;background:#e2e8f0;}
+.wp-req-opt-divider.required span{color:#b91c1c;}
+.wp-req-opt-divider.optional span{color:#94a3b8;}
+/* Info / link */
+.doc-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:800;border:none;cursor:pointer;flex-shrink:0;line-height:1;vertical-align:middle;margin-left:5px;}
+.doc-info-btn:hover{background:#bfdbfe;}
+.doc-link-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#1d4ed8;text-decoration:none;padding:2px 7px;border-radius:10px;background:#dbeafe;margin-left:5px;vertical-align:middle;white-space:nowrap;}
+.doc-link-btn:hover{background:#bfdbfe;}
+.doc-info-tooltip{font-size:12px;color:#475569;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:6px;line-height:1.5;}
+/* Submit form */
+.wp-submit-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:14px;display:flex;flex-direction:column;gap:12px;}
+.wp-submit-form label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;}
+.wp-submit-form input,.wp-submit-form .form-input{width:100%;max-width:100%;box-sizing:border-box;min-height:46px;font-size:15px;-webkit-appearance:none;appearance:none;}
+.wp-submit-form input[type=file]{min-height:46px;padding:8px;}
 .wp-submit-row{display:flex;gap:10px;}
 .wp-submit-row .wp-doc-btn{flex:1;}
-.wp-pending-badge{display:inline-block;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;margin-top:4px;}
-.wp-assign-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;}
-.wp-assign-title{font-size:15px;font-weight:700;color:#1a2035;margin-bottom:6px;}
-.wp-assign-meta{font-size:13px;color:var(--text-l);line-height:1.6;}
-.wp-profile-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px 16px;}
-.wp-profile-title{font-size:16px;font-weight:700;color:#1a2035;margin-bottom:16px;}
+/* Action buttons — DISTINCT from tabs: emerald green */
+.wp-doc-btn{display:block;width:100%;margin-top:14px;padding:13px 16px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:48px;transition:background .15s;}
+.wp-doc-btn:active{background:#047857;}
+.wp-doc-btn.cancel{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+.wp-doc-btn.cancel:active{background:#e2e8f0;}
+/* Assignment cards */
+.wp-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;}
+.wp-assign-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;}
+.wp-assign-meta{font-size:13px;color:#64748b;line-height:1.6;}
+/* Profile */
+.wp-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 16px;}
+.wp-profile-title{font-size:16px;font-weight:700;color:#1e293b;margin-bottom:16px;}
 .wp-profile-field{margin-bottom:14px;}
-.wp-profile-field label{font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:5px;}
-.wp-profile-field input,.wp-profile-field textarea{width:100%;box-sizing:border-box;min-height:44px;font-size:15px;}
-.wp-profile-save{width:100%;padding:14px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer;min-height:50px;margin-top:6px;}
-.wp-profile-save:active{background:#4338ca;}
-.wp-readonly-field{background:var(--bg,#f1f5f9);border-radius:6px;padding:10px 12px;font-size:14px;color:var(--text-m,#475569);min-height:44px;display:flex;align-items:center;}
+.wp-profile-field label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px;}
+.wp-profile-field input,.wp-profile-field textarea{width:100%;box-sizing:border-box;min-height:46px;font-size:15px;}
+.wp-profile-save{width:100%;padding:14px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;min-height:50px;margin-top:6px;transition:background .15s;}
+.wp-profile-save:active{background:#047857;}
+.wp-readonly-field{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:14px;color:#475569;min-height:44px;display:flex;align-items:center;}
+/* Doc card layout helpers */
+.wp-filter-label{display:block;font-size:13px;font-weight:600;}
+.wp-doc-name-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+.wp-doc-name{font-size:15px;font-weight:700;color:#1e293b;line-height:1.3;}
+.wp-doc-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.wp-doc-tip{font-size:12px;color:#64748b;font-style:italic;margin-top:6px;line-height:1.4;}
+.wp-doc-links{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.wp-expiry-tag{font-size:12px;color:#64748b;white-space:nowrap;}
 
 </style>
 </head>
@@ -4530,76 +4564,96 @@ function renderWPDocs(){
   const tmpl=tmplForWorker(w);
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
 
-  // Filter tabs
-  const filterLabels={missing:'Missing',expiring:'Expiring Soon',ok:'Valid'};
+  // Filter tab counts
   const filterCounts={missing:0,expiring:0,ok:0};
   tmpl.forEach(d=>{ const st=docStatusAt(w.docs?.[d.id],today); if(filterCounts[st]!==undefined) filterCounts[st]++; });
-  let html=`<div class="wp-filter-tabs">`;
-  ['missing','expiring','ok'].forEach(f=>{
-    html+=`<button class="wp-filter-tab${wpDocFilter===f?' active':''}" onclick="wpSetDocFilter('${f}')">${filterLabels[f]}<br><span style="font-size:11px;font-weight:400;">${filterCounts[f]}</span></button>`;
-  });
-  html+=`</div>`;
 
-  // Filtered docs
+  let html=`<div class="wp-filter-tabs">
+    <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')">
+      <span class="wp-filter-label">Missing</span>
+      <span class="wp-filter-count">${filterCounts.missing}</span>
+    </button>
+    <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')">
+      <span class="wp-filter-label">Expiring</span>
+      <span class="wp-filter-count">${filterCounts.expiring}</span>
+    </button>
+    <button class="wp-filter-tab${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')">
+      <span class="wp-filter-label">Valid</span>
+      <span class="wp-filter-count">${filterCounts.ok}</span>
+    </button>
+  </div>`;
+
+  const renderDocCard=(d)=>{
+    const docData=w.docs?.[d.id];
+    const st=docStatusAt(docData,today);
+    const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:'Missing'}[st]||'—';
+    const pillClass={ok:'ok',expiring:'expiring',missing:'missing'}[st]||'';
+    const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
+    const hasPending=!!pendingMap[d.id];
+    const isOpen=wpDocSubmitOpen[d.id];
+    const reqBadge=d.req?`<span class="wp-req-badge">Required</span>`:`<span class="wp-opt-badge">Optional</span>`;
+    return `<div class="wp-doc-row">
+      <div class="wp-doc-top">
+        <div class="wp-doc-icon">${d.icon||'📄'}</div>
+        <div class="wp-doc-info">
+          <div class="wp-doc-name-row">
+            <span class="wp-doc-name">${esc(d.name)}</span>
+            ${reqBadge}
+          </div>
+          <div class="wp-doc-meta-row">
+            <span class="wp-status-pill ${pillClass}">${stLabel}</span>
+            ${expiryStr?`<span class="wp-expiry-tag">${st==='expiring'?'Expires':'Expired'}: ${expiryStr}</span>`:''}
+          </div>
+          ${hasPending?`<div class="wp-pending-badge">⏳ Awaiting admin review</div>`:''}
+          ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
+          ${d.infoText||d.infoUrl?`<div class="wp-doc-links">${d.infoText?`<button class="doc-info-btn" onclick="var s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none'">i</button><div class="doc-info-tooltip" style="display:none;">${esc(d.infoText)}</div>`:''} ${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 More info</a>`:''}</div>`:''}
+        </div>
+      </div>
+      ${isOpen?`<div class="wp-submit-form">
+        <div><label>Expiry date</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/></div>
+        <div><label>Issue date (optional)</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/></div>
+        <div><label>Attach document (optional)</label><input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/></div>
+        <div><label>Notes (optional)</label><input type="text" class="form-input" id="wpNote_${d.id}" placeholder="Any notes for the reviewer…"/></div>
+        <div class="wp-submit-row">
+          <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">Submit for review</button>
+          <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
+        </div>
+      </div>`:''}
+      ${!isOpen&&!hasPending?`<button class="wp-doc-btn" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
+    </div>`;
+  };
+
   const filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)===wpDocFilter);
-  if(!filtered.length){
-    const emptyMsg={missing:'No missing documents',expiring:'No documents expiring soon',ok:'No valid documents'}[wpDocFilter]||'No documents';
-    html+=`<div class="wp-empty-filter">${emptyMsg}</div>`;
-    el.innerHTML=html; return;
+
+  if(wpDocFilter==='missing'){
+    const reqDocs=filtered.filter(d=>d.req);
+    const optDocs=filtered.filter(d=>!d.req);
+    if(!filtered.length){
+      html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">✓</div><div>No missing documents</div></div>`;
+    } else {
+      if(reqDocs.length){
+        html+=`<div class="wp-req-opt-divider required"><span>Required documents</span></div>`;
+        reqDocs.forEach(d=>{ html+=renderDocCard(d); });
+      }
+      if(optDocs.length){
+        html+=`<div class="wp-req-opt-divider optional"><span>Optional documents</span></div>`;
+        optDocs.forEach(d=>{ html+=renderDocCard(d); });
+      }
+    }
+  } else {
+    if(!filtered.length){
+      const emptyMsg={expiring:'No documents expiring soon',ok:'All documents are up to date'}[wpDocFilter]||'No documents';
+      const emptyIcon={expiring:'🟡',ok:'✓'}[wpDocFilter]||'—';
+      html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
+    } else {
+      const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
+      cats.forEach(cat=>{
+        html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+        filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
+      });
+    }
   }
 
-  const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
-  cats.forEach(cat=>{
-    html+=`<div class="wp-section-title">${esc(cat)}</div>`;
-    filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{
-      const docData=w.docs?.[d.id];
-      const st=docStatusAt(docData,today);
-      const stColor={ok:'#276749',expiring:'#b45309',missing:'#c53030'}[st]||'#64748b';
-      const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:'Missing'}[st]||'—';
-      const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
-      const hasPending=!!pendingMap[d.id];
-      const isOpen=wpDocSubmitOpen[d.id];
-
-      html+=`<div class="wp-doc-row">
-        <div class="wp-doc-top">
-          <div class="wp-doc-icon">${d.icon||'📄'}</div>
-          <div class="wp-doc-info">
-            <div class="wp-doc-name">${esc(d.name)}${d.req?' <span style="font-size:11px;color:#c53030;font-weight:700;">Required</span>':''}</div>
-            <div class="wp-doc-meta">
-              Status: <strong style="color:${stColor};">${stLabel}</strong>
-              ${docData?.expiry?`<br>Expires: ${expiryStr}`:''}
-            </div>
-            ${hasPending?`<div class="wp-pending-badge" style="margin-top:6px;">Awaiting admin review</div>`:''}
-            ${d.tip?`<div class="wp-doc-meta" style="margin-top:4px;font-style:italic;">${esc(d.tip)}</div>`:''}
-            ${d.infoText||d.infoUrl?`<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;">${d.infoText?`<button class="doc-info-btn" onclick="var s=this.nextElementSibling;s.style.display=s.style.display==='none'?'block':'none'">i</button><div class="doc-info-tooltip" style="display:none;width:100%;">${esc(d.infoText)}</div>`:''} ${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 More info / form</a>`:''}</div>`:''}
-          </div>
-        </div>
-        ${isOpen?`<div class="wp-submit-form">
-          <div>
-            <label>Expiry date</label>
-            <input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/>
-          </div>
-          <div>
-            <label>Issue date (optional)</label>
-            <input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/>
-          </div>
-          <div>
-            <label>Attach document (optional)</label>
-            <input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/>
-          </div>
-          <div>
-            <label>Notes (optional)</label>
-            <input type="text" class="form-input" id="wpNote_${d.id}" placeholder="Any notes for the reviewer…"/>
-          </div>
-          <div class="wp-submit-row">
-            <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">Submit for review</button>
-            <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
-          </div>
-        </div>`:''}
-        ${!isOpen&&!hasPending?`<button class="wp-doc-btn" style="margin-top:10px;" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
-      </div>`;
-    });
-  });
   el.innerHTML=html;
 }
 function wpToggleSubmit(docKey){
