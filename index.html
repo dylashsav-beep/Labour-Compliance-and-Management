@@ -594,7 +594,21 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-#sbAuthBar{position:sticky;top:75px;z-index:190;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);border-radius:6px;margin:12px auto;padding:10px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between;max-width:1480px;font-size:12px;color:var(--text-m)}
+/* Header sync indicator */
+.header-sync-wrap{display:flex;align-items:center;gap:8px;margin-right:12px;flex-shrink:0;}
+.hsync-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.01em;white-space:nowrap;transition:background .3s,color .3s;}
+.hsync-pill::before{content:'';width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+.hsync-live{background:rgba(34,197,94,.18);color:#bbf7d0;}.hsync-live::before{background:#4ade80;}
+.hsync-synced{background:rgba(34,197,94,.18);color:#bbf7d0;}.hsync-synced::before{background:#4ade80;}
+.hsync-syncing{background:rgba(251,191,36,.18);color:#fde68a;}.hsync-syncing::before{background:#fbbf24;animation:hsync-blink 1s step-start infinite;}
+.hsync-loading{background:rgba(251,191,36,.18);color:#fde68a;}.hsync-loading::before{background:#fbbf24;animation:hsync-blink 1s step-start infinite;}
+.hsync-error{background:rgba(239,68,68,.18);color:#fca5a5;}.hsync-error::before{background:#f87171;}
+.hsync-offline{background:rgba(255,255,255,.1);color:rgba(255,255,255,.55);}.hsync-offline::before{background:rgba(255,255,255,.3);}
+@keyframes hsync-blink{0%,100%{opacity:1;}50%{opacity:.35;}}
+.hsync-user{font-size:12px;color:rgba(255,255,255,.65);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+.btn-hdr{padding:5px 11px;font-size:12px;font-weight:600;border-radius:5px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:background .15s;}
+.btn-hdr:hover{background:rgba(255,255,255,.2);}
+#sbAuthBar{position:sticky;top:75px;z-index:190;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);border-radius:6px;margin:12px auto;padding:10px 14px;display:none!important;gap:10px;align-items:center;justify-content:space-between;max-width:1480px;font-size:12px;color:var(--text-m)}
 #sbAuthBar strong{color:var(--navy)}
 #sbLoginOverlay{position:fixed;inset:0;background:#fff;z-index:10000;display:none;align-items:center;justify-content:center;padding:20px}
 #sbLoginOverlay.open{display:flex}
@@ -688,6 +702,7 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;}
 .wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
 body.wp-mode #sbAuthBar{display:none!important;}
+body.wp-mode #headerSyncWrap{display:none!important;}
 /* Filter tabs — status pill style, distinct from buttons */
 .wp-filter-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:24px;}
 .wp-filter-tab{padding:10px 4px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
@@ -842,6 +857,13 @@ body.wp-mode #sbAuthBar{display:none!important;}
         <div class="logo-name"><span id="headerAppTitle">TMC Compliance</span></div>
       </div>
       <div class="header-spacer"></div>
+      <div class="header-sync-wrap" id="headerSyncWrap">
+        <span id="headerSyncPill" class="hsync-pill hsync-offline">Offline</span>
+        <span id="headerSyncUser" class="hsync-user"></span>
+        <button id="hdrLoginBtn" class="btn-hdr" onclick="sbOpenLogin()">Sign in</button>
+        <button id="hdrSyncBtn" class="btn-hdr" onclick="sbForceSync()" style="display:none" title="Force sync now">Sync</button>
+        <button id="hdrLogoutBtn" class="btn-hdr" onclick="sbLogout()" style="display:none">Logout</button>
+      </div>
       <div class="header-actions">
         <button class="btn btn-outline" onclick="doExportXLSX()">Export XLSX</button>
         <button class="btn btn-outline" id="exportFilesBtn" onclick="exportWorkerFiles()">Export Files</button>
@@ -2224,6 +2246,7 @@ let sbSession = null;
 let sbReady = false;
 let sbSyncTimer = null;
 let sbIsLoading = false;
+let sbLoadStartTime = null;
 let sbHasLoadedRemote = false;
 let sbRealtimeChannel = null;
 let sbRemoteReloadTimer = null;
@@ -2313,13 +2336,38 @@ function sbShowLoginPrompt(show, msg){
 function sbRefreshAuthButtons(){
   const hasSession = !!sbSession;
   const canUseApp = !!sbSession && !!sbUserActive && sbUserRole !== 'no_access';
+  // Legacy bar buttons (bar is hidden via CSS; kept for compat)
   const loginBtn=document.getElementById('sbAuthLoginBtn'), syncBtn=document.getElementById('sbAuthSyncBtn'), logoutBtn=document.getElementById('sbAuthLogoutBtn');
   if(loginBtn) loginBtn.style.display = canUseApp ? 'none' : 'inline-flex';
   if(syncBtn) syncBtn.style.display = canUseApp ? 'inline-flex' : 'none';
   if(logoutBtn) logoutBtn.style.display = hasSession ? 'inline-flex' : 'none';
+  // Header buttons
+  const hdrLogin=document.getElementById('hdrLoginBtn'), hdrSync=document.getElementById('hdrSyncBtn'), hdrLogout=document.getElementById('hdrLogoutBtn'), hdrUser=document.getElementById('headerSyncUser');
+  if(hdrLogin) hdrLogin.style.display = canUseApp ? 'none' : 'inline-flex';
+  if(hdrSync) hdrSync.style.display = canUseApp ? 'inline-flex' : 'none';
+  if(hdrLogout) hdrLogout.style.display = hasSession ? 'inline-flex' : 'none';
+  if(hdrUser) hdrUser.textContent = canUseApp ? (sbSession?.user?.email?.split('@')[0]||'') : '';
 }
 function sbOpenLogin(){ sbShowSignIn(); document.getElementById('sbLoginOverlay')?.classList.add('open'); sbShowLoginPrompt(false); sbRefreshAuthButtons(); setTimeout(()=>document.getElementById('sbEmail')?.focus(),80); }
-function sbSetStatus(text, online){ const bar=document.getElementById('sbAuthBar'), pill=document.getElementById('sbStatus'); if(bar)bar.style.display='flex'; if(pill){pill.textContent=text; pill.style.background=online?'var(--green-l)':'var(--amber-l)'; pill.style.borderColor=online?'var(--green-b)':'var(--amber-b)'; pill.style.color=online?'var(--green)':'var(--amber)';} sbRefreshAuthButtons(); }
+function sbSetStatus(text, online){
+  // Map verbose status messages to compact header pill states
+  const t = text.toLowerCase();
+  let label, state;
+  if(t.includes('loading')){ label='Loading'; state='loading'; }
+  else if(t.includes('syncing') || t.includes('sync error') || t.includes('sync failed')){ label='Syncing'; state='syncing'; }
+  else if(t.includes('synced') || t.includes('loaded')){ label='Synced'; state='synced'; }
+  else if(t.includes('live') || t.includes('subscribed')){ label='Live'; state='live'; }
+  else if(t.includes('error') || t.includes('failed') || t.includes('blocked') || t.includes('timed out')){ label='Error'; state='error'; }
+  else if(t.includes('offline') || t.includes('login required') || t.includes('sign in') || t.includes('pending')){ label='Offline'; state='offline'; }
+  else if(online){ label='Live'; state='live'; }
+  else{ label='Offline'; state='offline'; }
+  const hpill=document.getElementById('headerSyncPill');
+  if(hpill){ hpill.textContent=label; hpill.className='hsync-pill hsync-'+state; }
+  // Also update legacy pill (bar hidden via CSS)
+  const pill=document.getElementById('sbStatus');
+  if(pill) pill.textContent=text;
+  sbRefreshAuthButtons();
+}
 
 // ─── Doc Templates ────────────────────────────────────────────────────────────
 // ─── Settings Store ───────────────────────────────────────────────────────────
@@ -8273,13 +8321,43 @@ function sbStartRealtime(){
   // Poll less aggressively so an old browser tab is less likely to overwrite fresh database state.
   clearInterval(sbLivePollTimer);
   sbLivePollTimer = setInterval(()=>{
+    // Watchdog: if sbIsLoading has been stuck for >45s, force-clear it
+    if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>45000){
+      console.warn('[TMC] Poll watchdog: clearing stuck sbIsLoading');
+      sbIsLoading=false; sbLoadStartTime=null;
+      sbSetStatus('Supabase: load timed out — retrying…', false);
+    }
     if(sbReady && sbSession && !sbIsLoading && Date.now() >= sbSuppressRealtimeUntil){
       sbQueueRemoteReload('poll');
     }
   }, 30000);
+  // Recover when tab becomes visible after being hidden (e.g. phone sleep / tab switch)
+  if(!window._sbVisibilityListenerAdded){
+    window._sbVisibilityListenerAdded=true;
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState!=='visible') return;
+      // If stuck loading, clear it
+      if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>10000){
+        console.warn('[TMC] Visibility: clearing stuck sbIsLoading');
+        sbIsLoading=false; sbLoadStartTime=null;
+        sbHasLoadedRemote=false;
+      }
+      // Trigger reload when returning to tab
+      if(sbReady && sbSession && !sbIsLoading){
+        setTimeout(()=>sbQueueRemoteReload('visibility'),400);
+      }
+    });
+    window.addEventListener('online',()=>{
+      sbSetStatus('Supabase: back online…', true);
+      if(sbReady && sbSession && !sbIsLoading) setTimeout(()=>sbLoadAll().catch(()=>{}),500);
+    });
+    window.addEventListener('offline',()=>{
+      sbSetStatus('Supabase: offline', false);
+    });
+  }
 }
 
-function sbScheduleSync(){ if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return; clearTimeout(sbSyncTimer); sbSyncTimer=setTimeout(()=>sbPersistAll().catch(e=>{ console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message, false); }),650); }
+function sbScheduleSync(){ if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return; clearTimeout(sbSyncTimer); sbSyncTimer=setTimeout(()=>{ sbSetStatus('Supabase: syncing…',true); sbPersistAll().then(()=>sbSetStatus('Supabase: synced',true)).catch(e=>{ console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message, false); }); },650); }
 async function sbForceSync(){ try{ await sbPersistAll(true); alert('Synced to Supabase.'); }catch(e){ alert('Sync failed: '+e.message); } }
 
 async function sbUploadEmbeddedFiles(){
@@ -8608,7 +8686,16 @@ async function updateUserActive(userId, active){
 async function sbLoadAll(){
   if(!sbClient||!sbSession) return;
   sbIsLoading=true;
+  sbLoadStartTime=Date.now();
   sbSetStatus('Supabase: loading…', true);
+  // Watchdog: if any query hangs, unblock sbIsLoading after 35s so sync/poll can recover
+  const _loadWatchdog=setTimeout(()=>{
+    if(sbIsLoading){
+      console.warn('[TMC] Load watchdog: clearing stuck sbIsLoading after 35s');
+      sbIsLoading=false; sbLoadStartTime=null;
+      sbSetStatus('Supabase: load timed out — tap Sync to retry', false);
+    }
+  }, 35000);
   sbLastWorkerLoadProblem = null;
   const loadErrors = [];
   const tableErr = (name, error) => {
@@ -8715,7 +8802,7 @@ async function sbLoadAll(){
     sbSetStatus('Supabase: load failed — ' + (e.message||e), false);
     renderTable();
     throw e;
-  } finally { sbIsLoading=false; }
+  } finally { clearTimeout(_loadWatchdog); sbIsLoading=false; sbLoadStartTime=null; }
 }
 
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
