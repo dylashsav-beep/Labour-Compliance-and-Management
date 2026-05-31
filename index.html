@@ -269,6 +269,11 @@ td{padding:10px 14px;vertical-align:middle;}
 /* MODALS */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
 .overlay.open{display:flex;}
+.export-opt-row{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;cursor:pointer;transition:background .12s;}
+.export-opt-row:hover{background:var(--bg);}
+.export-opt-row input{margin-top:2px;flex-shrink:0;accent-color:var(--navy);}
+.export-opt-label{font-size:13px;font-weight:600;color:var(--text);}
+.export-opt-desc{font-size:11px;color:var(--text-l);margin-top:2px;line-height:1.4;}
 .modal{background:#fff;border-radius:8px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.16);animation:min .18s ease;}
 #fileViewerOverlay{z-index:600;}
 #fileViewerOverlay .modal{max-width:960px;width:95vw;height:90vh;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -2275,6 +2280,46 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
 </div>
 
+<div class="overlay" id="exportOptionsOverlay">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Export Worker Files</div>
+        <div class="modal-subtitle">Choose what to include in the ZIP</div>
+      </div>
+      <button class="modal-close" onclick="closeM('exportOptionsOverlay')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:12px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">File options</div>
+      <label class="export-opt-row">
+        <input type="checkbox" id="expOptSuperseded"/>
+        <div class="export-opt-info">
+          <div class="export-opt-label">Include superseded files</div>
+          <div class="export-opt-desc">Older document versions that have been replaced. Excluded by default.</div>
+        </div>
+      </label>
+      <div style="font-size:12px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 10px;">Worker scope</div>
+      <label class="export-opt-row">
+        <input type="radio" name="expScope" id="expScopeFiltered" value="filtered" checked/>
+        <div class="export-opt-info">
+          <div class="export-opt-label">Current filter only</div>
+          <div class="export-opt-desc">Only the workers visible in the current table view.</div>
+        </div>
+      </label>
+      <label class="export-opt-row">
+        <input type="radio" name="expScope" id="expScopeAll" value="all"/>
+        <div class="export-opt-info">
+          <div class="export-opt-label">All active workers</div>
+          <div class="export-opt-desc">Every active worker regardless of current filter.</div>
+        </div>
+      </label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-cancel" onclick="closeM('exportOptionsOverlay')">Cancel</button>
+      <button class="btn btn-save" onclick="_doExportWithOptions()">Export ZIP</button>
+    </div>
+  </div>
+</div>
 <div class="overlay" id="tmcConfirmOverlay">
   <div class="modal" style="max-width:500px;">
     <div class="modal-header">
@@ -8280,9 +8325,20 @@ function _buildExportXLSX(){
 }
 function doExport(){doExportXLSX();}
 
-async function exportWorkerFiles(){
+function exportWorkerFiles(){
   if(!sbClient||!sbSession){alert('Please sign in to export files.');return;}
-  const list=filtered();
+  // Reset options to defaults then show dialog
+  const supOpt=document.getElementById('expOptSuperseded');
+  const scopeFiltered=document.getElementById('expScopeFiltered');
+  if(supOpt) supOpt.checked=false;
+  if(scopeFiltered) scopeFiltered.checked=true;
+  document.getElementById('exportOptionsOverlay').classList.add('open');
+}
+async function _doExportWithOptions(){
+  closeM('exportOptionsOverlay');
+  const includeSuperseeded=document.getElementById('expOptSuperseded')?.checked||false;
+  const scopeAll=document.getElementById('expScopeAll')?.checked||false;
+  const list=scopeAll?workers.filter(w=>w.active!==false):filtered();
   if(!list.length){alert('No workers in current filter.');return;}
 
   const safe=s=>s.replace(/[/\\:*?"<>|]/g,'_').trim();
@@ -8298,7 +8354,10 @@ async function exportWorkerFiles(){
     for(const [docId,files] of Object.entries(fileStore[w.id]||{})){
       if(!files||!files.length) continue;
       const folder=safe(docNameMap[docId]||docId);
-      for(const f of files) toExport.push({safeW,folderPath:folder,file:f});
+      for(const f of files){
+        if(f.superseded && !includeSuperseeded) continue;
+        toExport.push({safeW,folderPath:folder,file:f,superseded:!!f.superseded});
+      }
     }
 
     // Assignment contract files
@@ -8345,8 +8404,8 @@ async function exportWorkerFiles(){
   let done=0,failed=0;
   const total=toExport.length;
 
-  for(const {safeW,folderPath,file} of toExport){
-    const zipFolder=safeW+'/'+folderPath;
+  for(const {safeW,folderPath,file,superseded} of toExport){
+    const zipFolder=safeW+'/'+(superseded?folderPath+'/Superseded':folderPath);
     if(!usedNames[zipFolder]) usedNames[zipFolder]=new Set();
 
     // Deduplicate filename within folder
