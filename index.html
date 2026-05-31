@@ -769,6 +769,13 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-assign-chevron{font-size:16px;color:#94a3b8;flex-shrink:0;}
 .wp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:20px 0 8px;}
 .wp-section-label:first-child{margin-top:0;}
+.wp-past-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;margin:16px 0 0;user-select:none;transition:background .12s;}
+.wp-past-toggle:hover{background:#f1f5f9;}
+.wp-past-toggle-label{font-size:13px;font-weight:600;color:#475569;}
+.wp-past-toggle-arrow{font-size:14px;color:#94a3b8;transition:transform .2s;}
+.wp-past-toggle-arrow.open{transform:rotate(180deg);}
+.wp-call-link{display:inline-flex;align-items:center;gap:6px;color:#16a34a;font-size:14px;font-weight:700;text-decoration:none;padding:8px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;}
+.wp-call-link:hover{background:#dcfce7;}
 /* Project detail overlay */
 #wpProjDetail{position:fixed;inset:0;background:#f1f5f9;z-index:120;display:none;overflow-y:auto;}
 .wp-proj-detail-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1e293b;color:#fff;position:sticky;top:0;z-index:5;}
@@ -2129,6 +2136,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <div class="form-field full"><label class="form-label">Project Name</label><input class="form-input" id="pName" placeholder="e.g. Zuidas Tower Phase 2"/></div>
         <div class="form-field"><label class="form-label">Client</label><input class="form-input" id="pClient" placeholder="e.g. Schiphol Group"/></div>
         <div class="form-field"><label class="form-label">Lead Project Manager</label><input class="form-input" id="pPM" placeholder="e.g. Jan de Vries"/></div>
+        <div class="form-field"><label class="form-label">Contact Phone (optional)</label><input class="form-input" id="pPhone" type="tel" placeholder="e.g. +31 6 12345678"/></div>
         <div class="form-field full"><label class="form-label">Description (optional)</label><input class="form-input" id="pDesc" placeholder="Brief description of the project"/></div>
         <div class="form-field full">
           <label class="form-label">Location (optional)</label>
@@ -4718,7 +4726,7 @@ function wpLoadPortalData(data){
     const did=doc?.doc_key;
     if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); }
   });
-  projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
+  projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',phone:p.contact_phone||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
   projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:[]}));
   wpSubmissions=data.submissions||[];
   // Resource assignments for worker portal
@@ -4967,10 +4975,21 @@ function renderWPAssignments(){
     html+=current.map(mkCard).join('');
   }
   if(past.length){
-    html+=`<div class="wp-section-label">Past Projects</div>`;
-    html+=past.map(mkCard).join('');
+    html+=`<button class="wp-past-toggle" onclick="wpTogglePast(this)" aria-expanded="false">
+      <span class="wp-past-toggle-label">Past Projects (${past.length})</span>
+      <span class="wp-past-toggle-arrow">▼</span>
+    </button>
+    <div id="wpPastCards" style="display:none;">${past.map(mkCard).join('')}</div>`;
   }
   el.innerHTML=html;
+}
+function wpTogglePast(btn){
+  const cards=document.getElementById('wpPastCards'); if(!cards) return;
+  const open=cards.style.display==='none';
+  cards.style.display=open?'block':'none';
+  const arrow=btn.querySelector('.wp-past-toggle-arrow');
+  if(arrow) arrow.classList.toggle('open',open);
+  btn.setAttribute('aria-expanded',String(open));
 }
 function wpOpenProjDetail(assignmentId){
   const a=projectAssignments.find(x=>x.id===assignmentId); if(!a) return;
@@ -4983,9 +5002,13 @@ function wpOpenProjDetail(assignmentId){
       ?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">📍 Open in Maps</a>`
       :`<span>${esc(proj.location)}</span>`)
     :'<span style="color:#94a3b8;">—</span>';
+  const phoneHtml=proj?.phone
+    ?`<a class="wp-call-link" href="tel:${esc(proj.phone.replace(/\s/g,''))}">📞 ${esc(proj.phone)}</a>`
+    :'';
   const infoRows=[
     proj?.client    ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Client</span><span class="wp-proj-info-value">${esc(proj.client)}</span></div>`:'',
     proj?.pm        ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Project Leader</span><span class="wp-proj-info-value">${esc(proj.pm)}</span></div>`:'',
+    proj?.phone     ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Contact</span><span class="wp-proj-info-value">${phoneHtml}</span></div>`:'',
     proj?.location  ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Location</span><span class="wp-proj-info-value">${locationHtml}</span></div>`:'',
     proj?.desc      ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Description</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(proj.desc)}</span></div>`:'',
   ].filter(Boolean).join('');
@@ -5646,6 +5669,7 @@ function openAddProject(){
   document.getElementById('pName').value = '';
   document.getElementById('pClient').value = '';
   document.getElementById('pPM').value = '';
+  document.getElementById('pPhone').value = '';
   document.getElementById('pDesc').value = '';
   document.getElementById('pLocation').value = '';
   document.getElementById('pStatus').value = 'active';
@@ -5658,6 +5682,7 @@ function editProject(id){
   document.getElementById('pName').value = p.name;
   document.getElementById('pClient').value = p.client||'';
   document.getElementById('pPM').value = p.pm||'';
+  document.getElementById('pPhone').value = p.phone||'';
   document.getElementById('pDesc').value = p.desc||'';
   document.getElementById('pLocation').value = p.location||'';
   document.getElementById('pStatus').value = p.active?'active':'inactive';
@@ -5669,18 +5694,19 @@ function saveProject(){
   if(name.length > 120){ alert('Project name must be 120 characters or fewer.'); return; }
   const client = document.getElementById('pClient').value.trim();
   const pm = document.getElementById('pPM').value.trim();
+  const phone = document.getElementById('pPhone').value.trim();
   const desc = document.getElementById('pDesc').value.trim();
   const location = document.getElementById('pLocation').value.trim();
   const active = document.getElementById('pStatus').value === 'active';
   if(editingProjectId){
     const p = projectStore.find(x=>x.id===editingProjectId);
-    if(p){ p.name=name; p.client=client; p.pm=pm; p.desc=desc; p.location=location; p.active=active; }
+    if(p){ p.name=name; p.client=client; p.pm=pm; p.phone=phone; p.desc=desc; p.location=location; p.active=active; }
   } else {
     // Check for duplicate name
     if(projectStore.some(p=>p.name.toLowerCase()===name.toLowerCase())){
       alert('A project with this name already exists.');return;
     }
-    projectStore.push({id:crypto.randomUUID(),name,client,pm,desc,location,active});
+    projectStore.push({id:crypto.randomUUID(),name,client,pm,phone,desc,location,active});
   }
   saveProjects();
   closeM('projOverlay');
@@ -8565,7 +8591,7 @@ async function sbPersistAll(force=false){
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   await sbUpsertRows('document_set_items',dsi);
-  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
+  await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',contact_phone:p.phone||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
@@ -8856,7 +8882,7 @@ async function sbLoadAll(){
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
       (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
     }
-    if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
+    if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',phone:p.contact_phone||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
 
     workers.forEach(w=>{tmplForWorker(w).forEach(d=>w.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});});
     (wdocData||[]).forEach(d=>{const w=workers.find(x=>x.id===d.worker_id); if(w){w.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]};}});
