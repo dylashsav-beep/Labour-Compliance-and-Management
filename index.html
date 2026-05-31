@@ -1052,7 +1052,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     </div>
     <div class="legend">
       <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Document on file</div>
-      <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Expiring within 60 days (still on site — action needed)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Expiring within <span id="legendWarningDays">60</span> days (still on site — action needed)</div>
       <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>Missing or expired (No-Go)</div>
     </div>
     <div class="table-card">
@@ -5990,9 +5990,11 @@ function _orgDefaultLogo(){
 }
 
 function updateWarnDesc(){
-  const el=document.getElementById('warnDesc');if(!el)return;
   const d=settings.warningDays;
-  el.textContent=`Documents expiring within ${d} day${d!==1?'s':''} will show as ⚠ Warning. Documents expiring after that will show as ✓ Go.`;
+  const el=document.getElementById('warnDesc');
+  if(el) el.textContent=`Documents expiring within ${d} day${d!==1?'s':''} will show as ⚠ Warning. Documents expiring after that will show as ✓ Go.`;
+  const leg=document.getElementById('legendWarningDays');
+  if(leg) leg.textContent=d;
 }
 
 function applyWarningDays(days){
@@ -8924,7 +8926,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; updateWarnDesc(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
