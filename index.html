@@ -2989,14 +2989,17 @@ function scoreAt(w, refDate){
 
 // Auto-recompute stored doc statuses from expiry dates — called after load and after setting expiry
 function recomputeDocStatuses(){
+  // 'expired' is display-only — never stored (DB check constraint allows ok/expiring/missing).
+  // Only sync 'expiring' ↔ 'ok' transitions so the DB reflects upcoming expiries.
   const today=new Date(); let changed=false;
   workers.forEach(w=>{
     if(!w.docs)return;
     Object.keys(w.docs).forEach(did=>{
       const doc=w.docs[did];
-      if(!doc||doc.status==='missing')return; // never auto-change missing
+      if(!doc||doc.status==='missing')return;
       const computed=docStatusAt(doc,today);
-      if(doc.status!==computed){doc.status=computed;changed=true;}
+      const storable=computed==='expired'?'ok':computed; // expired stays as 'ok' in DB
+      if(doc.status!==storable){doc.status=storable;changed=true;}
     });
   });
   if(changed)sbScheduleSync();
@@ -4575,9 +4578,9 @@ function _setExpiryInline(wid,did,val){
   const w=workers.find(x=>x.id===wid);if(!w||!w.docs[did])return;
   w.docs[did].date=val;
   if(val&&w.docs[did].status!=='missing'){
-    // recompute effective status from the new date immediately
     const computed=docStatusAt(w.docs[did],new Date());
-    w.docs[did].status=computed;
+    // 'expired' is display-only — store as 'ok' (doc is on file; date drives expired display)
+    w.docs[did].status=computed==='expired'?'ok':computed;
     const key=`${wid}_${did}`;
     const sel=document.getElementById(`ssel_${key}`);if(sel){sel.className=`status-select ${computed}`;sel.value=computed;}
     const di=document.getElementById(`di_${key}`);if(di)di.className=`doc-item ${computed}`;
