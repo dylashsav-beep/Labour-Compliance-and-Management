@@ -133,9 +133,11 @@ td{padding:10px 14px;vertical-align:middle;}
 .worker-active-badge.active{background:var(--green-l);color:var(--green);border:1px solid var(--green-b);}
 .worker-active-badge.inactive{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
 .project-tag{display:inline-block;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);}
-/* Assigned-this-week tags — visually distinct */
-.assign-tag{display:block;font-size:12px;color:var(--text-m);cursor:pointer;white-space:nowrap;line-height:1.5;}
+/* Assigned-this-week tags */
+.assign-tag{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;max-width:200px;line-height:1.4;}
 .assign-tag:hover{color:var(--navy);text-decoration:underline;}
+.assign-tag-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.assign-tag-icon{flex-shrink:0;font-size:11px;opacity:.65;}
 .assign-none{font-size:12px;color:var(--text-l);font-style:italic;}
 
 /* DOC CHIPS */
@@ -3198,7 +3200,8 @@ function workerAssignmentSummary(wid){
   const assigns=projectAssignments.filter(a=>a.wid===wid).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
   if(!assigns.length) return '<span class="assign-none">No assignments</span>';
   const a=assigns[0]; const p=projectStore.find(x=>x.id===a.projectId);
-  return `<span class="assign-tag" onclick="openEditPA('${a.id}')">${esc(p?.name||'Unknown project')} <span style="font-size:10px;opacity:.7;">${hasContractFile(a)?'📎':'⚠'}</span></span><div style="font-size:10px;color:var(--text-l);margin-top:2px;">${a.startDate||'—'} → ${a.endDate||'Ongoing'}</div>`;
+  const name=esc(p?.name||'Unknown project');
+  return `<span class="assign-tag" title="${name}" onclick="openEditPA('${a.id}')"><span class="assign-tag-name">${name}</span><span class="assign-tag-icon">${hasContractFile(a)?'📎':'⚠'}</span></span><div style="font-size:11px;color:var(--text-l);margin-top:2px;">${a.startDate||'—'} → ${a.endDate||'Ongoing'}</div>`;
 }
 function renderInactiveWorkersTable(){
   const card=document.getElementById('inactiveWorkersCard'), body=document.getElementById('inactiveWorkersTBody'), count=document.getElementById('inactiveWorkersCount');
@@ -3556,7 +3559,7 @@ function renderTable(){
       return s<=wkSun2&&e>=wkMon2;
     });
     const weekPAHtml=weekPAs.length
-      ?`<div style="display:flex;flex-direction:column;gap:3px;">${weekPAs.map(a=>{const p=projectStore.find(x=>x.id===a.projectId);const icon=hasContractFile(a)?'📎':'⚠';return`<span class="assign-tag" title="${hasContractFile(a)?'Contract attached':'No contract — click to edit'}" onclick="openEditPA('${a.id}')">${esc(p?.name||'?')} <span style="font-size:10px;opacity:.7;">${icon}</span></span>`}).join('')}</div>`
+      ?`<div style="display:flex;flex-direction:column;gap:4px;">${weekPAs.map(a=>{const p=projectStore.find(x=>x.id===a.projectId);const hasContract=hasContractFile(a);const icon=hasContract?'📎':'⚠';const tip=hasContract?'Contract attached':'No contract — click to edit';const name=esc(p?.name||'?');return`<span class="assign-tag" title="${name} — ${tip}" onclick="openEditPA('${a.id}')"><span class="assign-tag-name">${name}</span><span class="assign-tag-icon">${icon}</span></span>`}).join('')}</div>`
       :`<span class="assign-none">Not assigned</span>`;
     const workerActive = w.active !== false;
     return `<tr style="${!workerActive?'opacity:.58;background:#fafafa;':''}">
