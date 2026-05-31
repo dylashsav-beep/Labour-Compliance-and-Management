@@ -8483,7 +8483,12 @@ function sbQueueRemoteReload(reason){
   sbSetStatus('Supabase: live update detected…', true);
   sbRemoteReloadTimer = setTimeout(async()=>{
     try{ await sbLoadAll(); sbSetStatus('Supabase: live', true); }
-    catch(e){ console.warn('Realtime reload failed:', e.message); sbSetStatus('Supabase: reload warning', false); }
+    catch(e){
+      console.warn('Realtime reload failed:', e.message);
+      // Force-clear in case sbLoadAll's finally didn't run (e.g. OOM/script error)
+      sbIsLoading=false; sbLoadStartTime=null;
+      sbSetStatus('Supabase: reload warning', false);
+    }
   }, 650);
 }
 function sbStartRealtime(){
@@ -8498,11 +8503,12 @@ function sbStartRealtime(){
   // Poll less aggressively so an old browser tab is less likely to overwrite fresh database state.
   clearInterval(sbLivePollTimer);
   sbLivePollTimer = setInterval(()=>{
-    // Watchdog: if sbIsLoading has been stuck for >45s, force-clear it
-    if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>45000){
-      console.warn('[TMC] Poll watchdog: clearing stuck sbIsLoading');
-      sbIsLoading=false; sbLoadStartTime=null;
+    // Watchdog: if sbIsLoading has been stuck for >20s, force-clear it and retry
+    if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>20000){
+      console.warn('[TMC] Poll watchdog: clearing stuck sbIsLoading after 20s');
+      sbIsLoading=false; sbLoadStartTime=null; sbHasLoadedRemote=false;
       sbSetStatus('Supabase: load timed out — retrying…', false);
+      setTimeout(()=>{ if(sbReady&&sbSession&&!sbIsLoading) sbLoadAll().catch(()=>{}); }, 500);
     }
     if(sbReady && sbSession && !sbIsLoading && Date.now() >= sbSuppressRealtimeUntil){
       sbQueueRemoteReload('poll');
@@ -8514,7 +8520,7 @@ function sbStartRealtime(){
     document.addEventListener('visibilitychange',()=>{
       if(document.visibilityState!=='visible') return;
       // If stuck loading, clear it
-      if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>10000){
+      if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>8000){
         console.warn('[TMC] Visibility: clearing stuck sbIsLoading');
         sbIsLoading=false; sbLoadStartTime=null;
         sbHasLoadedRemote=false;
@@ -8534,7 +8540,21 @@ function sbStartRealtime(){
   }
 }
 
-function sbScheduleSync(){ if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return; clearTimeout(sbSyncTimer); sbSyncTimer=setTimeout(()=>{ sbSetStatus('Supabase: syncing…',true); sbPersistAll().then(()=>sbSetStatus('Supabase: synced',true)).catch(e=>{ console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message, false); }); },650); }
+function sbScheduleSync(){
+  if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return;
+  clearTimeout(sbSyncTimer);
+  sbSyncTimer=setTimeout(()=>{
+    sbSetStatus('Supabase: syncing…',true);
+    // Race persist against a 30s timeout so "Syncing" can never hang forever
+    const _syncWatchdog=setTimeout(()=>{
+      console.warn('[TMC] Sync watchdog: persist took >30s, marking error');
+      sbSetStatus('Supabase: sync timed out — tap Sync to retry',false);
+    },30000);
+    sbPersistAll()
+      .then(()=>{ clearTimeout(_syncWatchdog); sbSetStatus('Supabase: synced',true); })
+      .catch(e=>{ clearTimeout(_syncWatchdog); console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message,false); });
+  },650);
+}
 async function sbForceSync(){ try{ await sbPersistAll(true); alert('Synced to Supabase.'); }catch(e){ alert('Sync failed: '+e.message); } }
 
 async function sbUploadEmbeddedFiles(){
@@ -8620,7 +8640,8 @@ async function sbPersistAll(force=false){
   if(!force && !sbHasLoadedRemote) return;
   sbSuppressRealtimeUntil = Date.now() + 2500;
   sbSetStatus('Supabase: syncing…', true);
-  await sbUploadEmbeddedFiles();
+  try{ await sbUploadEmbeddedFiles(); }
+  catch(e){ console.error('[TMC] File upload failed during sync:',e); sbSetStatus('Supabase: file upload error — '+e.message,false); throw e; }
   const userId=sbSession.user.id;
   const oid=currentOrgId||SITE_ORG_ID;
   // Remote guards: prevent stale browser tabs/local caches from reactivating archived items or worker inactive states.
@@ -8865,14 +8886,14 @@ async function sbLoadAll(){
   sbIsLoading=true;
   sbLoadStartTime=Date.now();
   sbSetStatus('Supabase: loading…', true);
-  // Watchdog: if any query hangs, unblock sbIsLoading after 35s so sync/poll can recover
+  // Watchdog: if any query hangs, unblock sbIsLoading after 20s so sync/poll can recover
   const _loadWatchdog=setTimeout(()=>{
     if(sbIsLoading){
-      console.warn('[TMC] Load watchdog: clearing stuck sbIsLoading after 35s');
+      console.warn('[TMC] Load watchdog: clearing stuck sbIsLoading after 20s');
       sbIsLoading=false; sbLoadStartTime=null;
       sbSetStatus('Supabase: load timed out — tap Sync to retry', false);
     }
-  }, 35000);
+  }, 20000);
   sbLastWorkerLoadProblem = null;
   const loadErrors = [];
   const tableErr = (name, error) => {
@@ -8960,7 +8981,6 @@ async function sbLoadAll(){
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     sbHasLoadedRemote = true;
-    recomputeDocStatuses(); // auto-update expired/expiring based on today's date
     renderProjFilters();renderDocSetFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
       const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
@@ -8980,7 +9000,13 @@ async function sbLoadAll(){
     sbSetStatus('Supabase: load failed — ' + (e.message||e), false);
     renderTable();
     throw e;
-  } finally { clearTimeout(_loadWatchdog); sbIsLoading=false; sbLoadStartTime=null; }
+  } finally {
+    clearTimeout(_loadWatchdog);
+    sbIsLoading=false;
+    sbLoadStartTime=null;
+    // Run AFTER clearing sbIsLoading so its sbScheduleSync() call isn't blocked
+    recomputeDocStatuses();
+  }
 }
 
 function sbWrap(name){ const old=window[name]; if(typeof old==='function'){ window[name]=function(...args){ const action=sbActionForFunction(name); if(action && !requireAction(action, name)) return; const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out; }; } }
