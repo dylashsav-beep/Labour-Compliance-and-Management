@@ -144,11 +144,13 @@ td{padding:10px 14px;vertical-align:middle;}
 .chip.ok{color:var(--green);border-color:var(--green-b);background:var(--green-l);}
 .chip.missing{color:var(--red);border-color:var(--red-b);background:var(--red-l);}
 .chip.expiring{color:var(--amber);border-color:var(--amber-b);background:var(--amber-l);}
+.chip.expired{color:#991b1b;border-color:#fca5a5;background:#fee2e2;}
 .chip:hover{opacity:.75;}
 .chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .chip.ok .chip-dot{background:var(--green);}
 .chip.missing .chip-dot{background:var(--red);}
 .chip.expiring .chip-dot{background:var(--amber);}
+.chip.expired .chip-dot{background:#dc2626;}
 
 /* SCORE */
 .score-cell{display:flex;align-items:center;gap:8px;}
@@ -306,6 +308,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .doc-item.ok{border-left-color:var(--green);}
 .doc-item.missing{border-left-color:var(--red);}
 .doc-item.expiring{border-left-color:var(--amber);}
+.doc-item.expired{border-left-color:#dc2626;}
 .doc-item-row{display:flex;align-items:center;padding:8px 12px;gap:8px;}
 .doc-icon{font-size:15px;flex-shrink:0;}
 .doc-info{flex:1;min-width:0;}
@@ -323,6 +326,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .status-select.ok{background:var(--green-l);color:var(--green);border-color:var(--green-b);}
 .status-select.missing{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
 .status-select.expiring{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b);}
+.status-select.expired{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
 .status-select option{background:#fff;color:var(--text);}
 .attach-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-m);cursor:pointer;transition:all .15s;}
 .attach-btn:hover{border-color:var(--navy);color:var(--navy);}
@@ -711,11 +715,12 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 body.wp-mode #sbAuthBar{display:none!important;}
 body.wp-mode #headerSyncWrap{display:none!important;}
 /* Filter tabs — status pill style, distinct from buttons */
-.wp-filter-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:24px;}
+.wp-filter-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:24px;}
 .wp-filter-tab{padding:10px 4px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
 .wp-filter-tab:active{opacity:.85;}
 .wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
 .wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.wp-filter-tab.active[data-f="expired"]{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
 .wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
 .wp-filter-tab.active[data-f="optional"]{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
 .wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
@@ -733,6 +738,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-status-pill.ok{background:#dcfce7;color:#166534;}
 .wp-status-pill.expiring{background:#fef3c7;color:#92400e;}
 .wp-status-pill.missing{background:#fee2e2;color:#b91c1c;}
+.wp-status-pill.expired{background:#fee2e2;color:#991b1b;}
 .wp-status-pill.opt-neutral{background:#f1f5f9;color:#475569;}
 .wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
 .wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
@@ -2942,20 +2948,20 @@ function tmpl(w){ return tmplForWorker(w); }
 //
 // Logic:
 //   - If stored status is 'missing' (or no doc): always missing
-//   - If stored status is 'ok' or 'expiring':
+//   - If doc is on file (any non-missing status):
 //       → compute against expiry date relative to refDate
 //       → if no expiry date: stays 'ok'
-//       → if expiry < refDate: 'missing' (expired by that week)
-//       → if expiry is within 60 days of refDate: 'expiring'
+//       → if expiry < refDate: 'expired'
+//       → if expiry is within settings.warningDays of refDate: 'expiring'
 //       → otherwise: 'ok'
 function docStatusAt(doc, refDate){
   // No doc or explicitly marked missing — always missing regardless of date
   if(!doc || doc.status==='missing') return 'missing';
-  // Doc is on file (ok or expiring stored) — evaluate against the viewed week
+  // Doc is on file — evaluate against the expiry date
   if(!doc.date) return 'ok'; // on file with no expiry date — always valid
   const expiry = new Date(doc.date); expiry.setHours(0,0,0,0);
   const ref    = new Date(refDate);  ref.setHours(0,0,0,0);
-  if(expiry < ref) return 'missing';  // expired before this week → no-go
+  if(expiry < ref) return 'expired';  // past expiry date
   const daysLeft = (expiry - ref) / 86400000;
   if(daysLeft <= settings.warningDays) return 'expiring'; // expiring soon → warning
   return 'ok';
@@ -2965,7 +2971,7 @@ function docStatusAt(doc, refDate){
 function goStatusAt(w, refDate){
   const t=tmpl(w);
   const req=t.filter(d=>d.req);
-  const anyMissing=req.some(d=>docStatusAt(w.docs[d.id], refDate)==='missing');
+  const anyMissing=req.some(d=>{ const s=docStatusAt(w.docs[d.id],refDate); return s==='missing'||s==='expired'; });
   if(anyMissing) return 'nogo';
   const anyExpiring=req.some(d=>docStatusAt(w.docs[d.id], refDate)==='expiring');
   if(anyExpiring) return 'warning';
@@ -2979,6 +2985,21 @@ function scoreAt(w, refDate){
     return st==='ok'||st==='expiring';
   });
   return req.length?Math.round(present.length/req.length*100):0;
+}
+
+// Auto-recompute stored doc statuses from expiry dates — called after load and after setting expiry
+function recomputeDocStatuses(){
+  const today=new Date(); let changed=false;
+  workers.forEach(w=>{
+    if(!w.docs)return;
+    Object.keys(w.docs).forEach(did=>{
+      const doc=w.docs[did];
+      if(!doc||doc.status==='missing')return; // never auto-change missing
+      const computed=docStatusAt(doc,today);
+      if(doc.status!==computed){doc.status=computed;changed=true;}
+    });
+  });
+  if(changed)sbScheduleSync();
 }
 
 // Convenience wrappers that default to today (for modal/stats use)
@@ -4391,10 +4412,12 @@ function rebuildModal(id){
     :gs==='warning'?'⚠ WARNING — Worker is on site but one or more required documents are expiring soon. Action required before expiry.'
     :'✕ NO-GO — One or more required documents are missing or expired. Worker must not be on site until resolved.')+refNote;
   const missingDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='missing');
+  const expiredDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='expired');
   const expiringDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='expiring');
   let html=`<div style="padding:12px 16px;background:${goBg};border:1px solid ${goBorder};border-radius:6px;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:${goColor};margin-bottom:${missingDocs.length||expiringDocs.length?'6px':'0'}">${goText}</div>
+    <div style="font-size:13px;font-weight:700;color:${goColor};margin-bottom:${missingDocs.length||expiredDocs.length||expiringDocs.length?'6px':'0'}">${goText}</div>
     ${missingDocs.length?`<div style="font-size:11px;color:var(--red);margin-top:4px;">Missing: ${missingDocs.map(d=>d.name).join(', ')}</div>`:''}
+    ${expiredDocs.length?`<div style="font-size:11px;color:#991b1b;margin-top:4px;">Expired: ${expiredDocs.map(d=>d.name+(w.docs[d.id]?.date?' (expired '+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
     ${expiringDocs.length?`<div style="font-size:11px;color:var(--amber);margin-top:2px;">Expiring: ${expiringDocs.map(d=>d.name+(w.docs[d.id]?.date?' ('+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
   </div>`;
   html+=`<div class="worker-status-edit-panel">
@@ -4489,8 +4512,7 @@ function rebuildModal(id){
     html+=`<div class="doc-section"><div class="doc-section-title">${cat}</div>`;
     t.filter(d=>d.cat===cat).forEach(d=>{
       const doc=w.docs[d.id]||{status:'missing',date:null,issueDate:null,files:[]};
-      const st=docStatusAt(doc, new Date());   // effective status for display colour
-      const storedSt=doc.status||'missing';    // editable stored value for the dropdown
+      const st=docStatusAt(doc, new Date());   // effective/computed status
       const key=`${id}_${d.id}`, isOpen=expandedDoc===key;
       const _allFiles=(fileStore[id]&&fileStore[id][d.id]||[]).map((f,fi)=>({f,fi}));
       const _mkFileRow=({f,fi},inSup)=>`<div class="file-row"><span class="file-name" title="${esc(f.name)}">${esc(f.name)}</span><span class="file-size">${fsz(f.size)}</span><div class="file-actions"><button class="file-dl" onclick="dlFile('${id}','${d.id}',${fi})" title="Download">↓</button><button class="file-sup-btn" onclick="supersedFile('${id}','${d.id}',${fi})" title="${inSup?'Restore to current':'Mark as superseded'}">${inSup?'↑ Restore':'↓ Supersede'}</button><button class="file-rm" onclick="rmFile('${id}','${d.id}',${fi})" title="Remove">✕</button></div></div>`;
@@ -4506,10 +4528,11 @@ function rebuildModal(id){
           </div>
           <div class="doc-controls">
             ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
-            <select class="status-select ${storedSt}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
-              <option value="ok"       ${storedSt==='ok'?'selected':''}>On file</option>
-              <option value="expiring" ${storedSt==='expiring'?'selected':''}>Expiring</option>
-              <option value="missing"  ${storedSt==='missing'?'selected':''}>Missing</option>
+            <select class="status-select ${st}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
+              <option value="ok"       ${st==='ok'?'selected':''}>Valid</option>
+              <option value="expiring" ${st==='expiring'?'selected':''}>Expiring</option>
+              <option value="expired"  ${st==='expired'?'selected':''}>Expired</option>
+              <option value="missing"  ${st==='missing'?'selected':''}>Missing</option>
             </select>
             <button class="attach-btn" onclick="toggleExp('${id}','${d.id}')">Dates / Files</button>
           </div>
@@ -4536,25 +4559,28 @@ function rebuildModal(id){
 function setDocStatus(wid,did,val){
   const w=workers.find(x=>x.id===wid);if(!w)return;
   if(!w.docs[did])w.docs[did]={files:[]};
-  w.docs[did].status=val;
+  // expiring/expired are auto-computed from dates; normalize to 'ok' if user manually picks them
+  const storeVal=(val==='expiring'||val==='expired')?'ok':val;
+  w.docs[did].status=storeVal;
+  // recompute effective status so display reflects date-based rules immediately
+  const effectiveSt=docStatusAt(w.docs[did],new Date());
   const key=`${wid}_${did}`;
-  const sel=document.getElementById(`ssel_${key}`);if(sel)sel.className=`status-select ${val}`;
-  const di=document.getElementById(`di_${key}`);if(di)di.className=`doc-item ${val}`;
-  if(val!=='missing'){expandedDoc=key;const ex=document.getElementById(`dexp_${key}`);if(ex)ex.classList.add('open');}
+  const sel=document.getElementById(`ssel_${key}`);if(sel){sel.className=`status-select ${effectiveSt}`;sel.value=effectiveSt;}
+  const di=document.getElementById(`di_${key}`);if(di)di.className=`doc-item ${effectiveSt}`;
+  if(storeVal!=='missing'){expandedDoc=key;const ex=document.getElementById(`dexp_${key}`);if(ex)ex.classList.add('open');}
   refreshScore(wid);renderTable();
 }
 function _setExpiryInline(wid,did,val){
   // Updates state + inline DOM only — no modal rebuild, safe to call on every keystroke
   const w=workers.find(x=>x.id===wid);if(!w||!w.docs[did])return;
   w.docs[did].date=val;
-  if(val){
-    const diff=(new Date(val)-new Date())/86400000;
-    if(diff>=0&&diff<=60&&w.docs[did].status==='ok'){
-      w.docs[did].status='expiring';
-      const key=`${wid}_${did}`;
-      const sel=document.getElementById(`ssel_${key}`);if(sel){sel.className='status-select expiring';sel.value='expiring';}
-      const di=document.getElementById(`di_${key}`);if(di)di.className='doc-item expiring';
-    }
+  if(val&&w.docs[did].status!=='missing'){
+    // recompute effective status from the new date immediately
+    const computed=docStatusAt(w.docs[did],new Date());
+    w.docs[did].status=computed;
+    const key=`${wid}_${did}`;
+    const sel=document.getElementById(`ssel_${key}`);if(sel){sel.className=`status-select ${computed}`;sel.value=computed;}
+    const di=document.getElementById(`di_${key}`);if(di)di.className=`doc-item ${computed}`;
   }
   const key=`${wid}_${did}`,di=document.getElementById(`di_${key}`);
   if(di){let tag=di.querySelector('.expiry-tag');
@@ -4804,12 +4830,13 @@ function renderWPDocs(){
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
 
   // Filter tab counts — missing = required only; optional = optional unsubmitted
-  const filterCounts={missing:0,expiring:0,ok:0,optional:0};
+  const filterCounts={missing:0,expiring:0,expired:0,ok:0,optional:0};
   tmpl.forEach(d=>{
     const st=docStatusAt(w.docs?.[d.id],today);
     if(st==='missing'&&d.req) filterCounts.missing++;
     else if(st==='missing'&&!d.req) filterCounts.optional++;
     else if(st==='expiring') filterCounts.expiring++;
+    else if(st==='expired') filterCounts.expired++;
     else if(st==='ok') filterCounts.ok++;
   });
 
@@ -4821,6 +4848,10 @@ function renderWPDocs(){
     <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')">
       <span class="wp-filter-label">Expiring</span>
       <span class="wp-filter-count">${filterCounts.expiring}</span>
+    </button>
+    <button class="wp-filter-tab${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')">
+      <span class="wp-filter-label">Expired</span>
+      <span class="wp-filter-count">${filterCounts.expired}</span>
     </button>
     <button class="wp-filter-tab${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')">
       <span class="wp-filter-label">Valid</span>
@@ -4836,8 +4867,8 @@ function renderWPDocs(){
     const docData=w.docs?.[d.id];
     const st=docStatusAt(docData,today);
     const inOptionalTab=wpDocFilter==='optional';
-    const stLabel={ok:'Up to date',expiring:'Expiring soon',missing:inOptionalTab?'Not submitted':'Missing'}[st]||'—';
-    const pillClass={ok:'ok',expiring:'expiring',missing:inOptionalTab?'opt-neutral':'missing'}[st]||'';
+    const stLabel={ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:inOptionalTab?'Not submitted':'Missing'}[st]||'—';
+    const pillClass={ok:'ok',expiring:'expiring',expired:'expired',missing:inOptionalTab?'opt-neutral':'missing'}[st]||'';
     const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
     const hasPending=!!pendingMap[d.id];
     const isOpen=wpDocSubmitOpen[d.id];
@@ -4887,8 +4918,8 @@ function renderWPDocs(){
   }
 
   if(!filtered.length){
-    const emptyMsg={missing:'No required documents missing',expiring:'No documents expiring soon',ok:'All documents are up to date',optional:'No optional documents to submit'}[wpDocFilter]||'No documents';
-    const emptyIcon={missing:'✓',expiring:'🟡',ok:'✓',optional:'✓'}[wpDocFilter]||'—';
+    const emptyMsg={missing:'No required documents missing',expiring:'No documents expiring soon',expired:'No expired documents',ok:'All documents are up to date',optional:'No optional documents to submit'}[wpDocFilter]||'No documents';
+    const emptyIcon={missing:'✓',expiring:'🟡',expired:'✓',ok:'✓',optional:'✓'}[wpDocFilter]||'—';
     html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
   } else if(wpDocFilter==='optional'){
     html+=`<div class="wp-doc-optional-intro">These documents are not required but can be submitted to complete your profile.</div>`;
@@ -8918,6 +8949,7 @@ async function sbLoadAll(){
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     sbHasLoadedRemote = true;
+    recomputeDocStatuses(); // auto-update expired/expiring based on today's date
     renderProjFilters();renderDocSetFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
       const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
