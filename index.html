@@ -760,10 +760,32 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-doc-btn:active{background:#047857;}
 .wp-doc-btn.cancel{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
 .wp-doc-btn.cancel:active{background:#e2e8f0;}
-/* Assignment cards */
-.wp-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;}
-.wp-assign-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;}
+/* Assignment / Project cards */
+.wp-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.wp-assign-card:hover{border-color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.wp-assign-card:active{background:#f8fafc;}
+.wp-assign-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .wp-assign-meta{font-size:13px;color:#64748b;line-height:1.6;}
+.wp-assign-chevron{font-size:16px;color:#94a3b8;flex-shrink:0;}
+.wp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:20px 0 8px;}
+.wp-section-label:first-child{margin-top:0;}
+/* Project detail overlay */
+#wpProjDetail{position:fixed;inset:0;background:#f1f5f9;z-index:120;display:none;overflow-y:auto;}
+.wp-proj-detail-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1e293b;color:#fff;position:sticky;top:0;z-index:5;}
+.wp-proj-back-btn{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;opacity:.8;}
+.wp-proj-back-btn:hover{opacity:1;}
+.wp-proj-detail-title{font-size:15px;font-weight:700;color:#fff;}
+.wp-proj-detail-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;}
+.wp-proj-info-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:14px;}
+.wp-proj-info-name{font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px;}
+.wp-proj-info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f1f5f9;}
+.wp-proj-info-row:first-of-type{border-top:none;padding-top:14px;}
+.wp-proj-info-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;width:110px;flex-shrink:0;padding-top:1px;}
+.wp-proj-info-value{font-size:14px;font-weight:600;color:#1e293b;flex:1;}
+.wp-proj-map-link{display:inline-flex;align-items:center;gap:5px;color:#2563eb;font-size:14px;font-weight:600;text-decoration:none;}
+.wp-proj-map-link:hover{text-decoration:underline;}
+.wp-proj-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:14px;}
+.wp-proj-assign-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px;}
 /* Profile */
 .wp-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 16px;}
 .wp-profile-title{font-size:16px;font-weight:700;color:#1e293b;margin-bottom:16px;}
@@ -918,7 +940,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
   <div class="wp-tabs">
     <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">Documents</button>
-    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Assignments</button>
+    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Projects</button>
     <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
     <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
   </div>
@@ -927,6 +949,14 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     <div id="wpViewAssign" style="display:none;"></div>
     <div id="wpViewProfile" style="display:none;"></div>
     <div id="wpViewResources" style="display:none;"></div>
+  </div>
+  <!-- Project detail full-screen overlay -->
+  <div id="wpProjDetail">
+    <div class="wp-proj-detail-header">
+      <button class="wp-proj-back-btn" onclick="wpCloseProjDetail()">&#8592;</button>
+      <span class="wp-proj-detail-title" id="wpProjDetailTitle">Project Details</span>
+    </div>
+    <div class="wp-proj-detail-body" id="wpProjDetailBody"></div>
   </div>
 </div>
 
@@ -4912,21 +4942,70 @@ async function submitWPDoc(docKey){
 function renderWPAssignments(){
   const el=document.getElementById('wpViewAssign'); if(!el) return;
   const myPAs=projectAssignments.filter(a=>a.wid===wpWorkerId).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
-  if(!myPAs.length){el.innerHTML='<p style="color:var(--text-l);font-size:13px;padding:12px 0;">No assignments on record.</p>';return;}
+  if(!myPAs.length){el.innerHTML='<p style="color:#94a3b8;font-size:13px;padding:12px 0;">No projects on record.</p>';return;}
   const now=new Date().toISOString().slice(0,10);
-  el.innerHTML=myPAs.map(a=>{
+  const current=myPAs.filter(a=>(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now));
+  const past=myPAs.filter(a=>a.endDate&&a.endDate<now);
+  const mkCard=(a)=>{
     const proj=projectStore.find(p=>p.id===a.projectId);
-    const isCurrent=(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now);
-    return`<div class="wp-assign-card">
-      <div class="wp-assign-title">${esc(proj?.name||'Unknown project')}${isCurrent?' <span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Current</span>':''}</div>
+    const ongoing=!a.endDate||a.endDate>=now;
+    return`<div class="wp-assign-card" onclick="wpOpenProjDetail('${a.id}')">
+      <div class="wp-assign-title">
+        <span>${esc(proj?.name||'Unknown project')}</span>
+        <span class="wp-assign-chevron">›</span>
+      </div>
       <div class="wp-assign-meta">
         ${proj?.client?`<div>Client: <strong>${esc(proj.client)}</strong></div>`:''}
-        <div>Period: <strong>${a.startDate||'?'} → ${a.endDate||'ongoing'}</strong></div>
+        <div>Period: <strong>${a.startDate||'?'} → ${ongoing?'<span style="color:#16a34a;">ongoing</span>':esc(a.endDate)}</strong></div>
         ${a.rate?`<div>Rate: <strong>${a.rate} / ${a.rateType||'day'}</strong></div>`:''}
-        ${a.notes?`<div style="margin-top:6px;color:var(--text-m);">${esc(a.notes)}</div>`:''}
       </div>
     </div>`;
-  }).join('');
+  };
+  let html='';
+  if(current.length){
+    html+=`<div class="wp-section-label">Current Project${current.length>1?'s':''}</div>`;
+    html+=current.map(mkCard).join('');
+  }
+  if(past.length){
+    html+=`<div class="wp-section-label">Past Projects</div>`;
+    html+=past.map(mkCard).join('');
+  }
+  el.innerHTML=html;
+}
+function wpOpenProjDetail(assignmentId){
+  const a=projectAssignments.find(x=>x.id===assignmentId); if(!a) return;
+  const proj=projectStore.find(p=>p.id===a.projectId);
+  const now=new Date().toISOString().slice(0,10);
+  const ongoing=!a.endDate||a.endDate>=now;
+  const isUrl=proj?.location&&/^https?:\/\//i.test(proj.location);
+  const locationHtml=proj?.location
+    ?(isUrl
+      ?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">📍 Open in Maps</a>`
+      :`<span>${esc(proj.location)}</span>`)
+    :'<span style="color:#94a3b8;">—</span>';
+  const infoRows=[
+    proj?.client    ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Client</span><span class="wp-proj-info-value">${esc(proj.client)}</span></div>`:'',
+    proj?.pm        ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Project Leader</span><span class="wp-proj-info-value">${esc(proj.pm)}</span></div>`:'',
+    proj?.location  ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Location</span><span class="wp-proj-info-value">${locationHtml}</span></div>`:'',
+    proj?.desc      ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Description</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(proj.desc)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  document.getElementById('wpProjDetailTitle').textContent=proj?.name||'Project Details';
+  document.getElementById('wpProjDetailBody').innerHTML=`
+    <div class="wp-proj-info-card">
+      <div class="wp-proj-info-name">${esc(proj?.name||'—')}</div>
+      ${infoRows}
+    </div>
+    <div class="wp-proj-assign-card">
+      <div class="wp-proj-assign-label">Your Assignment</div>
+      <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">Period</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?'<span style="color:#16a34a;font-weight:700;">ongoing</span>':esc(a.endDate)}</span></div>
+      ${a.rate?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Rate</span><span class="wp-proj-info-value">${esc(String(a.rate))} / ${esc(a.rateType||'day')}</span></div>`:''}
+      ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Notes</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
+    </div>`;
+  document.getElementById('wpProjDetail').style.display='block';
+  document.getElementById('wpProjDetail').scrollTop=0;
+}
+function wpCloseProjDetail(){
+  document.getElementById('wpProjDetail').style.display='none';
 }
 
 // ── Worker portal: My Profile ──
