@@ -19,7 +19,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;}
-.wrap{max-width:1480px;margin:0 auto;padding:0 24px;}
+.wrap{max-width:1480px;margin:0 auto;padding:20px 24px 0;}
 
 /* HEADER */
 header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:sticky;top:0;z-index:200;}
@@ -45,7 +45,7 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:stic
 .btn-cancel:hover{background:var(--bg);}
 
 /* STATS */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 0 16px;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 0;}
 .stat{background:#fff;border:1px solid var(--border);border-radius:6px;padding:16px 18px;box-shadow:var(--sh);border-left:3px solid var(--border);}
 .stat.s-red{border-left-color:var(--red);}
 .stat.s-amber{border-left-color:var(--amber);}
@@ -60,11 +60,11 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:stic
 .stat-note{font-size:11px;color:var(--text-l);margin-top:3px;}
 
 /* VIEW TABS */
-.view-tabs{display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden;background:#fff;box-shadow:var(--sh);width:fit-content;}
-.vtab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:7px 18px;border:none;background:transparent;color:var(--text-m);cursor:pointer;transition:all .15s;border-right:1px solid var(--border);}
+.view-tabs{display:flex;align-items:center;gap:0;background:transparent;box-shadow:none;border:none;}
+.vtab{font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:13px 18px;border:none;border-bottom:2px solid transparent;background:transparent;color:var(--text-m);cursor:pointer;transition:color .15s,border-color .15s;white-space:nowrap;margin-bottom:-1px;}
 .vtab:last-child{border-right:none;}
-.vtab:hover{background:var(--sky-xl);color:var(--navy);}
-.vtab.active{background:var(--navy);color:#fff;}
+.vtab:hover{color:var(--navy);border-bottom-color:var(--navy-l);}
+.vtab.active{color:var(--navy);font-weight:600;border-bottom-color:var(--navy);background:transparent;}
 
 /* WEEK NAVIGATOR */
 .week-nav{display:flex;align-items:center;border:1px solid var(--border);border-radius:5px;overflow:hidden;background:#fff;box-shadow:var(--sh);}
@@ -75,6 +75,11 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:stic
 .week-today-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:6px 12px;border:none;background:transparent;color:var(--sky);cursor:pointer;transition:all .15s;}
 .week-today-btn:hover{background:var(--sky-xl);}
 .week-badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:var(--navy);color:#fff;vertical-align:middle;}
+/* Main nav bar — full-width sticky strip under the header */
+.main-nav-bar{position:sticky;top:89px;z-index:180;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.main-nav-inner{max-width:1480px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+body.wp-mode .main-nav-bar{display:none!important;}
+body.sb-auth-lock .main-nav-bar{visibility:hidden;}
 .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px;}
 
 /* FILTER BAR */
@@ -453,7 +458,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 /* ── Settings sidebar layout ────────────────────────────────────────── */
 .settings-layout{display:grid;grid-template-columns:192px 1fr;gap:24px;align-items:start;}
 @media(max-width:700px){.settings-layout{grid-template-columns:1fr;}}
-.settings-sidebar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:2px;position:sticky;top:76px;}
+.settings-sidebar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:2px;position:sticky;top:140px;}
 .sset-nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:6px;background:transparent;color:var(--text-m);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;width:100%;font-family:'Inter',sans-serif;}
 .sset-nav:hover{background:var(--sky-xl);color:var(--navy);}
 .sset-nav.active{background:var(--sky-xl);color:var(--navy);font-weight:600;}
@@ -560,8 +565,10 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 @media(max-width:480px){
   .wrap{padding:0 12px;}
   /* Tabs become a horizontal scroll strip */
+  .main-nav-inner{padding:0 12px;}
   .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;}
-  .vtab{flex-shrink:0;padding:7px 11px;font-size:12px;}
+  .vtab{flex-shrink:0;padding:10px 12px;font-size:12px;}
+  .main-nav-bar{top:75px;}
   /* Week navigator compact */
   .week-label{min-width:110px;padding:6px 8px;font-size:12px;}
   .week-label .week-dates{display:none;}
@@ -605,7 +612,6 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .hsync-error{background:rgba(239,68,68,.18);color:#fca5a5;}.hsync-error::before{background:#f87171;}
 .hsync-offline{background:rgba(255,255,255,.1);color:rgba(255,255,255,.55);}.hsync-offline::before{background:rgba(255,255,255,.3);}
 @keyframes hsync-blink{0%,100%{opacity:1;}50%{opacity:.35;}}
-.hsync-user{font-size:12px;color:rgba(255,255,255,.65);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;}
 .btn-hdr{padding:5px 11px;font-size:12px;font-weight:600;border-radius:5px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:background .15s;}
 .btn-hdr:hover{background:rgba(255,255,255,.2);}
 #sbAuthBar{position:sticky;top:75px;z-index:190;background:#fff;border:1px solid var(--border);box-shadow:var(--sh);border-radius:6px;margin:12px auto;padding:10px 14px;display:none!important;gap:10px;align-items:center;justify-content:space-between;max-width:1480px;font-size:12px;color:var(--text-m)}
@@ -859,7 +865,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <div class="header-spacer"></div>
       <div class="header-sync-wrap" id="headerSyncWrap">
         <span id="headerSyncPill" class="hsync-pill hsync-offline">Offline</span>
-        <span id="headerSyncUser" class="hsync-user"></span>
         <button id="hdrLoginBtn" class="btn-hdr" onclick="sbOpenLogin()">Sign in</button>
         <button id="hdrSyncBtn" class="btn-hdr" onclick="sbForceSync()" style="display:none" title="Force sync now">Sync</button>
         <button id="hdrLogoutBtn" class="btn-hdr" onclick="sbLogout()" style="display:none">Logout</button>
@@ -916,11 +921,8 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
 </div>
 
-<div class="wrap">
-  <div class="stats-row" id="statsBar"></div>
-
-  <!-- TOOLBAR -->
-  <div class="toolbar">
+<nav class="main-nav-bar" id="mainNavBar">
+  <div class="main-nav-inner">
     <div class="view-tabs">
       <button class="vtab active" id="tabWorkers"  onclick="switchView('workers')">Workers</button>
       <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
@@ -939,6 +941,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <button class="week-today-btn" onclick="goToday()">Today</button>
     </div>
   </div>
+</nav>
+
+<div class="wrap">
+  <div class="stats-row" id="statsBar"></div>
 
   <!-- WORKERS VIEW -->
   <div id="viewWorkers">
@@ -2342,11 +2348,10 @@ function sbRefreshAuthButtons(){
   if(syncBtn) syncBtn.style.display = canUseApp ? 'inline-flex' : 'none';
   if(logoutBtn) logoutBtn.style.display = hasSession ? 'inline-flex' : 'none';
   // Header buttons
-  const hdrLogin=document.getElementById('hdrLoginBtn'), hdrSync=document.getElementById('hdrSyncBtn'), hdrLogout=document.getElementById('hdrLogoutBtn'), hdrUser=document.getElementById('headerSyncUser');
+  const hdrLogin=document.getElementById('hdrLoginBtn'), hdrSync=document.getElementById('hdrSyncBtn'), hdrLogout=document.getElementById('hdrLogoutBtn');
   if(hdrLogin) hdrLogin.style.display = canUseApp ? 'none' : 'inline-flex';
   if(hdrSync) hdrSync.style.display = canUseApp ? 'inline-flex' : 'none';
   if(hdrLogout) hdrLogout.style.display = hasSession ? 'inline-flex' : 'none';
-  if(hdrUser) hdrUser.textContent = canUseApp ? (sbSession?.user?.email?.split('@')[0]||'') : '';
 }
 function sbOpenLogin(){ sbShowSignIn(); document.getElementById('sbLoginOverlay')?.classList.add('open'); sbShowLoginPrompt(false); sbRefreshAuthButtons(); setTimeout(()=>document.getElementById('sbEmail')?.focus(),80); }
 function sbSetStatus(text, online){
@@ -8903,7 +8908,7 @@ async function sbLogout(){
   document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
-  document.querySelector('.toolbar')?.style?.removeProperty('display');
+  document.getElementById('mainNavBar')?.style?.removeProperty('display');
   document.querySelector('header')?.style?.removeProperty('display');
   if(sbClient) await sbClient.auth.signOut(); location.reload();
 }
