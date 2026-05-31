@@ -22,7 +22,8 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sa
 .wrap{max-width:1480px;margin:0 auto;padding:20px 24px 0;}
 
 /* HEADER */
-header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:sticky;top:0;z-index:200;}
+header{background:var(--navy-d);border-bottom:3px solid var(--sky);}
+.sticky-chrome{position:sticky;top:0;z-index:200;}
 .header-inner{display:flex;align-items:center;gap:16px;padding:12px 0;}
 .logo{display:flex;align-items:center;gap:14px;}
 .logo-mark{width:210px;height:62px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:8px 12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.16);}
@@ -76,10 +77,10 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);position:stic
 .week-today-btn:hover{background:var(--sky-xl);}
 .week-badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:var(--navy);color:#fff;vertical-align:middle;}
 /* Main nav bar — full-width sticky strip under the header */
-.main-nav-bar{position:sticky;top:89px;z-index:180;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);}
+.main-nav-bar{background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .main-nav-inner{max-width:1480px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-body.wp-mode .main-nav-bar{display:none!important;}
-body.sb-auth-lock .main-nav-bar{visibility:hidden;}
+body.wp-mode .sticky-chrome{display:none!important;}
+body.sb-auth-lock .sticky-chrome{visibility:hidden;}
 .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px;}
 
 /* FILTER BAR */
@@ -458,7 +459,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 /* ── Settings sidebar layout ────────────────────────────────────────── */
 .settings-layout{display:grid;grid-template-columns:192px 1fr;gap:24px;align-items:start;}
 @media(max-width:700px){.settings-layout{grid-template-columns:1fr;}}
-.settings-sidebar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:2px;position:sticky;top:140px;}
+.settings-sidebar{background:#fff;border:1px solid var(--border);border-radius:10px;padding:8px;box-shadow:var(--sh);display:flex;flex-direction:column;gap:2px;position:sticky;top:16px;}
 .sset-nav{display:flex;align-items:center;gap:10px;padding:10px 12px;border:none;border-radius:6px;background:transparent;color:var(--text-m);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;width:100%;font-family:'Inter',sans-serif;}
 .sset-nav:hover{background:var(--sky-xl);color:var(--navy);}
 .sset-nav.active{background:var(--sky-xl);color:var(--navy);font-weight:600;}
@@ -568,7 +569,6 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   .main-nav-inner{padding:0 12px;}
   .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;}
   .vtab{flex-shrink:0;padding:10px 12px;font-size:12px;}
-  .main-nav-bar{top:75px;}
   /* Week navigator compact */
   .week-label{min-width:110px;padding:6px 8px;font-size:12px;}
   .week-label .week-dates{display:none;}
@@ -620,7 +620,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 #sbLoginOverlay.open{display:flex}
 
 body.sb-auth-lock{overflow:hidden;}
-body.sb-auth-lock header,
+body.sb-auth-lock .sticky-chrome,
 body.sb-auth-lock > .wrap,
 body.sb-auth-lock footer,
 body.sb-auth-lock #sbAuthBar{visibility:hidden;}
@@ -853,6 +853,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
 </div>
 
+<div class="sticky-chrome">
 <header>
   <div class="wrap">
     <div class="header-inner">
@@ -877,6 +878,28 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     </div>
   </div>
 </header>
+<nav class="main-nav-bar" id="mainNavBar">
+  <div class="main-nav-inner">
+    <div class="view-tabs">
+      <button class="vtab active" id="tabWorkers"  onclick="switchView('workers')">Workers</button>
+      <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
+      <button class="vtab"        id="tabProjects" onclick="switchView('projects')">Projects</button>
+      <button class="vtab"        id="tabResources" onclick="switchView('resources')">Resources</button>
+      <button class="vtab"        id="tabDocuments" onclick="switchView('documents')">Documents</button>
+      <button class="vtab"        id="tabSettings" onclick="switchView('settings')">⚙ Settings</button>
+    </div>
+    <div class="week-nav" id="weekNav">
+      <button class="week-arrow" onclick="shiftWeek(-1)">&#8592;</button>
+      <div class="week-label">
+        <span id="weekTitle">—</span>
+        <span class="week-dates" id="weekDates"></span>
+      </div>
+      <button class="week-arrow" onclick="shiftWeek(1)">&#8594;</button>
+      <button class="week-today-btn" onclick="goToday()">Today</button>
+    </div>
+  </div>
+</nav>
+</div><!-- /.sticky-chrome -->
 <script>window._orgDefaultLogoSrc=document.getElementById('headerLogoImg')?.src||'';</script>
 <div id="sbAuthBar" style="display:none;"><div class="sbAuthLeft"><span class="sbPill" id="sbStatus" onclick="sbOpenLogin()" style="cursor:pointer;">Supabase: offline</span> <span id="sbUser"></span></div><div class="sbAuthRight"><button class="btn btn-save" id="sbAuthLoginBtn" onclick="sbOpenLogin()">Sign in</button><button class="btn btn-cancel" id="sbAuthSyncBtn" onclick="sbForceSync()">Sync now</button><button class="btn btn-cancel" id="sbAuthLogoutBtn" onclick="sbLogout()">Log out</button></div></div>
 <div id="sbLoginPrompt"><div><strong>Login required.</strong> Sign in to enable Add Worker, Assignments, document editing and saving to Supabase.</div><button class="btn btn-save" onclick="sbOpenLogin()">Sign in</button></div>
@@ -920,28 +943,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     <div class="fv-body" id="fileViewerBody"></div>
   </div>
 </div>
-
-<nav class="main-nav-bar" id="mainNavBar">
-  <div class="main-nav-inner">
-    <div class="view-tabs">
-      <button class="vtab active" id="tabWorkers"  onclick="switchView('workers')">Workers</button>
-      <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
-      <button class="vtab"        id="tabProjects" onclick="switchView('projects')">Projects</button>
-      <button class="vtab"        id="tabResources" onclick="switchView('resources')">Resources</button>
-      <button class="vtab"        id="tabDocuments" onclick="switchView('documents')">Documents</button>
-      <button class="vtab"        id="tabSettings" onclick="switchView('settings')">⚙ Settings</button>
-    </div>
-    <div class="week-nav" id="weekNav">
-      <button class="week-arrow" onclick="shiftWeek(-1)">&#8592;</button>
-      <div class="week-label">
-        <span id="weekTitle">—</span>
-        <span class="week-dates" id="weekDates"></span>
-      </div>
-      <button class="week-arrow" onclick="shiftWeek(1)">&#8594;</button>
-      <button class="week-today-btn" onclick="goToday()">Today</button>
-    </div>
-  </div>
-</nav>
 
 <div class="wrap">
   <div class="stats-row" id="statsBar"></div>
@@ -4715,7 +4716,7 @@ async function initWorkerPortal(workerId){
   document.getElementById('workerPortal').style.display='block';
   document.querySelectorAll('.wrap').forEach(el=>el.style.display='none');
   document.querySelector('.toolbar')?.style?.setProperty('display','none');
-  document.querySelector('header')?.style?.setProperty('display','none');
+  document.querySelector('.sticky-chrome')?.style?.setProperty('display','none');
   document.getElementById('sbAuthBar').style.display='none';
   document.getElementById('sbLoginPrompt').style.display='none';
   document.body.classList.add('wp-mode');
@@ -8924,8 +8925,7 @@ async function sbLogout(){
   document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
-  document.getElementById('mainNavBar')?.style?.removeProperty('display');
-  document.querySelector('header')?.style?.removeProperty('display');
+  document.querySelector('.sticky-chrome')?.style?.removeProperty('display');
   if(sbClient) await sbClient.auth.signOut(); location.reload();
 }
 async function sbAfterAuth(){
