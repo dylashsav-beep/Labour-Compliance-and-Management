@@ -5037,10 +5037,16 @@ function renderWPProfile(){
   const w=wpWorkerObj; if(!w){el.innerHTML='<p>Profile not found.</p>';return;}
   el.innerHTML=`<div class="wp-profile-card">
     <div class="wp-profile-title">My Profile</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Your details below are visible to your compliance team. Changes are saved for review.</div>
     <div class="wp-profile-field"><label>Full Name</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
     <div class="wp-profile-field"><label>Worker Type</label><div class="wp-readonly-field">${w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker'}</div></div>
     <div class="wp-profile-field"><label>Nationality</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
     <div class="wp-profile-field"><label>Email Address</label><input class="form-input wp-profile-field" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="your@email.com"/></div>
+    <div class="wp-profile-field">
+      <label>Phone Number</label>
+      <input class="form-input wp-profile-field" id="wpProfPhone" type="tel" value="${esc(w.phone||'')}" placeholder="e.g. +31 6 12345678"/>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Used by your compliance team to contact you.</div>
+    </div>
     <div class="wp-profile-field"><label>Notes / Additional info</label><textarea class="form-input" id="wpProfNotes" rows="3" style="resize:vertical;width:100%;box-sizing:border-box;font-size:15px;">${esc(w.notes||'')}</textarea></div>
     <button class="wp-profile-save" onclick="saveWPProfile()">Save changes</button>
   </div>`;
@@ -5048,11 +5054,12 @@ function renderWPProfile(){
 async function saveWPProfile(){
   if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   const email=(document.getElementById('wpProfEmail')?.value||'').trim();
+  const phone=(document.getElementById('wpProfPhone')?.value||'').trim();
   const notes=(document.getElementById('wpProfNotes')?.value||'').trim();
   const w=wpWorkerObj; if(!w) return;
-  w.email=email; w.notes=notes;
+  w.email=email; w.phone=phone; w.notes=notes;
   try{
-    const {error}=await sbClient.rpc('save_worker_profile',{p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_new_email:email||null,p_notes:notes||null});
+    const {error}=await sbClient.rpc('save_worker_profile',{p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_new_email:email||null,p_notes:notes||null,p_phone:phone||null});
     if(error) throw error;
     sbSetStatus('Profile saved',true);
     renderWPProfile();
