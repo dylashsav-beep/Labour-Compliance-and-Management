@@ -8459,21 +8459,27 @@ async function sbSignedDownload(path, name){
 async function sbInactiveIdSet(table){
   const set = new Set();
   if(!sbClient) return set;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error('Timeout: '+table)), 15000);
   try{
-    const {data,error}=await sbClient.from(table).select('id').eq('active',false);
+    const {data,error}=await sbClient.from(table).select('id').eq('active',false).abortSignal(ctrl.signal);
+    clearTimeout(timer);
     if(error) throw error;
     (data||[]).forEach(r=>set.add(r.id));
-  }catch(e){ console.warn('Could not read inactive ids for '+table+':', e.message); }
+  }catch(e){ clearTimeout(timer); console.warn('Could not read inactive ids for '+table+':', e.message); }
   return set;
 }
 async function sbRemoteWorkerActiveMap(){
   const map = {};
   if(!sbClient) return map;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error('Timeout: workers active map')), 15000);
   try{
-    const {data,error}=await sbClient.from('workers').select('id,active');
+    const {data,error}=await sbClient.from('workers').select('id,active').abortSignal(ctrl.signal);
+    clearTimeout(timer);
     if(error) throw error;
     (data||[]).forEach(r=>map[r.id]=r.active!==false);
-  }catch(e){ console.warn('Could not read remote worker active states:', e.message); }
+  }catch(e){ clearTimeout(timer); console.warn('Could not read remote worker active states:', e.message); }
   return map;
 }
 function sbQueueRemoteReload(reason){
@@ -8584,7 +8590,14 @@ async function sbUploadEmbeddedFiles(){
 async function sbUpsertRows(table, rows){
   if(!sbClient) return;
   if(!sbCanWriteTable(table)){ console.debug('[TMC] sbUpsertRows: skipped', table, '— role:', sbUserRole); return; }
-  if(rows.length){ const {error}=await sbClient.from(table).upsert(rows); if(error) throw error; }
+  if(!rows.length) return;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(new Error('Upsert timeout: '+table)), 25000);
+  try{
+    const {error}=await sbClient.from(table).upsert(rows).abortSignal(ctrl.signal);
+    clearTimeout(timer);
+    if(error) throw error;
+  }catch(e){ clearTimeout(timer); throw e; }
 }
 async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
   if(!sbClient||!sbSession) return;
@@ -8904,11 +8917,14 @@ async function sbLoadAll(){
     }
   };
   const q = async (name, builder, fallback) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(new Error('Query timeout: '+name)), 15000);
     try{
-      const {data,error}=await builder;
+      const {data,error}=await builder.abortSignal(ctrl.signal);
+      clearTimeout(timer);
       if(error){ tableErr(name,error); return fallback; }
       return data ?? fallback;
-    }catch(e){ tableErr(name,e); return fallback; }
+    }catch(e){ clearTimeout(timer); tableErr(name,e); return fallback; }
   };
   try{
     const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData] = await Promise.all([
