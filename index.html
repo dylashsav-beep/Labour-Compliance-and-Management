@@ -754,7 +754,9 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .doc-info-btn:hover{background:#bfdbfe;}
 .doc-link-btn{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#1d4ed8;text-decoration:none;padding:2px 7px;border-radius:10px;background:#dbeafe;margin-left:5px;vertical-align:middle;white-space:nowrap;}
 .doc-link-btn:hover{background:#bfdbfe;}
-.doc-info-tooltip{font-size:12px;color:#475569;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:6px;line-height:1.5;}
+.doc-info-tooltip{display:none;font-size:12px;color:#475569;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:6px;line-height:1.5;animation:fadeIn .15s ease;}
+.doc-info-tooltip.open{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px);}to{opacity:1;transform:translateY(0);}}
 /* Submit form */
 .wp-submit-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:14px;display:flex;flex-direction:column;gap:12px;}
 .wp-submit-form label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;}
@@ -4526,7 +4528,7 @@ function rebuildModal(id){
         <div class="doc-item-row">
           <div class="doc-icon">${d.icon}</div>
           <div class="doc-info">
-            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.infoText?`<button class="doc-info-btn" title="${esc(d.infoText)}" onclick="this.nextElementSibling?.classList.toggle('open')">i</button><span class="doc-info-tooltip" style="display:none;" onclick="this.classList.toggle('open')">${esc(d.infoText)}</span>`:''}${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 Link</a>`:''}</div>
+            <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.infoText?`<button class="doc-info-btn" title="Show info" onclick="var t=this.nextElementSibling;t.classList.toggle('open')">i</button><span class="doc-info-tooltip" onclick="this.classList.remove('open')">${esc(d.infoText)}</span>`:''}${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 Link</a>`:''}</div>
             <div class="doc-tip">${d.tip}</div>
           </div>
           <div class="doc-controls">
