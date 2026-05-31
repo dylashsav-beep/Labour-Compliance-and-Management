@@ -134,7 +134,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .worker-active-badge.inactive{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
 .project-tag{display:inline-block;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);}
 /* Assigned-this-week tags — visually distinct */
-.assign-tag{display:inline;font-size:12px;color:var(--text-m);cursor:pointer;white-space:nowrap;}
+.assign-tag{display:block;font-size:12px;color:var(--text-m);cursor:pointer;white-space:nowrap;line-height:1.5;}
 .assign-tag:hover{color:var(--navy);text-decoration:underline;}
 .assign-none{font-size:12px;color:var(--text-l);font-style:italic;}
 
@@ -3530,7 +3530,7 @@ function renderTable(){
       return s<=wkSun2&&e>=wkMon2;
     });
     const weekPAHtml=weekPAs.length
-      ?weekPAs.map((a,i)=>{const p=projectStore.find(x=>x.id===a.projectId);const icon=hasContractFile(a)?'📎':'⚠';return`<span class="assign-tag" title="${hasContractFile(a)?'Contract attached':'No contract — click to edit'}" onclick="openEditPA('${a.id}')">${esc(p?.name||'?')} <span style="font-size:10px;opacity:.7;">${icon}</span></span>${i<weekPAs.length-1?'<span style="color:var(--text-l);margin:0 2px;">·</span>':''}`}).join('')
+      ?`<div style="display:flex;flex-direction:column;gap:3px;">${weekPAs.map(a=>{const p=projectStore.find(x=>x.id===a.projectId);const icon=hasContractFile(a)?'📎':'⚠';return`<span class="assign-tag" title="${hasContractFile(a)?'Contract attached':'No contract — click to edit'}" onclick="openEditPA('${a.id}')">${esc(p?.name||'?')} <span style="font-size:10px;opacity:.7;">${icon}</span></span>`}).join('')}</div>`
       :`<span class="assign-none">Not assigned</span>`;
     const workerActive = w.active !== false;
     return `<tr style="${!workerActive?'opacity:.58;background:#fafafa;':''}">
