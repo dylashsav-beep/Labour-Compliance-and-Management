@@ -504,13 +504,13 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .deleted-items-header{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:0;}
 .deleted-items-header:hover .settings-card-title{color:var(--navy-l);}
 .deleted-items-chevron{font-size:13px;color:var(--text-l);transition:transform .18s;}
-.deleted-items-body{display:none;max-height:520px;overflow-y:auto;padding:12px 6px 2px 0;border-top:1px solid var(--border);margin-top:12px;}
+.deleted-items-body{display:none;max-height:520px;overflow-y:auto;padding:10px 6px 4px 0;}
 .deleted-items-body.open{display:block;}
 .deleted-items-body::-webkit-scrollbar{width:9px;}
 .deleted-items-body::-webkit-scrollbar-thumb{background:#c8d2e1;border-radius:9px;}
 .deleted-items-body::-webkit-scrollbar-track{background:var(--bg);border-radius:9px;}
 #deletedItemsCard.collapsed .deleted-items-chevron{transform:rotate(-90deg);}
-.del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0 10px;position:sticky;top:0;background:#fff;z-index:3;border-bottom:1px solid var(--border);margin-bottom:12px;}
+.del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:0;}
 .event-type-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
 .event-type-badge.note{background:#eff6ff;color:#1d4ed8;}
 .event-type-badge.breakdown{background:#fff1f2;color:#be123c;}
@@ -554,7 +554,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .restore-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
 .restore-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:10px;background:var(--amber-l);border:1px solid var(--amber-b);color:var(--amber);white-space:nowrap;}
 .restore-worker{font-size:11px;font-weight:600;color:var(--navy);margin:3px 0 2px;}
-.restore-meta{font-size:10px;color:var(--text-l);line-height:1.5;}
+.restore-meta{font-size:11px;color:var(--text-l);line-height:1.5;}
 .restore-detail-grid{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:5px;}
 .restore-detail{font-size:11px;color:var(--text-m);}
 .restore-detail strong{color:var(--text);font-weight:600;}
@@ -1521,22 +1521,22 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               <div class="settings-card-title">Deleted Items / Restore History</div>
               <div class="settings-card-desc">Deleted records are archived here. Files remain in storage; only the active view reference is removed.</div>
             </div>
-            <div id="deletedItemsBody" class="deleted-items-body open" style="margin-top:0;border-top:none;max-height:640px;">
-              <div class="del-toolbar">
-                <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)" style="flex:1;min-width:180px;">
-                <div class="del-filters" id="delFilters" style="display:flex;flex-wrap:wrap;gap:5px;flex:2;min-width:300px;">
-                  <button class="del-filter-btn active" data-filter="all" onclick="delFilterChange('all')">All</button>
-                  <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Docs</button>
-                  <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Assignments</button>
-                  <button class="del-filter-btn" data-filter="accommodation" onclick="delFilterChange('accommodation')">Accommodation</button>
-                  <button class="del-filter-btn" data-filter="vehicles" onclick="delFilterChange('vehicles')">Vehicles</button>
-                  <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance</button>
-                </div>
-                <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
-                  <span style="font-size:11px;color:var(--text-l);">Show:</span>
-                  <div class="del-size-btns" id="delSizeBtns"></div>
-                </div>
+            <div class="del-toolbar">
+              <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)" style="flex:1;min-width:180px;">
+              <div class="del-filters" id="delFilters" style="display:flex;flex-wrap:wrap;gap:5px;flex:2;min-width:300px;">
+                <button class="del-filter-btn active" data-filter="all" onclick="delFilterChange('all')">All</button>
+                <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Docs</button>
+                <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Assignments</button>
+                <button class="del-filter-btn" data-filter="accommodation" onclick="delFilterChange('accommodation')">Accommodation</button>
+                <button class="del-filter-btn" data-filter="vehicles" onclick="delFilterChange('vehicles')">Vehicles</button>
+                <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance</button>
               </div>
+              <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+                <span style="font-size:11px;color:var(--text-l);">Show:</span>
+                <div class="del-size-btns" id="delSizeBtns"></div>
+              </div>
+            </div>
+            <div id="deletedItemsBody" class="deleted-items-body open" style="max-height:540px;">
               <div id="deletedItemsList"></div>
               <div class="del-count-bar" id="delCountBar" style="display:none;">
                 <span id="delCountInfo"></span>
@@ -8489,23 +8489,19 @@ function renderDeletedItems(){
 
   list.innerHTML=pageItems.map(it=>{
     const details=deletedItemDetails(it);
-    const rows=details.map(([k,v])=>`<div class="restore-detail"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('') || '<div class="restore-detail"><em>Details retained in Supabase</em></div>';
     const typeLabel=(it.type||'item').replaceAll('_',' ');
-    const meta=(it.payload||{})._meta||{};
-    let labelWorker='';
-    if(it.type==='project_assignment' && (!meta.workerName || meta.workerName==='—') && (it.label||'').includes('→')) labelWorker = (it.label.split(':').slice(1).join(':').split('→')[0]||'').trim();
-    const workerLine = (meta.workerName || labelWorker) ? `<div class="restore-worker">Worker: ${esc(meta.workerName || labelWorker)}</div>` : (meta.affectedWorkers ? `<div class="restore-worker">Affected: ${esc(meta.affectedWorkers)}</div>` : '');
     const icon=typeIcons[it.type]||'🗂';
     const dateStr=it.deletedAt?new Date(it.deletedAt).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+    const deletedByShort = it.deletedBy ? it.deletedBy.split('@')[0] : '';
+    const detailLine = details.slice(0,3).map(([k,v])=>`${esc(k)}: ${esc(v)}`).join(' · ');
+    const metaLine = [detailLine, `Archived ${dateStr}${deletedByShort?' by '+esc(deletedByShort):''}`].filter(Boolean).join(' · ');
     return `<div class="restore-card">
       <div class="del-archive-icon">${icon}</div>
       <div class="restore-card-body">
         <div class="restore-title"><span class="restore-type">${esc(typeLabel)}</span><span>${esc(it.label||it.id)}</span></div>
-        ${workerLine}
-        <div class="restore-meta">Archived: ${dateStr}${it.deletedBy?' · by '+esc(it.deletedBy):''}</div>
-        <div class="restore-detail-grid">${rows}</div>
-        <div class="restore-actions"><button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="restoreDeletedItem('${it.id}')">↩ Restore</button></div>
+        <div class="restore-meta">${metaLine}</div>
       </div>
+      <button class="btn" style="font-size:11px;padding:3px 9px;flex-shrink:0;margin-top:1px;" onclick="restoreDeletedItem('${it.id}')">↩ Restore</button>
     </div>`;
   }).join('');
 
