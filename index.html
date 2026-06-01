@@ -510,7 +510,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .deleted-items-body::-webkit-scrollbar-thumb{background:#c8d2e1;border-radius:9px;}
 .deleted-items-body::-webkit-scrollbar-track{background:var(--bg);border-radius:9px;}
 #deletedItemsCard.collapsed .deleted-items-chevron{transform:rotate(-90deg);}
-.del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+.del-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0 10px;position:sticky;top:0;background:#fff;z-index:3;border-bottom:1px solid var(--border);margin-bottom:12px;}
 .event-type-badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;}
 .event-type-badge.note{background:#eff6ff;color:#1d4ed8;}
 .event-type-badge.breakdown{background:#fff1f2;color:#be123c;}
@@ -549,15 +549,24 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 
 /* DELETE PROTECTION / RECYCLE BIN */
 .protect-note{font-size:12px;color:var(--amber);background:var(--amber-l);border:1px solid var(--amber-b);border-radius:5px;padding:8px 10px;margin:8px 0;}
-.restore-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:12px 14px;margin-bottom:10px;border-left:4px solid var(--amber);box-shadow:var(--sh);}
-.restore-title{font-size:13px;font-weight:700;color:var(--navy);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
-.restore-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.35px;padding:2px 6px;border-radius:3px;background:var(--amber-l);border:1px solid var(--amber-b);color:var(--amber);}
-.restore-meta{font-size:11px;color:var(--text-l);margin-top:3px;}
-.restore-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin-top:9px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:5px;}
-.restore-detail{font-size:11px;color:var(--text-m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.restore-card{background:#fff;border:1px solid var(--border);border-left:3px solid var(--amber);border-radius:8px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;}
+.restore-card-body{flex:1;min-width:0;}
+.restore-title{font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px;}
+.restore-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:10px;background:var(--amber-l);border:1px solid var(--amber-b);color:var(--amber);white-space:nowrap;}
+.restore-worker{font-size:11px;font-weight:600;color:var(--navy);margin:3px 0 2px;}
+.restore-meta{font-size:10px;color:var(--text-l);line-height:1.5;}
+.restore-detail-grid{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:5px;}
+.restore-detail{font-size:11px;color:var(--text-m);}
 .restore-detail strong{color:var(--text);font-weight:600;}
-.restore-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
-@media(max-width:700px){.restore-detail-grid{grid-template-columns:1fr;}}
+.restore-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;}
+.del-archive-icon{font-size:18px;flex-shrink:0;margin-top:1px;}
+.del-count-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;font-size:12px;color:var(--text-l);}
+.del-pg-btns{display:flex;gap:4px;}
+.del-pg-btn{padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:600;color:var(--text-m);background:#fff;cursor:pointer;transition:all .1s;}
+.del-pg-btn.active,.del-pg-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.del-size-btns{display:flex;gap:4px;}
+.del-size-btn{padding:3px 7px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-weight:600;color:var(--text-m);background:#fff;cursor:pointer;transition:all .1s;}
+.del-size-btn.active,.del-size-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
 .protected-input{background:#f7f7f7!important;color:var(--text-l)!important;}
 
 @media(max-width:900px){.stats-row{grid-template-columns:repeat(2,1fr);}.expand-grid{grid-template-columns:1fr;}.worker-summary-grid{grid-template-columns:1fr 1fr;}}
@@ -1512,19 +1521,27 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               <div class="settings-card-title">Deleted Items / Restore History</div>
               <div class="settings-card-desc">Deleted records are archived here. Files remain in storage; only the active view reference is removed.</div>
             </div>
-            <div id="deletedItemsBody" class="deleted-items-body open" style="margin-top:0;border-top:none;max-height:600px;">
+            <div id="deletedItemsBody" class="deleted-items-body open" style="margin-top:0;border-top:none;max-height:640px;">
               <div class="del-toolbar">
-                <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)">
-                <div class="del-filters" id="delFilters">
+                <input class="del-search" id="delSearch" type="text" placeholder="Search by worker name, document, project…" oninput="delSearchChange(this.value)" style="flex:1;min-width:180px;">
+                <div class="del-filters" id="delFilters" style="display:flex;flex-wrap:wrap;gap:5px;flex:2;min-width:300px;">
                   <button class="del-filter-btn active" data-filter="all" onclick="delFilterChange('all')">All</button>
-                  <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Documents</button>
-                  <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Worker Assignments</button>
+                  <button class="del-filter-btn" data-filter="worker_docs" onclick="delFilterChange('worker_docs')">Worker Docs</button>
+                  <button class="del-filter-btn" data-filter="assignments" onclick="delFilterChange('assignments')">Assignments</button>
                   <button class="del-filter-btn" data-filter="accommodation" onclick="delFilterChange('accommodation')">Accommodation</button>
                   <button class="del-filter-btn" data-filter="vehicles" onclick="delFilterChange('vehicles')">Vehicles</button>
-                  <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance Docs</button>
+                  <button class="del-filter-btn" data-filter="compliance" onclick="delFilterChange('compliance')">Compliance</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:5px;flex-shrink:0;">
+                  <span style="font-size:11px;color:var(--text-l);">Show:</span>
+                  <div class="del-size-btns" id="delSizeBtns"></div>
                 </div>
               </div>
               <div id="deletedItemsList"></div>
+              <div class="del-count-bar" id="delCountBar" style="display:none;">
+                <span id="delCountInfo"></span>
+                <div class="del-pg-btns" id="delPgBtns"></div>
+              </div>
             </div>
           </div>
         </div><!-- /sset-archive -->
@@ -2585,6 +2602,8 @@ const DOC_ITEM_TOMBSTONES_KEY = 'tmc_doc_item_tombstones_v1';
 let deletedItems = [];
 let delFilterState = 'all';
 let delSearchState = '';
+let delPage = 1;
+let delPageSize = 10;
 let docItemTombstones = new Set();
 // v38: Supabase is the source of truth.
 // Do NOT use local browser tombstones/deleted history because multiple users/browsers must see the same data.
@@ -8399,11 +8418,13 @@ function toggleDeletedItemsPanel(){
   card.classList.toggle('collapsed', !body.classList.contains('open'));
 }
 function delFilterChange(f){
-  delFilterState=f;
+  delFilterState=f; delPage=1;
   document.querySelectorAll('.del-filter-btn').forEach(b=>b.classList.toggle('active', b.dataset.filter===f));
   renderDeletedItems();
 }
-function delSearchChange(v){ delSearchState=v.toLowerCase().trim(); renderDeletedItems(); }
+function delSearchChange(v){ delSearchState=v.toLowerCase().trim(); delPage=1; renderDeletedItems(); }
+function setDelPage(p){ delPage=p; renderDeletedItems(); }
+function setDelPageSize(s){ delPageSize=s; delPage=1; renderDeletedItems(); }
 function delItemMatchesFilter(it){
   const f=delFilterState;
   if(f==='all') return true;
@@ -8440,24 +8461,72 @@ function renderDeletedItems(){
   if(card.style.display==='none')return;
   deletedItems = (deletedItems||[]).filter(it=>it.type!=='worker_status_change');
   saveDeletedItems();
+
+  // Render page size buttons
+  const sizeBtns=document.getElementById('delSizeBtns');
+  if(sizeBtns) sizeBtns.innerHTML=[5,10,15,25].map(n=>`<button class="del-size-btn${delPageSize===n?' active':''}" onclick="setDelPageSize(${n})">${n}</button>`).join('');
+
   const visibleDeletedItems = deletedItems.filter(it=>delItemMatchesFilter(it)&&delItemMatchesSearch(it));
-  if(!deletedItems.length){ list.innerHTML='<div style="font-size:12px;color:var(--text-l);">No deleted items archived yet.</div>'; return; }
-  if(!visibleDeletedItems.length){ list.innerHTML='<div style="font-size:12px;color:var(--text-l);">No items match your search or filter.</div>'; return; }
-  list.innerHTML=visibleDeletedItems.map(it=>{
-    const rows=deletedItemDetails(it).map(([k,v])=>`<div class="restore-detail"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('') || '<div class="restore-detail"><strong>Details:</strong> Archived data retained in Supabase</div>';
+
+  if(!deletedItems.length){
+    list.innerHTML='<div class="appr-empty"><div class="appr-empty-icon">🗂</div><div>No deleted items archived yet.</div></div>';
+    const cb=document.getElementById('delCountBar'); if(cb)cb.style.display='none';
+    return;
+  }
+  if(!visibleDeletedItems.length){
+    list.innerHTML='<div class="appr-empty"><div class="appr-empty-icon">—</div><div>No items match your search or filter.</div></div>';
+    const cb=document.getElementById('delCountBar'); if(cb)cb.style.display='none';
+    return;
+  }
+
+  const total=visibleDeletedItems.length;
+  const totalPages=Math.max(1,Math.ceil(total/delPageSize));
+  const safePage=Math.min(delPage,totalPages);
+  const start=(safePage-1)*delPageSize;
+  const pageItems=visibleDeletedItems.slice(start,start+delPageSize);
+
+  const typeIcons={worker:'👤',project:'📋',project_assignment:'📋',worker_document_file:'📄',document_set:'📁',document_set_item:'📄',document_set_item_group_delete:'📄',property:'🏠',vehicle:'🚗',accommodation_assignment:'🏠',vehicle_assignment:'🚗',compliance_document:'📑',compliance_document_file:'📑',tool:'🔧',tool_assignment:'🔧'};
+
+  list.innerHTML=pageItems.map(it=>{
+    const details=deletedItemDetails(it);
+    const rows=details.map(([k,v])=>`<div class="restore-detail"><strong>${esc(k)}:</strong> ${esc(v)}</div>`).join('') || '<div class="restore-detail"><em>Details retained in Supabase</em></div>';
     const typeLabel=(it.type||'item').replaceAll('_',' ');
     const meta=(it.payload||{})._meta||{};
     let labelWorker='';
     if(it.type==='project_assignment' && (!meta.workerName || meta.workerName==='—') && (it.label||'').includes('→')) labelWorker = (it.label.split(':').slice(1).join(':').split('→')[0]||'').trim();
-    const workerHeadline = (meta.workerName || labelWorker) ? `<div class="restore-worker">Worker: ${esc(meta.workerName || labelWorker)}</div>` : (meta.affectedWorkers ? `<div class="restore-worker">Affected workers: ${esc(meta.affectedWorkers)}</div>` : '');
+    const workerLine = (meta.workerName || labelWorker) ? `<div class="restore-worker">Worker: ${esc(meta.workerName || labelWorker)}</div>` : (meta.affectedWorkers ? `<div class="restore-worker">Affected: ${esc(meta.affectedWorkers)}</div>` : '');
+    const icon=typeIcons[it.type]||'🗂';
+    const dateStr=it.deletedAt?new Date(it.deletedAt).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
     return `<div class="restore-card">
-      <div class="restore-title"><span class="restore-type">${esc(typeLabel)}</span><span>${esc(it.label||it.id)}</span></div>
-      ${workerHeadline}
-      <div class="restore-meta">Deleted ${new Date(it.deletedAt).toLocaleString()} ${it.deletedBy?'· by '+esc(it.deletedBy):''}</div>
-      <div class="restore-detail-grid">${rows}</div>
-      <div class="restore-actions"><button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="restoreDeletedItem('${it.id}')">Restore</button></div>
+      <div class="del-archive-icon">${icon}</div>
+      <div class="restore-card-body">
+        <div class="restore-title"><span class="restore-type">${esc(typeLabel)}</span><span>${esc(it.label||it.id)}</span></div>
+        ${workerLine}
+        <div class="restore-meta">Archived: ${dateStr}${it.deletedBy?' · by '+esc(it.deletedBy):''}</div>
+        <div class="restore-detail-grid">${rows}</div>
+        <div class="restore-actions"><button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="restoreDeletedItem('${it.id}')">↩ Restore</button></div>
+      </div>
     </div>`;
   }).join('');
+
+  // Pagination bar
+  const countBar=document.getElementById('delCountBar');
+  const countInfo=document.getElementById('delCountInfo');
+  const pgBtns=document.getElementById('delPgBtns');
+  if(countBar){
+    countBar.style.display=total>delPageSize?'':'none';
+    if(countInfo) countInfo.textContent=`${start+1}–${Math.min(start+delPageSize,total)} of ${total} items`;
+    if(pgBtns){
+      let ph='';
+      if(safePage>1) ph+=`<button class="del-pg-btn" onclick="setDelPage(${safePage-1})">‹</button>`;
+      for(let i=1;i<=totalPages;i++){
+        if(totalPages<=7||i===1||i===totalPages||Math.abs(i-safePage)<=1) ph+=`<button class="del-pg-btn${i===safePage?' active':''}" onclick="setDelPage(${i})">${i}</button>`;
+        else if(Math.abs(i-safePage)===2) ph+=`<span style="padding:3px 4px;color:var(--text-l);">…</span>`;
+      }
+      if(safePage<totalPages) ph+=`<button class="del-pg-btn" onclick="setDelPage(${safePage+1})">›</button>`;
+      pgBtns.innerHTML=ph;
+    }
+  }
 }
 async function sbMarkDeletedItemRestored(id){
   if(!sbClient||!sbSession) return;
