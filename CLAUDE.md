@@ -11,7 +11,7 @@
 - **Single-file app**: All HTML, CSS, JS in `index.html` (~400KB). No build step, no framework.
 - **Backend**: Supabase (auth, PostgreSQL database, Storage bucket `tmc-documents`)
 - **Hosting**: GitHub Pages (served from `main` branch)
-- **Working branch**: `claude/debug-error-400-S0q20` — always develop here, PR → merge to `main`
+- **Git workflow**: develop on `claude/debug-error-400-S0q20`, then **immediately fast-forward merge to `main` and push both branches** in the same session. Never leave `main` behind. Every commit session ends with `main` = working branch.
 - **Email**: Supabase Edge Function `daily-digest` → Resend API (`onboarding@resend.dev` sandbox; swap to own domain later)
 
 ---
@@ -159,6 +159,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `worker_portal_anon_rpc.sql` | ⏳ Pending | SECURITY DEFINER RPC functions for worker direct-login portal |
 | `worker_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing anon workers to upload to worker-submissions/ |
 | `add_doc_set_item_info_fields.sql` | ⏳ Pending | Adds info_text and info_url columns to document_set_items |
+| `add_reject_delete_days_to_settings.sql` | ⏳ Pending | reject_delete_days column on settings table (Approvals auto-delete) |
 
 ---
 
@@ -200,9 +201,9 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 
 ---
 
-## Checkpoint — Production State as of 2026-05-19
+## Checkpoint — Production State as of 2026-06-01
 
-**138 commits on main**. System fully live with:
+**140 commits on main**. System fully live with:
 - Worker compliance tracking (docs, expiry, GO/NO-GO scoring)
 - Project assignment Gantt with multi-assignment support and lane packing
 - Resource management (accommodation + vehicles) with billing tracker
@@ -210,3 +211,5 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 - Daily email digest via Resend + Supabase Edge Functions
 - Role-based access (admin/planner/compliance/viewer)
 - Supabase Auth with MFA available
+- Custom domain: work-force.nl (GitHub Pages + GoDaddy DNS)
+- Approvals tab: pending doc submissions + return requests, approved/rejected history with pagination and search, auto-delete rejected, worker portal pending badge
