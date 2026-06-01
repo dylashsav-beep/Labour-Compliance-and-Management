@@ -5052,7 +5052,6 @@ function renderWPAssignments(){
       <div class="wp-assign-meta">
         ${proj?.client?`<div>Client: <strong>${esc(proj.client)}</strong></div>`:''}
         <div>Period: <strong>${a.startDate||'?'} → ${ongoing?'<span style="color:#16a34a;">ongoing</span>':esc(a.endDate)}</strong></div>
-        ${a.rate?`<div>Rate: <strong>${a.rate} / ${a.rateType||'day'}</strong></div>`:''}
       </div>
     </div>`;
   };
@@ -5108,7 +5107,6 @@ function wpOpenProjDetail(assignmentId){
     <div class="wp-proj-assign-card">
       <div class="wp-proj-assign-label">Your Assignment</div>
       <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">Period</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?'<span style="color:#16a34a;font-weight:700;">ongoing</span>':esc(a.endDate)}</span></div>
-      ${a.rate?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Rate</span><span class="wp-proj-info-value">${esc(String(a.rate))} / ${esc(a.rateType||'day')}</span></div>`:''}
       ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Notes</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
     </div>`;
   document.getElementById('wpProjDetail').style.display='block';
