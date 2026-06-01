@@ -685,6 +685,36 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .doc-scope-radio{display:flex;gap:12px;align-items:center;margin-top:4px;}
 .doc-scope-radio label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;color:var(--text-m);font-weight:500;}
 
+/* ── Approvals tab ──────────────────────────────── */
+.vtab-badge{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;margin-left:5px;vertical-align:middle;line-height:1;}
+.appr-section-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-l);margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.appr-section-label:first-child{margin-top:0;}
+.appr-history-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.appr-search{flex:1;min-width:160px;max-width:300px;padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);background:#fff;outline:none;}
+.appr-search:focus{border-color:var(--navy);box-shadow:0 0 0 2px rgba(26,48,130,.08);}
+.appr-page-btns{display:flex;gap:4px;}
+.appr-page-btn{padding:4px 9px;border:1px solid var(--border);border-radius:5px;font-size:12px;font-weight:600;color:var(--text-m);background:#fff;cursor:pointer;transition:all .1s;}
+.appr-page-btn.active,.appr-page-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.appr-hist-card{background:#fff;border:1px solid var(--border);border-left:3px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px;transition:box-shadow .1s;}
+.appr-hist-card.approved{border-left-color:var(--green);}
+.appr-hist-card.rejected{border-left-color:var(--red);}
+.appr-hist-info{flex:1;min-width:0;}
+.appr-hist-title{font-size:13px;font-weight:700;color:var(--text);}
+.appr-hist-meta{font-size:11px;color:var(--text-l);margin-top:3px;line-height:1.5;}
+.appr-hist-reviewer{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:10px;color:var(--text-l);}
+.appr-status-pill{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;}
+.appr-status-pill.approved{background:#dcfce7;color:#15803d;}
+.appr-status-pill.rejected{background:#fee2e2;color:#b91c1c;}
+.appr-status-pill.pending{background:#fef3c7;color:#b45309;}
+.appr-empty{padding:32px 0;text-align:center;color:var(--text-l);font-size:13px;}
+.appr-empty-icon{font-size:28px;margin-bottom:8px;}
+.appr-pagination-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 0 4px;font-size:12px;color:var(--text-l);}
+.appr-pg-btns{display:flex;gap:4px;}
+.appr-pg-btn{padding:3px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-weight:600;color:var(--text-m);background:#fff;cursor:pointer;transition:all .1s;}
+.appr-pg-btn.active,.appr-pg-btn:hover{background:var(--navy);color:#fff;border-color:var(--navy);}
+.appr-pending-empty{background:#f8fafc;border:1px dashed var(--border);border-radius:8px;padding:22px;text-align:center;color:var(--text-l);font-size:13px;margin-bottom:4px;}
+.appr-sub-group-label{font-size:12px;font-weight:600;color:var(--text-m);margin:0 0 8px;display:flex;align-items:center;gap:8px;}
+
 /* ── Worker Portal ──────────────────────────────── */
 /* OTP panel in login overlay */
 .sbOtpPanel{display:none;}
@@ -778,6 +808,8 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-doc-btn:active{background:#047857;}
 .wp-doc-btn.cancel{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
 .wp-doc-btn.cancel:active{background:#e2e8f0;}
+.wp-doc-btn-secondary{background:#f1f5f9!important;color:#475569!important;border:1px solid #e2e8f0!important;font-size:13px!important;padding:9px 16px!important;min-height:40px!important;margin-top:8px!important;}
+.wp-doc-btn-secondary:active{background:#e2e8f0!important;}
 /* Assignment / Project cards */
 .wp-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
 .wp-assign-card:hover{border-color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.08);}
@@ -932,6 +964,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <button class="vtab"        id="tabRoster"   onclick="switchView('roster')">Worker Assignments</button>
       <button class="vtab"        id="tabProjects" onclick="switchView('projects')">Projects</button>
       <button class="vtab"        id="tabResources" onclick="switchView('resources')">Resources</button>
+      <button class="vtab"        id="tabApprovals" onclick="switchView('approvals')">Approvals<span class="vtab-badge" id="approvalsTabBadge" style="display:none;"></span></button>
       <button class="vtab"        id="tabDocuments" onclick="switchView('documents')">Documents</button>
       <button class="vtab"        id="tabSettings" onclick="switchView('settings')">⚙ Settings</button>
     </div>
@@ -1004,21 +1037,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 
   <!-- WORKERS VIEW -->
   <div id="viewWorkers">
-    <!-- Admin: pending worker submissions (hidden until there are items) -->
-    <div id="pendingSubmissionsSection" style="display:none;margin-bottom:18px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:13px;font-weight:700;color:#1a2035;">Pending Worker Submissions</span>
-        <span id="pendingSubCount" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;"></span>
-      </div>
-      <div id="pendingSubList"></div>
-    </div>
-    <div id="returnRequestsSection" style="display:none;margin-bottom:18px;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-        <span style="font-size:13px;font-weight:700;color:#1a2035;">Pending Return Requests</span>
-        <span id="returnRequestsCount" style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#b45309;border:1px solid #fcd34d;"></span>
-      </div>
-      <div id="returnRequestsList"></div>
-    </div>
     <div class="filter-bar">
       <div class="pf-wrap" id="dsfWrap">
         <button class="fbtn pf-trigger" id="dsfTrigger" onclick="toggleDSFPanel(event)">
@@ -1205,6 +1223,72 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       </div>
     </div>
   </div>
+  <!-- APPROVALS VIEW -->
+  <div id="viewApprovals" style="display:none;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:var(--text);">Approvals</div>
+        <div style="font-size:13px;color:var(--text-l);margin-top:3px;">Review document submissions and resource return requests from workers.</div>
+      </div>
+      <button class="btn btn-cancel" style="font-size:12px;" onclick="loadApprovalsData()">↻ Refresh</button>
+    </div>
+
+    <!-- ── Pending ─────────────────────────────────── -->
+    <div class="appr-section-label">Pending</div>
+
+    <div id="pendingSubmissionsSection" style="display:none;margin-bottom:18px;">
+      <div class="appr-sub-group-label">
+        <span>📄 Document Submissions</span>
+        <span id="pendingSubCount" class="appr-status-pill pending"></span>
+      </div>
+      <div id="pendingSubList"></div>
+    </div>
+
+    <div id="returnRequestsSection" style="display:none;margin-bottom:18px;">
+      <div class="appr-sub-group-label">
+        <span>📦 Resource Return Requests</span>
+        <span id="returnRequestsCount" class="appr-status-pill pending"></span>
+      </div>
+      <div id="returnRequestsList"></div>
+    </div>
+
+    <div id="approvalsPendingEmpty" class="appr-pending-empty" style="display:none;">
+      <div class="appr-empty-icon">✓</div>
+      <div>All clear — no pending approvals</div>
+    </div>
+
+    <!-- ── Recently Approved ──────────────────────── -->
+    <div class="appr-section-label" style="margin-top:32px;">Recently Approved</div>
+    <div class="appr-history-bar">
+      <input type="text" class="appr-search" placeholder="Search worker or document…" id="approvalsApprovedSearch" oninput="renderApprovalsHistory('approved')"/>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span style="font-size:11px;color:var(--text-l);">Show:</span>
+        <div class="appr-page-btns" id="approvalsApprovedPageBtns"></div>
+      </div>
+    </div>
+    <div id="approvalsApprovedList"></div>
+    <div class="appr-pagination-bar" id="approvalsApprovedPagBar" style="display:none;">
+      <span id="approvalsApprovedPagInfo"></span>
+      <div class="appr-pg-btns" id="approvalsApprovedPagBtns"></div>
+    </div>
+
+    <!-- ── Rejected ────────────────────────────────── -->
+    <div class="appr-section-label" style="margin-top:32px;">Rejected</div>
+    <div id="approvalsRejectedAutoDeleteNote" style="font-size:11px;color:var(--text-l);margin-bottom:12px;"></div>
+    <div class="appr-history-bar">
+      <input type="text" class="appr-search" placeholder="Search worker or document…" id="approvalsRejectedSearch" oninput="renderApprovalsHistory('rejected')"/>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <span style="font-size:11px;color:var(--text-l);">Show:</span>
+        <div class="appr-page-btns" id="approvalsRejectedPageBtns"></div>
+      </div>
+    </div>
+    <div id="approvalsRejectedList"></div>
+    <div class="appr-pagination-bar" id="approvalsRejectedPagBar" style="display:none;">
+      <span id="approvalsRejectedPagInfo"></span>
+      <div class="appr-pg-btns" id="approvalsRejectedPagBtns"></div>
+    </div>
+  </div><!-- /viewApprovals -->
+
   <!-- DOCUMENTS VIEW -->
   <div id="viewDocuments" style="display:none;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
@@ -1347,6 +1431,21 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               <div style="display:flex;gap:6px;flex-wrap:wrap;" id="warnPresets"></div>
             </div>
             <div style="margin-top:10px;font-size:12px;color:var(--text-l);" id="warnDesc"></div>
+          </div>
+
+          <!-- Auto-delete rejected approvals -->
+          <div class="settings-card" style="margin-bottom:16px;">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Auto-Delete Rejected Approvals</div>
+              <div class="settings-card-desc">Automatically remove rejected document submissions and return requests after a set number of days. Set to 0 to disable.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <input type="number" id="rejectDeleteDaysInput" min="0" max="365" value="30"
+                style="width:80px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-weight:600;color:var(--text);"
+                oninput="applyRejectDeleteDays(this.value)"/>
+              <span style="font-size:13px;color:var(--text-m);">days (0 = never delete)</span>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:var(--text-l);" id="rejectDeleteDesc"></div>
           </div>
 
           <!-- Compliance Email Report -->
@@ -2761,7 +2860,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl' };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30 };
 
 // Built-in set IDs (cannot be deleted)
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
@@ -2785,7 +2884,7 @@ function initDefaultSets(){
 function loadSettings(){
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; }
+    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; }
   } catch(e){}
   try {
     const raw = localStorage.getItem(DOC_SETS_KEY);
@@ -3135,17 +3234,18 @@ function renderWeekLabel(){
 let currentView='workers';
 function switchView(v){
   currentView=v;
-  ['workers','roster','projects','resources','documents','settings'].forEach(id=>{
+  ['workers','roster','projects','resources','approvals','documents','settings'].forEach(id=>{
     document.getElementById('view'+id.charAt(0).toUpperCase()+id.slice(1)).style.display=v===id?'block':'none';
     document.getElementById('tab'+id.charAt(0).toUpperCase()+id.slice(1)).className='vtab'+(v===id?' active':'');
   });
-  document.getElementById('weekNav').style.display=(v==='projects'||v==='settings'||v==='resources'||v==='roster'||v==='documents')?'none':'flex';
+  document.getElementById('weekNav').style.display=(v==='projects'||v==='settings'||v==='resources'||v==='roster'||v==='documents'||v==='approvals')?'none':'flex';
   document.getElementById('statsBar').style.display=v==='workers'?'':'none';
   if(v==='roster')renderRoster();
   if(v==='projects')renderProjects();
   if(v==='settings')renderSettings();
   if(v==='resources')renderResources();
   if(v==='documents')renderDocuments();
+  if(v==='approvals')loadApprovalsData();
 }
 
 // ─── Filter state (multi-select Sets, empty = show all) ──────────────────────
@@ -4882,7 +4982,7 @@ function renderWPDocs(){
   const w=wpWorkerObj; if(!w){el.innerHTML='<p>Worker profile not found.</p>';return;}
   const today=new Date();
   const tmpl=tmplForWorker(w);
-  const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId).map(s=>[s.doc_key,s]));
+  const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId&&s.status==='pending').map(s=>[s.doc_key,s]));
 
   // Filter tab counts — missing = required only; optional = optional unsubmitted
   const filterCounts={missing:0,expiring:0,expired:0,ok:0,optional:0};
@@ -4959,7 +5059,7 @@ function renderWPDocs(){
           <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
         </div>
       </div>`:''}
-      ${!isOpen&&!hasPending?`<button class="wp-doc-btn" onclick="wpToggleSubmit('${d.id}')">Submit update</button>`:''}
+      ${!isOpen?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?'Submit replacement':'Submit update'}</button>`:''}
     </div>`;
   };
 
@@ -5029,6 +5129,10 @@ async function submitWPDoc(docKey){
     alert('Could not submit: '+e.message); return;
   }
   wpDocSubmitOpen[docKey]=false;
+  if(!wpSubmissions.some(s=>s.worker_id===wpWorkerId&&s.doc_key===docKey&&s.status==='pending')){
+    wpSubmissions.push({id:'_opt_'+Date.now(),worker_id:wpWorkerId,doc_key:docKey,status:'pending',submitted_at:new Date().toISOString()});
+  }
+  renderWPDocs();
   await wpLoadSubmissions();
   renderWPDocs();
 }
@@ -5266,6 +5370,160 @@ async function wpSubmitReturn(resourceType, assignmentId){
   }catch(e){ alert('Could not submit: '+e.message); }
 }
 
+// ── Approvals tab ─────────────────────────────────────────────────────────────
+let approvalsHistory = [];
+let approvalsApprovedPage = 1, approvalsRejectedPage = 1;
+let approvalsApprovedPageSize = 10, approvalsRejectedPageSize = 10;
+
+function updateApprovalsBadge(){
+  const pendingCount=(wpSubmissions.filter(s=>s.status==='pending').length)+(adminReturnRequests.filter(r=>r.status==='pending').length);
+  const badge=document.getElementById('approvalsTabBadge');
+  if(!badge)return;
+  badge.style.display=pendingCount?'':'none';
+  badge.textContent=pendingCount>99?'99+':pendingCount||'';
+}
+function _refreshApprovalsPendingEmpty(){
+  const hasSubs=document.getElementById('pendingSubmissionsSection')?.style.display!=='none';
+  const hasRets=document.getElementById('returnRequestsSection')?.style.display!=='none';
+  const el=document.getElementById('approvalsPendingEmpty');
+  if(el)el.style.display=(hasSubs||hasRets)?'none':'';
+}
+
+async function loadApprovalsData(){
+  if(!sbClient||!sbSession)return;
+  if(sbUserRole!=='admin'&&sbUserRole!=='compliance')return;
+  await Promise.all([loadAdminPendingSubmissions(),loadAdminReturnRequests()]);
+  await loadApprovalsHistory();
+  await autoDeleteOldRejections();
+  renderApprovalsView();
+}
+
+async function loadApprovalsHistory(){
+  if(!sbClient||!sbSession)return;
+  try{
+    const [subRes,retRes]=await Promise.all([
+      sbClient.from('worker_document_submissions').select('*').eq('active',true).in('status',['approved','rejected']).order('reviewed_at',{ascending:false}).limit(500),
+      sbClient.from('worker_resource_return_requests').select('*').in('status',['approved','rejected']).order('reviewed_at',{ascending:false}).limit(500)
+    ]);
+    const docs=(subRes.data||[]).map(s=>({...s,_type:'document'}));
+    const rets=(retRes.data||[]).map(r=>({...r,_type:'return'}));
+    approvalsHistory=[...docs,...rets].sort((a,b)=>(b.reviewed_at||'').localeCompare(a.reviewed_at||''));
+  }catch(e){console.warn('[TMC] loadApprovalsHistory:',e.message);}
+}
+
+async function autoDeleteOldRejections(){
+  const days=settings.rejectDeleteDays;
+  if(!days||days<=0)return;
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-days);
+  const cutoffStr=cutoff.toISOString();
+  const toDelete=approvalsHistory.filter(h=>h.status==='rejected'&&h.reviewed_at&&h.reviewed_at<cutoffStr);
+  if(!toDelete.length)return;
+  const docIds=toDelete.filter(h=>h._type==='document').map(h=>h.id);
+  const retIds=toDelete.filter(h=>h._type==='return').map(h=>h.id);
+  try{
+    if(docIds.length)await sbClient.from('worker_document_submissions').update({active:false}).in('id',docIds);
+    if(retIds.length)await sbClient.from('worker_resource_return_requests').update({active:false}).in('id',retIds);
+    approvalsHistory=approvalsHistory.filter(h=>!(h.status==='rejected'&&h.reviewed_at&&h.reviewed_at<cutoffStr));
+  }catch(e){console.warn('[TMC] autoDeleteOldRejections:',e.message);}
+}
+
+function renderApprovalsView(){
+  const hasPendingSubs=wpSubmissions.filter(s=>s.status==='pending').length>0;
+  const hasPendingRets=adminReturnRequests.filter(r=>r.status==='pending').length>0;
+  const emptyEl=document.getElementById('approvalsPendingEmpty');
+  if(emptyEl)emptyEl.style.display=(hasPendingSubs||hasPendingRets)?'none':'';
+  const noteEl=document.getElementById('approvalsRejectedAutoDeleteNote');
+  if(noteEl){const d=settings.rejectDeleteDays??30;noteEl.textContent=d>0?`Rejected items are automatically removed after ${d} day${d!==1?'s':''}.`:'Auto-delete of rejected items is disabled.';}
+  renderApprovalsHistory('approved');
+  renderApprovalsHistory('rejected');
+  updateApprovalsBadge();
+}
+
+function renderApprovalsHistory(type){
+  const isApproved=type==='approved';
+  const prefix=isApproved?'Approved':'Rejected';
+  const searchEl=document.getElementById(`approvals${prefix}Search`);
+  const listEl=document.getElementById(`approvals${prefix}List`);
+  const pagBarEl=document.getElementById(`approvals${prefix}PagBar`);
+  const pagInfoEl=document.getElementById(`approvals${prefix}PagInfo`);
+  const pagBtnsEl=document.getElementById(`approvals${prefix}PagBtns`);
+  const pageSizeBtns=document.getElementById(`approvals${prefix}PageBtns`);
+  if(!listEl)return;
+  const pageSize=isApproved?approvalsApprovedPageSize:approvalsRejectedPageSize;
+  const page=isApproved?approvalsApprovedPage:approvalsRejectedPage;
+  if(pageSizeBtns)pageSizeBtns.innerHTML=[5,10,15,25].map(n=>`<button class="appr-page-btn${pageSize===n?' active':''}" onclick="setApprovalsPageSize('${type}',${n})">${n}</button>`).join('');
+  const q=(searchEl?.value||'').toLowerCase().trim();
+  const typeIcon={accommodation:'🏠',vehicle:'🚗',tool:'🔧'};
+  let items=approvalsHistory.filter(h=>h.status===type);
+  if(q){items=items.filter(h=>{
+    const w=workers.find(x=>x.id===h.worker_id);
+    const wName=(w?.name||h.submitted_by_email||'').toLowerCase();
+    const dName=h._type==='document'?((docSetItems[w?.docSetId]||[]).find(d=>d.id===h.doc_key)?.name||h.doc_key||'').toLowerCase():`${h.resource_type||''} return`.toLowerCase();
+    return wName.includes(q)||dName.includes(q);
+  });}
+  const total=items.length;
+  const totalPages=Math.max(1,Math.ceil(total/pageSize));
+  const safePage=Math.min(page,totalPages);
+  const start=(safePage-1)*pageSize;
+  const pageItems=items.slice(start,start+pageSize);
+  if(!total){
+    listEl.innerHTML=`<div class="appr-empty"><div class="appr-empty-icon">${isApproved?'✓':'—'}</div><div>${q?'No results for your search.':isApproved?'No approved items yet.':'No rejected items.'}</div></div>`;
+    if(pagBarEl)pagBarEl.style.display='none';
+    return;
+  }
+  listEl.innerHTML=pageItems.map(h=>{
+    const w=workers.find(x=>x.id===h.worker_id);
+    const workerName=w?.name||h.submitted_by_email||'Unknown worker';
+    const isDoc=h._type==='document';
+    const docItem=isDoc?((docSetItems[w?.docSetId]||[]).find(d=>d.id===h.doc_key)||{name:h.doc_key||'Document',icon:'📄'}):{name:`${(h.resource_type||'').charAt(0).toUpperCase()+(h.resource_type||'').slice(1)} Return`,icon:typeIcon[h.resource_type]||'📦'};
+    const submittedStr=h.submitted_at?new Date(h.submitted_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'—';
+    const reviewedStr=h.reviewed_at?new Date(h.reviewed_at).toLocaleString('en-GB',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
+    const statusCls=h.status==='approved'?'approved':'rejected';
+    const statusLabel=h.status==='approved'?'✓ Approved':'✕ Rejected';
+    return`<div class="appr-hist-card ${statusCls}">
+      <div style="font-size:20px;flex-shrink:0;">${docItem.icon||'📄'}</div>
+      <div class="appr-hist-info">
+        <div class="appr-hist-title">${esc(workerName)} — ${esc(docItem.name)}</div>
+        <div class="appr-hist-meta">Submitted: ${submittedStr}${h.expiry_date?` · Expiry: <strong>${h.expiry_date}</strong>`:''}${h.file_name?` · <button class="btn" style="font-size:10px;padding:1px 5px;" onclick="sbSignedDownload('${h.file_path}','${esc(h.file_name)}')">View file</button>`:''}</div>
+        ${h.review_notes?`<div class="appr-hist-meta" style="margin-top:2px;">Notes: <em>${esc(h.review_notes)}</em></div>`:''}
+        <div class="appr-hist-reviewer"><span class="appr-status-pill ${statusCls}">${statusLabel}</span>${h.reviewed_by?`<span>by ${esc(h.reviewed_by)}</span>`:''}${h.reviewed_at?`<span>· ${reviewedStr}</span>`:''}</div>
+      </div>
+    </div>`;
+  }).join('');
+  if(pagBarEl){
+    pagBarEl.style.display=total>pageSize?'':'none';
+    if(pagInfoEl)pagInfoEl.textContent=`${start+1}–${Math.min(start+pageSize,total)} of ${total}`;
+    if(pagBtnsEl){
+      let pHtml='';
+      if(safePage>1)pHtml+=`<button class="appr-pg-btn" onclick="setApprovalsPage('${type}',${safePage-1})">‹</button>`;
+      for(let i=1;i<=totalPages;i++){
+        if(totalPages<=7||i===1||i===totalPages||Math.abs(i-safePage)<=1)pHtml+=`<button class="appr-pg-btn${i===safePage?' active':''}" onclick="setApprovalsPage('${type}',${i})">${i}</button>`;
+        else if(Math.abs(i-safePage)===2)pHtml+=`<span style="padding:3px 4px;color:var(--text-l);">…</span>`;
+      }
+      if(safePage<totalPages)pHtml+=`<button class="appr-pg-btn" onclick="setApprovalsPage('${type}',${safePage+1})">›</button>`;
+      pagBtnsEl.innerHTML=pHtml;
+    }
+  }
+}
+
+function setApprovalsPage(type,page){if(type==='approved')approvalsApprovedPage=page;else approvalsRejectedPage=page;renderApprovalsHistory(type);}
+function setApprovalsPageSize(type,size){if(type==='approved'){approvalsApprovedPageSize=size;approvalsApprovedPage=1;}else{approvalsRejectedPageSize=size;approvalsRejectedPage=1;}renderApprovalsHistory(type);}
+
+function applyRejectDeleteDays(val){
+  const parsed=parseInt(val,10);
+  if(isNaN(parsed)||parsed<0)return;
+  settings.rejectDeleteDays=Math.min(parsed,365);
+  saveSettings();
+  _updateRejectDeleteDesc();
+  if(sbReady)sbScheduleSync();
+}
+function _updateRejectDeleteDesc(){
+  const el=document.getElementById('rejectDeleteDesc');
+  if(!el)return;
+  const d=settings.rejectDeleteDays??30;
+  el.textContent=d>0?`Rejected approvals older than ${d} day${d!==1?'s':''} will be removed automatically when the Approvals tab is opened.`:'Rejected approvals will never be automatically deleted.';
+}
+
 // ── Admin: pending submissions review ──
 async function loadAdminPendingSubmissions(){
   if(!sbClient||!sbSession) return;
@@ -5276,6 +5534,7 @@ async function loadAdminPendingSubmissions(){
       .order('submitted_at',{ascending:false});
     wpSubmissions=data||[];
     renderAdminPendingSubmissions();
+    updateApprovalsBadge();
   }catch(e){ console.warn('[TMC] loadAdminPendingSubmissions:',e.message); }
 }
 function renderAdminPendingSubmissions(){
@@ -5284,9 +5543,11 @@ function renderAdminPendingSubmissions(){
   const count=document.getElementById('pendingSubCount');
   if(!section||!list||!count) return;
   const pending=wpSubmissions.filter(s=>s.status==='pending');
-  if(!pending.length){section.style.display='none';return;}
+  if(!pending.length){section.style.display='none';updateApprovalsBadge();_refreshApprovalsPendingEmpty();return;}
   section.style.display='block';
   count.textContent=pending.length+' pending';
+  updateApprovalsBadge();
+  _refreshApprovalsPendingEmpty();
   list.innerHTML=pending.map(s=>{
     const w=workers.find(x=>x.id===s.worker_id);
     const workerName=w?.name||s.submitted_by_email||'Unknown worker';
@@ -5351,7 +5612,8 @@ async function approveSubmission(subId){
       reviewed_by:sbSession.user.email,review_notes:reviewNotes||null
     }).eq('id',subId);
     wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
-    renderAdminPendingSubmissions(); renderTable(); if(curW) rebuildModal(curW);
+    approvalsHistory.unshift({...sub,_type:'document',status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:sbSession.user.email,review_notes:reviewNotes||null});
+    renderAdminPendingSubmissions(); renderApprovalsHistory('approved'); renderTable(); if(curW) rebuildModal(curW);
   }catch(e){alert('Approve failed: '+e.message);}
 }
 async function rejectSubmission(subId){
@@ -5362,8 +5624,9 @@ async function rejectSubmission(subId){
       status:'rejected',reviewed_at:new Date().toISOString(),
       reviewed_by:sbSession.user.email,review_notes:reviewNotes||null
     }).eq('id',subId);
+    approvalsHistory.unshift({...sub,_type:'document',status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:sbSession.user.email,review_notes:reviewNotes||null});
     wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
-    renderAdminPendingSubmissions();
+    renderAdminPendingSubmissions(); renderApprovalsHistory('rejected');
   }catch(e){alert('Reject failed: '+e.message);}
 }
 
@@ -5379,6 +5642,7 @@ async function loadAdminReturnRequests(){
     if(error) throw error;
     adminReturnRequests=data||[];
     renderAdminReturnRequests();
+    updateApprovalsBadge();
   }catch(e){ console.warn('[TMC] loadAdminReturnRequests:',e.message); }
 }
 function renderAdminReturnRequests(){
@@ -5387,9 +5651,11 @@ function renderAdminReturnRequests(){
   const count=document.getElementById('returnRequestsCount');
   if(!section||!list||!count) return;
   const pending=adminReturnRequests.filter(r=>r.status==='pending');
-  if(!pending.length){section.style.display='none';return;}
+  if(!pending.length){section.style.display='none';updateApprovalsBadge();_refreshApprovalsPendingEmpty();return;}
   section.style.display='block';
   count.textContent=pending.length+' pending';
+  updateApprovalsBadge();
+  _refreshApprovalsPendingEmpty();
   const typeIcon={accommodation:'🏠',vehicle:'🚗',tool:'🔧'};
   list.innerHTML=pending.map(r=>{
     const w=workers.find(x=>x.id===r.worker_id);
@@ -5458,8 +5724,9 @@ async function approveReturnRequest(reqId){
         saveToolHistory();
       }
     }
+    approvalsHistory.unshift({...r,_type:'return',status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null});
     adminReturnRequests=adminReturnRequests.filter(x=>x.id!==reqId);
-    renderAdminReturnRequests();
+    renderAdminReturnRequests(); renderApprovalsHistory('approved');
     renderResources();
     if(curW) rebuildModal(curW);
   }catch(e){alert('Approve failed: '+e.message);}
@@ -5472,8 +5739,9 @@ async function rejectReturnRequest(reqId){
       status:'rejected',reviewed_at:new Date().toISOString(),
       reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null
     }).eq('id',reqId);
+    approvalsHistory.unshift({...r,_type:'return',status:'rejected',reviewed_at:new Date().toISOString(),reviewed_by:sbSession?.user?.email||'',review_notes:reviewNotes||null});
     adminReturnRequests=adminReturnRequests.filter(x=>x.id!==reqId);
-    renderAdminReturnRequests();
+    renderAdminReturnRequests(); renderApprovalsHistory('rejected');
   }catch(e){alert('Reject failed: '+e.message);}
 }
 
@@ -5853,6 +6121,9 @@ function renderSettings(){
       `<button class="preset-btn${settings.warningDays===d?' active':''}" onclick="applyWarningDays(${d})">${d} days</button>`
     ).join('');
     updateWarnDesc();
+    const rdInput=document.getElementById('rejectDeleteDaysInput');
+    if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
+    _updateRejectDeleteDesc();
     renderComplianceReportSettings();
   }
   if(active==='docsets') renderDocSets();
@@ -5878,6 +6149,9 @@ function switchSettingsSection(name){
       `<button class="preset-btn${settings.warningDays===d?' active':''}" onclick="applyWarningDays(${d})">${d} days</button>`
     ).join('');
     updateWarnDesc();
+    const rdInput=document.getElementById('rejectDeleteDaysInput');
+    if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
+    _updateRejectDeleteDesc();
     renderComplianceReportSettings();
   }
   if(name==='docsets') renderDocSets();
@@ -8731,7 +9005,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
@@ -8872,6 +9146,7 @@ function applyRoleUI(){
   const addCompDocBtn=document.getElementById('addCompDocBtn'); if(addCompDocBtn) addCompDocBtn.classList.toggle('role-hide', !canWorkers);
   document.querySelectorAll('#paContractFile').forEach(el=>el.classList.toggle('role-hide', !canPlanning));
   document.querySelectorAll('#warnRange,#zzpNewName,#zzpNewCat,#zzpNewTip,#zzpNewReq,#blueNewName,#blueNewCat,#blueNewTip,#blueNewReq').forEach(el=>el.disabled=!canSettings);
+  const approvalsTab=document.getElementById('tabApprovals'); if(approvalsTab) approvalsTab.classList.toggle('role-hide', !canWorkers);
   const settingsTab=document.getElementById('tabSettings'); if(settingsTab) settingsTab.classList.toggle('role-hide', !(canSettings || canRoles));
   const addWorkerBtn=document.getElementById('addWorkerBtn'); if(addWorkerBtn) addWorkerBtn.classList.toggle('role-hide', !canWorkers);
   const newAssignmentBtn=document.getElementById('newAssignmentBtn'); if(newAssignmentBtn) newAssignmentBtn.classList.toggle('role-hide', !canPlanning);
@@ -9024,7 +9299,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; updateWarnDesc(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; updateWarnDesc(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
