@@ -955,7 +955,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 <div id="workerPortal">
   <div class="wp-header">
     <div class="wp-header-left">
-      <div class="wp-header-title">TMC Worker Portal</div>
+      <div class="wp-header-title" id="wpHeaderTitle">Worker Portal</div>
       <div class="wp-header-name" id="wpHeaderName"></div>
     </div>
     <div class="wp-header-right">
@@ -5896,6 +5896,9 @@ function applyOrgBranding(){
   // Header app title: "{Org Name} Compliance"
   const titleEl=document.getElementById('headerAppTitle');
   if(titleEl) titleEl.textContent=(currentOrg.name||'TMC')+' Compliance';
+  // Worker portal title: "{Org Name} Worker Portal"
+  const wpTitle=document.getElementById('wpHeaderTitle');
+  if(wpTitle) wpTitle.textContent=(currentOrg.name||'Worker Portal')+' Worker Portal';
   // Browser tab title
   document.title=(currentOrg.name||'TMC Compliance')+' — Compliance';
   // Primary colour
