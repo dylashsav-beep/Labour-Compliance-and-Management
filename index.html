@@ -754,9 +754,14 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .wp-signout-btn{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
 .wp-signout-btn:active{background:rgba(255,255,255,.18);}
-.wp-lang-toggle{display:flex;gap:2px;background:rgba(255,255,255,.1);border-radius:6px;padding:2px;flex-shrink:0;}
-.wp-lang-btn{padding:4px 9px;border:none;border-radius:4px;font-size:11px;font-weight:700;color:rgba(255,255,255,.55);background:transparent;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
-.wp-lang-btn.active{background:rgba(255,255,255,.22);color:#fff;}
+.wp-lang-dd{position:relative;flex-shrink:0;}
+.wp-lang-dd-btn{display:flex;align-items:center;gap:5px;padding:7px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;min-height:40px;transition:background .15s;}
+.wp-lang-dd-btn:hover{background:rgba(255,255,255,.18);}
+.wp-lang-caret{font-size:10px;opacity:.6;margin-left:1px;}
+.wp-lang-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.14);z-index:200;overflow:hidden;min-width:148px;}
+.wp-lang-opt{display:flex;align-items:center;gap:9px;width:100%;padding:11px 14px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;text-align:left;}
+.wp-lang-opt:hover{background:var(--sky-xl);color:var(--navy);}
+.wp-lang-opt.active{font-weight:700;color:var(--navy);}
 .wp-status-banner{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2e8f0;background:#fff;flex-wrap:wrap;}
 .wp-status-text{font-size:14px;font-weight:600;}
 /* Tabs — navigation state only, NOT action color */
@@ -1015,9 +1020,17 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     </div>
     <div class="wp-header-right">
       <span id="wpStatusBadge"></span>
-      <div class="wp-lang-toggle">
-        <button class="wp-lang-btn active" id="wpLangEN" onclick="wpSetLang('en')">EN</button>
-        <button class="wp-lang-btn" id="wpLangRO" onclick="wpSetLang('ro')">RO</button>
+      <div class="wp-lang-dd" id="wpLangDd">
+        <button class="wp-lang-dd-btn" id="wpLangDdBtn" onclick="wpToggleLangMenu(event)">
+          <span id="wpLangFlag">🇬🇧</span>
+          <span id="wpLangCode">EN</span>
+          <span class="wp-lang-caret">▾</span>
+        </button>
+        <div class="wp-lang-menu" id="wpLangMenu" style="display:none;">
+          <button class="wp-lang-opt" id="wpLangOptEN" onclick="wpSetLang('en')">🇬🇧 English</button>
+          <button class="wp-lang-opt" id="wpLangOptRO" onclick="wpSetLang('ro')">🇷🇴 Română</button>
+          <button class="wp-lang-opt" id="wpLangOptNL" onclick="wpSetLang('nl')">🇳🇱 Nederlands</button>
+        </div>
       </div>
       <button class="wp-signout-btn" id="wpSignOutBtn" onclick="sbLogout()">Sign out</button>
     </div>
@@ -4953,6 +4966,71 @@ const wpI18n = {
     helpInfo:'Help & info', openFormLink:'Open form / link',
     workerNotFound:'Worker profile not found.',
   },
+  nl: {
+    workerPortal:'Werknemersportaal', signOut:'Uitloggen',
+    tabDocs:'Documenten', tabProjects:'Projecten', tabProfile:'Profiel', tabResources:'Middelen',
+    missing:'Ontbrekend', expiring:'Verloopt', expired:'Verlopen', valid:'Geldig', optional:'Optioneel',
+    stValid:'Geldig', stExpiring:'Verloopt binnenkort', stExpired:'Verlopen', stNotSubmitted:'Niet ingediend', stMissing:'Ontbrekend',
+    required:'Verplicht', reqOptional:'Optioneel', awaitingReview:'⏳ Wacht op beoordeling',
+    expires:'Verloopt', expiredOn:'Verlopen',
+    officialFormRequired:'📎 Officieel formulier vereist',
+    templateSub:'Download, vul in en dien dit sjabloon in — gebruik geen eigen formaat.',
+    download:'📥 Downloaden',
+    expiryDate:'Vervaldatum', issueDate:'Uitgiftedatum (optioneel)',
+    attachDoc:'Document bijvoegen (optioneel)', notes:'Opmerkingen (optioneel)',
+    notesPlaceholder:'Opmerkingen voor de beoordelaar…',
+    submitForReview:'Indienen voor beoordeling', cancel:'Annuleren',
+    submitReplacement:'Vervanging indienen', submitUpdate:'Update indienen',
+    emptyMissing:'Geen verplichte documenten ontbrekend',
+    emptyExpiring:'Geen documenten die binnenkort verlopen',
+    emptyExpired:'Geen verlopen documenten',
+    emptyOk:'Alle documenten zijn up-to-date',
+    emptyOptional:'Geen optionele documenten in te dienen',
+    emptyDocs:'Geen documenten',
+    optionalIntro:'Deze documenten zijn niet verplicht maar kunnen worden ingediend om uw profiel te voltooien.',
+    notSignedIn:'Niet ingelogd.',
+    pleaseAddExpiry:'Voer een vervaldatum in of voeg een bestand toe voordat u indient.',
+    fileUploadFailed:'Upload mislukt: ',
+    canStillSubmit:'U kunt nog steeds indienen zonder bestand — voeg het indien nodig afzonderlijk toe.',
+    couldNotSubmit:'Kon niet indienen: ',
+    noProjects:'Geen projecten geregistreerd.',
+    currentProject:'Huidig project', currentProjects:'Huidige projecten',
+    client:'Klant', period:'Periode', ongoing:'lopend', unknownProject:'Onbekend project',
+    pastProjects:'Eerdere projecten',
+    projectLeader:'Projectleider', contact:'Contact', location:'Locatie',
+    description:'Beschrijving', projectDetails:'Projectdetails',
+    yourAssignment:'Uw opdracht', periodLabel:'Periode', notesLabel:'Opmerkingen',
+    openInMaps:'📍 Openen in Maps',
+    myProfile:'Mijn profiel',
+    profileDesc:'De onderstaande gegevens zijn zichtbaar voor uw complianceteam. Wijzigingen worden opgeslagen voor beoordeling.',
+    fullName:'Volledige naam', workerType:'Type werknemer',
+    zzp:'ZZP (Zelfstandige)', employed:'Werknemer in loondienst',
+    nationality:'Nationaliteit', emailAddress:'E-mailadres',
+    emailPlaceholder:'uw@email.com', phoneNumber:'Telefoonnummer',
+    phonePlaceholder:'bijv. +31 6 12345678',
+    phoneHelp:'Wordt gebruikt door uw complianceteam om contact met u op te nemen.',
+    notesAdditional:'Opmerkingen / Aanvullende informatie', saveChanges:'Wijzigingen opslaan',
+    profileNotFound:'Profiel niet gevonden.',
+    couldNotSaveProfile:'Profiel kon niet worden opgeslagen: ', profileSaved:'Profiel opgeslagen',
+    active:'Actief', ended:'Beëindigd', returningSoon:'Binnenkort terugkeren',
+    accommodation:'Accommodatie', vehicles:'Voertuigen', tools:'Gereedschap',
+    propertyFallback:'Eigendom', vehicleFallback:'Voertuig', toolFallback:'Gereedschap',
+    noAccommodation:'Geen accommodatie geregistreerd.',
+    noVehicles:'Geen voertuigen geregistreerd.',
+    noTools:'Geen gereedschap geregistreerd.',
+    noResources:'Geen resourcetoewijzingen gevonden.',
+    from:'Van:', ongoingCap:'Lopend',
+    returnPending:'Retourbewijs ingediend — wacht op beoordeling',
+    submitReturn:'Retour / afsluiting indienen',
+    submitReturnTitle:'Retour / Afsluiting indienen',
+    proposedReturnDate:'Voorgestelde retour- / afsluitingsdatum',
+    attachProof:'Bewijs foto / document bijvoegen',
+    returnFileUploadFailed:'Upload mislukt: ',
+    canStillSubmitReturn:'U kunt nog steeds indienen zonder bestand.',
+    returnSubmitted:'Retourverzoek ingediend! Uw manager zal de afsluiting beoordelen en bevestigen.',
+    helpInfo:'Hulp & informatie', openFormLink:'Formulier / link openen',
+    workerNotFound:'Werknemersprofiel niet gevonden.',
+  },
   ro: {
     workerPortal:'Portal Lucrător', signOut:'Deconectare',
     tabDocs:'Documente', tabProjects:'Proiecte', tabProfile:'Profil', tabResources:'Resurse',
@@ -5016,17 +5094,64 @@ const wpI18n = {
     workerNotFound:'Profil lucrător negăsit.',
   }
 };
+const wpLangMeta={
+  en:{flag:'🇬🇧',code:'EN'},
+  nl:{flag:'🇳🇱',code:'NL'},
+  ro:{flag:'🇷🇴',code:'RO'},
+};
+const wpInfoCache=new Map(); // key: `${docId}|${lang}` → translatedText
+
 function t(key){ return (wpI18n[wpLang]||wpI18n.en)[key] || wpI18n.en[key] || key; }
-function wpSetLang(lang){
-  wpLang=lang;
-  try{localStorage.setItem('wpLang',lang);}catch(e){}
-  document.getElementById('wpLangEN')?.classList.toggle('active',lang==='en');
-  document.getElementById('wpLangRO')?.classList.toggle('active',lang==='ro');
+
+async function wpTranslate(text, targetLang){
+  if(!text||targetLang==='en') return text;
+  const key=`${text}|${targetLang}`;
+  if(wpInfoCache.has(key)) return wpInfoCache.get(key);
+  try{
+    const resp=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0,450))}&langpair=auto|${targetLang}`);
+    if(!resp.ok) throw new Error('http '+resp.status);
+    const data=await resp.json();
+    if(data.responseStatus===200){
+      const tr=data.responseData.translatedText;
+      wpInfoCache.set(key,tr);
+      return tr;
+    }
+  }catch(e){ console.warn('[TMC] translate failed:',e.message); }
+  return text;
+}
+
+function wpUpdateLangUI(){
+  const m=wpLangMeta[wpLang]||wpLangMeta.en;
+  const flag=document.getElementById('wpLangFlag'), code=document.getElementById('wpLangCode');
+  if(flag) flag.textContent=m.flag;
+  if(code) code.textContent=m.code;
+  ['EN','RO','NL'].forEach(c=>document.getElementById('wpLangOpt'+c)?.classList.toggle('active',wpLang===c.toLowerCase()));
   document.getElementById('wpHeaderTitle').textContent=t('workerPortal');
   document.getElementById('wpTabDocs').textContent=t('tabDocs');
   document.getElementById('wpTabAssign').textContent=t('tabProjects');
   document.getElementById('wpTabProfile').textContent=t('tabProfile');
   document.getElementById('wpTabResources').textContent=t('tabResources');
+  const so=document.getElementById('wpSignOutBtn'); if(so) so.textContent=t('signOut');
+}
+
+function wpToggleLangMenu(ev){
+  ev?.stopPropagation();
+  const menu=document.getElementById('wpLangMenu');
+  if(!menu) return;
+  const open=menu.style.display==='none';
+  menu.style.display=open?'block':'none';
+  if(open){
+    const close=()=>{menu.style.display='none';document.removeEventListener('click',close);};
+    setTimeout(()=>document.addEventListener('click',close),0);
+  }
+}
+
+function wpSetLang(lang){
+  wpLang=lang;
+  wpInfoCache.clear(); // clear translation cache when language changes
+  try{localStorage.setItem('wpLang',lang);}catch(e){}
+  document.getElementById('wpLangMenu').style.display='none';
+  wpUpdateLangUI();
   const at=wpActiveTab||'docs';
   if(at==='docs') renderWPDocs();
   else if(at==='assign') renderWPAssignments();
@@ -5143,14 +5268,7 @@ async function initWorkerPortal(workerId){
   document.body.classList.add('wp-mode');
   wpDocFilter='missing';
   // Apply language to static elements
-  document.getElementById('wpHeaderTitle').textContent=t('workerPortal');
-  document.getElementById('wpTabDocs').textContent=t('tabDocs');
-  document.getElementById('wpTabAssign').textContent=t('tabProjects');
-  document.getElementById('wpTabProfile').textContent=t('tabProfile');
-  document.getElementById('wpTabResources').textContent=t('tabResources');
-  document.getElementById('wpSignOutBtn').textContent=t('signOut');
-  document.getElementById('wpLangEN')?.classList.toggle('active',wpLang==='en');
-  document.getElementById('wpLangRO')?.classList.toggle('active',wpLang==='ro');
+  wpUpdateLangUI();
   // Update header
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
@@ -5187,7 +5305,7 @@ function wpSwitch(tab){
 
 // ── Worker portal: My Documents ──
 function wpSetDocFilter(f){ wpDocFilter=f; renderWPDocs(); }
-function renderWPDocs(){
+async function renderWPDocs(){
   const el=document.getElementById('wpViewDocs'); if(!el) return;
   const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('workerNotFound')}</p>`;return;}
   const today=new Date();
@@ -5228,6 +5346,18 @@ function renderWPDocs(){
     </button>
   </div>`;
 
+  // Pre-translate infoText for all visible docs (async, cached per session)
+  if(wpLang!=='en'){
+    const tmplAll=tmplForWorker(w);
+    const toTranslate=tmplAll.filter(d=>d.infoText&&!wpInfoCache.has(`${d.id}|${wpLang}`));
+    if(toTranslate.length){
+      await Promise.allSettled(toTranslate.map(async d=>{
+        const tr=await wpTranslate(d.infoText,wpLang);
+        wpInfoCache.set(`${d.id}|${wpLang}`,tr);
+      }));
+    }
+  }
+
   const renderDocCard=(d)=>{
     const docData=w.docs?.[d.id];
     const st=docStatusAt(docData,today);
@@ -5240,7 +5370,8 @@ function renderWPDocs(){
     const reqBadge=d.req?`<span class="wp-req-badge">${t('required')}</span>`:`<span class="wp-opt-badge">${t('reqOptional')}</span>`;
     const safeId=d.id.replace(/[^a-zA-Z0-9_-]/g,'_');
     const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="${t('helpInfo')}" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="${t('openFormLink')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
-    const infoPanel=d.infoText?`<div class="wp-info-panel" id="wpit_${safeId}" style="display:none;">${esc(d.infoText)}</div>`:'';
+    const infoTextDisplay=wpLang!=='en'?(wpInfoCache.get(`${d.id}|${wpLang}`)||d.infoText):d.infoText;
+    const infoPanel=d.infoText?`<div class="wp-info-panel" id="wpit_${safeId}" style="display:none;">${esc(infoTextDisplay)}</div>`:'';
     return `<div class="wp-doc-row">
       ${infoIcons}
       <div class="wp-doc-top">
