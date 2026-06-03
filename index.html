@@ -129,6 +129,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .type-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;}
 .type-badge.zzp{background:#ebf4ff;color:var(--navy-l);border:1px solid #bfdbfe;}
 .type-badge.blue{background:var(--sky-xl);color:var(--navy);border:1px solid var(--sky-l);}
+.type-badge.custom{background:#f3f4f6;color:#374151;border:1px solid #d1d5db;}
 .worker-active-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:11px;font-weight:700;}
 .worker-active-badge.active{background:var(--green-l);color:var(--green);border:1px solid var(--green-b);}
 .worker-active-badge.inactive{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
@@ -1471,6 +1472,16 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               </div>
             </div>
           </div>
+          <!-- Worker Types -->
+          <div class="settings-card" style="margin-top:16px;">
+            <div class="settings-card-title">Worker Types</div>
+            <div class="settings-card-desc">Define the types used when registering workers. Built-in types cannot be removed.</div>
+            <div id="workerTypesSettingsList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+              <input class="form-input" id="newWorkerTypeInput" placeholder="e.g. Subcontractor" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter')addWorkerType()"/>
+              <button class="btn btn-primary" onclick="addWorkerType()">Add Type</button>
+            </div>
+          </div>
         </div><!-- /sset-org -->
 
         <!-- COMPLIANCE -->
@@ -2289,10 +2300,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <div class="form-field"><label class="form-label">Email Address</label><input class="form-input" id="fEmail" type="email" placeholder="worker@example.com"/></div>
         <div class="form-field"><label class="form-label">Phone Number</label><input class="form-input" id="fPhone" type="tel" placeholder="e.g. +31 6 12345678"/></div>
         <div class="form-field"><label class="form-label">Worker Type</label>
-          <select class="form-select" id="fType">
-            <option value="zzp">ZZP (Self-employed)</option>
-            <option value="blue">Employed Worker</option>
-          </select>
+          <select class="form-select" id="fType"></select>
         </div>
         <div class="form-field"><label class="form-label">Nationality</label>
           <select class="form-select" id="fNat">
@@ -2936,7 +2944,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30 };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP',builtIn:true},{id:'blue',label:'Employed',builtIn:true}] };
 
 // Built-in set IDs (cannot be deleted)
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
@@ -2960,7 +2968,7 @@ function initDefaultSets(){
 function loadSettings(){
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; }
+    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; if(Array.isArray(s.workerTypes)&&s.workerTypes.length) settings.workerTypes=s.workerTypes; }
   } catch(e){}
   try {
     const raw = localStorage.getItem(DOC_SETS_KEY);
@@ -3005,6 +3013,16 @@ function loadSettings(){
 }
 function saveSettings(){
   try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch(e){}
+}
+function workerTypeLabel(typeId){
+  const t=(settings.workerTypes||[]).find(t=>t.id===typeId);
+  return t?t.label:(typeId||'Unknown');
+}
+function populateWorkerTypeDropdown(selectId, currentValue){
+  const sel=document.getElementById(selectId);
+  if(!sel) return;
+  sel.innerHTML=(settings.workerTypes||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.label)}</option>`).join('');
+  if(currentValue!==undefined) sel.value=currentValue;
 }
 function saveDocSets(){
   try{ localStorage.setItem(DOC_SETS_KEY, JSON.stringify({sets:docSets,items:docSetItems})); } catch(e){}
@@ -3441,7 +3459,7 @@ function renderInactiveWorkersTable(){
     const chips=tmpl(w).filter(d=>d.req).slice(0,4).map(d=>{ const ds=docStatusAt(w.docs[d.id], currentWeekMonday); return `<span class="chip ${ds}" title="${esc(d.name)}"><span class="chip-dot"></span>${d.icon} ${esc(d.name.split(' ')[0])}</span>`; }).join('');
     return `<tr class="inactive-worker-row">
       <td><div class="worker-cell"><div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div><div><div class="worker-name">${esc(w.name)}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div></div></td>
-      <td><span class="type-badge ${w.type}">${w.type==='zzp'?'ZZP':'Employed'}</span></td>
+      <td><span class="type-badge ${w.type}">${workerTypeLabel(w.type)}</span></td>
       <td>${workerAssignmentSummary(w.id)}</td>
       <td><div class="doc-chips">${chips}</div></td>
       <td><span class="status-badge ${st}"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
@@ -3792,7 +3810,7 @@ function renderTable(){
         <div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div>
         <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div>
       </div></td>
-      <td><span class="type-badge ${w.type}">${w.type==='zzp'?'ZZP':'Employed'}</span></td>
+      <td><span class="type-badge ${w.type}">${workerTypeLabel(w.type)}</span></td>
       <td id="assigncell_${w.id}">${weekPAHtml}</td>
       <td><div class="doc-chips">${chips(w)}</div></td>
       <td><span class="score-num" style="color:${sc(s)};font-size:12px;font-weight:600;">${s}%</span></td>
@@ -4517,7 +4535,7 @@ function openWorker(id){
   curW=id;expandedDoc=null;
   const w=workers.find(x=>x.id===id);if(!w)return;
   document.getElementById('mName').value=w.name;
-  document.getElementById('mMeta').textContent=`${[w.ref,w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
+  document.getElementById('mMeta').textContent=`${[w.ref,workerTypeLabel(w.type),w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
   rebuildModal(id);
   document.getElementById('detailOverlay').classList.add('open');
 }
@@ -4545,7 +4563,7 @@ async function saveWorkerName(wid, name){
   if(w.name===trimmed) return;
   w.name=trimmed;
   document.getElementById('mName').value=trimmed;
-  document.getElementById('mMeta').textContent=`${[w.ref,w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
+  document.getElementById('mMeta').textContent=`${[w.ref,workerTypeLabel(w.type),w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
   renderTable(); renderStats();
   if(sbClient&&sbSession&&sbCanWriteTable('workers')){
     const {error}=await sbClient.from('workers').update({full_name:trimmed,updated_at:new Date().toISOString()}).eq('id',wid);
@@ -4596,7 +4614,7 @@ function setWorkerActiveStatus(wid, makeActive, sourceLabel){
     w.active = newActive;
     sbWorkerActiveDirty[wid] = Date.now();
     if(curW===wid){
-      document.getElementById('mMeta').textContent=`${[w.ref,w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
+      document.getElementById('mMeta').textContent=`${[w.ref,workerTypeLabel(w.type),w.nat,w.active===false?'Inactive':'Active'].filter(Boolean).join(' · ')}`;
       rebuildModal(wid);
     }
     renderTable(); renderStats(); applyRoleUI();
@@ -5593,7 +5611,7 @@ function renderWPProfile(){
     <div class="wp-profile-title">${t('myProfile')}</div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">${t('profileDesc')}</div>
     <div class="wp-profile-field"><label>${t('fullName')}</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
-    <div class="wp-profile-field"><label>${t('workerType')}</label><div class="wp-readonly-field">${w.type==='zzp'?t('zzp'):t('employed')}</div></div>
+    <div class="wp-profile-field"><label>${t('workerType')}</label><div class="wp-readonly-field">${workerTypeLabel(w.type)}</div></div>
     <div class="wp-profile-field"><label>${t('nationality')}</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
     <div class="wp-profile-field"><label>${t('emailAddress')}</label><input class="form-input wp-profile-field" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="${t('emailPlaceholder')}"/></div>
     <div class="wp-profile-field">
@@ -6126,9 +6144,9 @@ function openAdd(){
   const sel = _populateWorkerModal();
   sel.value = SET_NL_ZZP;
   ['fName','fRef','fAgency','fEmail','fPhone','fNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('fType').value = 'zzp';
+  populateWorkerTypeDropdown('fType','zzp');
   document.getElementById('fNat').value = 'NL';
-  document.getElementById('fType').onchange = ()=>{ sel.value = document.getElementById('fType').value==='zzp'?SET_NL_ZZP:SET_NL_BLUE; };
+  document.getElementById('fType').onchange = ()=>{ const v=document.getElementById('fType').value; if(v==='zzp') sel.value=SET_NL_ZZP; else if(v==='blue') sel.value=SET_NL_BLUE; };
   document.getElementById('addOverlay').classList.add('open');
 }
 function openEditWorker(wid){
@@ -6144,10 +6162,10 @@ function openEditWorker(wid){
   document.getElementById('fEmail').value = w.email || '';
   document.getElementById('fPhone').value = w.phone || '';
   document.getElementById('fNotes').value = w.notes || '';
-  document.getElementById('fType').value = w.type || 'zzp';
+  populateWorkerTypeDropdown('fType', w.type||'zzp');
   document.getElementById('fNat').value = w.nat || 'NL';
   sel.value = w.docSetId || SET_NL_ZZP;
-  document.getElementById('fType').onchange = null;
+  document.getElementById('fType').onchange = ()=>{ const v=document.getElementById('fType').value; if(v==='zzp') sel.value=SET_NL_ZZP; else if(v==='blue') sel.value=SET_NL_BLUE; };
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('fName').focus(), 50);
 }
@@ -6529,6 +6547,7 @@ function renderSettings(){
     _updateRejectDeleteDesc();
     renderComplianceReportSettings();
   }
+  if(active==='org') renderWorkerTypesSettings();
   if(active==='docsets') renderDocSets();
   if(active==='users'){ renderRolesPanel(); applyRoleUI(); }
   if(active==='archive') renderDeletedItems?.();
@@ -6557,6 +6576,7 @@ function switchSettingsSection(name){
     _updateRejectDeleteDesc();
     renderComplianceReportSettings();
   }
+  if(name==='org') renderWorkerTypesSettings();
   if(name==='docsets') renderDocSets();
   if(name==='users'){ renderRolesPanel(); applyRoleUI(); }
   if(name==='archive') renderDeletedItems?.();
@@ -6721,6 +6741,40 @@ function updateWarnDesc(){
   if(leg) leg.textContent=d;
 }
 
+function renderWorkerTypesSettings(){
+  const el=document.getElementById('workerTypesSettingsList');
+  if(!el) return;
+  const types=settings.workerTypes||[];
+  el.innerHTML=types.map(t=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:${t.builtIn?'#f8fafc':'#fff'};border:1px solid var(--border);border-radius:6px;">
+      <span style="flex:1;font-size:13px;font-weight:500;color:var(--text);">${esc(t.label)}</span>
+      ${t.builtIn?'<span style="font-size:11px;color:var(--text-l);background:#f1f5f9;padding:2px 7px;border-radius:10px;">built-in</span>':''}
+      ${!t.builtIn?`<button class="btn btn-cancel" style="padding:2px 10px;font-size:12px;" onclick="removeWorkerType('${esc(t.id)}')">Remove</button>`:''}
+    </div>`).join('');
+}
+function addWorkerType(){
+  const input=document.getElementById('newWorkerTypeInput');
+  const label=(input?.value||'').trim();
+  if(!label){ input?.focus(); return; }
+  const id=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
+  if(!id){ alert('Invalid type name.'); return; }
+  if((settings.workerTypes||[]).find(t=>t.id===id)){ alert('A type with that name already exists.'); input.value=''; return; }
+  settings.workerTypes=[...(settings.workerTypes||[]),{id,label,builtIn:false}];
+  input.value='';
+  saveSettings();
+  sbScheduleSync();
+  renderWorkerTypesSettings();
+}
+function removeWorkerType(id){
+  const t=(settings.workerTypes||[]).find(t=>t.id===id);
+  if(!t||t.builtIn) return;
+  const inUse=workers.some(w=>w.type===id);
+  if(inUse&&!confirm(`"${t.label}" is currently assigned to one or more workers. Remove it anyway?`)) return;
+  settings.workerTypes=(settings.workerTypes||[]).filter(t=>t.id!==id);
+  saveSettings();
+  sbScheduleSync();
+  renderWorkerTypesSettings();
+}
 function applyWarningDays(days){
   const parsed=parseInt(days,10);
   if(isNaN(parsed)||parsed<7||parsed>180){alert('Warning days must be between 7 and 180.');return;}
@@ -6778,7 +6832,7 @@ function complianceReportText(){
     const label=r.status==='nogo'?'NO-GO':'WARNING';
     const issueDocs=complianceIssueDocs(w,r.status);
     txt+=`${i+1}. ${w.name} (${w.id}) - ${label} - Score ${r.score}%\n`;
-    txt+=`   Type: ${w.type==='zzp'?'ZZP':'Employed'} · Nationality: ${w.nat||'—'}\n`;
+    txt+=`   Type: ${workerTypeLabel(w.type)} · Nationality: ${w.nat||'—'}\n`;
     txt+=`   Issue: ${issueDocs.length?issueDocs.join('; '):'Required document issue'}\n\n`;
   });
   return txt;
@@ -8409,7 +8463,7 @@ function openAssignAccom(wid, entryId){
   const entry = entryId ? hist.find(a=>a.id===entryId) : null;
 
   document.getElementById('assignAccomTitle').textContent = entry ? `Edit Accommodation — ${w.name}` : `Add Accommodation — ${w.name}`;
-  document.getElementById('assignAccomSub').textContent = `${w.id} · ${w.type==='zzp'?'ZZP':'Employed'}`;
+  document.getElementById('assignAccomSub').textContent = `${w.id} · ${workerTypeLabel(w.type)}`;
 
   const sel = document.getElementById('assignAccomProp');
   sel.innerHTML = '<option value="">— Select property —</option>' +
@@ -8585,7 +8639,7 @@ function openAssignVehicle(wid, entryId){
   const entry = entryId ? hist.find(a=>a.id===entryId) : null;
 
   document.getElementById('assignVehicleTitle').textContent = entry ? `Edit Vehicle — ${w.name}` : `Add Vehicle — ${w.name}`;
-  document.getElementById('assignVehicleSub').textContent = `${w.id} · ${w.type==='zzp'?'ZZP':'Employed'}`;
+  document.getElementById('assignVehicleSub').textContent = `${w.id} · ${workerTypeLabel(w.type)}`;
   const sel = document.getElementById('assignVehicleSel');
   sel.innerHTML = '<option value="">— Select vehicle —</option>' +
     vehicles.map(v=>`<option value="${v.id}"${entry?.vehicleId===v.id?' selected':''}>${esc(v.desc+(v.reg?' ('+v.reg+')'  :''))}</option>`).join('');
@@ -8683,7 +8737,7 @@ function openAssignTool(wid, entryId){
   const hist=toolHistory[wid]||[];
   const entry=entryId?hist.find(a=>a.id===entryId):null;
   document.getElementById('assignToolTitle').textContent=entry?`Edit Tool — ${w.name}`:`Assign Tool — ${w.name}`;
-  document.getElementById('assignToolSub').textContent=`${w.ref||''} · ${w.type==='zzp'?'ZZP':'Employed'}`;
+  document.getElementById('assignToolSub').textContent=`${w.ref||''} · ${workerTypeLabel(w.type)}`;
   const sel=document.getElementById('assignToolSel');
   sel.innerHTML='<option value="">— Select tool —</option>'+tools.map(t=>`<option value="${t.id}"${entry?.toolId===t.id?' selected':''}>${esc(t.name)}${t.serial?' ('+t.serial+')':''}</option>`).join('');
   document.getElementById('assignToolStart').value=entry?.startDate||'';
@@ -9018,7 +9072,7 @@ function _buildExportXLSX(){
     return [
       w.name,
       w.ref||'',
-      w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker',
+      workerTypeLabel(w.type),
       w.nat||'',
       w.agency||'',
       w.email||'',
@@ -9502,7 +9556,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).filter(t=>!t.builtIn),updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
@@ -9796,7 +9850,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; updateWarnDesc(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const builtIns=[{id:'zzp',label:'ZZP',builtIn:true},{id:'blue',label:'Employed',builtIn:true}]; const custom=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label&&!['zzp','blue'].includes(t.id)).map(t=>({...t,builtIn:false})):[];  settings.workerTypes=[...builtIns,...custom]; updateWarnDesc(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
