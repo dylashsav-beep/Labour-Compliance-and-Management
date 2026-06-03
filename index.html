@@ -8898,7 +8898,19 @@ async function sbSignedDownload(path, name){
   const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 300);
   if(error){alert('Could not create link: '+error.message);return false;}
   const signedUrl=data.signedUrl;
-  const doDownload=()=>{ window.open(signedUrl,'_blank'); };
+  const doDownload=async()=>{
+    try{
+      const resp=await fetch(signedUrl);
+      if(!resp.ok) throw new Error('fetch failed');
+      const blob=await resp.blob();
+      const blobUrl=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=blobUrl;a.download=name||'download';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(blobUrl),15000);
+    }catch(e){
+      window.open(signedUrl,'_blank');
+    }
+  };
   openFileViewer(signedUrl, name, doDownload);
   return true;
 }
