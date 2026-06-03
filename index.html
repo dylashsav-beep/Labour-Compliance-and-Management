@@ -9332,7 +9332,7 @@ function sbStartRealtime(){
       .subscribe(status=>{
         if(status==='SUBSCRIBED') sbSetStatus('Supabase: live', true);
         else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED')
-          sbSetStatus('Supabase: live updates paused — polling every 5 min', false);
+          sbSetStatus('Supabase: live updates paused', false);
       });
   }catch(e){ console.warn('Realtime setup warning:', e.message); }
   // Fallback poll for cases where the Realtime WebSocket is blocked or drops.
