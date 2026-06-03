@@ -1475,7 +1475,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <!-- Worker Types -->
           <div class="settings-card" style="margin-top:16px;">
             <div class="settings-card-title">Worker Types</div>
-            <div class="settings-card-desc">Define the types used when registering workers. Built-in types cannot be removed.</div>
+            <div class="settings-card-desc">Define the types used when registering workers. All types can be renamed or removed.</div>
             <div id="workerTypesSettingsList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;"></div>
             <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
               <input class="form-input" id="newWorkerTypeInput" placeholder="e.g. Subcontractor" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter')addWorkerType()"/>
@@ -2944,7 +2944,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP',builtIn:true},{id:'blue',label:'Employed',builtIn:true}] };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}] };
 
 // Built-in set IDs (cannot be deleted)
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
@@ -2968,7 +2968,7 @@ function initDefaultSets(){
 function loadSettings(){
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; if(Array.isArray(s.workerTypes)&&s.workerTypes.length) settings.workerTypes=s.workerTypes; }
+    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; if(Array.isArray(s.workerTypes)&&s.workerTypes.length) settings.workerTypes=s.workerTypes.map(t=>({id:t.id,label:t.label})); }
   } catch(e){}
   try {
     const raw = localStorage.getItem(DOC_SETS_KEY);
@@ -6746,11 +6746,37 @@ function renderWorkerTypesSettings(){
   if(!el) return;
   const types=settings.workerTypes||[];
   el.innerHTML=types.map(t=>`
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:${t.builtIn?'#f8fafc':'#fff'};border:1px solid var(--border);border-radius:6px;">
-      <span style="flex:1;font-size:13px;font-weight:500;color:var(--text);">${esc(t.label)}</span>
-      ${t.builtIn?'<span style="font-size:11px;color:var(--text-l);background:#f1f5f9;padding:2px 7px;border-radius:10px;">built-in</span>':''}
-      ${!t.builtIn?`<button class="btn btn-cancel" style="padding:2px 10px;font-size:12px;" onclick="removeWorkerType('${esc(t.id)}')">Remove</button>`:''}
+    <div id="wtrow_${t.id}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;">
+      <span id="wtlabel_${t.id}" style="flex:1;font-size:13px;font-weight:500;color:var(--text);">${esc(t.label)}</span>
+      <input id="wtedit_${t.id}" class="form-input" style="flex:1;font-size:13px;padding:4px 8px;display:none;" value="${esc(t.label)}" onkeydown="if(event.key==='Enter')saveWorkerTypeRename('${t.id}');if(event.key==='Escape')cancelWorkerTypeRename('${t.id}')"/>
+      <button id="wtrenamebtn_${t.id}" class="btn btn-cancel" style="padding:2px 10px;font-size:12px;" onclick="startWorkerTypeRename('${t.id}')">Rename</button>
+      <button id="wtsavebtn_${t.id}" class="btn btn-primary" style="padding:2px 10px;font-size:12px;display:none;" onclick="saveWorkerTypeRename('${t.id}')">Save</button>
+      <button class="btn btn-danger" style="padding:2px 10px;font-size:12px;" onclick="removeWorkerType('${t.id}')">Remove</button>
     </div>`).join('');
+}
+function startWorkerTypeRename(id){
+  document.getElementById('wtlabel_'+id).style.display='none';
+  document.getElementById('wtrenamebtn_'+id).style.display='none';
+  const inp=document.getElementById('wtedit_'+id);
+  inp.style.display='';
+  document.getElementById('wtsavebtn_'+id).style.display='';
+  inp.focus(); inp.select();
+}
+function cancelWorkerTypeRename(id){
+  const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
+  document.getElementById('wtedit_'+id).style.display='none';
+  document.getElementById('wtsavebtn_'+id).style.display='none';
+  document.getElementById('wtlabel_'+id).style.display='';
+  document.getElementById('wtrenamebtn_'+id).style.display='';
+}
+function saveWorkerTypeRename(id){
+  const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
+  const newLabel=(document.getElementById('wtedit_'+id)?.value||'').trim();
+  if(!newLabel){ alert('Label cannot be empty.'); return; }
+  t.label=newLabel;
+  saveSettings(); sbScheduleSync();
+  renderWorkerTypesSettings();
+  renderTable(); renderStats();
 }
 function addWorkerType(){
   const input=document.getElementById('newWorkerTypeInput');
@@ -6759,20 +6785,18 @@ function addWorkerType(){
   const id=label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
   if(!id){ alert('Invalid type name.'); return; }
   if((settings.workerTypes||[]).find(t=>t.id===id)){ alert('A type with that name already exists.'); input.value=''; return; }
-  settings.workerTypes=[...(settings.workerTypes||[]),{id,label,builtIn:false}];
+  settings.workerTypes=[...(settings.workerTypes||[]),{id,label}];
   input.value='';
-  saveSettings();
-  sbScheduleSync();
+  saveSettings(); sbScheduleSync();
   renderWorkerTypesSettings();
 }
 function removeWorkerType(id){
-  const t=(settings.workerTypes||[]).find(t=>t.id===id);
-  if(!t||t.builtIn) return;
+  const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
+  if((settings.workerTypes||[]).length<=1){ alert('You must have at least one worker type.'); return; }
   const inUse=workers.some(w=>w.type===id);
-  if(inUse&&!confirm(`"${t.label}" is currently assigned to one or more workers. Remove it anyway?`)) return;
+  if(inUse&&!confirm(`"${t.label}" is currently assigned to one or more workers. Those workers will show their type as "${id}" until updated. Remove anyway?`)) return;
   settings.workerTypes=(settings.workerTypes||[]).filter(t=>t.id!==id);
-  saveSettings();
-  sbScheduleSync();
+  saveSettings(); sbScheduleSync();
   renderWorkerTypesSettings();
 }
 function applyWarningDays(days){
@@ -9556,7 +9580,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).filter(t=>!t.builtIn),updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
@@ -9850,7 +9874,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const builtIns=[{id:'zzp',label:'ZZP',builtIn:true},{id:'blue',label:'Employed',builtIn:true}]; const custom=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label&&!['zzp','blue'].includes(t.id)).map(t=>({...t,builtIn:false})):[];  settings.workerTypes=[...builtIns,...custom]; updateWarnDesc(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; updateWarnDesc(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
