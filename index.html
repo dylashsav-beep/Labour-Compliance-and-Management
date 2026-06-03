@@ -2528,6 +2528,8 @@ let sbSyncTimer = null;
 let sbIsLoading = false;
 let sbLoadStartTime = null;
 let sbHasLoadedRemote = false;
+let sbLastLoadedAt = 0;      // ms timestamp of last successful sbLoadAll() completion
+let sbDeferredSync = false;  // true when a save was requested while sbIsLoading; fired after load
 let sbRealtimeChannel = null;
 let sbRemoteReloadTimer = null;
 let sbLivePollTimer = null;
@@ -9329,21 +9331,21 @@ function sbStartRealtime(){
       .on('postgres_changes',{event:'*',schema:'public'}, payload=>sbQueueRemoteReload(payload.table||'change'))
       .subscribe(status=>{ if(status==='SUBSCRIBED') sbSetStatus('Supabase: live', true); });
   }catch(e){ console.warn('Realtime setup warning:', e.message); }
-  // Fallback for browser/GitHub cases where Realtime is delayed or websocket access is blocked.
-  // Poll less aggressively so an old browser tab is less likely to overwrite fresh database state.
+  // Fallback poll for cases where the Realtime WebSocket is blocked or drops.
+  // Runs every 5 minutes — WebSocket handles real-time; this is just a safety net.
   clearInterval(sbLivePollTimer);
   sbLivePollTimer = setInterval(()=>{
     // Watchdog: if sbIsLoading has been stuck for >20s, force-clear it and retry
     if(sbIsLoading && sbLoadStartTime && (Date.now()-sbLoadStartTime)>20000){
       console.warn('[TMC] Poll watchdog: clearing stuck sbIsLoading after 20s');
-      sbIsLoading=false; sbLoadStartTime=null; sbHasLoadedRemote=false;
+      sbIsLoading=false; sbLoadStartTime=null; sbHasLoadedRemote=false; sbDeferredSync=false;
       sbSetStatus('Supabase: load timed out — retrying…', false);
       setTimeout(()=>{ if(sbReady&&sbSession&&!sbIsLoading) sbLoadAll().catch(()=>{}); }, 500);
     }
     if(sbReady && sbSession && !sbIsLoading && Date.now() >= sbSuppressRealtimeUntil){
       sbQueueRemoteReload('poll');
     }
-  }, 30000);
+  }, 300000);
   // Recover when tab becomes visible after being hidden (e.g. phone sleep / tab switch)
   if(!window._sbVisibilityListenerAdded){
     window._sbVisibilityListenerAdded=true;
@@ -9355,8 +9357,9 @@ function sbStartRealtime(){
         sbIsLoading=false; sbLoadStartTime=null;
         sbHasLoadedRemote=false;
       }
-      // Trigger reload when returning to tab
-      if(sbReady && sbSession && !sbIsLoading){
+      // Only reload if data is stale (last load >90s ago). Short tab switches skip the reload
+      // entirely to avoid constantly blocking saves when users switch tabs or check their phone.
+      if(sbReady && sbSession && !sbIsLoading && (Date.now()-sbLastLoadedAt)>90000){
         setTimeout(()=>sbQueueRemoteReload('visibility'),400);
       }
     });
@@ -9371,7 +9374,8 @@ function sbStartRealtime(){
 }
 
 function sbScheduleSync(){
-  if(sbIsLoading||!sbReady||!sbSession||!sbHasLoadedRemote) return;
+  if(!sbReady||!sbSession||!sbHasLoadedRemote) return;
+  if(sbIsLoading){ sbDeferredSync=true; return; } // queue it — fired after sbLoadAll() finishes
   clearTimeout(sbSyncTimer);
   sbSyncTimer=setTimeout(()=>{
     sbSetStatus('Supabase: syncing…',true);
@@ -9728,7 +9732,7 @@ async function sbLoadAll(){
   const _loadWatchdog=setTimeout(()=>{
     if(sbIsLoading){
       console.warn('[TMC] Load watchdog: clearing stuck sbIsLoading after 20s');
-      sbIsLoading=false; sbLoadStartTime=null;
+      sbIsLoading=false; sbLoadStartTime=null; sbDeferredSync=false;
       sbSetStatus('Supabase: load timed out — tap Sync to retry', false);
     }
   }, 20000);
@@ -9845,8 +9849,11 @@ async function sbLoadAll(){
     clearTimeout(_loadWatchdog);
     sbIsLoading=false;
     sbLoadStartTime=null;
+    sbLastLoadedAt=Date.now();
     // Run AFTER clearing sbIsLoading so its sbScheduleSync() call isn't blocked
     recomputeDocStatuses();
+    // Fire any save that was requested while we were loading
+    if(sbDeferredSync){ sbDeferredSync=false; sbScheduleSync(); }
   }
 }
 
