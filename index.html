@@ -9329,7 +9329,11 @@ function sbStartRealtime(){
     if(sbRealtimeChannel){ sbClient.removeChannel(sbRealtimeChannel); sbRealtimeChannel=null; }
     sbRealtimeChannel = sbClient.channel('tmc-compliance-live')
       .on('postgres_changes',{event:'*',schema:'public'}, payload=>sbQueueRemoteReload(payload.table||'change'))
-      .subscribe(status=>{ if(status==='SUBSCRIBED') sbSetStatus('Supabase: live', true); });
+      .subscribe(status=>{
+        if(status==='SUBSCRIBED') sbSetStatus('Supabase: live', true);
+        else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED')
+          sbSetStatus('Supabase: live updates paused — polling every 5 min', false);
+      });
   }catch(e){ console.warn('Realtime setup warning:', e.message); }
   // Fallback poll for cases where the Realtime WebSocket is blocked or drops.
   // Runs every 5 minutes — WebSocket handles real-time; this is just a safety net.
