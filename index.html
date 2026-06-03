@@ -133,6 +133,8 @@ td{padding:10px 14px;vertical-align:middle;}
 .worker-active-badge.active{background:var(--green-l);color:var(--green);border:1px solid var(--green-b);}
 .worker-active-badge.inactive{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
 .project-tag{display:inline-block;padding:2px 8px;border-radius:4px;margin:2px;font-size:11px;background:var(--bg);border:1px solid var(--border);color:var(--text-m);}
+.proj-inactive-toggle{display:flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-size:12px;font-weight:600;color:var(--text-m);cursor:pointer;width:100%;text-align:left;transition:background .12s;}
+.proj-inactive-toggle:hover{background:#f1f5f9;color:var(--navy);}
 /* Assigned-this-week tags */
 .assign-tag{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;max-width:200px;line-height:1.4;}
 .assign-tag:hover{color:var(--navy);text-decoration:underline;}
@@ -1263,6 +1265,25 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       </table></div>
       <div class="no-results" id="noProjRes" style="display:none">
         <div class="no-results-icon">📋</div>No projects yet — add one above
+      </div>
+      <!-- Inactive projects collapsible -->
+      <div id="projInactiveSection" style="display:none;margin-top:12px;">
+        <button class="proj-inactive-toggle" id="projInactiveToggle" onclick="toggleInactiveProjects()">
+          <span id="projInactiveLabel">▶ Inactive Projects (0)</span>
+        </button>
+        <div id="projInactiveBody" style="display:none;margin-top:8px;">
+          <div class="table-scroll"><table>
+            <thead><tr>
+              <th class="no-sort">Project Name</th>
+              <th class="no-sort">Client</th>
+              <th class="no-sort">Project Manager</th>
+              <th class="no-sort">Description</th>
+              <th class="no-sort">Location</th>
+              <th class="no-sort">Actions</th>
+            </tr></thead>
+            <tbody id="projInactiveRows"></tbody>
+          </table></div>
+        </div>
       </div>
     </div>
   </div>
@@ -6327,22 +6348,21 @@ function _renderProjWorkersBody(){
 function renderProjects(){
   const tb = document.getElementById('projBody');
   const count = document.getElementById('projCount');
-  count.textContent = projectStore.length + ' project' + (projectStore.length!==1?'s':'');
-  if(!projectStore.length){
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const active = projectStore.filter(p=>p.active!==false);
+  const inactive = projectStore.filter(p=>p.active===false);
+
+  count.textContent = active.length + ' project' + (active.length!==1?'s':'');
+  if(!active.length && !inactive.length){
     tb.innerHTML='';
     document.getElementById('noProjRes').style.display='block';
+    document.getElementById('projInactiveSection').style.display='none';
     return;
   }
-  document.getElementById('noProjRes').style.display='none';
-  tb.innerHTML = projectStore.filter(p=>p.active!==false).map(p=>{
-    const today = new Date(); today.setHours(0,0,0,0);
-    const activeWorkers = [...new Set(projectAssignments
-      .filter(a=>a.projectId===p.id && (!a.endDate||new Date(a.endDate)>=today))
-      .map(a=>a.wid))];
-    const wNames = activeWorkers.map(wid=>{ const w=workers.find(x=>x.id===wid); return w?w.name:wid; });
-    const statusDot = p.active
-      ? `<span title="Active" style="font-size:13px;color:var(--green);">●</span>`
-      : `<span title="Inactive" style="font-size:13px;color:var(--text-l);">●</span>`;
+  document.getElementById('noProjRes').style.display=active.length?'none':'block';
+
+  const mkRow=(p, showAssigned)=>{
     const docCount = complianceDocs.filter(d=>d.active!==false&&d.scope_type==='project'&&d.scope_id===p.id).length;
     const docBadge = docCount>0?`<span class="doc-count-badge" title="${docCount} compliance document${docCount!==1?'s':''}">${docCount}</span>`:'';
     const isUrl = p.location && /^https?:\/\//i.test(p.location);
@@ -6351,17 +6371,56 @@ function renderProjects(){
           ? `<a href="${esc(p.location)}" target="_blank" rel="noopener" style="color:var(--navy);font-size:12px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;" title="${esc(p.location)}">📍 View map</a>`
           : `<span style="font-size:12px;color:var(--text-m);">${esc(p.location)}</span>`)
       : '<span style="color:var(--text-l);font-style:italic;font-size:12px;">—</span>';
-    return `<tr style="${!p.active?'opacity:.65':''}">
-      <td style="font-weight:600;color:var(--navy);">${esc(p.name)}${docBadge}</td>
-      <td style="font-size:12px;color:var(--text-m);">${p.client?esc(p.client):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
-      <td style="font-size:12px;color:var(--text-m);">${p.pm?esc(p.pm):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
-      <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
-      <td>${locationCell}</td>
-      <td style="font-size:12px;">${wNames.length?wNames.map(n=>`<span class="project-tag">${esc(n)}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None active</span>'}</td>
-      <td style="text-align:center;">${statusDot}</td>
-      <td style="text-align:right;"><button class="kebab-btn" onclick="openProjMenu('${p.id}',event)" title="Actions">⋯</button></td>
-    </tr>`;
-  }).join('');
+    if(showAssigned){
+      const activeWorkers = [...new Set(projectAssignments
+        .filter(a=>a.projectId===p.id && (!a.endDate||new Date(a.endDate)>=today))
+        .map(a=>a.wid))];
+      const wNames = activeWorkers.map(wid=>{ const w=workers.find(x=>x.id===wid); return w?w.name:wid; });
+      return `<tr>
+        <td style="font-weight:600;color:var(--navy);">${esc(p.name)}${docBadge}</td>
+        <td style="font-size:12px;color:var(--text-m);">${p.client?esc(p.client):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td style="font-size:12px;color:var(--text-m);">${p.pm?esc(p.pm):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td>${locationCell}</td>
+        <td style="font-size:12px;">${wNames.length?wNames.map(n=>`<span class="project-tag">${esc(n)}</span>`).join(''):'<span style="color:var(--text-l);font-size:11px;">None active</span>'}</td>
+        <td style="text-align:center;"><span title="Active" style="font-size:13px;color:var(--green);">●</span></td>
+        <td style="text-align:right;"><button class="kebab-btn" onclick="openProjMenu('${p.id}',event)" title="Actions">⋯</button></td>
+      </tr>`;
+    } else {
+      return `<tr style="opacity:.7;">
+        <td style="font-weight:600;color:var(--text-m);">${esc(p.name)}${docBadge}</td>
+        <td style="font-size:12px;color:var(--text-m);">${p.client?esc(p.client):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td style="font-size:12px;color:var(--text-m);">${p.pm?esc(p.pm):'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td style="color:var(--text-m);font-size:12px;">${esc(p.desc)||'<span style="color:var(--text-l);font-style:italic;">—</span>'}</td>
+        <td>${locationCell}</td>
+        <td style="text-align:right;"><button class="kebab-btn" onclick="openProjMenu('${p.id}',event)" title="Actions">⋯</button></td>
+      </tr>`;
+    }
+  };
+
+  tb.innerHTML = active.map(p=>mkRow(p,true)).join('');
+
+  // Inactive section
+  const inactiveSection = document.getElementById('projInactiveSection');
+  const inactiveLabel = document.getElementById('projInactiveLabel');
+  const inactiveRows = document.getElementById('projInactiveRows');
+  if(inactive.length){
+    inactiveSection.style.display='block';
+    const open = document.getElementById('projInactiveBody').style.display!=='none';
+    inactiveLabel.textContent=(open?'▼':'▶')+` Inactive Projects (${inactive.length})`;
+    inactiveRows.innerHTML = inactive.map(p=>mkRow(p,false)).join('');
+  } else {
+    inactiveSection.style.display='none';
+  }
+}
+
+function toggleInactiveProjects(){
+  const body = document.getElementById('projInactiveBody');
+  const label = document.getElementById('projInactiveLabel');
+  const inactive = projectStore.filter(p=>p.active===false);
+  const open = body.style.display==='none';
+  body.style.display = open?'block':'none';
+  label.textContent=(open?'▼':'▶')+` Inactive Projects (${inactive.length})`;
 }
 
 let editingProjectId = null;
@@ -9697,7 +9756,7 @@ async function sbLoadAll(){
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
-      q('projects', sbClient.from('projects').select('*').eq('active',true).order('name'), []),
+      q('projects', sbClient.from('projects').select('*').order('name'), []),
       q('workers', sbClient.from('workers').select('*').order('full_name'), null),
       q('worker_documents', sbClient.from('worker_documents').select('*').eq('active',true), []),
       q('worker_document_files', sbClient.from('worker_document_files').select('*').eq('active',true), []),
