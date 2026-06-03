@@ -6976,41 +6976,43 @@ function renderDocSetCard(s){
         const rowId=`dsr_${s.id}_${d.id}`;
         const editingThis=docItemEditActive[s.id+'__'+d.id];
         if(editingThis){
-          html+=`<div class="doc-settings-row" id="${rowId}" style="flex-direction:column;gap:0;padding:10px 12px 12px;background:var(--sky-xl);">
-            <div style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:8px;">Edit document field</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">Icon</label>
-                <input id="editDoc_icon_${s.id}_${d.id}" class="form-input" value="${esc(d.icon||'📌')}" style="width:54px;" placeholder="📌"/>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">Name *</label>
-                <input id="editDoc_name_${s.id}_${d.id}" class="form-input" value="${esc(d.name)}" style="width:200px;" placeholder="Document name" onkeydown="if(event.key==='Enter')saveDocItemEdit('${s.id}','${d.id}')"/>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">Category</label>
-                <input id="editDoc_cat_${s.id}_${d.id}" class="form-input" value="${esc(d.cat||'')}" list="catlist_${s.id}" style="width:140px;" placeholder="e.g. Safety"/>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">Description</label>
-                <input id="editDoc_tip_${s.id}_${d.id}" class="form-input" value="${esc(d.tip||'')}" style="width:220px;" placeholder="Brief description"/>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">ℹ Info note <span style="font-weight:400;">(shown as tooltip)</span></label>
-                <textarea id="editDoc_info_${s.id}_${d.id}" class="form-input" style="width:240px;height:52px;resize:vertical;font-size:12px;" placeholder="Explain what this document is or what's accepted…">${esc(d.infoText||'')}</textarea>
-              </div>
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-l);">🔗 Info / form link</label>
-                <input id="editDoc_url_${s.id}_${d.id}" class="form-input" value="${esc(d.infoUrl||'')}" style="width:220px;" placeholder="https://…" type="url"/>
+          html+=`<div class="doc-settings-row" id="${rowId}" style="flex-direction:column;gap:0;padding:14px 16px 16px;background:var(--sky-xl);border-radius:8px;">
+            <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:14px;letter-spacing:.01em;">Edit document field</div>
+            <div style="display:grid;grid-template-columns:60px 1fr 160px 1fr;gap:10px;margin-bottom:10px;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">Icon</label>
+                <input id="editDoc_icon_${s.id}_${d.id}" class="form-input" value="${esc(d.icon||'📌')}" placeholder="📌"/>
               </div>
               <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:10px;color:var(--text-l);">📎 Form template <span style="font-weight:400;">(workers download &amp; complete this)</span></label>
-                ${d.templateFileName?`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--navy);">📄 ${esc(d.templateFileName)}</span><button type="button" class="btn btn-cancel" style="font-size:10px;padding:2px 6px;" onclick="docItemTemplateClear('${s.id}','${d.id}')">✕ Remove</button></div>`:`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:none;"></div>`}
-                <input type="file" id="editDoc_tmpl_${s.id}_${d.id}" style="font-size:11px;width:240px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.png,.jpg"/>
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">Name <span style="color:var(--red);">*</span></label>
+                <input id="editDoc_name_${s.id}_${d.id}" class="form-input" value="${esc(d.name)}" placeholder="Document name" onkeydown="if(event.key==='Enter')saveDocItemEdit('${s.id}','${d.id}')"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">Category</label>
+                <input id="editDoc_cat_${s.id}_${d.id}" class="form-input" value="${esc(d.cat||'')}" list="catlist_${s.id}" placeholder="e.g. Safety"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">Description</label>
+                <input id="editDoc_tip_${s.id}_${d.id}" class="form-input" value="${esc(d.tip||'')}" placeholder="Brief description shown under the document name"/>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">ℹ Info note <span style="font-weight:400;color:var(--text-l);">(shown as expandable tooltip to worker)</span></label>
+                <textarea id="editDoc_info_${s.id}_${d.id}" class="form-input" style="height:72px;resize:vertical;font-size:12px;line-height:1.5;" placeholder="Explain what this document is or what's accepted…">${esc(d.infoText||'')}</textarea>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);">🔗 Info / form link <span style="font-weight:400;color:var(--text-l);">(optional external URL)</span></label>
+                <input id="editDoc_url_${s.id}_${d.id}" class="form-input" value="${esc(d.infoUrl||'')}" placeholder="https://…" type="url"/>
+                <label style="font-size:11px;font-weight:600;color:var(--text-m);margin-top:6px;">📎 Form template <span style="font-weight:400;color:var(--text-l);">(workers download &amp; complete)</span></label>
+                ${d.templateFileName?`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--navy);">📄 ${esc(d.templateFileName)}</span><button type="button" class="btn btn-cancel" style="font-size:10px;padding:2px 8px;" onclick="docItemTemplateClear('${s.id}','${d.id}')">✕ Remove</button></div>`:`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:none;"></div>`}
+                <input type="file" id="editDoc_tmpl_${s.id}_${d.id}" style="font-size:12px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.png,.jpg"/>
                 <input type="hidden" id="editDoc_tmpl_remove_${s.id}_${d.id}" value="0"/>
               </div>
-              <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save</button>
-              <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--sky-l);">
+              <button class="btn btn-cancel" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
+              <button class="btn btn-primary" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save changes</button>
             </div>
           </div>`;
         } else {
