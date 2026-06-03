@@ -754,6 +754,9 @@ body.sb-auth-lock #sbLoginOverlay{visibility:visible;}
 .wp-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .wp-signout-btn{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
 .wp-signout-btn:active{background:rgba(255,255,255,.18);}
+.wp-lang-toggle{display:flex;gap:2px;background:rgba(255,255,255,.1);border-radius:6px;padding:2px;flex-shrink:0;}
+.wp-lang-btn{padding:4px 9px;border:none;border-radius:4px;font-size:11px;font-weight:700;color:rgba(255,255,255,.55);background:transparent;cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+.wp-lang-btn.active{background:rgba(255,255,255,.22);color:#fff;}
 .wp-status-banner{padding:12px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #e2e8f0;background:#fff;flex-wrap:wrap;}
 .wp-status-text{font-size:14px;font-weight:600;}
 /* Tabs — navigation state only, NOT action color */
@@ -1012,7 +1015,11 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     </div>
     <div class="wp-header-right">
       <span id="wpStatusBadge"></span>
-      <button class="wp-signout-btn" onclick="sbLogout()">Sign out</button>
+      <div class="wp-lang-toggle">
+        <button class="wp-lang-btn active" id="wpLangEN" onclick="wpSetLang('en')">EN</button>
+        <button class="wp-lang-btn" id="wpLangRO" onclick="wpSetLang('ro')">RO</button>
+      </div>
+      <button class="wp-signout-btn" id="wpSignOutBtn" onclick="sbLogout()">Sign out</button>
     </div>
   </div>
   <div class="wp-tabs">
@@ -4869,6 +4876,163 @@ let wpProperties = [];
 let wpVehicles = [];
 let wpTools = [];
 let wpReturnRequests = [];
+let wpLang = 'en';
+
+const wpI18n = {
+  en: {
+    workerPortal:'Worker Portal', signOut:'Sign out',
+    tabDocs:'Documents', tabProjects:'Projects', tabProfile:'Profile', tabResources:'Resources',
+    // filter tabs
+    missing:'Missing', expiring:'Expiring', expired:'Expired', valid:'Valid', optional:'Optional',
+    // status labels
+    stValid:'Valid', stExpiring:'Expiring soon', stExpired:'Expired', stNotSubmitted:'Not submitted', stMissing:'Missing',
+    // badges
+    required:'Required', reqOptional:'Optional', awaitingReview:'⏳ Awaiting admin review',
+    expires:'Expires', expiredOn:'Expired',
+    // template banner
+    officialFormRequired:'📎 Official form required',
+    templateSub:'Download, complete and submit this template — do not use your own format.',
+    download:'📥 Download',
+    // submit form
+    expiryDate:'Expiry date', issueDate:'Issue date (optional)',
+    attachDoc:'Attach document (optional)', notes:'Notes (optional)',
+    notesPlaceholder:'Any notes for the reviewer…',
+    submitForReview:'Submit for review', cancel:'Cancel',
+    submitReplacement:'Submit replacement', submitUpdate:'Submit update',
+    // empty states
+    emptyMissing:'No required documents missing', emptyExpiring:'No documents expiring soon',
+    emptyExpired:'No expired documents', emptyOk:'All documents are up to date',
+    emptyOptional:'No optional documents to submit', emptyDocs:'No documents',
+    optionalIntro:'These documents are not required but can be submitted to complete your profile.',
+    // alerts
+    notSignedIn:'Not signed in.',
+    pleaseAddExpiry:'Please enter an expiry date or attach a file before submitting.',
+    fileUploadFailed:'File upload failed: ',
+    canStillSubmit:'You can still submit without a file — attach it separately if needed.',
+    couldNotSubmit:'Could not submit: ',
+    // projects
+    noProjects:'No projects on record.',
+    currentProject:'Current Project', currentProjects:'Current Projects',
+    client:'Client', period:'Period', ongoing:'ongoing', unknownProject:'Unknown project',
+    pastProjects:'Past Projects',
+    // project detail
+    projectLeader:'Project Leader', contact:'Contact', location:'Location',
+    description:'Description', projectDetails:'Project Details',
+    yourAssignment:'Your Assignment', periodLabel:'Period', notesLabel:'Notes',
+    openInMaps:'📍 Open in Maps',
+    // profile
+    myProfile:'My Profile',
+    profileDesc:'Your details below are visible to your compliance team. Changes are saved for review.',
+    fullName:'Full Name', workerType:'Worker Type',
+    zzp:'ZZP (Self-employed)', employed:'Employed Worker',
+    nationality:'Nationality', emailAddress:'Email Address',
+    emailPlaceholder:'your@email.com', phoneNumber:'Phone Number',
+    phonePlaceholder:'e.g. +31 6 12345678',
+    phoneHelp:'Used by your compliance team to contact you.',
+    notesAdditional:'Notes / Additional info', saveChanges:'Save changes',
+    profileNotFound:'Profile not found.',
+    couldNotSaveProfile:'Could not save profile: ', profileSaved:'Profile saved',
+    // resources
+    active:'Active', ended:'Ended', returningSoon:'Returning soon',
+    accommodation:'Accommodation', vehicles:'Vehicles', tools:'Tools',
+    propertyFallback:'Property', vehicleFallback:'Vehicle', toolFallback:'Tool',
+    noAccommodation:'No accommodation on record.',
+    noVehicles:'No vehicles on record.',
+    noTools:'No tools on record.',
+    noResources:'No resource assignments found.',
+    from:'From:', ongoingCap:'Ongoing',
+    returnPending:'Return proof submitted — awaiting review',
+    submitReturn:'Submit return / close out',
+    // return form
+    submitReturnTitle:'Submit Return / Close Out',
+    proposedReturnDate:'Proposed return / close-out date',
+    attachProof:'Attach proof photo / document',
+    returnFileUploadFailed:'File upload failed: ',
+    canStillSubmitReturn:'You can still submit without a file.',
+    returnSubmitted:'Return request submitted! Your manager will review and confirm the closure.',
+    helpInfo:'Help & info', openFormLink:'Open form / link',
+    workerNotFound:'Worker profile not found.',
+  },
+  ro: {
+    workerPortal:'Portal Lucrător', signOut:'Deconectare',
+    tabDocs:'Documente', tabProjects:'Proiecte', tabProfile:'Profil', tabResources:'Resurse',
+    missing:'Lipsă', expiring:'Expiră', expired:'Expirat', valid:'Valide', optional:'Opționale',
+    stValid:'Valid', stExpiring:'Expiră curând', stExpired:'Expirat', stNotSubmitted:'Neîncărcat', stMissing:'Lipsă',
+    required:'Obligatoriu', reqOptional:'Opțional', awaitingReview:'⏳ În așteptarea verificării',
+    expires:'Expiră', expiredOn:'Expirat',
+    officialFormRequired:'📎 Formular oficial obligatoriu',
+    templateSub:'Descarcă, completează și trimite acest model — nu folosi propriul format.',
+    download:'📥 Descarcă',
+    expiryDate:'Data expirării', issueDate:'Data emiterii (opțional)',
+    attachDoc:'Atașează document (opțional)', notes:'Observații (opțional)',
+    notesPlaceholder:'Observații pentru verificator…',
+    submitForReview:'Trimite spre verificare', cancel:'Anulare',
+    submitReplacement:'Trimite înlocuitor', submitUpdate:'Trimite actualizare',
+    emptyMissing:'Niciun document obligatoriu lipsă', emptyExpiring:'Niciun document care expiră curând',
+    emptyExpired:'Niciun document expirat', emptyOk:'Toate documentele sunt la zi',
+    emptyOptional:'Niciun document opțional de trimis', emptyDocs:'Niciun document',
+    optionalIntro:'Aceste documente nu sunt obligatorii, dar pot fi trimise pentru a-ți completa profilul.',
+    notSignedIn:'Nu ești autentificat.',
+    pleaseAddExpiry:'Introduceți data expirării sau atașați un document înainte de a trimite.',
+    fileUploadFailed:'Eroare la încărcare: ',
+    canStillSubmit:'Poți trimite și fără fișier — atașează-l separat dacă este necesar.',
+    couldNotSubmit:'Nu s-a putut trimite: ',
+    noProjects:'Niciun proiect înregistrat.',
+    currentProject:'Proiect curent', currentProjects:'Proiecte curente',
+    client:'Client', period:'Perioadă', ongoing:'în desfășurare', unknownProject:'Proiect necunoscut',
+    pastProjects:'Proiecte anterioare',
+    projectLeader:'Responsabil proiect', contact:'Contact', location:'Locație',
+    description:'Descriere', projectDetails:'Detalii proiect',
+    yourAssignment:'Misiunea ta', periodLabel:'Perioadă', notesLabel:'Observații',
+    openInMaps:'📍 Deschide în Maps',
+    myProfile:'Profilul meu',
+    profileDesc:'Detaliile de mai jos sunt vizibile pentru echipa de conformitate. Modificările sunt salvate pentru revizuire.',
+    fullName:'Nume complet', workerType:'Tip angajat',
+    zzp:'ZZP (Lucrător independent)', employed:'Angajat',
+    nationality:'Naționalitate', emailAddress:'Adresă de email',
+    emailPlaceholder:'email@tau.com', phoneNumber:'Număr de telefon',
+    phonePlaceholder:'ex. +31 6 12345678',
+    phoneHelp:'Folosit de echipa de conformitate pentru a te contacta.',
+    notesAdditional:'Observații / Informații suplimentare', saveChanges:'Salvează modificările',
+    profileNotFound:'Profil negăsit.',
+    couldNotSaveProfile:'Nu s-a putut salva profilul: ', profileSaved:'Profil salvat',
+    active:'Activ', ended:'Încheiat', returningSoon:'Returnare în curând',
+    accommodation:'Cazare', vehicles:'Vehicule', tools:'Unelte',
+    propertyFallback:'Proprietate', vehicleFallback:'Vehicul', toolFallback:'Unealtă',
+    noAccommodation:'Nicio cazare înregistrată.',
+    noVehicles:'Niciun vehicul înregistrat.',
+    noTools:'Nicio unealtă înregistrată.',
+    noResources:'Nicio alocare de resurse găsită.',
+    from:'De la:', ongoingCap:'În desfășurare',
+    returnPending:'Dovadă returnare trimisă — în așteptarea verificării',
+    submitReturn:'Trimite returnare / închidere',
+    submitReturnTitle:'Trimite returnare / Închidere',
+    proposedReturnDate:'Data propusă de returnare / închidere',
+    attachProof:'Atașează fotografie / document dovadă',
+    returnFileUploadFailed:'Eroare la încărcare: ',
+    canStillSubmitReturn:'Poți trimite și fără fișier.',
+    returnSubmitted:'Cerere de returnare trimisă! Managerul tău va revizui și confirma închiderea.',
+    helpInfo:'Ajutor și informații', openFormLink:'Deschide formular / link',
+    workerNotFound:'Profil lucrător negăsit.',
+  }
+};
+function t(key){ return (wpI18n[wpLang]||wpI18n.en)[key] || wpI18n.en[key] || key; }
+function wpSetLang(lang){
+  wpLang=lang;
+  try{localStorage.setItem('wpLang',lang);}catch(e){}
+  document.getElementById('wpLangEN')?.classList.toggle('active',lang==='en');
+  document.getElementById('wpLangRO')?.classList.toggle('active',lang==='ro');
+  document.getElementById('wpHeaderTitle').textContent=t('workerPortal');
+  document.getElementById('wpTabDocs').textContent=t('tabDocs');
+  document.getElementById('wpTabAssign').textContent=t('tabProjects');
+  document.getElementById('wpTabProfile').textContent=t('tabProfile');
+  document.getElementById('wpTabResources').textContent=t('tabResources');
+  const at=wpActiveTab||'docs';
+  if(at==='docs') renderWPDocs();
+  else if(at==='assign') renderWPAssignments();
+  else if(at==='profile') renderWPProfile();
+  else if(at==='resources') renderWPResources();
+}
 
 // Role selection screen
 function sbShowRoleSelect(){
@@ -4962,6 +5126,8 @@ async function initWorkerPortal(workerId){
   wpWorkerObj=workers.find(w=>w.id===workerId)||null;
   if(!wpWorkerEmail && sbSession?.user?.email) wpWorkerEmail=sbSession.user.email;
   if(!wpWorkerEmail && wpWorkerObj?.email) wpWorkerEmail=wpWorkerObj.email;
+  // Restore language preference
+  try{const sl=localStorage.getItem('wpLang'); if(sl==='en'||sl==='ro') wpLang=sl;}catch(e){}
   // Load this worker's submissions
   await wpLoadSubmissions();
   // Show portal, hide ALL admin UI elements
@@ -4976,6 +5142,15 @@ async function initWorkerPortal(workerId){
   document.getElementById('sbLoginPrompt').style.display='none';
   document.body.classList.add('wp-mode');
   wpDocFilter='missing';
+  // Apply language to static elements
+  document.getElementById('wpHeaderTitle').textContent=t('workerPortal');
+  document.getElementById('wpTabDocs').textContent=t('tabDocs');
+  document.getElementById('wpTabAssign').textContent=t('tabProjects');
+  document.getElementById('wpTabProfile').textContent=t('tabProfile');
+  document.getElementById('wpTabResources').textContent=t('tabResources');
+  document.getElementById('wpSignOutBtn').textContent=t('signOut');
+  document.getElementById('wpLangEN')?.classList.toggle('active',wpLang==='en');
+  document.getElementById('wpLangRO')?.classList.toggle('active',wpLang==='ro');
   // Update header
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
@@ -5014,7 +5189,7 @@ function wpSwitch(tab){
 function wpSetDocFilter(f){ wpDocFilter=f; renderWPDocs(); }
 function renderWPDocs(){
   const el=document.getElementById('wpViewDocs'); if(!el) return;
-  const w=wpWorkerObj; if(!w){el.innerHTML='<p>Worker profile not found.</p>';return;}
+  const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('workerNotFound')}</p>`;return;}
   const today=new Date();
   const tmpl=tmplForWorker(w);
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId&&s.status==='pending').map(s=>[s.doc_key,s]));
@@ -5032,23 +5207,23 @@ function renderWPDocs(){
 
   let html=`<div class="wp-filter-tabs">
     <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')">
-      <span class="wp-filter-label">Missing</span>
+      <span class="wp-filter-label">${t('missing')}</span>
       <span class="wp-filter-count">${filterCounts.missing}</span>
     </button>
     <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')">
-      <span class="wp-filter-label">Expiring</span>
+      <span class="wp-filter-label">${t('expiring')}</span>
       <span class="wp-filter-count">${filterCounts.expiring}</span>
     </button>
     <button class="wp-filter-tab${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')">
-      <span class="wp-filter-label">Expired</span>
+      <span class="wp-filter-label">${t('expired')}</span>
       <span class="wp-filter-count">${filterCounts.expired}</span>
     </button>
     <button class="wp-filter-tab${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')">
-      <span class="wp-filter-label">Valid</span>
+      <span class="wp-filter-label">${t('valid')}</span>
       <span class="wp-filter-count">${filterCounts.ok}</span>
     </button>
     <button class="wp-filter-tab${wpDocFilter==='optional'?' active':''}" data-f="optional" onclick="wpSetDocFilter('optional')">
-      <span class="wp-filter-label">Optional</span>
+      <span class="wp-filter-label">${t('optional')}</span>
       <span class="wp-filter-count">${filterCounts.optional}</span>
     </button>
   </div>`;
@@ -5057,14 +5232,14 @@ function renderWPDocs(){
     const docData=w.docs?.[d.id];
     const st=docStatusAt(docData,today);
     const inOptionalTab=wpDocFilter==='optional';
-    const stLabel={ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:inOptionalTab?'Not submitted':'Missing'}[st]||'—';
+    const stLabel={ok:t('stValid'),expiring:t('stExpiring'),expired:t('stExpired'),missing:inOptionalTab?t('stNotSubmitted'):t('stMissing')}[st]||'—';
     const pillClass={ok:'ok',expiring:'expiring',expired:'expired',missing:inOptionalTab?'opt-neutral':'missing'}[st]||'';
     const expiryStr=docData?.expiry?new Date(docData.expiry).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
     const hasPending=!!pendingMap[d.id];
     const isOpen=wpDocSubmitOpen[d.id];
-    const reqBadge=d.req?`<span class="wp-req-badge">Required</span>`:`<span class="wp-opt-badge">Optional</span>`;
+    const reqBadge=d.req?`<span class="wp-req-badge">${t('required')}</span>`:`<span class="wp-opt-badge">${t('reqOptional')}</span>`;
     const safeId=d.id.replace(/[^a-zA-Z0-9_-]/g,'_');
-    const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="Help &amp; info" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="Open form / link"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
+    const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="${t('helpInfo')}" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="${t('openFormLink')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
     const infoPanel=d.infoText?`<div class="wp-info-panel" id="wpit_${safeId}" style="display:none;">${esc(d.infoText)}</div>`:'';
     return `<div class="wp-doc-row">
       ${infoIcons}
@@ -5077,25 +5252,25 @@ function renderWPDocs(){
           </div>
           <div class="wp-doc-meta-row">
             <span class="wp-status-pill ${pillClass}">${stLabel}</span>
-            ${expiryStr?`<span class="wp-expiry-tag">${st==='expiring'?'Expires':'Expired'}: ${expiryStr}</span>`:''}
+            ${expiryStr?`<span class="wp-expiry-tag">${st==='expiring'?t('expires'):t('expiredOn')}: ${expiryStr}</span>`:''}
           </div>
-          ${hasPending?`<div class="wp-pending-badge">⏳ Awaiting admin review</div>`:''}
+          ${hasPending?`<div class="wp-pending-badge">${t('awaitingReview')}</div>`:''}
           ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
           ${infoPanel}
-          ${d.templateFilePath?`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">📎 Official form required</div><div class="wp-template-banner-sub">Download, complete and submit this template — do not use your own format.</div></div><button class="wp-template-dl-btn" onclick="sbSignedDownload('${d.templateFilePath.replace(/'/g,"\\'")}','${(d.templateFileName||'template').replace(/'/g,"\\'")}')">📥 Download</button></div>`:''}
+          ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="sbSignedDownload('${_p}','${_n}')">${t('download')}</button></div>`;})():''}
         </div>
       </div>
       ${isOpen?`<div class="wp-submit-form">
-        <div><label>Expiry date</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/></div>
-        <div><label>Issue date (optional)</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/></div>
-        <div><label>Attach document (optional)</label><input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/></div>
-        <div><label>Notes (optional)</label><input type="text" class="form-input" id="wpNote_${d.id}" placeholder="Any notes for the reviewer…"/></div>
+        <div><label>${t('expiryDate')}</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/></div>
+        <div><label>${t('issueDate')}</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/></div>
+        <div><label>${t('attachDoc')}</label><input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/></div>
+        <div><label>${t('notes')}</label><input type="text" class="form-input" id="wpNote_${d.id}" placeholder="${t('notesPlaceholder')}"/></div>
         <div class="wp-submit-row">
-          <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">Submit for review</button>
-          <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">Cancel</button>
+          <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">${t('submitForReview')}</button>
+          <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">${t('cancel')}</button>
         </div>
       </div>`:''}
-      ${!isOpen?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?'Submit replacement':'Submit update'}</button>`:''}
+      ${!isOpen?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?t('submitReplacement'):t('submitUpdate')}</button>`:''}
     </div>`;
   };
 
@@ -5109,11 +5284,11 @@ function renderWPDocs(){
   }
 
   if(!filtered.length){
-    const emptyMsg={missing:'No required documents missing',expiring:'No documents expiring soon',expired:'No expired documents',ok:'All documents are up to date',optional:'No optional documents to submit'}[wpDocFilter]||'No documents';
+    const emptyMsg={missing:t('emptyMissing'),expiring:t('emptyExpiring'),expired:t('emptyExpired'),ok:t('emptyOk'),optional:t('emptyOptional')}[wpDocFilter]||t('emptyDocs');
     const emptyIcon={missing:'✓',expiring:'🟡',expired:'✓',ok:'✓',optional:'✓'}[wpDocFilter]||'—';
     html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
   } else if(wpDocFilter==='optional'){
-    html+=`<div class="wp-doc-optional-intro">These documents are not required but can be submitted to complete your profile.</div>`;
+    html+=`<div class="wp-doc-optional-intro">${t('optionalIntro')}</div>`;
     const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
     cats.forEach(cat=>{
       html+=`<div class="wp-section-title">${esc(cat)}</div>`;
@@ -5134,13 +5309,13 @@ function wpToggleSubmit(docKey){
   renderWPDocs();
 }
 async function submitWPDoc(docKey){
-  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert('Not signed in.');return;}
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert(t('notSignedIn'));return;}
   const expiryDate=(document.getElementById(`wpExp_${docKey}`)?.value||'').trim()||null;
   const issueDate=(document.getElementById(`wpIss_${docKey}`)?.value||'').trim()||null;
   const notes=(document.getElementById(`wpNote_${docKey}`)?.value||'').trim()||null;
   const fileInput=document.getElementById(`wpFile_${docKey}`);
   const file=fileInput?.files?.[0]||null;
-  if(!expiryDate&&!file){alert('Please enter an expiry date or attach a file before submitting.');return;}
+  if(!expiryDate&&!file){alert(t('pleaseAddExpiry'));return;}
 
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
@@ -5150,7 +5325,7 @@ async function submitWPDoc(docKey){
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
       fileName=file.name; fileSize=file.size; mimeType=file.type;
-    }catch(e){alert('File upload failed: '+e.message+'\n\nYou can still submit without a file — attach it separately if needed.');filePath=null;}
+    }catch(e){alert(t('fileUploadFailed')+e.message+'\n\n'+t('canStillSubmit'));filePath=null;}
   }
 
   try{
@@ -5162,7 +5337,7 @@ async function submitWPDoc(docKey){
     if(error) throw error;
   }catch(e){
     if(filePath) sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
-    alert('Could not submit: '+e.message); return;
+    alert(t('couldNotSubmit')+e.message); return;
   }
   wpDocSubmitOpen[docKey]=false;
   if(!wpSubmissions.some(s=>s.worker_id===wpWorkerId&&s.doc_key===docKey&&s.status==='pending')){
@@ -5177,7 +5352,7 @@ async function submitWPDoc(docKey){
 function renderWPAssignments(){
   const el=document.getElementById('wpViewAssign'); if(!el) return;
   const myPAs=projectAssignments.filter(a=>a.wid===wpWorkerId).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
-  if(!myPAs.length){el.innerHTML='<p style="color:#94a3b8;font-size:13px;padding:12px 0;">No projects on record.</p>';return;}
+  if(!myPAs.length){el.innerHTML=`<p style="color:#94a3b8;font-size:13px;padding:12px 0;">${t('noProjects')}</p>`;return;}
   const now=new Date().toISOString().slice(0,10);
   const current=myPAs.filter(a=>(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now));
   const past=myPAs.filter(a=>a.endDate&&a.endDate<now);
@@ -5186,23 +5361,23 @@ function renderWPAssignments(){
     const ongoing=!a.endDate||a.endDate>=now;
     return`<div class="wp-assign-card" onclick="wpOpenProjDetail('${a.id}')">
       <div class="wp-assign-title">
-        <span>${esc(proj?.name||'Unknown project')}</span>
+        <span>${esc(proj?.name||t('unknownProject'))}</span>
         <span class="wp-assign-chevron">›</span>
       </div>
       <div class="wp-assign-meta">
-        ${proj?.client?`<div>Client: <strong>${esc(proj.client)}</strong></div>`:''}
-        <div>Period: <strong>${a.startDate||'?'} → ${ongoing?'<span style="color:#16a34a;">ongoing</span>':esc(a.endDate)}</strong></div>
+        ${proj?.client?`<div>${t('client')}: <strong>${esc(proj.client)}</strong></div>`:''}
+        <div>${t('period')}: <strong>${a.startDate||'?'} → ${ongoing?`<span style="color:#16a34a;">${t('ongoing')}</span>`:esc(a.endDate)}</strong></div>
       </div>
     </div>`;
   };
   let html='';
   if(current.length){
-    html+=`<div class="wp-section-label">Current Project${current.length>1?'s':''}</div>`;
+    html+=`<div class="wp-section-label">${current.length>1?t('currentProjects'):t('currentProject')}</div>`;
     html+=current.map(mkCard).join('');
   }
   if(past.length){
     html+=`<button class="wp-past-toggle" onclick="wpTogglePast(this)" aria-expanded="false">
-      <span class="wp-past-toggle-label">Past Projects (${past.length})</span>
+      <span class="wp-past-toggle-label">${t('pastProjects')} (${past.length})</span>
       <span class="wp-past-toggle-arrow">▼</span>
     </button>
     <div id="wpPastCards" style="display:none;">${past.map(mkCard).join('')}</div>`;
@@ -5225,29 +5400,29 @@ function wpOpenProjDetail(assignmentId){
   const isUrl=proj?.location&&/^https?:\/\//i.test(proj.location);
   const locationHtml=proj?.location
     ?(isUrl
-      ?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">📍 Open in Maps</a>`
+      ?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">${t('openInMaps')}</a>`
       :`<span>${esc(proj.location)}</span>`)
     :'<span style="color:#94a3b8;">—</span>';
   const phoneHtml=proj?.phone
     ?`<a class="wp-call-link" href="tel:${esc(proj.phone.replace(/\s/g,''))}">📞 ${esc(proj.phone)}</a>`
     :'';
   const infoRows=[
-    proj?.client    ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Client</span><span class="wp-proj-info-value">${esc(proj.client)}</span></div>`:'',
-    proj?.pm        ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Project Leader</span><span class="wp-proj-info-value">${esc(proj.pm)}</span></div>`:'',
-    proj?.phone     ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Contact</span><span class="wp-proj-info-value">${phoneHtml}</span></div>`:'',
-    proj?.location  ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Location</span><span class="wp-proj-info-value">${locationHtml}</span></div>`:'',
-    proj?.desc      ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Description</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(proj.desc)}</span></div>`:'',
+    proj?.client    ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('client')}</span><span class="wp-proj-info-value">${esc(proj.client)}</span></div>`:'',
+    proj?.pm        ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('projectLeader')}</span><span class="wp-proj-info-value">${esc(proj.pm)}</span></div>`:'',
+    proj?.phone     ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('contact')}</span><span class="wp-proj-info-value">${phoneHtml}</span></div>`:'',
+    proj?.location  ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('location')}</span><span class="wp-proj-info-value">${locationHtml}</span></div>`:'',
+    proj?.desc      ?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('description')}</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(proj.desc)}</span></div>`:'',
   ].filter(Boolean).join('');
-  document.getElementById('wpProjDetailTitle').textContent=proj?.name||'Project Details';
+  document.getElementById('wpProjDetailTitle').textContent=proj?.name||t('projectDetails');
   document.getElementById('wpProjDetailBody').innerHTML=`
     <div class="wp-proj-info-card">
       <div class="wp-proj-info-name">${esc(proj?.name||'—')}</div>
       ${infoRows}
     </div>
     <div class="wp-proj-assign-card">
-      <div class="wp-proj-assign-label">Your Assignment</div>
-      <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">Period</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?'<span style="color:#16a34a;font-weight:700;">ongoing</span>':esc(a.endDate)}</span></div>
-      ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">Notes</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
+      <div class="wp-proj-assign-label">${t('yourAssignment')}</div>
+      <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">${t('periodLabel')}</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?`<span style="color:#16a34a;font-weight:700;">${t('ongoing')}</span>`:esc(a.endDate)}</span></div>
+      ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('notesLabel')}</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
     </div>`;
   document.getElementById('wpProjDetail').style.display='block';
   document.getElementById('wpProjDetail').scrollTop=0;
@@ -5259,21 +5434,21 @@ function wpCloseProjDetail(){
 // ── Worker portal: My Profile ──
 function renderWPProfile(){
   const el=document.getElementById('wpViewProfile'); if(!el) return;
-  const w=wpWorkerObj; if(!w){el.innerHTML='<p>Profile not found.</p>';return;}
+  const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('profileNotFound')}</p>`;return;}
   el.innerHTML=`<div class="wp-profile-card">
-    <div class="wp-profile-title">My Profile</div>
-    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">Your details below are visible to your compliance team. Changes are saved for review.</div>
-    <div class="wp-profile-field"><label>Full Name</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
-    <div class="wp-profile-field"><label>Worker Type</label><div class="wp-readonly-field">${w.type==='zzp'?'ZZP (Self-employed)':'Employed Worker'}</div></div>
-    <div class="wp-profile-field"><label>Nationality</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
-    <div class="wp-profile-field"><label>Email Address</label><input class="form-input wp-profile-field" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="your@email.com"/></div>
+    <div class="wp-profile-title">${t('myProfile')}</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">${t('profileDesc')}</div>
+    <div class="wp-profile-field"><label>${t('fullName')}</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
+    <div class="wp-profile-field"><label>${t('workerType')}</label><div class="wp-readonly-field">${w.type==='zzp'?t('zzp'):t('employed')}</div></div>
+    <div class="wp-profile-field"><label>${t('nationality')}</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
+    <div class="wp-profile-field"><label>${t('emailAddress')}</label><input class="form-input wp-profile-field" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="${t('emailPlaceholder')}"/></div>
     <div class="wp-profile-field">
-      <label>Phone Number</label>
-      <input class="form-input wp-profile-field" id="wpProfPhone" type="tel" value="${esc(w.phone||'')}" placeholder="e.g. +31 6 12345678"/>
-      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">Used by your compliance team to contact you.</div>
+      <label>${t('phoneNumber')}</label>
+      <input class="form-input wp-profile-field" id="wpProfPhone" type="tel" value="${esc(w.phone||'')}" placeholder="${t('phonePlaceholder')}"/>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">${t('phoneHelp')}</div>
     </div>
-    <div class="wp-profile-field"><label>Notes / Additional info</label><textarea class="form-input" id="wpProfNotes" rows="3" style="resize:vertical;width:100%;box-sizing:border-box;font-size:15px;">${esc(w.notes||'')}</textarea></div>
-    <button class="wp-profile-save" onclick="saveWPProfile()">Save changes</button>
+    <div class="wp-profile-field"><label>${t('notesAdditional')}</label><textarea class="form-input" id="wpProfNotes" rows="3" style="resize:vertical;width:100%;box-sizing:border-box;font-size:15px;">${esc(w.notes||'')}</textarea></div>
+    <button class="wp-profile-save" onclick="saveWPProfile()">${t('saveChanges')}</button>
   </div>`;
 }
 async function saveWPProfile(){
@@ -5286,9 +5461,9 @@ async function saveWPProfile(){
   try{
     const {error}=await sbClient.rpc('save_worker_profile',{p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_new_email:email||null,p_notes:notes||null,p_phone:phone||null});
     if(error) throw error;
-    sbSetStatus('Profile saved',true);
+    sbSetStatus(t('profileSaved'),true);
     renderWPProfile();
-  }catch(e){alert('Could not save profile: '+e.message);}
+  }catch(e){alert(t('couldNotSaveProfile')+e.message);}
 }
 
 // ── Worker portal: Resources tab ──
@@ -5297,15 +5472,15 @@ function renderWPResources(){
   const today=new Date().toISOString().slice(0,10);
 
   function resStatusBadgeWP(endDate){
-    if(!endDate) return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">Active</span>';
-    if(endDate<today) return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">Ended</span>';
-    return '<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">Returning soon</span>';
+    if(!endDate) return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">${t('active')}</span>`;
+    if(endDate<today) return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">${t('ended')}</span>`;
+    return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">${t('returningSoon')}</span>`;
   }
 
   const pendingReturnIds=new Set((wpReturnRequests||[]).map(r=>r.assignment_id));
 
-  function assignmentSection(icon, title, assignments, getResourceName, getResourceDetail, resourceType){
-    if(!assignments.length) return `<div class="wp-section-title">${icon} ${title}</div><div style="color:var(--text-l);font-size:13px;padding:8px 0 16px;">No ${title.toLowerCase()} on record.</div>`;
+  function assignmentSection(icon, title, assignments, getResourceName, getResourceDetail, resourceType, noMsg){
+    if(!assignments.length) return `<div class="wp-section-title">${icon} ${title}</div><div style="color:var(--text-l);font-size:13px;padding:8px 0 16px;">${noMsg}</div>`;
     let html=`<div class="wp-section-title">${icon} ${title}</div>`;
     assignments.forEach(a=>{
       const name=getResourceName(a);
@@ -5316,12 +5491,12 @@ function renderWPResources(){
         <div class="wp-assign-title">${esc(name)} ${resStatusBadgeWP(a.endDate)}</div>
         <div class="wp-assign-meta">
           ${detail?`<div>${esc(detail)}</div>`:''}
-          <div>From: <strong>${a.startDate||'—'}</strong>${a.endDate?` → <strong>${a.endDate}</strong>`:' → <strong>Ongoing</strong>'}</div>
+          <div>${t('from')} <strong>${a.startDate||'—'}</strong>${a.endDate?` → <strong>${a.endDate}</strong>`:` → <strong>${t('ongoingCap')}</strong>`}</div>
           ${a.notes?`<div style="margin-top:4px;color:var(--text-m);">${esc(a.notes)}</div>`:''}
         </div>
         ${isActive?hasPending
-          ?`<div style="margin-top:8px;padding:4px 10px;border-radius:8px;background:#fef3c7;color:#b45309;font-size:12px;font-weight:600;display:inline-block;">Return proof submitted — awaiting review</div>`
-          :`<button class="wp-doc-btn" style="margin-top:8px;" onclick="wpOpenReturnRequest('${resourceType}','${a.id}',event)">Submit return / close out</button>`
+          ?`<div style="margin-top:8px;padding:4px 10px;border-radius:8px;background:#fef3c7;color:#b45309;font-size:12px;font-weight:600;display:inline-block;">${t('returnPending')}</div>`
+          :`<button class="wp-doc-btn" style="margin-top:8px;" onclick="wpOpenReturnRequest('${resourceType}','${a.id}',event)">${t('submitReturn')}</button>`
         :''}
       </div>`;
     });
@@ -5329,20 +5504,20 @@ function renderWPResources(){
   }
 
   let html='';
-  html+=assignmentSection('🏠','Accommodation',wpAccomAssignments,
-    a=>{const p=wpProperties.find(x=>x.id===a.propId); return p?.name||'Property';},
+  html+=assignmentSection('🏠',t('accommodation'),wpAccomAssignments,
+    a=>{const p=wpProperties.find(x=>x.id===a.propId); return p?.name||t('propertyFallback');},
     a=>{const p=wpProperties.find(x=>x.id===a.propId); return p?.address||'';},
-    'accommodation');
-  html+=assignmentSection('🚗','Vehicles',wpVehAssignments,
-    a=>{const v=wpVehicles.find(x=>x.id===a.vehicleId); return v?`${v.desc||''}${v.reg?' ('+v.reg+')':''}`.trim()||'Vehicle':'Vehicle';},
+    'accommodation',t('noAccommodation'));
+  html+=assignmentSection('🚗',t('vehicles'),wpVehAssignments,
+    a=>{const v=wpVehicles.find(x=>x.id===a.vehicleId); return v?`${v.desc||''}${v.reg?' ('+v.reg+')':''}`.trim()||t('vehicleFallback'):t('vehicleFallback');},
     a=>'',
-    'vehicle');
-  html+=assignmentSection('🔧','Tools',wpToolAssignments,
-    a=>{const t=wpTools.find(x=>x.id===a.toolId); return t?.name||'Tool';},
-    a=>{const t=wpTools.find(x=>x.id===a.toolId); return t?.serial?'S/N: '+t.serial:'';},
-    'tool');
+    'vehicle',t('noVehicles'));
+  html+=assignmentSection('🔧',t('tools'),wpToolAssignments,
+    a=>{const tl=wpTools.find(x=>x.id===a.toolId); return tl?.name||t('toolFallback');},
+    a=>{const tl=wpTools.find(x=>x.id===a.toolId); return tl?.serial?'S/N: '+tl.serial:'';},
+    'tool',t('noTools'));
 
-  el.innerHTML=html||'<p style="color:var(--text-l);">No resource assignments found.</p>';
+  el.innerHTML=html||`<p style="color:var(--text-l);">${t('noResources')}</p>`;
 }
 
 function wpOpenReturnRequest(resourceType, assignmentId, ev){
@@ -5354,16 +5529,16 @@ function wpOpenReturnRequest(resourceType, assignmentId, ev){
   if(!card) return;
   const today=new Date().toISOString().slice(0,10);
   const formHtml=`<div class="wp-return-form" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;">
-    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">Submit Return / Close Out</div>
-    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Proposed return / close-out date</label>
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">${t('submitReturnTitle')}</div>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">${t('proposedReturnDate')}</label>
       <input type="date" class="form-input" id="wpReturnDate_${assignmentId}" value="${today}" style="font-size:13px;min-height:44px;"/></div>
-    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Attach proof photo / document</label>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">${t('attachProof')}</label>
       <input type="file" id="wpReturnFile_${assignmentId}" accept=".pdf,.jpg,.jpeg,.png" class="form-input" style="font-size:13px;"/></div>
-    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">Notes (optional)</label>
-      <input type="text" class="form-input" id="wpReturnNote_${assignmentId}" placeholder="Any notes for the reviewer…" style="font-size:13px;"/></div>
+    <div class="form-field" style="margin-bottom:8px;"><label class="form-label" style="font-size:12px;">${t('notes')}</label>
+      <input type="text" class="form-input" id="wpReturnNote_${assignmentId}" placeholder="${t('notesPlaceholder')}" style="font-size:13px;"/></div>
     <div style="display:flex;gap:8px;margin-top:8px;">
-      <button class="wp-doc-btn" onclick="wpSubmitReturn('${resourceType}','${assignmentId}')">Submit for review</button>
-      <button class="wp-doc-btn" style="background:#f1f5f9;color:#475569;" onclick="this.closest('.wp-return-form').remove();document.querySelector('[data-return-btn=\\'${assignmentId}\\']')?.style?.setProperty('display','');">Cancel</button>
+      <button class="wp-doc-btn" onclick="wpSubmitReturn('${resourceType}','${assignmentId}')">${t('submitForReview')}</button>
+      <button class="wp-doc-btn" style="background:#f1f5f9;color:#475569;" onclick="this.closest('.wp-return-form').remove();document.querySelector('[data-return-btn=\\'${assignmentId}\\']')?.style?.setProperty('display','');">${t('cancel')}</button>
     </div>
   </div>`;
   card.insertAdjacentHTML('beforeend', formHtml);
@@ -5371,7 +5546,7 @@ function wpOpenReturnRequest(resourceType, assignmentId, ev){
 }
 
 async function wpSubmitReturn(resourceType, assignmentId){
-  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert('Not signed in.');return;}
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert(t('notSignedIn'));return;}
   const fileInput=document.getElementById(`wpReturnFile_${assignmentId}`);
   const file=fileInput?.files?.[0]||null;
   const notes=(document.getElementById(`wpReturnNote_${assignmentId}`)?.value||'').trim()||null;
@@ -5385,7 +5560,7 @@ async function wpSubmitReturn(resourceType, assignmentId){
       const {error}=await sbClient.storage.from('tmc-documents').upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
       fileName=file.name; fileSize=file.size; mimeType=file.type;
-    }catch(e){ console.warn('[TMC] return file upload failed:',e.message); alert('File upload failed: '+e.message+'\n\nYou can still submit without a file.'); filePath=null; }
+    }catch(e){ console.warn('[TMC] return file upload failed:',e.message); alert(t('returnFileUploadFailed')+e.message+'\n\n'+t('canStillSubmitReturn')); filePath=null; }
   }
 
   try{
@@ -5396,14 +5571,14 @@ async function wpSubmitReturn(resourceType, assignmentId){
       p_proposed_date:proposedDate||null
     });
     if(error) throw error;
-    alert('Return request submitted! Your manager will review and confirm the closure.');
+    alert(t('returnSubmitted'));
     // Reload portal data
     try{
       const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail});
       if(!e2&&data) wpLoadPortalData(data);
     }catch(e){ console.warn('[TMC] wpSubmitReturn reload:',e.message); }
     renderWPResources();
-  }catch(e){ alert('Could not submit: '+e.message); }
+  }catch(e){ alert(t('couldNotSubmit')+e.message); }
 }
 
 // ── Approvals tab ─────────────────────────────────────────────────────────────
