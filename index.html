@@ -877,6 +877,12 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-card-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;padding:0;flex-shrink:0;}
 .wp-card-icon-btn:hover,.wp-card-icon-btn:active{background:#e2e8f0;color:#1e293b;}
 .wp-info-panel{font-size:13px;color:#334155;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.6;}
+.wp-template-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;}
+.wp-template-banner-text{flex:1;min-width:0;}
+.wp-template-banner-label{font-size:12px;font-weight:700;color:#78350f;}
+.wp-template-banner-sub{font-size:11px;color:#92400e;margin-top:1px;}
+.wp-template-dl-btn{flex-shrink:0;padding:6px 12px;background:#f59e0b;border:none;border-radius:6px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;transition:background .15s;}
+.wp-template-dl-btn:hover{background:#d97706;}
 
 </style>
 </head>
@@ -2970,6 +2976,8 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
     tip: doc.tip || '',
     info_text: doc.infoText || null,
     info_url: doc.infoUrl || null,
+    template_file_name: doc.templateFileName || null,
+    template_file_path: doc.templateFilePath || null,
     required: !!doc.req && !doc.archived,
     built_in: !!doc.builtIn,
     archived: !!doc.archived,
@@ -4916,7 +4924,7 @@ function wpLoadPortalData(data){
   docSets.forEach(s=>docSetItems[s.id]=[]);
   (data.doc_set_items||[]).forEach(d=>{
     if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[];
-    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
+    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
   });
   tmplForWorker(workerObj).forEach(d=>workerObj.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});
   (data.worker_docs||[]).forEach(d=>{ workerObj.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]}; });
@@ -5066,6 +5074,7 @@ function renderWPDocs(){
           ${hasPending?`<div class="wp-pending-badge">⏳ Awaiting admin review</div>`:''}
           ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
           ${infoPanel}
+          ${d.templateFilePath?`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">📎 Official form required</div><div class="wp-template-banner-sub">Download, complete and submit this template — do not use your own format.</div></div><button class="wp-template-dl-btn" onclick="sbSignedDownload('${d.templateFilePath.replace(/'/g,"\\'")}','${(d.templateFileName||'template').replace(/'/g,"\\'")}')">📥 Download</button></div>`:''}
         </div>
       </div>
       ${isOpen?`<div class="wp-submit-form">
@@ -6541,6 +6550,12 @@ function renderDocSetCard(s){
                 <label style="font-size:10px;color:var(--text-l);">🔗 Info / form link</label>
                 <input id="editDoc_url_${s.id}_${d.id}" class="form-input" value="${esc(d.infoUrl||'')}" style="width:220px;" placeholder="https://…" type="url"/>
               </div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <label style="font-size:10px;color:var(--text-l);">📎 Form template <span style="font-weight:400;">(workers download &amp; complete this)</span></label>
+                ${d.templateFileName?`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:flex;align-items:center;gap:6px;"><span style="font-size:11px;font-weight:600;color:var(--navy);">📄 ${esc(d.templateFileName)}</span><button type="button" class="btn btn-cancel" style="font-size:10px;padding:2px 6px;" onclick="docItemTemplateClear('${s.id}','${d.id}')">✕ Remove</button></div>`:`<div id="editDoc_tmpl_current_${s.id}_${d.id}" style="display:none;"></div>`}
+                <input type="file" id="editDoc_tmpl_${s.id}_${d.id}" style="font-size:11px;width:240px;" accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.ods,.txt,.png,.jpg"/>
+                <input type="hidden" id="editDoc_tmpl_remove_${s.id}_${d.id}" value="0"/>
+              </div>
               <button class="btn btn-primary" style="height:32px;align-self:flex-end;" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save</button>
               <button class="btn btn-cancel" style="height:32px;align-self:flex-end;" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
             </div>
@@ -6551,7 +6566,7 @@ function renderDocSetCard(s){
               <span style="font-size:14px;">${d.icon}</span>
               <div>
                 <div class="doc-settings-name">${esc(d.name)}
-                  <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}
+                  <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.templateFilePath?`<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:10px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;margin-left:4px;">📎 Template</span>`:''}
                 </div>
                 <div class="doc-settings-meta">${esc(d.tip)}</div>
               </div>
@@ -6770,9 +6785,21 @@ async function saveDocItemEdit(setId,docId){
   const newIcon=(document.getElementById(`editDoc_icon_${setId}_${docId}`)?.value||'').trim()||doc.icon||'📌';
   const newInfoText=(document.getElementById(`editDoc_info_${setId}_${docId}`)?.value||'').trim()||null;
   const newInfoUrl=(document.getElementById(`editDoc_url_${setId}_${docId}`)?.value||'').trim()||null;
-  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon,infoText:doc.infoText,infoUrl:doc.infoUrl};
+  const tmplClear=document.getElementById(`editDoc_tmpl_remove_${setId}_${docId}`)?.value==='1';
+  const tmplFile=document.getElementById(`editDoc_tmpl_${setId}_${docId}`)?.files?.[0]||null;
+  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon,infoText:doc.infoText,infoUrl:doc.infoUrl,templateFileName:doc.templateFileName,templateFilePath:doc.templateFilePath};
   doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon; doc.infoText=newInfoText; doc.infoUrl=newInfoUrl;
+  if(tmplClear){ doc.templateFileName=null; doc.templateFilePath=null; }
   try{
+    if(!tmplClear && tmplFile && sbClient && sbSession){
+      const oldPath=doc.templateFilePath;
+      const newPath=`doc-templates/${setId}/${docId}/${sbSlug(tmplFile.name)}`;
+      const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(newPath,tmplFile,{contentType:tmplFile.type||'application/octet-stream',upsert:true});
+      if(upErr) throw new Error('Template upload failed: '+upErr.message);
+      if(oldPath && oldPath!==newPath) sbClient.storage.from(SB_BUCKET).remove([oldPath]).catch(()=>{});
+      doc.templateFilePath=newPath;
+      doc.templateFileName=tmplFile.name;
+    }
     await sbRemoteUpsertDocSetItem(setId,doc);
   }catch(e){
     Object.assign(doc,prev);
@@ -6783,6 +6810,13 @@ async function saveDocItemEdit(setId,docId){
   saveDocSets();
   renderDocSetCardInPlace(setId);
   renderTable(); if(curW) rebuildModal(curW);
+}
+
+function docItemTemplateClear(setId, docId){
+  const el=document.getElementById(`editDoc_tmpl_remove_${setId}_${docId}`);
+  if(el) el.value='1';
+  const cur=document.getElementById(`editDoc_tmpl_current_${setId}_${docId}`);
+  if(cur) cur.style.display='none';
 }
 
 // ── Category rename ──
@@ -9368,7 +9402,7 @@ async function sbLoadAll(){
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
-      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
+      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
     }
     if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',phone:p.contact_phone||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
 
