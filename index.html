@@ -9821,11 +9821,12 @@ async function sbLoadAll(){
   sbLastWorkerLoadProblem = null;
   const loadErrors = [];
   const tableErr = (name, error) => {
-    if(error){
-      const msg = `${name}: ${error.message || error}`;
-      loadErrors.push(msg);
-      console.warn('Supabase table load failed:', msg);
-    }
+    if(!error) return;
+    const msg = error.message || String(error);
+    // "relation does not exist" means the migration hasn't been run yet — not a real error.
+    if(msg.includes('does not exist') || msg.includes('42P01')) return;
+    loadErrors.push(`${name}: ${msg}`);
+    console.warn('Supabase table load failed:', `${name}: ${msg}`);
   };
   const q = async (name, builder, fallback) => {
     const ctrl = new AbortController();
