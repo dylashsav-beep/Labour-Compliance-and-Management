@@ -1118,6 +1118,16 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <div class="pf-options" id="pfGroup"></div>
         </div>
       </div>
+      <div class="filter-sep"></div>
+      <div class="pf-wrap" id="mdfWrap">
+        <button class="fbtn pf-trigger" id="mdfTrigger" onclick="toggleMDFPanel(event)">
+          <span id="mdfLabel">Any Missing Doc</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="mdfPanel" style="min-width:220px;">
+          <div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div>
+          <div class="pf-options" id="mdfGroup"></div>
+        </div>
+      </div>
       <input class="search-input" type="text" placeholder="Search by name or project…" oninput="handleSearch(this.value)"/>
     </div>
     <div class="legend">
@@ -1136,7 +1146,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <th onclick="srt('name')">Name</th>
           <th onclick="srt('type')">Type</th>
           <th class="no-sort" id="thWeekAssign">Worker Assignment</th>
-          <th class="no-sort">Required Docs</th>
+          <th onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</th>
           <th onclick="srt('score')">Score</th>
           <th onclick="srt('status')">Go / No-Go</th>
           <th class="no-sort">Notes</th>
@@ -3361,6 +3371,7 @@ let fDocSet= new Set();  // empty = all doc sets (stored as docSetId)
 let fStatus= new Set();  // empty = all compliance statuses
 let fProj  = new Set();  // empty = all projects
 let fActive = 'active';   // worker active filter: active | inactive | all
+let fMissingDoc = '';     // doc_key to filter by missing/expired (empty = all)
 let fSearch='', sortKey='', sortDir=1;
 let expandedDoc=null;
 
@@ -3519,7 +3530,7 @@ function setFP(v){
     if(fProj.has(name)) fProj.delete(name);
     else fProj.add(name);
   }
-  renderProjFilters();renderDocSetFilters();
+  renderProjFilters();renderDocSetFilters();renderMissingDocFilter();
   renderTable();
 }
 
@@ -3551,6 +3562,75 @@ function renderProjFilters(){
       ${esc(p.name)}
     </label>`;
   }).join('') || `<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No active projects</div>`;
+}
+
+// ─── Missing-doc filter ───────────────────────────────────────────────────────
+function toggleMDFPanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('mdfPanel');
+  const trigger=document.getElementById('mdfTrigger');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){ renderMissingDocFilter(); }
+}
+function closeMDFPanel(){
+  const panel=document.getElementById('mdfPanel');
+  const trigger=document.getElementById('mdfTrigger');
+  if(panel){ panel.classList.remove('open'); }
+  if(trigger) trigger.classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('mdfWrap');
+  if(wrap&&!wrap.contains(e.target)) closeMDFPanel();
+});
+function setFMD(docKey){
+  fMissingDoc=docKey||'';
+  renderMissingDocFilter();
+  renderTable();
+}
+function renderMissingDocFilter(){
+  const g=document.getElementById('mdfGroup');
+  const label=document.getElementById('mdfLabel');
+  const trigger=document.getElementById('mdfTrigger');
+  if(!g) return;
+  // Collect all required doc items across all sets, deduplicated by doc_key
+  const refDate=currentWeekMonday;
+  const seen=new Map();
+  docSets.forEach(s=>{
+    (docSetItems[s.id]||[]).filter(d=>d.req&&!d.archived).forEach(d=>{
+      if(!seen.has(d.id)) seen.set(d.id,{key:d.id,name:d.name,cat:d.cat||'Other',icon:d.icon||'📄'});
+    });
+  });
+  // Update trigger label
+  if(fMissingDoc&&seen.has(fMissingDoc)){
+    const d=seen.get(fMissingDoc);
+    label.innerHTML=`<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;">${esc(d.icon+' '+d.name)}</span>`;
+    trigger.classList.add('active');
+  } else {
+    label.innerHTML='Any Missing Doc';
+    trigger.classList.remove('active');
+  }
+  if(!seen.size){ g.innerHTML=`<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No required documents defined</div>`; return; }
+  // Group by category
+  const cats=new Map();
+  seen.forEach(d=>{ if(!cats.has(d.cat)) cats.set(d.cat,[]); cats.get(d.cat).push(d); });
+  let html='';
+  cats.forEach((docs,cat)=>{
+    html+=`<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.05em;">${esc(cat)}</div>`;
+    html+=docs.map(d=>{
+      const sel=fMissingDoc===d.key;
+      // Count workers currently missing this doc
+      const missingCount=workers.filter(w=>w.active!==false&&(docStatusAt(w.docs?.[d.key],refDate)==='missing'||docStatusAt(w.docs?.[d.key],refDate)==='expired')).length;
+      return `<label class="pf-option${sel?' checked':''}" onclick="setFMD('${sel?'':d.key}');event.preventDefault()">
+        <input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFMD('${sel?'':d.key}')">
+        <span style="flex:1;">${esc(d.icon+' '+d.name)}</span>
+        ${missingCount>0?`<span style="font-size:10px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;">${missingCount}</span>`:''}
+      </label>`;
+    }).join('');
+  });
+  g.innerHTML=html;
 }
 
 // ─── Multi-select Allocation Widget ──────────────────────────────────────────
@@ -3741,12 +3821,14 @@ function filtered(){
     }));
   }
   if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
+  if(fMissingDoc){l=l.filter(w=>{const doc=w.docs?.[fMissingDoc];const st=docStatusAt(doc,refDate);return st==='missing'||st==='expired';});}
   if(sortKey){l.sort((a,b)=>{
     let av,bv;
     if(sortKey==='name'){av=a.name;bv=b.name;}
     else if(sortKey==='type'){av=a.type;bv=b.type;}
     else if(sortKey==='score'){av=scoreAt(a,refDate);bv=scoreAt(b,refDate);}
-    else if(sortKey==='status'){av=goStatusAt(a,refDate);bv=goStatusAt(b,refDate);}
+    else if(sortKey==='status'){const o={go:0,warning:1,nogo:2};av=o[goStatusAt(a,refDate)]??0;bv=o[goStatusAt(b,refDate)]??0;}
+    else if(sortKey==='missing'){av=tmpl(a).filter(d=>d.req&&(docStatusAt(a.docs?.[d.id],refDate)==='missing'||docStatusAt(a.docs?.[d.id],refDate)==='expired')).length;bv=tmpl(b).filter(d=>d.req&&(docStatusAt(b.docs?.[d.id],refDate)==='missing'||docStatusAt(b.docs?.[d.id],refDate)==='expired')).length;}
     return av<bv?-sortDir:av>bv?sortDir:0;
   });}
   return l;
@@ -6596,7 +6678,7 @@ function saveProject(){
   saveProjects();
   closeM('projOverlay');
   renderProjects();
-  renderProjFilters();renderDocSetFilters();  // refresh filter bar
+  renderProjFilters();renderDocSetFilters();renderMissingDocFilter();  // refresh filter bar
   // Refresh add-worker picker if open
   const picker = document.getElementById('addProjPicker');
   if(picker) picker.innerHTML = activeProjectNames().map(p=>`<button type="button" class="proj-btn" onclick="this.classList.toggle('sel')">${p}</button>`).join('');
@@ -6606,7 +6688,7 @@ function toggleProjectActive(id){
   p.active = !p.active;
   saveProjects();
   renderProjects();
-  renderProjFilters();renderDocSetFilters();
+  renderProjFilters();renderDocSetFilters();renderMissingDocFilter();
 }
 function deleteProject(id){
   const p = projectStore.find(x=>x.id===id); if(!p) return;
@@ -6619,7 +6701,7 @@ function deleteProject(id){
     projectStore = projectStore.filter(x=>x.id!==id);
     projectAssignments = projectAssignments.filter(a=>a.projectId!==id);
     saveProjects(); savePA();
-    renderProjects(); renderProjFilters();renderDocSetFilters(); renderRoster(); renderTable(); renderDeletedItems();
+    renderProjects(); renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderRoster(); renderTable(); renderDeletedItems();
     // Mark inactive in Supabase immediately — don't rely on deferred sync
     if(sbClient && sbSession && sbCanWriteTable('projects')){
       await sbClient.from('projects').update({active:false}).eq('id',id);
@@ -9151,7 +9233,7 @@ function restoreDeletedItem(id){
   const it=deletedItems.find(x=>x.id===id); if(!it) return;
   tmcConfirm('Restore this archived item?', 'The item will be returned to the active dashboard where possible. The restore action will be recorded in Supabase.', async ()=>{
   const p=it.payload||{};
-  if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters();renderDocSetFilters(); renderRoster(); renderTable(); if(sbClient&&sbSession&&p.project.id&&sbCanWriteTable('projects')){ sbClient.from('projects').update({active:true}).eq('id',p.project.id).then(({error})=>{if(error) console.warn('[TMC] restore project Supabase write failed:',error.message);}); (p.assignments||[]).forEach(a=>{if(a.id&&sbCanWriteTable('project_assignments')) sbClient.from('project_assignments').update({active:true}).eq('id',a.id).then(({error})=>{if(error) console.warn('[TMC] restore project assignments Supabase write failed:',error.message);});}); } }
+  if(it.type==='project' && p.project){ if(!projectStore.find(x=>x.id===p.project.id)) projectStore.push({...p.project,active:true}); (p.assignments||[]).forEach(a=>{ if(!projectAssignments.find(x=>x.id===a.id)) projectAssignments.push(a); }); saveProjects(); savePA(); renderProjects(); renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderRoster(); renderTable(); if(sbClient&&sbSession&&p.project.id&&sbCanWriteTable('projects')){ sbClient.from('projects').update({active:true}).eq('id',p.project.id).then(({error})=>{if(error) console.warn('[TMC] restore project Supabase write failed:',error.message);}); (p.assignments||[]).forEach(a=>{if(a.id&&sbCanWriteTable('project_assignments')) sbClient.from('project_assignments').update({active:true}).eq('id',a.id).then(({error})=>{if(error) console.warn('[TMC] restore project assignments Supabase write failed:',error.message);});}); } }
   else if(it.type==='project_assignment' && p){ const restored={...p}; delete restored._meta; projectAssignments.push(restored); savePA(); renderRoster(); renderTable(); if(sbClient&&sbSession&&restored.id&&sbCanWriteTable('project_assignments')){ sbClient.from('project_assignments').update({active:true,archived_at:null,archived_by:null}).eq('id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment Supabase write failed:',error.message); }); if(sbCanWriteTable('project_assignment_files')) sbClient.from('project_assignment_files').update({active:true}).eq('project_assignment_id',restored.id).then(({error})=>{ if(error) console.warn('[TMC] restore assignment files Supabase write failed:',error.message); }); } }
   else if(it.type==='worker_document_file'){ if(!fileStore[p.wid])fileStore[p.wid]={}; if(!fileStore[p.wid][p.did])fileStore[p.wid][p.did]=[]; fileStore[p.wid][p.did].push(p.file); refreshFiles(p.wid,p.did); const fp=p.file?.file_path||p.file?.storagePath; if(sbClient&&sbSession&&fp&&sbCanWriteTable('worker_document_files')){ sbClient.from('worker_document_files').update({active:true}).eq('file_path',fp).then(({error})=>{ if(error) console.warn('[TMC] restore worker file Supabase write failed:',error.message); }); } }
   else if(it.type==='worker_status_change'){ const wid=p.workerId||p.wid||p._meta?.workerId; const w=workers.find(x=>x.id===wid); if(w){ w.active = p.oldActive !== false; renderTable(); renderStats(); if(curW===wid) rebuildModal(wid); sbUpdateWorkerActiveImmediate(wid, p.oldActive !== false).catch(e=>console.warn('[TMC] restore worker status Supabase write failed:',e.message)); } }
@@ -10056,7 +10138,7 @@ async function sbLoadAll(){
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     sbHasLoadedRemote = true;
-    renderProjFilters();renderDocSetFilters(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
+    renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
       const workerErr = loadErrors.find(x=>x.startsWith('workers:'));
       if(workerErr){
@@ -10290,7 +10372,7 @@ async function sbBoot(){
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 // loadProjects() was called at definition time above, so projectStore is ready
-renderProjFilters();renderDocSetFilters();
+renderProjFilters();renderDocSetFilters();renderMissingDocFilter();
 renderWeekLabel();
 renderTable();
 applyRoleUI();
