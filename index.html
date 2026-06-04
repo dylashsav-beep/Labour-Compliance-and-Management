@@ -3048,6 +3048,7 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
     info_url: doc.infoUrl || null,
     template_file_name: doc.templateFileName || null,
     template_file_path: doc.templateFilePath || null,
+    allow_issue: !!doc.allowIssue,
     required: !!doc.req && !doc.archived,
     built_in: !!doc.builtIn,
     archived: !!doc.archived,
@@ -4780,7 +4781,7 @@ function rebuildModal(id){
           </div>
           <div class="doc-controls">
             ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
-            ${(()=>{const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&x.status==='pending_signature');return ai?`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">📤 Issued</span><button class="file-rm" onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="margin-left:2px;">Revoke</button>`:sbCanWriteTable('worker_documents')?`<button class="attach-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:'';})()}
+            ${(()=>{if(!d.allowIssue)return'';const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&x.status==='pending_signature');return ai?`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">📤 Issued</span><button onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;padding:0 2px;text-decoration:underline;">Revoke</button>`:sbCanWriteTable('worker_documents')?`<button class="attach-btn" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:''})()}
             <select class="status-select ${st}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
               <option value="ok"       ${st==='ok'?'selected':''}>Valid</option>
               <option value="expiring" ${st==='expiring'?'selected':''}>Expiring</option>
@@ -5265,7 +5266,7 @@ function wpLoadPortalData(data){
   docSets.forEach(s=>docSetItems[s.id]=[]);
   (data.doc_set_items||[]).forEach(d=>{
     if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[];
-    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
+    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,allowIssue:!!d.allow_issue,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null});
   });
   tmplForWorker(workerObj).forEach(d=>workerObj.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});
   (data.worker_docs||[]).forEach(d=>{ workerObj.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]}; });
@@ -7083,9 +7084,14 @@ function renderDocSetCard(s){
             </div>
 
             <!-- Footer -->
-            <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:14px;border-top:1px solid #c7ddf7;">
+            <div style="display:flex;align-items:center;padding-top:14px;border-top:1px solid #c7ddf7;">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text-m);user-select:none;">
+                <input type="checkbox" id="editDoc_allowIssue_${s.id}_${d.id}" ${d.allowIssue?'checked':''}/>
+                <span>Allow personalised document issuance for this question</span>
+              </label>
+              <div style="flex:1;"></div>
               <button class="btn btn-cancel" onclick="cancelDocItemEdit('${s.id}','${d.id}')">Cancel</button>
-              <button class="btn btn-primary" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save changes</button>
+              <button class="btn btn-primary" style="margin-left:8px;" onclick="saveDocItemEdit('${s.id}','${d.id}')">Save changes</button>
             </div>
           </div>`;
         } else {
@@ -7094,7 +7100,7 @@ function renderDocSetCard(s){
               <span style="font-size:14px;">${d.icon}</span>
               <div>
                 <div class="doc-settings-name">${esc(d.name)}
-                  <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.templateFilePath?`<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:10px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;margin-left:4px;">📎 Template</span>`:''}
+                  <span class="req-tag ${d.req&&!d.archived?'req':'opt'}">${d.archived?'Archived':(d.req?'Required':'Optional')}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.templateFilePath?`<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:10px;background:#fef3c7;border:1px solid #fcd34d;color:#92400e;margin-left:4px;">📎 Template</span>`:''}${d.allowIssue?`<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 6px;border-radius:10px;background:#ede9fe;border:1px solid #c4b5fd;color:#6d28d9;margin-left:4px;">📤 Issuable</span>`:''}
                 </div>
                 <div class="doc-settings-meta">${esc(d.tip)}</div>
               </div>
@@ -7313,10 +7319,11 @@ async function saveDocItemEdit(setId,docId){
   const newIcon=(document.getElementById(`editDoc_icon_${setId}_${docId}`)?.value||'').trim()||doc.icon||'📌';
   const newInfoText=(document.getElementById(`editDoc_info_${setId}_${docId}`)?.value||'').trim()||null;
   const newInfoUrl=(document.getElementById(`editDoc_url_${setId}_${docId}`)?.value||'').trim()||null;
+  const newAllowIssue=!!(document.getElementById(`editDoc_allowIssue_${setId}_${docId}`)?.checked);
   const tmplClear=document.getElementById(`editDoc_tmpl_remove_${setId}_${docId}`)?.value==='1';
   const tmplFile=document.getElementById(`editDoc_tmpl_${setId}_${docId}`)?.files?.[0]||null;
-  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon,infoText:doc.infoText,infoUrl:doc.infoUrl,templateFileName:doc.templateFileName,templateFilePath:doc.templateFilePath};
-  doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon; doc.infoText=newInfoText; doc.infoUrl=newInfoUrl;
+  const prev={name:doc.name,cat:doc.cat,tip:doc.tip,icon:doc.icon,infoText:doc.infoText,infoUrl:doc.infoUrl,templateFileName:doc.templateFileName,templateFilePath:doc.templateFilePath,allowIssue:doc.allowIssue};
+  doc.name=newName; doc.cat=newCat; doc.tip=newTip; doc.icon=newIcon; doc.infoText=newInfoText; doc.infoUrl=newInfoUrl; doc.allowIssue=newAllowIssue;
   if(tmplClear){ doc.templateFileName=null; doc.templateFilePath=null; }
   try{
     if(!tmplClear && tmplFile && sbClient && sbSession){
@@ -9658,7 +9665,7 @@ async function sbPersistAll(force=false){
   if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
-  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
+  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,allow_issue:!!d.allowIssue,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   await sbUpsertRows('document_set_items',dsi);
   await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',contact_phone:p.phone||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
