@@ -3585,46 +3585,66 @@ document.addEventListener('click',function(e){
   const wrap=document.getElementById('mdfWrap');
   if(wrap&&!wrap.contains(e.target)) closeMDFPanel();
 });
-function setFMD(docKey){
-  fMissingDoc=docKey||'';
+function setFMD(normName){
+  fMissingDoc=normName||'';
   renderMissingDocFilter();
   renderTable();
+}
+// Normalise a document name so the same document across different sets groups together.
+function _normDocName(n){ return (n||'').trim().toLowerCase().replace(/\s+/g,' '); }
+// True if the worker has a REQUIRED doc (in their own assigned set, honouring
+// per-worker overrides) whose name matches normName and is missing/expired.
+function _workerMissingNamedDoc(w, normName, refDate){
+  return tmpl(w).some(d=>{
+    if(!d.req) return false;
+    if(_normDocName(d.name)!==normName) return false;
+    const st=docStatusAt(w.docs?.[d.id], refDate);
+    return st==='missing'||st==='expired';
+  });
+}
+// Build the dropdown groups: one entry per distinct required-doc NAME across all
+// sets (so e.g. "A1 Form" appearing in two sets collapses to a single option).
+function _missingDocGroups(){
+  const groups=new Map(); // normName -> {normName, name, cat, icon}
+  docSets.forEach(s=>{
+    (docSetItems[s.id]||[]).filter(d=>d.req&&!d.archived).forEach(d=>{
+      const nn=_normDocName(d.name);
+      if(!nn) return;
+      if(!groups.has(nn)) groups.set(nn,{normName:nn,name:d.name,cat:d.cat||'Other',icon:d.icon||'📄'});
+    });
+  });
+  return groups;
 }
 function renderMissingDocFilter(){
   const g=document.getElementById('mdfGroup');
   const label=document.getElementById('mdfLabel');
   const trigger=document.getElementById('mdfTrigger');
   if(!g) return;
-  // Collect all required doc items across all sets, deduplicated by doc_key
   const refDate=currentWeekMonday;
-  const seen=new Map();
-  docSets.forEach(s=>{
-    (docSetItems[s.id]||[]).filter(d=>d.req&&!d.archived).forEach(d=>{
-      if(!seen.has(d.id)) seen.set(d.id,{key:d.id,name:d.name,cat:d.cat||'Other',icon:d.icon||'📄'});
-    });
-  });
+  const groups=_missingDocGroups();
   // Update trigger label
-  if(fMissingDoc&&seen.has(fMissingDoc)){
-    const d=seen.get(fMissingDoc);
+  if(fMissingDoc&&groups.has(fMissingDoc)){
+    const d=groups.get(fMissingDoc);
     label.innerHTML=`<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;">${esc(d.icon+' '+d.name)}</span>`;
     trigger.classList.add('active');
   } else {
     label.innerHTML='Any Missing Doc';
     trigger.classList.remove('active');
   }
-  if(!seen.size){ g.innerHTML=`<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No required documents defined</div>`; return; }
-  // Group by category
+  if(!groups.size){ g.innerHTML=`<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No required documents defined</div>`; return; }
+  // Group entries by category for the dropdown layout
   const cats=new Map();
-  seen.forEach(d=>{ if(!cats.has(d.cat)) cats.set(d.cat,[]); cats.get(d.cat).push(d); });
+  groups.forEach(d=>{ if(!cats.has(d.cat)) cats.set(d.cat,[]); cats.get(d.cat).push(d); });
   let html='';
   cats.forEach((docs,cat)=>{
     html+=`<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.05em;">${esc(cat)}</div>`;
     html+=docs.map(d=>{
-      const sel=fMissingDoc===d.key;
-      // Count workers currently missing this doc
-      const missingCount=workers.filter(w=>w.active!==false&&(docStatusAt(w.docs?.[d.key],refDate)==='missing'||docStatusAt(w.docs?.[d.key],refDate)==='expired')).length;
-      return `<label class="pf-option${sel?' checked':''}" onclick="setFMD('${sel?'':d.key}');event.preventDefault()">
-        <input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFMD('${sel?'':d.key}')">
+      const sel=fMissingDoc===d.normName;
+      // Count only ACTIVE workers for whom this doc is required in THEIR set and is missing/expired
+      const missingCount=workers.filter(w=>w.active!==false&&_workerMissingNamedDoc(w,d.normName,refDate)).length;
+      const val=sel?'':encodeURIComponent(d.normName).replace(/'/g,'%27'); // toggle off if already selected
+      return `<label class="pf-option${sel?' checked':''}" onclick="setFMD(decodeURIComponent('${val}'));event.preventDefault()">
+        <input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFMD(decodeURIComponent('${val}'))">
         <span style="flex:1;">${esc(d.icon+' '+d.name)}</span>
         ${missingCount>0?`<span style="font-size:10px;font-weight:700;background:var(--red);color:#fff;padding:1px 6px;border-radius:8px;margin-left:4px;">${missingCount}</span>`:''}
       </label>`;
@@ -3821,7 +3841,7 @@ function filtered(){
     }));
   }
   if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
-  if(fMissingDoc){l=l.filter(w=>{const doc=w.docs?.[fMissingDoc];const st=docStatusAt(doc,refDate);return st==='missing'||st==='expired';});}
+  if(fMissingDoc){l=l.filter(w=>_workerMissingNamedDoc(w,fMissingDoc,refDate));}
   if(sortKey){l.sort((a,b)=>{
     let av,bv;
     if(sortKey==='name'){av=a.name;bv=b.name;}
