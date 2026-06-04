@@ -3061,14 +3061,13 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
   };
   const { error } = await sbClient.from('document_set_items').upsert(row);
   if(error){
-    // Most likely cause: the allow_issue column / its schema cache is missing.
+    console.error('[TMC] document_set_items upsert (with allow_issue) failed:', JSON.stringify({message:error.message,code:error.code,details:error.details,hint:error.hint}));
     // Save everything else so the rest of the edit persists, but report that
-    // allow_issue did NOT persist so the caller can warn the user.
+    // allow_issue did NOT persist so the caller can warn the user with the real error.
     const {allow_issue:_ai,...rowFallback}=row;
     const {error:e2}=await sbClient.from('document_set_items').upsert(rowFallback);
     if(e2) throw e2;
-    const missingAllowIssue = /allow_issue/i.test(error.message||'') || error.code==='PGRST204' || error.code==='42703';
-    return { allowIssuePersisted: false, allowIssueError: missingAllowIssue ? error.message : null };
+    return { allowIssuePersisted: false, allowIssueError: error.message||'unknown error', allowIssueCode: error.code||'' };
   }
   return { allowIssuePersisted: true };
 }
@@ -7394,7 +7393,7 @@ async function saveDocItemEdit(setId,docId){
   renderTable(); if(curW) rebuildModal(curW);
   // Warn if the personalised-issuance flag was changed but the DB column is missing.
   if(_res && _res.allowIssuePersisted===false && newAllowIssue!==prev.allowIssue){
-    alert('Saved — but the "Allow personalised document issuance" setting could NOT be stored in the database because the allow_issue column is missing (or Supabase\'s schema cache is stale).\n\nTo make this setting persist for everyone, run this once in Supabase → SQL Editor:\n\nALTER TABLE document_set_items ADD COLUMN IF NOT EXISTS allow_issue boolean NOT NULL DEFAULT false;\nNOTIFY pgrst, \'reload schema\';\n\nUntil then this tick will reset when the page reloads.');
+    alert('Saved everything EXCEPT the "Allow personalised document issuance" tick.\n\nThe database rejected the allow_issue column with this exact error:\n\n  '+(_res.allowIssueError||'(no message)')+'\n  code: '+(_res.allowIssueCode||'(none)')+'\n\nIf this mentions the schema cache, run in Supabase → SQL Editor:\n  NOTIFY pgrst, \'reload schema\';\n\nIf it says the column does not exist, run:\n  ALTER TABLE document_set_items ADD COLUMN IF NOT EXISTS allow_issue boolean NOT NULL DEFAULT false;\n\nPlease send me the exact error text above so I can fix the real cause.');
   }
 }
 
