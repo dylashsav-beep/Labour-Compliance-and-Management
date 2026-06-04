@@ -10107,7 +10107,7 @@ async function sbLoadAll(){
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
-      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
+      (itemData||[]).forEach(d=>{ if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[]; docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,allowIssue:!!d.allow_issue,req:!!d.required && !d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived,archivedAt:d.archived_at||null}); });
     }
     if((projData||[]).length) projectStore=(projData||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',phone:p.contact_phone||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
 
