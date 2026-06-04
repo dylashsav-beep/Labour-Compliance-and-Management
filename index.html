@@ -9633,6 +9633,16 @@ async function sbUpsertRows(table, rows){
   if(!sbClient) return;
   if(!sbCanWriteTable(table)){ console.debug('[TMC] sbUpsertRows: skipped', table, '— role:', sbUserRole); return; }
   if(!rows.length) return;
+  // De-duplicate by primary key (id) — Postgres throws
+  // "ON CONFLICT DO UPDATE command cannot affect row a second time"
+  // if a single upsert batch contains two rows with the same id. Keep the
+  // last occurrence (most recent state) for each id.
+  if(rows.length && rows[0] && Object.prototype.hasOwnProperty.call(rows[0],'id')){
+    const seen=new Map();
+    rows.forEach(r=>seen.set(r.id, r));
+    if(seen.size!==rows.length){ console.warn('[TMC] sbUpsertRows: removed', rows.length-seen.size, 'duplicate id(s) from', table); }
+    rows=Array.from(seen.values());
+  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(new Error('Upsert timeout: '+table)), 25000);
   try{
