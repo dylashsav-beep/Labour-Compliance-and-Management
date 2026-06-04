@@ -1,0 +1,2482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TMC Work-Force — Labour Compliance Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy: #1e3a5f;
+      --navy-dark: #152d4a;
+      --navy-deeper: #0f2138;
+      --blue: #3b82f6;
+      --blue-hover: #2563eb;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+      --light: #94a3b8;
+      --go: #16a34a;
+      --go-bg: #dcfce7;
+      --go-border: #bbf7d0;
+      --warning: #d97706;
+      --warning-bg: #fef3c7;
+      --warning-border: #fde68a;
+      --nogo: #dc2626;
+      --nogo-bg: #fee2e2;
+      --nogo-border: #fecaca;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── NAVBAR ─── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 68px;
+      background: rgba(248, 250, 252, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    }
+    .navbar.scrolled {
+      background: rgba(255,255,255,0.95);
+      border-bottom-color: var(--border);
+      box-shadow: 0 1px 12px rgba(0,0,0,0.06);
+    }
+    .navbar-logo {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .navbar-logo-main {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+    }
+    .navbar-logo-sub {
+      font-size: 0.68rem;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .navbar-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      border: none;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text);
+    }
+    .btn-outline:hover {
+      border-color: var(--navy);
+      color: var(--navy);
+      background: rgba(30,58,95,0.04);
+    }
+    .btn-primary {
+      background: var(--blue);
+      color: #fff;
+      border: 1.5px solid var(--blue);
+    }
+    .btn-primary:hover {
+      background: var(--blue-hover);
+      border-color: var(--blue-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59,130,246,0.35);
+    }
+    .btn-ghost {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.3);
+      color: #fff;
+    }
+    .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.7);
+      background: rgba(255,255,255,0.08);
+    }
+    .btn-white {
+      background: #fff;
+      border: 1.5px solid #fff;
+      color: var(--navy);
+    }
+    .btn-white:hover {
+      background: #f0f4ff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .btn-lg {
+      padding: 0.75rem 1.75rem;
+      font-size: 1rem;
+    }
+
+    /* ─── ANIMATIONS ─── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fade-up-delay-1 { transition-delay: 0.1s; }
+    .fade-up-delay-2 { transition-delay: 0.2s; }
+    .fade-up-delay-3 { transition-delay: 0.3s; }
+    .fade-up-delay-4 { transition-delay: 0.4s; }
+    .fade-up-delay-5 { transition-delay: 0.5s; }
+    .fade-up-delay-6 { transition-delay: 0.6s; }
+
+    /* ─── HERO ─── */
+    .hero {
+      background: linear-gradient(160deg, #f0f6ff 0%, #f8fafc 50%, #eff6ff 100%);
+      padding: 7rem 2rem 5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(59,130,246,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(59,130,246,0.1);
+      border: 1px solid rgba(59,130,246,0.2);
+      color: var(--blue);
+      padding: 0.35rem 1rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 1.75rem;
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      color: var(--navy);
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      max-width: 780px;
+      margin: 0 auto 1.5rem;
+    }
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .hero-ctas {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 4rem;
+    }
+
+    /* ─── HERO DASHBOARD MOCKUP ─── */
+    .hero-mockup {
+      max-width: 820px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(30,58,95,0.12), 0 0 0 1px var(--border);
+      overflow: hidden;
+      text-align: left;
+    }
+    .mockup-titlebar {
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--border);
+      padding: 0.7rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .mockup-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+    .mockup-dot-red { background: #fc5c65; }
+    .mockup-dot-yellow { background: #fed330; }
+    .mockup-dot-green { background: #26de81; }
+    .mockup-title-text {
+      margin-left: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .mockup-header {
+      padding: 1.25rem 1.5rem 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .mockup-header-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .mockup-header-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .mockup-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .mockup-table thead tr {
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+    }
+    .mockup-table th {
+      padding: 0.6rem 1.25rem;
+      text-align: left;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--light);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .mockup-table td {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .mockup-table tbody tr:last-child td { border-bottom: none; }
+    .mockup-table tbody tr:hover td { background: #f8fafc; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .status-go { background: var(--go-bg); color: var(--go); border: 1px solid var(--go-border); }
+    .status-warning { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+    .status-nogo { background: var(--nogo-bg); color: var(--nogo); border: 1px solid var(--nogo-border); }
+    .doc-count { font-size: 0.78rem; color: var(--muted); font-weight: 500; }
+    .doc-count-ok { color: var(--go); font-weight: 600; }
+    .doc-count-warn { color: var(--warning); font-weight: 600; }
+    .doc-count-bad { color: var(--nogo); font-weight: 600; }
+    .worker-name { font-weight: 600; color: var(--text); }
+    .worker-type { font-size: 0.72rem; color: var(--muted); font-weight: 400; margin-top: 1px; }
+    .project-tag {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      padding: 0.15rem 0.55rem;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    /* ─── PAIN POINTS ─── */
+    .pain-strip {
+      background: var(--navy);
+      padding: 5rem 2rem;
+      text-align: center;
+    }
+    .pain-strip h2 {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .pain-strip .section-sub {
+      color: rgba(255,255,255,0.6);
+      font-size: 1rem;
+      margin-bottom: 3rem;
+    }
+    .pain-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .pain-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      text-align: left;
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+    }
+    .pain-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: rgba(220,38,38,0.25);
+      border: 1px solid rgba(220,38,38,0.4);
+      color: #fca5a5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .pain-text {
+      color: rgba(255,255,255,0.85);
+      font-size: 0.88rem;
+      line-height: 1.5;
+      font-weight: 500;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    .how-section {
+      background: var(--bg);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .section-label {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--blue);
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.15);
+      padding: 0.3rem 0.85rem;
+      border-radius: 100px;
+      margin-bottom: 1rem;
+    }
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 800;
+      color: var(--navy);
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 500px;
+      margin: 0 auto 3.5rem;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2rem 1.75rem;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .step-card:hover {
+      box-shadow: 0 8px 32px rgba(30,58,95,0.1);
+      transform: translateY(-3px);
+    }
+    .step-number {
+      font-size: 4rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #e2e8f0;
+      position: absolute;
+      top: 1.25rem;
+      right: 1.5rem;
+      letter-spacing: -0.05em;
+    }
+    .step-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.75rem;
+      padding-right: 2.5rem;
+    }
+    .step-desc {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ─── STATUS EXPLAINER ─── */
+    .status-section {
+      background: var(--card);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .status-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .status-card {
+      border-radius: 14px;
+      padding: 2.25rem 2rem;
+      text-align: left;
+      border: 2px solid;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .status-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+    }
+    .status-card-go {
+      background: var(--go-bg);
+      border-color: var(--go-border);
+    }
+    .status-card-warning {
+      background: var(--warning-bg);
+      border-color: var(--warning-border);
+    }
+    .status-card-nogo {
+      background: var(--nogo-bg);
+      border-color: var(--nogo-border);
+    }
+    .status-card-icon {
+      font-size: 2.25rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .status-card-label {
+      font-size: 1.35rem;
+      font-weight: 900;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.6rem;
+    }
+    .status-card-go .status-card-label { color: var(--go); }
+    .status-card-warning .status-card-label { color: var(--warning); }
+    .status-card-nogo .status-card-label { color: var(--nogo); }
+    .status-card-desc {
+      font-size: 0.875rem;
+      line-height: 1.6;
+      color: var(--text);
+      opacity: 0.85;
+    }
+
+    /* ─── FEATURE GRID ─── */
+    .features-section {
+      background: var(--bg);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      text-align: left;
+      transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s;
+    }
+    .feature-card:hover {
+      box-shadow: 0 8px 32px rgba(30,58,95,0.09);
+      border-color: #cbd5e1;
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.1rem;
+    }
+    .feature-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: var(--blue);
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .feature-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 0.5rem;
+    }
+    .feature-desc {
+      font-size: 0.83rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ─── PORTAL SPOTLIGHT ─── */
+    .portal-section {
+      background: var(--card);
+      padding: 6rem 2rem;
+    }
+    .portal-inner {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.04), 0 20px 60px rgba(30,58,95,0.1);
+      border: 1px solid var(--border);
+    }
+    .portal-left {
+      background: var(--navy);
+      padding: 3.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .portal-left h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.02em;
+      line-height: 1.3;
+      margin-bottom: 1.75rem;
+    }
+    .portal-benefits {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .portal-benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+    .portal-benefit-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(22,163,74,0.2);
+      border: 1px solid rgba(22,163,74,0.4);
+      color: #86efac;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .portal-benefit-text {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.55;
+    }
+    .portal-right {
+      background: #f8fafc;
+      padding: 3.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 1.25rem;
+    }
+    .portal-right-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+
+    /* Worker portal mockup card */
+    .portal-doc-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .portal-doc-header {
+      background: #fff;
+      padding: 1.1rem 1.25rem 0.75rem;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .portal-doc-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--navy);
+    }
+    .portal-doc-category {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .portal-doc-body {
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .portal-doc-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .portal-doc-row-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .portal-doc-row-value {
+      font-size: 0.8rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .portal-doc-footer {
+      padding: 0.85rem 1.25rem;
+      background: #f8fafc;
+      border-top: 1px solid #f1f5f9;
+    }
+    .btn-submit {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: background 0.2s;
+    }
+    .btn-submit:hover { background: var(--blue-hover); }
+
+    .portal-worker-info {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .portal-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .portal-worker-name {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .portal-worker-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .portal-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 100px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .portal-progress-fill {
+      height: 100%;
+      background: var(--warning);
+      border-radius: 100px;
+      width: 62.5%;
+    }
+    .portal-progress-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ─── TESTIMONIAL ─── */
+    .testimonial-section {
+      background: #f1f5f9;
+      padding: 5rem 2rem;
+      text-align: center;
+    }
+    .testimonial-inner {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+    .quote-mark {
+      font-size: 5rem;
+      line-height: 0.5;
+      color: #cbd5e1;
+      font-family: Georgia, serif;
+      margin-bottom: 1.5rem;
+    }
+    blockquote {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: var(--text);
+      line-height: 1.7;
+      font-weight: 500;
+      font-style: italic;
+      margin-bottom: 1.5rem;
+    }
+    .testimonial-author {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .testimonial-stars {
+      color: #f59e0b;
+      font-size: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ─── CTA SECTION ─── */
+    .cta-section {
+      background: var(--navy);
+      background-image: radial-gradient(ellipse at 60% 50%, rgba(59,130,246,0.18) 0%, transparent 60%);
+      padding: 6rem 2rem;
+      text-align: center;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.6rem, 3.5vw, 2.5rem);
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: -0.03em;
+      margin-bottom: 1rem;
+      max-width: 680px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cta-section p {
+      font-size: 1rem;
+      color: rgba(255,255,255,0.65);
+      max-width: 500px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.7;
+    }
+    .cta-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .cta-email-link {
+      font-size: 0.875rem;
+      color: rgba(255,255,255,0.55);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .cta-email-link:hover { color: rgba(255,255,255,0.9); }
+
+    /* ─── FOOTER ─── */
+    .footer {
+      background: var(--navy-deeper);
+      padding: 2rem 2rem;
+    }
+    .footer-inner {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .footer-logo {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .footer-logo-main {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .footer-logo-copy {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+    }
+    .footer-links {
+      display: flex;
+      gap: 0.25rem;
+      align-items: center;
+    }
+    .footer-link {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      transition: color 0.2s;
+      font-weight: 500;
+    }
+    .footer-link:hover { color: rgba(255,255,255,0.85); }
+    .footer-sep { color: rgba(255,255,255,0.2); font-size: 0.75rem; }
+    .footer-tagline {
+      font-size: 0.78rem;
+      color: rgba(255,255,255,0.3);
+      font-weight: 500;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      .navbar { padding: 0 1.25rem; }
+      .navbar-logo-sub { display: none; }
+      .hero { padding: 5rem 1.25rem 3.5rem; }
+      .hero-ctas { flex-direction: column; align-items: center; }
+      .pain-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .status-cards { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .portal-inner { grid-template-columns: 1fr; }
+      .portal-left { padding: 2.5rem 2rem; }
+      .portal-right { padding: 2.5rem 2rem; }
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+      .mockup-table th:nth-child(4),
+      .mockup-table td:nth-child(4) { display: none; }
+    }
+    @media (max-width: 480px) {
+      .how-section, .status-section, .features-section, .portal-section { padding: 4rem 1.25rem; }
+      .pain-strip { padding: 4rem 1.25rem; }
+      .testimonial-section, .cta-section { padding: 4rem 1.25rem; }
+      .mockup-table th:nth-child(3),
+      .mockup-table td:nth-child(3) { display: none; }
+    }
+
+    /* ═══════════════════════════════════════════
+         INTERACTIVE DEMO SANDBOX
+       ═══════════════════════════════════════════ */
+
+    /* ── Overlay shell ── */
+    #demoOverlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: var(--bg);
+      display: none;
+      flex-direction: column;
+    }
+    #demoOverlay.open { display: flex; }
+
+    /* ── Top bar ── */
+    .demo-topbar {
+      height: 56px;
+      flex: 0 0 56px;
+      background: var(--navy);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+    }
+    .demo-topbar-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .demo-back-btn {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      color: #fff;
+      padding: 0.4rem 0.95rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .demo-back-btn:hover {
+      border-color: #fff;
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* ── Body layout ── */
+    .demo-body {
+      flex: 1;
+      display: flex;
+      min-height: 0;
+    }
+
+    /* ── Sidebar ── */
+    .demo-sidebar {
+      width: 220px;
+      flex: 0 0 220px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 16px 0;
+      overflow-y: auto;
+    }
+    .demo-mode-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin: 0 18px 14px;
+      padding: 3px 11px;
+      background: var(--warning-bg);
+      color: var(--warning);
+      border: 1px solid var(--warning-border);
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+    }
+    .demo-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 18px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .demo-nav-item:hover { background: var(--bg); }
+    .demo-nav-item.active {
+      border-left: 3px solid var(--blue);
+      background: #eff6ff;
+      color: var(--navy);
+      font-weight: 700;
+    }
+    .demo-nav-icon { font-size: 1.05rem; }
+
+    /* ── Main content ── */
+    .demo-main {
+      flex: 1;
+      overflow: auto;
+      padding: 28px;
+    }
+    .demo-panel { display: none; }
+    .demo-panel.active { display: block; }
+
+    .demo-section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 4px;
+    }
+    .demo-section-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Cards ── */
+    .demo-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+      margin-bottom: 16px;
+    }
+
+    /* ── Tables ── */
+    .demo-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .demo-table th {
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-bottom: 2px solid var(--border);
+    }
+    .demo-table td {
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .demo-table tr:last-child td { border-bottom: none; }
+
+    /* ── Status badges ── */
+    .dbadge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .dbadge-go {
+      background: var(--go-bg);
+      color: var(--go);
+      border: 1px solid var(--go-border);
+    }
+    .dbadge-warn {
+      background: var(--warning-bg);
+      color: var(--warning);
+      border: 1px solid var(--warning-border);
+    }
+    .dbadge-nogo {
+      background: var(--nogo-bg);
+      color: var(--nogo);
+      border: 1px solid var(--nogo-border);
+    }
+
+    /* ── Forms ── */
+    .demo-form-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .demo-form-field { flex: 1; min-width: 140px; }
+    .demo-form-field label,
+    .demo-form-row > label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .demo-form-field input,
+    .demo-form-field select,
+    .demo-form-row input,
+    .demo-form-row select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background: #fff;
+    }
+    .demo-form-field input:focus,
+    .demo-form-field select:focus {
+      outline: none;
+      border-color: var(--blue);
+    }
+    .demo-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+    .demo-checkbox-row input { width: auto; }
+
+    /* ── Buttons ── */
+    .demo-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--blue);
+      color: #fff;
+      border: 1.5px solid var(--blue);
+    }
+    .demo-btn:hover {
+      background: var(--blue-hover);
+      border-color: var(--blue-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59,130,246,0.3);
+    }
+    .demo-btn-sec {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: transparent;
+      color: var(--text);
+      border: 1.5px solid var(--border);
+    }
+    .demo-btn-sec:hover {
+      border-color: var(--navy);
+      color: var(--navy);
+      background: rgba(30,58,95,0.04);
+    }
+    .demo-link {
+      color: var(--blue);
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .demo-link:hover { text-decoration: underline; }
+
+    /* ── Document compliance mini-rows ── */
+    .doc-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      margin-bottom: 7px;
+      border-left: 3px solid var(--border);
+    }
+    .doc-line.ok { border-left: 3px solid var(--go); }
+    .doc-line.warn { border-left: 3px solid var(--warning); }
+    .doc-line.bad { border-left: 3px solid var(--nogo); }
+    .doc-line-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .doc-line-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .doc-line-right { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Document set chips ── */
+    .doc-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      margin: 0 6px 6px 0;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 12px;
+      color: var(--text);
+    }
+    .doc-chip-tag {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+    .doc-chip-tag.req { background: var(--blue); color: #fff; }
+    .doc-chip-tag.opt { background: var(--border); color: var(--muted); }
+
+    /* ── Portal status banner ── */
+    .demo-portal-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+    .demo-portal-banner.go { background: var(--go-bg); color: var(--go); border: 1px solid var(--go-border); }
+    .demo-portal-banner.warn { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+    .demo-portal-banner.nogo { background: var(--nogo-bg); color: var(--nogo); border: 1px solid var(--nogo-border); }
+    .demo-portal-banner .icon { font-size: 1.5rem; }
+
+    /* ── Gantt-ish bar ── */
+    .demo-gantt-track {
+      position: relative;
+      height: 22px;
+      background: var(--bg);
+      border-radius: 5px;
+      overflow: hidden;
+      min-width: 120px;
+    }
+    .demo-gantt-bar {
+      position: absolute;
+      top: 0; bottom: 0;
+      background: var(--blue);
+      border-radius: 5px;
+      opacity: 0.85;
+    }
+
+    /* ── Billing weeks mini visual ── */
+    .demo-weeks { display: inline-flex; gap: 4px; }
+    .demo-week-sq {
+      width: 18px; height: 18px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .demo-week-sq.charged { background: var(--go-bg); border-color: var(--go-border); }
+    .demo-week-sq.uncharged { background: var(--warning-bg); border-color: var(--warning-border); }
+
+    /* ── Toast ── */
+    .demo-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(10px);
+      background: var(--navy);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 1100;
+    }
+    .demo-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Demo responsive ── */
+    @media (max-width: 768px) {
+      .demo-body { flex-direction: column; }
+      .demo-sidebar {
+        width: 100%;
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: row;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        padding: 8px 0;
+        align-items: center;
+      }
+      .demo-mode-pill { margin: 0 12px 0 12px; flex: 0 0 auto; }
+      .demo-nav-item {
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+        flex: 0 0 auto;
+      }
+      .demo-nav-item.active {
+        border-left: none;
+        border-bottom: 3px solid var(--blue);
+      }
+      .demo-main { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════════ -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar-logo">
+      <div class="navbar-logo-main">⚡ TMC Work-Force</div>
+      <div class="navbar-logo-sub">Labour Compliance Platform</div>
+    </div>
+    <div class="navbar-actions">
+      <a href="#" class="btn btn-outline" onclick="openDemo('workers');return false;">▶ Try Live Demo</a>
+      <a href="#" class="btn btn-outline">Log in</a>
+      <a href="#cta" class="btn btn-primary">Request Access</a>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════
+       HERO
+  ═══════════════════════════════════════════ -->
+  <section class="hero">
+    <div class="hero-badge fade-up visible">
+      🏗️ Built for European Construction
+    </div>
+
+    <h1 class="fade-up visible fade-up-delay-1">
+      Every worker. Every document.<br />Every deadline. Under control.
+    </h1>
+
+    <p class="hero-sub fade-up visible fade-up-delay-2">
+      Managing labour compliance across NL, BE, and AT is complex — expired VCA certificates, missing A1 declarations, and document chaos cost you time, money, and contracts. TMC Work-Force gives every worker a real-time GO, WARNING, or NO-GO status so your team always knows who can be deployed.
+    </p>
+
+    <div class="hero-ctas fade-up visible fade-up-delay-3">
+      <a href="#cta" class="btn btn-primary btn-lg">Request Access →</a>
+      <a href="#features" class="btn btn-outline btn-lg">See features ↓</a>
+      <a href="#" class="btn btn-outline btn-lg" onclick="openDemo('workers');return false;">▶ Try the Live Demo</a>
+    </div>
+
+    <!-- HERO DASHBOARD MOCKUP -->
+    <div class="hero-mockup fade-up visible fade-up-delay-4" onclick="openDemo('workers')" style="cursor:pointer;">
+      <div class="mockup-titlebar">
+        <div class="mockup-dot mockup-dot-red"></div>
+        <div class="mockup-dot mockup-dot-yellow"></div>
+        <div class="mockup-dot mockup-dot-green"></div>
+        <span class="mockup-title-text">TMC Work-Force — Workers</span>
+      </div>
+      <div class="mockup-header">
+        <span class="mockup-header-title">Worker Compliance Overview</span>
+        <span class="mockup-header-meta">Week 23 · 5 workers shown</span>
+      </div>
+      <table class="mockup-table">
+        <thead>
+          <tr>
+            <th>Worker</th>
+            <th>Status</th>
+            <th>Documents</th>
+            <th>Project</th>
+            <th>Country</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="worker-name">Andrei Popescu</div>
+              <div class="worker-type">ZZP · NL</div>
+            </td>
+            <td><span class="status-badge status-go">● GO</span></td>
+            <td><span class="doc-count doc-count-ok">8 / 8</span></td>
+            <td><span class="project-tag">Westpoort A12</span></td>
+            <td>🇳🇱 NL</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="worker-name">Mihai Ionescu</div>
+              <div class="worker-type">Employed · BE</div>
+            </td>
+            <td><span class="status-badge status-warning">◐ WARNING</span></td>
+            <td><span class="doc-count doc-count-warn">7 / 8</span></td>
+            <td><span class="project-tag">Antwerp Port Ph2</span></td>
+            <td>🇧🇪 BE</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="worker-name">Stefan Vasilescu</div>
+              <div class="worker-type">ZZP · NL</div>
+            </td>
+            <td><span class="status-badge status-nogo">✕ NO-GO</span></td>
+            <td><span class="doc-count doc-count-bad">5 / 8</span></td>
+            <td><span class="project-tag">Rotterdam Hub</span></td>
+            <td>🇳🇱 NL</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="worker-name">Ion Gheorghe</div>
+              <div class="worker-type">Employed · AT</div>
+            </td>
+            <td><span class="status-badge status-go">● GO</span></td>
+            <td><span class="doc-count doc-count-ok">9 / 9</span></td>
+            <td><span class="project-tag">Vienna Ring S3</span></td>
+            <td>🇦🇹 AT</td>
+          </tr>
+          <tr>
+            <td>
+              <div class="worker-name">Cosmin Dumitrescu</div>
+              <div class="worker-type">ZZP · NL</div>
+            </td>
+            <td><span class="status-badge status-warning">◐ WARNING</span></td>
+            <td><span class="doc-count doc-count-warn">6 / 8</span></td>
+            <td><span class="project-tag">Westpoort A12</span></td>
+            <td>🇳🇱 NL</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="text-align:center;padding:10px;font-size:12px;color:var(--muted);">👆 This is a live preview — click to explore the interactive demo</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       PAIN POINTS
+  ═══════════════════════════════════════════ -->
+  <section class="pain-strip">
+    <h2 class="fade-up">Sound familiar?</h2>
+    <p class="section-sub fade-up fade-up-delay-1">If you're managing construction workers across borders, you know the pain.</p>
+    <div class="pain-grid">
+      <div class="pain-card fade-up fade-up-delay-1">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Chasing workers for documents over WhatsApp at 10pm the night before a site visit</div>
+      </div>
+      <div class="pain-card fade-up fade-up-delay-2">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Spreadsheets that are always two weeks out of date and nobody trusts anymore</div>
+      </div>
+      <div class="pain-card fade-up fade-up-delay-3">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Not knowing a VCA certificate expired last month until the inspector shows up</div>
+      </div>
+      <div class="pain-card fade-up fade-up-delay-1">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Scrambling the night before a site audit to find scan copies of every document</div>
+      </div>
+      <div class="pain-card fade-up fade-up-delay-2">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Different document requirements for ZZP vs employed workers — and it changes by country</div>
+      </div>
+      <div class="pain-card fade-up fade-up-delay-3">
+        <div class="pain-icon">✗</div>
+        <div class="pain-text">Workers in NL, BE, and AT each with different legal requirements you can barely keep track of</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       HOW IT WORKS
+  ═══════════════════════════════════════════ -->
+  <section class="how-section">
+    <div class="section-label fade-up">How it works</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Up and running in minutes</h2>
+    <p class="section-sub fade-up fade-up-delay-2">No setup complexity. No long implementation. Start with built-in templates, customise as you grow.</p>
+    <div class="steps-grid">
+      <div class="step-card fade-up fade-up-delay-1">
+        <div class="step-number">1</div>
+        <div class="step-title">Set up your document sets</div>
+        <div class="step-desc">Built-in templates for NL ZZP, NL Employed (Blue Card), BE Employed, and AT Employed. Every required document is pre-configured. Create fully custom sets for any country or worker type.</div>
+      </div>
+      <div class="step-card fade-up fade-up-delay-2">
+        <div class="step-number">2</div>
+        <div class="step-title">Add your workers</div>
+        <div class="step-desc">Assign each worker a document set. Upload their documents, set expiry dates, and get instant compliance status. The system calculates GO, WARNING, and NO-GO automatically.</div>
+      </div>
+      <div class="step-card fade-up fade-up-delay-3">
+        <div class="step-number">3</div>
+        <div class="step-title">Stay on top automatically</div>
+        <div class="step-desc">Daily email digests flag everything expiring, missing, or unbilled. Workers submit updates through their own portal. Your compliance team reviews and approves in one place.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       STATUS EXPLAINER
+  ═══════════════════════════════════════════ -->
+  <section class="status-section">
+    <div class="section-label fade-up">Compliance Status</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Compliance status. At a glance.</h2>
+    <p class="section-sub fade-up fade-up-delay-2">Every worker has a real-time status that tells you exactly whether they are safe to deploy — no guesswork, no manual checking.</p>
+    <div class="status-cards">
+      <div class="status-card status-card-go fade-up fade-up-delay-1">
+        <span class="status-card-icon">✅</span>
+        <div class="status-card-label">GO</div>
+        <div class="status-card-desc">All required documents are valid and current. This worker is cleared for deployment on any project. Status updates automatically as documents approach expiry.</div>
+      </div>
+      <div class="status-card status-card-warning fade-up fade-up-delay-2">
+        <span class="status-card-icon">⚠️</span>
+        <div class="status-card-label">WARNING</div>
+        <div class="status-card-desc">One or more documents are expiring within your configured warning window (default 30 days). Action is needed soon — the worker can still be deployed but needs attention.</div>
+      </div>
+      <div class="status-card status-card-nogo fade-up fade-up-delay-3">
+        <span class="status-card-icon">🚫</span>
+        <div class="status-card-label">NO-GO</div>
+        <div class="status-card-desc">One or more required documents are missing or expired. This worker should not be deployed until the issue is resolved. The exact missing documents are clearly listed.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       FEATURE GRID
+  ═══════════════════════════════════════════ -->
+  <section class="features-section" id="features">
+    <div class="section-label fade-up">Features</div>
+    <h2 class="section-title fade-up fade-up-delay-1">Everything your compliance team needs</h2>
+    <p class="section-sub fade-up fade-up-delay-2">One platform that replaces the spreadsheets, the WhatsApp groups, and the manual email reminders.</p>
+    <div class="features-grid">
+
+      <!-- 1 Live Compliance Status -->
+      <div class="feature-card fade-up fade-up-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <div class="feature-title">Live Compliance Status</div>
+        <div class="feature-desc">Real-time GO / WARNING / NO-GO for every worker, automatically recalculated as documents expire. No manual refresh required.</div>
+      </div>
+
+      <!-- 2 Document Tracking -->
+      <div class="feature-card fade-up fade-up-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div class="feature-title">Document Tracking</div>
+        <div class="feature-desc">Track every required document per worker with expiry dates, issue dates, and uploaded file copies stored securely. One-click download any time.</div>
+      </div>
+
+      <!-- 3 Worker Portal -->
+      <div class="feature-card fade-up fade-up-delay-3">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="feature-title">Worker Portal</div>
+        <div class="feature-desc">Workers get their own secure link to submit and update documents in English, Dutch, or Romanian. No account creation needed.</div>
+      </div>
+
+      <!-- 4 Project Gantt -->
+      <div class="feature-card fade-up fade-up-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="3" rx="1"/><rect x="3" y="10.5" width="12" height="3" rx="1"/><rect x="3" y="17" width="16" height="3" rx="1"/></svg>
+        </div>
+        <div class="feature-title">Project Gantt</div>
+        <div class="feature-desc">Visual chart showing who is assigned to which projects across what time periods. Spot scheduling conflicts and coverage gaps instantly.</div>
+      </div>
+
+      <!-- 5 Billing Tracker -->
+      <div class="feature-card fade-up fade-up-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="8" y2="15"/><line x1="10" y1="15" x2="14" y2="15"/></svg>
+        </div>
+        <div class="feature-title">Accommodation &amp; Vehicle Billing</div>
+        <div class="feature-desc">Track housing and vehicle assignments with a weekly billing tracker. Never miss a billable week — amber cells flag uncharged periods automatically.</div>
+      </div>
+
+      <!-- 6 Daily Email Digest -->
+      <div class="feature-card fade-up fade-up-delay-3">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        </div>
+        <div class="feature-title">Daily Email Digest</div>
+        <div class="feature-desc">Automated morning email listing everything expiring, missing, or unbilled. Sent to your compliance team every day at 07:00. No email if nothing to report.</div>
+      </div>
+
+      <!-- 7 Role-Based Access -->
+      <div class="feature-card fade-up fade-up-delay-1">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="feature-title">Role-Based Access</div>
+        <div class="feature-desc">Admin, Planner, Compliance, and Viewer roles. Each user sees and can edit only what their role permits — no accidental changes, no data leaks.</div>
+      </div>
+
+      <!-- 8 Document Set Templates -->
+      <div class="feature-card fade-up fade-up-delay-2">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <div class="feature-title">Document Set Templates</div>
+        <div class="feature-desc">Built-in sets for NL ZZP, NL Employed, BE, and AT with all legal documents pre-configured. Fully customisable — add, rename, or remove any document.</div>
+      </div>
+
+      <!-- 9 Archive & Audit Trail -->
+      <div class="feature-card fade-up fade-up-delay-3">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        </div>
+        <div class="feature-title">Archive &amp; Audit Trail</div>
+        <div class="feature-desc">Soft-delete archive of every change, deletion, and document update. Searchable, filterable, and fully restorable — essential for compliance audits.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       WORKER PORTAL SPOTLIGHT
+  ═══════════════════════════════════════════ -->
+  <section class="portal-section">
+    <div class="portal-inner">
+      <div class="portal-left fade-up">
+        <h2>Workers manage their own documents.<br />You just approve.</h2>
+        <ul class="portal-benefits">
+          <li class="portal-benefit">
+            <div class="portal-benefit-icon">✓</div>
+            <div class="portal-benefit-text">Workers receive a secure personal link — no app to download, no account to create. They can update documents from any phone or computer.</div>
+          </li>
+          <li class="portal-benefit">
+            <div class="portal-benefit-icon">✓</div>
+            <div class="portal-benefit-text">The portal is available in English, Dutch, and Romanian. Workers see exactly which documents they need to submit and which are expiring.</div>
+          </li>
+          <li class="portal-benefit">
+            <div class="portal-benefit-icon">✓</div>
+            <div class="portal-benefit-text">Your compliance team reviews submissions in a single approvals queue — approve, reject with feedback, or request a different file. All tracked automatically.</div>
+          </li>
+        </ul>
+      </div>
+      <div class="portal-right fade-up fade-up-delay-2">
+        <div class="portal-right-label">Worker Portal — Live Preview</div>
+
+        <!-- Worker info card -->
+        <div class="portal-worker-info">
+          <div class="portal-avatar">AP</div>
+          <div>
+            <div class="portal-worker-name">Andrei Popescu</div>
+            <div class="portal-worker-meta">NL ZZP · Document set: NL – ZZP (Self-employed)</div>
+            <div class="portal-progress-bar"><div class="portal-progress-fill"></div></div>
+            <div class="portal-progress-label">
+              <span>Compliance: 62.5%</span>
+              <span style="color: var(--warning); font-weight: 600;">⚠ WARNING</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Document card -->
+        <div class="portal-doc-card">
+          <div class="portal-doc-header">
+            <div>
+              <div class="portal-doc-name">VCA Diploma</div>
+              <div class="portal-doc-category">Safety &amp; Compliance</div>
+            </div>
+            <span class="status-badge status-warning" style="font-size:0.68rem;">◐ EXPIRING</span>
+          </div>
+          <div class="portal-doc-body">
+            <div class="portal-doc-row">
+              <span class="portal-doc-row-label">Current expiry date</span>
+              <span class="portal-doc-row-value" style="color: var(--warning);">14 Jun 2026</span>
+            </div>
+            <div class="portal-doc-row">
+              <span class="portal-doc-row-label">Issue date</span>
+              <span class="portal-doc-row-value">14 Jun 2021</span>
+            </div>
+            <div class="portal-doc-row">
+              <span class="portal-doc-row-label">Uploaded file</span>
+              <span class="portal-doc-row-value" style="color: var(--blue);">📎 vca_diploma_AP.pdf</span>
+            </div>
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 7px; padding: 0.6rem 0.85rem; font-size: 0.78rem; color: #92400e; line-height: 1.5;">
+              ⚠ This document expires in 11 days. Please submit your renewed certificate as soon as possible.
+            </div>
+          </div>
+          <div class="portal-doc-footer">
+            <button class="btn-submit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Submit updated document
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       TESTIMONIAL
+  ═══════════════════════════════════════════ -->
+  <section class="testimonial-section">
+    <div class="testimonial-inner fade-up">
+      <div class="testimonial-stars">★★★★★</div>
+      <div class="quote-mark">"</div>
+      <blockquote>
+        Before TMC Work-Force, we had no idea half our ZZP contractors had expired VCA certificates. Now we catch it weeks before it becomes a problem — and our compliance team spends half the time they used to.
+      </blockquote>
+      <div class="testimonial-author">— Operations Manager, Dutch construction contractor</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       CTA
+  ═══════════════════════════════════════════ -->
+  <section class="cta-section" id="cta">
+    <h2 class="fade-up">Ready to take control of your compliance?</h2>
+    <p class="fade-up fade-up-delay-1">TMC Work-Force is deployed per organisation with dedicated setup and onboarding. Contact us to discuss your team's requirements and get started within a week.</p>
+    <div class="cta-actions fade-up fade-up-delay-2">
+      <a href="mailto:info@work-force.nl" class="btn btn-white btn-lg">Request Access →</a>
+      <a href="mailto:info@work-force.nl" class="cta-email-link">or email info@work-force.nl directly</a>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════
+       FOOTER
+  ═══════════════════════════════════════════ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <div class="footer-logo-main">⚡ TMC Work-Force</div>
+        <div class="footer-logo-copy">© 2026 TMC Construction · work-force.nl</div>
+      </div>
+      <div class="footer-links">
+        <a href="#" class="footer-link">Log in</a>
+        <span class="footer-sep">·</span>
+        <a href="#" class="footer-link">Worker Portal</a>
+        <span class="footer-sep">·</span>
+        <a href="mailto:info@work-force.nl" class="footer-link">Contact</a>
+      </div>
+      <div class="footer-tagline">Built for European construction.</div>
+    </div>
+  </footer>
+
+  <!-- ═══════════════════════════════════════════
+       INTERACTIVE DEMO SANDBOX OVERLAY
+  ═══════════════════════════════════════════ -->
+  <div id="demoOverlay">
+    <!-- Top bar -->
+    <div class="demo-topbar">
+      <div class="demo-topbar-title">⚡ TMC Work-Force — Interactive Demo</div>
+      <button class="demo-back-btn" onclick="closeDemo()">← Back to website</button>
+    </div>
+
+    <div class="demo-body">
+      <!-- Sidebar -->
+      <aside class="demo-sidebar">
+        <div class="demo-mode-pill">● DEMO MODE</div>
+        <div class="demo-nav-item" id="demoNav_workers" onclick="demoNav('workers')">
+          <span class="demo-nav-icon">👷</span><span>Workers</span>
+        </div>
+        <div class="demo-nav-item" id="demoNav_docsets" onclick="demoNav('docsets')">
+          <span class="demo-nav-icon">📋</span><span>Document Sets</span>
+        </div>
+        <div class="demo-nav-item" id="demoNav_assignments" onclick="demoNav('assignments')">
+          <span class="demo-nav-icon">📅</span><span>Assignments</span>
+        </div>
+        <div class="demo-nav-item" id="demoNav_accom" onclick="demoNav('accom')">
+          <span class="demo-nav-icon">🏠</span><span>Accommodation</span>
+        </div>
+        <div class="demo-nav-item" id="demoNav_vehicles" onclick="demoNav('vehicles')">
+          <span class="demo-nav-icon">🚐</span><span>Vehicles</span>
+        </div>
+        <div class="demo-nav-item" id="demoNav_portal" onclick="demoNav('portal')">
+          <span class="demo-nav-icon">📱</span><span>Worker Portal</span>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="demo-main">
+        <!-- Workers -->
+        <section class="demo-panel" id="demoPanel_workers">
+          <div class="demo-section-title">Workers</div>
+          <div class="demo-section-sub">Every operative with a real-time GO / WARNING / NO-GO compliance status.</div>
+          <div id="demoWorkersBody"></div>
+        </section>
+
+        <!-- Document Sets -->
+        <section class="demo-panel" id="demoPanel_docsets">
+          <div class="demo-section-title">Document Sets</div>
+          <div class="demo-section-sub">Define which documents each worker type and country must hold.</div>
+          <div id="demoDocSetsBody"></div>
+        </section>
+
+        <!-- Assignments -->
+        <section class="demo-panel" id="demoPanel_assignments">
+          <div class="demo-section-title">Project Assignments</div>
+          <div class="demo-section-sub">Place workers on projects across a planning timeline.</div>
+          <div id="demoAssignmentsBody"></div>
+        </section>
+
+        <!-- Accommodation -->
+        <section class="demo-panel" id="demoPanel_accom">
+          <div class="demo-section-title">Accommodation</div>
+          <div class="demo-section-sub">Assign housing and track weekly charges back to operatives.</div>
+          <div id="demoAccomBody"></div>
+        </section>
+
+        <!-- Vehicles -->
+        <section class="demo-panel" id="demoPanel_vehicles">
+          <div class="demo-section-title">Vehicles</div>
+          <div class="demo-section-sub">Manage your fleet and weekly vehicle charges per worker.</div>
+          <div id="demoVehiclesBody"></div>
+        </section>
+
+        <!-- Worker Portal -->
+        <section class="demo-panel" id="demoPanel_portal">
+          <div class="demo-section-title">Worker Portal</div>
+          <div class="demo-section-sub">What each worker sees — their documents, status, and what to fix.</div>
+          <div id="demoPortalBody"></div>
+        </section>
+      </main>
+    </div>
+
+    <div class="demo-toast" id="demoToast"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       SCRIPTS
+  ═══════════════════════════════════════════ -->
+  <script>
+    // ── Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      navbar.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    // ── Fade-up on scroll via IntersectionObserver
+    const fadeEls = document.querySelectorAll('.fade-up:not(.visible)');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.12,
+      rootMargin: '0px 0px -40px 0px'
+    });
+    fadeEls.forEach(el => observer.observe(el));
+
+    /* ═══════════════════════════════════════════════════════
+         INTERACTIVE DEMO SANDBOX — in-memory engine
+         All state lives in JS variables; nothing persists.
+       ═══════════════════════════════════════════════════════ */
+
+    // ── Fixed "today" so expiry maths are deterministic in the demo ──
+    const demoToday = new Date('2026-06-03');
+    const DAY_MS = 86400000;
+
+    // ── The NL – ZZP construction document set (the canonical 8 docs) ──
+    const DEMO_DOC_DEFS = [
+      { key: 'passport',        label: 'Passport / ID',                    required: true  },
+      { key: 'kvk',             label: 'KvK Registration',                 required: true  },
+      { key: 'vca',             label: 'VCA Safety Certificate',           required: true  },
+      { key: 'a1',              label: 'A1 Declaration',                   required: true  },
+      { key: 'liability',       label: 'Liability Insurance',              required: true  },
+      { key: 'model_agreement', label: 'Model Agreement (Modelovereenkomst)', required: true },
+      { key: 'bank',            label: 'Bank Details',                     required: false },
+      { key: 'photo',           label: 'ID Photo',                         required: false }
+    ];
+    const DEMO_DOC_COUNT = DEMO_DOC_DEFS.length; // 8
+
+    // helper: a valid doc with a future expiry (years from demo today)
+    function okDoc(year, month, day) { return { status: 'valid', expiry: year + '-' + month + '-' + day }; }
+
+    // ── Pre-seeded workers, each with a full docs object ──
+    // w1 Andrei → clean GO (all valid, far-future expiries)
+    // w2 Mihai  → WARNING (VCA expires ~30 days out)
+    // w3 Stefan → NO-GO (passport expired, A1 missing)
+    let demoWorkers = [
+      {
+        id: 'w1', name: 'Andrei Popescu', type: 'ZZP', country: 'NL',
+        ref: 'ZZP-2024-0142', project: 'Westpoort A12',
+        docs: {
+          passport:        okDoc('2028', '04', '12'),
+          kvk:             okDoc('2027', '11', '01'),
+          vca:             okDoc('2028', '02', '20'),
+          a1:              okDoc('2027', '07', '31'),
+          liability:       okDoc('2027', '09', '15'),
+          model_agreement: okDoc('2028', '01', '05'),
+          bank:            okDoc('2030', '01', '01'),
+          photo:           okDoc('2030', '01', '01')
+        }
+      },
+      {
+        id: 'w2', name: 'Mihai Ionescu', type: 'Employed', country: 'BE',
+        ref: 'EMP-0098', project: 'Antwerp Port Ph2',
+        docs: {
+          passport:        okDoc('2029', '03', '18'),
+          kvk:             okDoc('2027', '05', '22'),
+          vca:             { status: 'valid', expiry: '2026-07-03' }, // ~30 days → WARNING
+          a1:              okDoc('2027', '06', '30'),
+          liability:       okDoc('2028', '08', '10'),
+          model_agreement: okDoc('2027', '12', '01'),
+          bank:            okDoc('2030', '01', '01'),
+          photo:           okDoc('2030', '01', '01')
+        }
+      },
+      {
+        id: 'w3', name: 'Stefan Vasilescu', type: 'ZZP', country: 'NL',
+        ref: 'ZZP-2024-0211', project: 'Rotterdam Hub',
+        docs: {
+          passport:        { status: 'valid', expiry: '2026-01-10' }, // expired
+          kvk:             okDoc('2027', '10', '14'),
+          vca:             okDoc('2028', '03', '09'),
+          a1:              { status: 'missing', expiry: null },        // missing
+          liability:       okDoc('2027', '04', '28'),
+          model_agreement: okDoc('2027', '11', '20'),
+          bank:            okDoc('2030', '01', '01'),
+          photo:           okDoc('2030', '01', '01')
+        }
+      }
+    ];
+
+    // ── Pre-seeded project assignments, accommodation, vehicles ──
+    let demoAssignments = [
+      { id: 'a1', workerId: 'w1', project: 'Westpoort A12',    start: '2026-04-01', end: '2026-09-30', rate: '€45/hr' },
+      { id: 'a2', workerId: 'w2', project: 'Antwerp Port Ph2', start: '2026-05-15', end: '2026-08-15', rate: '€42/hr' },
+      { id: 'a3', workerId: 'w3', project: 'Rotterdam Hub',    start: '2026-06-01', end: '2026-12-01', rate: '€44/hr' }
+    ];
+    let demoAccom = [
+      { id: 'ac1', workerId: 'w1', property: 'De Liesbosch 22, Nieuwegein', charge: 120, toOperative: true },
+      { id: 'ac2', workerId: 'w3', property: 'Spaanse Polder 8, Rotterdam', charge: 95,  toOperative: false }
+    ];
+    let demoVehicles = [
+      { id: 've1', workerId: 'w1', vehicle: 'VW Transporter — 12-ABC-3', charge: 60, toOperative: true }
+    ];
+
+    // ── Document sets shown in the Document Sets panel ──
+    let demoDocSets = [
+      {
+        id: 'set1', name: 'NL – ZZP (Self-employed)', country: 'NL',
+        docs: DEMO_DOC_DEFS.map(d => ({ label: d.label, required: d.required }))
+      },
+      {
+        id: 'set2', name: 'NL – Employed Worker', country: 'NL',
+        docs: [
+          { label: 'Passport / ID',          required: true  },
+          { label: 'Blue Card / Work Permit', required: true  },
+          { label: 'VCA Safety Certificate', required: true  },
+          { label: 'A1 Declaration',         required: true  },
+          { label: 'Employment Contract',    required: true  },
+          { label: 'Bank Details',           required: false },
+          { label: 'ID Photo',               required: false }
+        ]
+      }
+    ];
+
+    // temp working list for the "Create Document Set" form
+    let demoNewSetDocs = [];
+
+    // ── Utility: escape user text before injecting into innerHTML ──
+    function demoEsc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function demoWorkerById(id) { return demoWorkers.find(w => w.id === id); }
+
+    /* ── Document status logic ──
+       For one document at demoToday:
+         'missing' → no document on file
+         'expired' → has an expiry in the past
+         'expiring' → expiry within 60 days
+         'ok' → valid with > 60 days remaining
+    */
+    function demoDocState(doc) {
+      if (!doc || doc.status === 'missing' || !doc.expiry) return 'missing';
+      const exp = new Date(doc.expiry);
+      const days = Math.floor((exp - demoToday) / DAY_MS);
+      if (days < 0) return 'expired';
+      if (days <= 60) return 'expiring';
+      return 'ok';
+    }
+
+    /* ── Overall worker status ──
+       GO       → every REQUIRED doc is 'ok'
+       WARNING  → some doc expiring within 60 days, but none expired/missing among required
+       NO-GO    → any REQUIRED doc missing or expired
+    */
+    function demoWorkerStatus(w) {
+      let anyExpiring = false;
+      for (const def of DEMO_DOC_DEFS) {
+        const st = demoDocState(w.docs[def.key]);
+        if (def.required && (st === 'missing' || st === 'expired')) return 'NO-GO';
+        if (st === 'expiring') anyExpiring = true;
+      }
+      return anyExpiring ? 'WARNING' : 'GO';
+    }
+
+    // count of valid (ok or expiring, i.e. on-file & not expired) docs out of total
+    function demoValidDocCount(w) {
+      let n = 0;
+      for (const def of DEMO_DOC_DEFS) {
+        const st = demoDocState(w.docs[def.key]);
+        if (st === 'ok' || st === 'expiring') n++;
+      }
+      return n;
+    }
+
+    // map a status string → badge class + label
+    function demoStatusBadge(status) {
+      if (status === 'GO')      return '<span class="dbadge dbadge-go">● GO</span>';
+      if (status === 'WARNING') return '<span class="dbadge dbadge-warn">● WARNING</span>';
+      return '<span class="dbadge dbadge-nogo">● NO-GO</span>';
+    }
+
+    // ── Overlay open/close ──
+    function openDemo(tab) {
+      const ov = document.getElementById('demoOverlay');
+      ov.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      demoNav(tab || 'workers');
+    }
+    function closeDemo() {
+      document.getElementById('demoOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    // ESC closes the demo
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && document.getElementById('demoOverlay').classList.contains('open')) closeDemo();
+    });
+
+    // ── Sidebar navigation ──
+    const DEMO_RENDERERS = {
+      workers:     renderDemoWorkers,
+      docsets:     renderDemoDocSets,
+      assignments: renderDemoAssignments,
+      accom:       renderDemoAccommodation,
+      vehicles:    renderDemoVehicles,
+      portal:      renderDemoPortal
+    };
+    function demoNav(tab) {
+      // panels
+      document.querySelectorAll('.demo-panel').forEach(p => p.classList.remove('active'));
+      const panel = document.getElementById('demoPanel_' + tab);
+      if (panel) panel.classList.add('active');
+      // sidebar items
+      document.querySelectorAll('.demo-nav-item').forEach(n => n.classList.remove('active'));
+      const nav = document.getElementById('demoNav_' + tab);
+      if (nav) nav.classList.add('active');
+      // render
+      const fn = DEMO_RENDERERS[tab];
+      if (fn) fn();
+    }
+
+    // ── Toast ──
+    let demoToastTimer = null;
+    function demoToast(msg) {
+      const t = document.getElementById('demoToast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(demoToastTimer);
+      demoToastTimer = setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    /* ═══════════ WORKERS PANEL ═══════════ */
+    let demoShowAddWorker = false;
+    function toggleAddWorker() { demoShowAddWorker = !demoShowAddWorker; renderDemoWorkers(); }
+    function submitAddWorker() {
+      const name = document.getElementById('demoNewWorkerName').value.trim();
+      if (!name) { demoToast('Enter a name first'); return; }
+      const type = document.getElementById('demoNewWorkerType').value;
+      const country = document.getElementById('demoNewWorkerCountry').value;
+      const ref = document.getElementById('demoNewWorkerRef').value.trim() || '—';
+      // new workers start with every doc missing → NO-GO
+      const docs = {};
+      DEMO_DOC_DEFS.forEach(d => { docs[d.key] = { status: 'missing', expiry: null }; });
+      demoWorkers.push({
+        id: 'w' + (Date.now()), name, type, country, ref, project: '—', docs
+      });
+      demoShowAddWorker = false;
+      renderDemoWorkers();
+      demoToast('Worker added — now NO-GO until documents are added');
+    }
+
+    function renderDemoWorkers() {
+      let rows = demoWorkers.map(w => {
+        const status = demoWorkerStatus(w);
+        const valid = demoValidDocCount(w);
+        return '<tr>' +
+          '<td><div style="font-weight:700;color:var(--navy);">' + demoEsc(w.name) + '</div>' +
+            '<div style="font-size:11px;color:var(--muted);">' + demoEsc(w.type) + ' · ' + demoEsc(w.country) + ' · ' + demoEsc(w.ref) + '</div></td>' +
+          '<td>' + demoStatusBadge(status) + '</td>' +
+          '<td>' + valid + '/' + DEMO_DOC_COUNT + '</td>' +
+          '<td>' + demoEsc(w.project) + '</td>' +
+          '<td><a class="demo-link" onclick="demoNav(\'portal\');demoSetPortalWorker(\'' + w.id + '\');">Open portal →</a></td>' +
+        '</tr>';
+      }).join('');
+
+      const form = demoShowAddWorker ? (
+        '<div class="demo-card" style="background:var(--bg);">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">Add a new worker</div>' +
+          '<div class="demo-form-row">' +
+            '<div class="demo-form-field"><label>Full name</label><input id="demoNewWorkerName" placeholder="e.g. Ion Marin" /></div>' +
+            '<div class="demo-form-field"><label>Worker type</label><select id="demoNewWorkerType"><option>ZZP</option><option>Employed</option></select></div>' +
+            '<div class="demo-form-field"><label>Country</label><select id="demoNewWorkerCountry"><option>NL</option><option>BE</option><option>AT</option></select></div>' +
+            '<div class="demo-form-field"><label>Reference</label><input id="demoNewWorkerRef" placeholder="e.g. ZZP-2026-0001" /></div>' +
+          '</div>' +
+          '<button class="demo-btn" onclick="submitAddWorker()">Add worker</button> ' +
+          '<button class="demo-btn-sec" onclick="toggleAddWorker()">Cancel</button>' +
+        '</div>'
+      ) : '';
+
+      document.getElementById('demoWorkersBody').innerHTML =
+        '<div style="margin-bottom:16px;">' +
+          (demoShowAddWorker ? '' : '<button class="demo-btn" onclick="toggleAddWorker()">+ Add Worker</button>') +
+        '</div>' +
+        form +
+        '<div class="demo-card" style="padding:6px 6px;">' +
+          '<table class="demo-table"><thead><tr>' +
+            '<th>Worker</th><th>Status</th><th>Documents</th><th>Project</th><th></th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '</div>';
+    }
+
+    /* ═══════════ DOCUMENT SETS PANEL ═══════════ */
+    let demoShowAddSet = false;
+    function toggleAddSet() {
+      demoShowAddSet = !demoShowAddSet;
+      if (demoShowAddSet) demoNewSetDocs = [];
+      renderDemoDocSets();
+    }
+    function addDocToNewSet() {
+      const inp = document.getElementById('demoNewDocName');
+      const val = inp.value.trim();
+      if (!val) return;
+      demoNewSetDocs.push(val);
+      inp.value = '';
+      renderDemoDocSets();
+      // keep focus on the input for fast multi-add
+      const again = document.getElementById('demoNewDocName');
+      if (again) again.focus();
+    }
+    function saveNewSet() {
+      const name = document.getElementById('demoNewSetName').value.trim();
+      if (!name) { demoToast('Give the set a name'); return; }
+      const country = document.getElementById('demoNewSetCountry').value;
+      demoDocSets.push({
+        id: 'set' + Date.now(),
+        name, country,
+        docs: demoNewSetDocs.map(d => ({ label: d, required: true }))
+      });
+      demoShowAddSet = false;
+      demoNewSetDocs = [];
+      renderDemoDocSets();
+      demoToast('Document set created');
+    }
+
+    function renderDemoDocSets() {
+      const sets = demoDocSets.map(set => {
+        const chips = set.docs.map(d =>
+          '<span class="doc-chip">' + demoEsc(d.label) +
+            '<span class="doc-chip-tag ' + (d.required ? 'req' : 'opt') + '">' + (d.required ? 'Required' : 'Optional') + '</span>' +
+          '</span>'
+        ).join('');
+        return '<div class="demo-card">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+            '<div style="font-weight:800;color:var(--navy);font-size:15px;">' + demoEsc(set.name) + '</div>' +
+            '<span class="dbadge dbadge-go" style="background:#eff6ff;color:var(--blue);border-color:#bfdbfe;">' + demoEsc(set.country) + ' · ' + set.docs.length + ' docs</span>' +
+          '</div>' +
+          '<div>' + chips + '</div>' +
+        '</div>';
+      }).join('');
+
+      let form = '';
+      if (demoShowAddSet) {
+        const working = demoNewSetDocs.length
+          ? demoNewSetDocs.map(d => '<span class="doc-chip">' + demoEsc(d) + '</span>').join('')
+          : '<span style="font-size:12px;color:var(--muted);">No documents added yet — add some below.</span>';
+        form = '<div class="demo-card" style="background:var(--bg);">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">Create a document set</div>' +
+          '<div class="demo-form-row">' +
+            '<div class="demo-form-field"><label>Set name</label><input id="demoNewSetName" placeholder="e.g. AT – Employed" /></div>' +
+            '<div class="demo-form-field"><label>Country</label><select id="demoNewSetCountry"><option>NL</option><option>BE</option><option>AT</option></select></div>' +
+          '</div>' +
+          '<div style="margin:6px 0 10px;">' + working + '</div>' +
+          '<div class="demo-form-row" style="align-items:flex-end;">' +
+            '<div class="demo-form-field"><label>Add a document</label><input id="demoNewDocName" placeholder="e.g. Passport / ID" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addDocToNewSet();}" /></div>' +
+            '<div style="flex:0 0 auto;"><button class="demo-btn-sec" onclick="addDocToNewSet()">+ Add document</button></div>' +
+          '</div>' +
+          '<button class="demo-btn" onclick="saveNewSet()">Save Set</button> ' +
+          '<button class="demo-btn-sec" onclick="toggleAddSet()">Cancel</button>' +
+        '</div>';
+      }
+
+      document.getElementById('demoDocSetsBody').innerHTML =
+        '<div style="margin-bottom:16px;">' +
+          (demoShowAddSet ? '' : '<button class="demo-btn" onclick="toggleAddSet()">+ Create Document Set</button>') +
+        '</div>' + form + sets;
+    }
+
+    /* ═══════════ ASSIGNMENTS PANEL ═══════════ */
+    let demoShowAddAssign = false;
+    function toggleAddAssign() { demoShowAddAssign = !demoShowAddAssign; renderDemoAssignments(); }
+    function submitAddAssign() {
+      const workerId = document.getElementById('demoAssignWorker').value;
+      const project = document.getElementById('demoAssignProject').value.trim();
+      const start = document.getElementById('demoAssignStart').value;
+      const end = document.getElementById('demoAssignEnd').value;
+      if (!project || !start || !end) { demoToast('Fill in project and dates'); return; }
+      demoAssignments.push({ id: 'a' + Date.now(), workerId, project, start, end, rate: '€44/hr' });
+      demoShowAddAssign = false;
+      renderDemoAssignments();
+      demoToast('Assignment created');
+    }
+
+    // build a worker <option> list, optionally pre-selecting one
+    function demoWorkerOptions(selectedId) {
+      return demoWorkers.map(w =>
+        '<option value="' + w.id + '"' + (w.id === selectedId ? ' selected' : '') + '>' + demoEsc(w.name) + '</option>'
+      ).join('');
+    }
+
+    // tiny gantt bar: position within a fixed Apr–Dec 2026 window
+    function demoGanttBar(start, end) {
+      const winStart = new Date('2026-04-01').getTime();
+      const winEnd = new Date('2026-12-31').getTime();
+      const span = winEnd - winStart;
+      const s = Math.max(0, Math.min(1, (new Date(start).getTime() - winStart) / span));
+      const e = Math.max(0, Math.min(1, (new Date(end).getTime() - winStart) / span));
+      const left = (s * 100).toFixed(1);
+      const width = Math.max(4, (e - s) * 100).toFixed(1);
+      return '<div class="demo-gantt-track"><div class="demo-gantt-bar" style="left:' + left + '%;width:' + width + '%;"></div></div>';
+    }
+
+    function renderDemoAssignments() {
+      const rows = demoAssignments.map(a => {
+        const w = demoWorkerById(a.workerId);
+        return '<tr>' +
+          '<td style="font-weight:700;color:var(--navy);">' + demoEsc(w ? w.name : '—') + '</td>' +
+          '<td>' + demoEsc(a.project) + '</td>' +
+          '<td>' + demoEsc(a.start) + '</td>' +
+          '<td>' + demoEsc(a.end) + '</td>' +
+          '<td>' + demoEsc(a.rate) + '</td>' +
+          '<td style="min-width:140px;">' + demoGanttBar(a.start, a.end) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      const form = demoShowAddAssign ? (
+        '<div class="demo-card" style="background:var(--bg);">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">New project assignment</div>' +
+          '<div class="demo-form-row">' +
+            '<div class="demo-form-field"><label>Worker</label><select id="demoAssignWorker">' + demoWorkerOptions() + '</select></div>' +
+            '<div class="demo-form-field"><label>Project</label><input id="demoAssignProject" placeholder="e.g. Eindhoven Tower" /></div>' +
+            '<div class="demo-form-field"><label>Start date</label><input id="demoAssignStart" type="date" value="2026-06-01" /></div>' +
+            '<div class="demo-form-field"><label>End date</label><input id="demoAssignEnd" type="date" value="2026-10-01" /></div>' +
+          '</div>' +
+          '<button class="demo-btn" onclick="submitAddAssign()">Create assignment</button> ' +
+          '<button class="demo-btn-sec" onclick="toggleAddAssign()">Cancel</button>' +
+        '</div>'
+      ) : '';
+
+      document.getElementById('demoAssignmentsBody').innerHTML =
+        '<div style="margin-bottom:16px;">' +
+          (demoShowAddAssign ? '' : '<button class="demo-btn" onclick="toggleAddAssign()">+ New Assignment</button>') +
+        '</div>' + form +
+        '<div class="demo-card" style="padding:6px 6px;">' +
+          '<table class="demo-table"><thead><tr>' +
+            '<th>Worker</th><th>Project</th><th>Start</th><th>End</th><th>Rate</th><th>Apr — Dec 2026</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '</div>';
+    }
+
+    /* ═══════════ ACCOMMODATION PANEL ═══════════ */
+    let demoShowAddAccom = false;
+    function toggleAddAccom() { demoShowAddAccom = !demoShowAddAccom; renderDemoAccommodation(); }
+    function submitAddAccom() {
+      const workerId = document.getElementById('demoAccomWorker').value;
+      const property = document.getElementById('demoAccomProperty').value.trim();
+      const charge = parseInt(document.getElementById('demoAccomCharge').value, 10) || 0;
+      const toOperative = document.getElementById('demoAccomToOp').checked;
+      if (!property) { demoToast('Enter a property'); return; }
+      demoAccom.push({ id: 'ac' + Date.now(), workerId, property, charge, toOperative });
+      demoShowAddAccom = false;
+      renderDemoAccommodation();
+      demoToast('Accommodation assigned');
+    }
+
+    // a row of 6 billing-week squares (mix of charged/uncharged for illustration)
+    function demoBillingWeeks(pattern) {
+      return '<div class="demo-weeks">' + pattern.map(c =>
+        '<div class="demo-week-sq ' + (c ? 'charged' : 'uncharged') + '"></div>'
+      ).join('') + '</div>';
+    }
+
+    function renderDemoAccommodation() {
+      const patterns = [[1,1,1,0,0,0],[1,1,0,0,0,0],[1,1,1,1,0,0]];
+      const rows = demoAccom.map((a, i) => {
+        const w = demoWorkerById(a.workerId);
+        return '<tr>' +
+          '<td style="font-weight:700;color:var(--navy);">' + demoEsc(w ? w.name : '—') + '</td>' +
+          '<td>' + demoEsc(a.property) + '</td>' +
+          '<td>€' + a.charge + '/wk</td>' +
+          '<td>' + (a.toOperative ? '<span class="dbadge dbadge-go">● Yes</span>' : '<span class="dbadge dbadge-warn">● No</span>') + '</td>' +
+          '<td>' + demoBillingWeeks(patterns[i % patterns.length]) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      const form = demoShowAddAccom ? (
+        '<div class="demo-card" style="background:var(--bg);">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">Assign accommodation</div>' +
+          '<div class="demo-form-row">' +
+            '<div class="demo-form-field"><label>Worker</label><select id="demoAccomWorker">' + demoWorkerOptions() + '</select></div>' +
+            '<div class="demo-form-field"><label>Property</label><input id="demoAccomProperty" placeholder="e.g. Kanaalweg 5, Utrecht" /></div>' +
+            '<div class="demo-form-field"><label>Weekly charge (€)</label><input id="demoAccomCharge" type="number" value="110" /></div>' +
+          '</div>' +
+          '<div class="demo-checkbox-row"><input type="checkbox" id="demoAccomToOp" checked /><label style="margin:0;color:var(--text);font-weight:500;">Charge to operative</label></div>' +
+          '<button class="demo-btn" onclick="submitAddAccom()">Assign accommodation</button> ' +
+          '<button class="demo-btn-sec" onclick="toggleAddAccom()">Cancel</button>' +
+        '</div>'
+      ) : '';
+
+      document.getElementById('demoAccomBody').innerHTML =
+        '<div style="margin-bottom:16px;">' +
+          (demoShowAddAccom ? '' : '<button class="demo-btn" onclick="toggleAddAccom()">+ Assign Accommodation</button>') +
+        '</div>' + form +
+        '<div class="demo-card" style="padding:6px 6px;">' +
+          '<table class="demo-table"><thead><tr>' +
+            '<th>Worker</th><th>Property</th><th>Weekly charge</th><th>Charge to operative</th><th>Billing weeks</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '</div>' +
+        '<div style="font-size:12px;color:var(--muted);padding:0 4px;">' +
+          '<span class="demo-week-sq charged" style="display:inline-block;vertical-align:middle;"></span> charged &nbsp; ' +
+          '<span class="demo-week-sq uncharged" style="display:inline-block;vertical-align:middle;"></span> awaiting charge' +
+        '</div>';
+    }
+
+    /* ═══════════ VEHICLES PANEL ═══════════ */
+    let demoShowAddVeh = false;
+    function toggleAddVeh() { demoShowAddVeh = !demoShowAddVeh; renderDemoVehicles(); }
+    function submitAddVeh() {
+      const workerId = document.getElementById('demoVehWorker').value;
+      const vehicle = document.getElementById('demoVehDesc').value.trim();
+      const charge = parseInt(document.getElementById('demoVehCharge').value, 10) || 0;
+      if (!vehicle) { demoToast('Enter a vehicle'); return; }
+      demoVehicles.push({ id: 've' + Date.now(), workerId, vehicle, charge, toOperative: true });
+      demoShowAddVeh = false;
+      renderDemoVehicles();
+      demoToast('Vehicle assigned');
+    }
+
+    function renderDemoVehicles() {
+      const patterns = [[1,1,1,1,0,0],[1,0,0,0,0,0]];
+      const rows = demoVehicles.map((v, i) => {
+        const w = demoWorkerById(v.workerId);
+        return '<tr>' +
+          '<td style="font-weight:700;color:var(--navy);">' + demoEsc(w ? w.name : '—') + '</td>' +
+          '<td>' + demoEsc(v.vehicle) + '</td>' +
+          '<td>€' + v.charge + '/wk</td>' +
+          '<td>' + demoBillingWeeks(patterns[i % patterns.length]) + '</td>' +
+        '</tr>';
+      }).join('');
+
+      const form = demoShowAddVeh ? (
+        '<div class="demo-card" style="background:var(--bg);">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">Assign vehicle</div>' +
+          '<div class="demo-form-row">' +
+            '<div class="demo-form-field"><label>Worker</label><select id="demoVehWorker">' + demoWorkerOptions() + '</select></div>' +
+            '<div class="demo-form-field"><label>Vehicle (reg / description)</label><input id="demoVehDesc" placeholder="e.g. Ford Transit — 45-XYZ-9" /></div>' +
+            '<div class="demo-form-field"><label>Weekly charge (€)</label><input id="demoVehCharge" type="number" value="55" /></div>' +
+          '</div>' +
+          '<button class="demo-btn" onclick="submitAddVeh()">Assign vehicle</button> ' +
+          '<button class="demo-btn-sec" onclick="toggleAddVeh()">Cancel</button>' +
+        '</div>'
+      ) : '';
+
+      document.getElementById('demoVehiclesBody').innerHTML =
+        '<div style="margin-bottom:16px;">' +
+          (demoShowAddVeh ? '' : '<button class="demo-btn" onclick="toggleAddVeh()">+ Assign Vehicle</button>') +
+        '</div>' + form +
+        '<div class="demo-card" style="padding:6px 6px;">' +
+          '<table class="demo-table"><thead><tr>' +
+            '<th>Worker</th><th>Vehicle</th><th>Weekly charge</th><th>Billing weeks</th>' +
+          '</tr></thead><tbody>' + rows + '</tbody></table>' +
+        '</div>';
+    }
+
+    /* ═══════════ WORKER PORTAL PANEL ═══════════ */
+    let demoPortalWorkerId = 'w1'; // default to Andrei (clean GO)
+    function demoSetPortalWorker(id) { demoPortalWorkerId = id; renderDemoPortal(); }
+    function demoPortalSubmit() {
+      demoToast('Submitted for review — your compliance team will approve it');
+    }
+
+    function renderDemoPortal() {
+      // keep a valid selection if a worker was removed
+      if (!demoWorkerById(demoPortalWorkerId)) demoPortalWorkerId = demoWorkers[0].id;
+      const w = demoWorkerById(demoPortalWorkerId);
+      const status = demoWorkerStatus(w);
+      const valid = demoValidDocCount(w);
+
+      const bannerClass = status === 'GO' ? 'go' : (status === 'WARNING' ? 'warn' : 'nogo');
+      const bannerIcon = status === 'GO' ? '✅' : (status === 'WARNING' ? '⚠️' : '⛔');
+      const bannerText = status === 'GO' ? 'GO — cleared for deployment'
+        : (status === 'WARNING' ? 'WARNING — action needed soon' : 'NO-GO — cannot be deployed');
+
+      // per-document rows
+      const lines = DEMO_DOC_DEFS.map(def => {
+        const doc = w.docs[def.key];
+        const st = demoDocState(doc);
+        let cls, meta, badge, action = '';
+        if (st === 'ok') {
+          cls = 'ok'; meta = 'Valid until ' + demoEsc(doc.expiry);
+          badge = '<span class="dbadge dbadge-go">● Valid</span>';
+        } else if (st === 'expiring') {
+          const days = Math.floor((new Date(doc.expiry) - demoToday) / DAY_MS);
+          cls = 'warn'; meta = 'Expires ' + demoEsc(doc.expiry) + ' · in ' + days + ' days';
+          badge = '<span class="dbadge dbadge-warn">● Expiring</span>';
+          action = '<button class="demo-btn-sec" style="padding:0.35rem 0.8rem;font-size:0.78rem;" onclick="demoPortalSubmit()">📤 Submit update</button>';
+        } else if (st === 'expired') {
+          cls = 'bad'; meta = 'Expired ' + demoEsc(doc.expiry);
+          badge = '<span class="dbadge dbadge-nogo">● Expired</span>';
+          action = '<button class="demo-btn-sec" style="padding:0.35rem 0.8rem;font-size:0.78rem;" onclick="demoPortalSubmit()">📤 Submit update</button>';
+        } else { // missing
+          cls = 'bad'; meta = 'Not on file';
+          badge = '<span class="dbadge dbadge-nogo">● Missing</span>';
+          action = '<button class="demo-btn-sec" style="padding:0.35rem 0.8rem;font-size:0.78rem;" onclick="demoPortalSubmit()">📤 Submit update</button>';
+        }
+        return '<div class="doc-line ' + cls + '">' +
+          '<div><div class="doc-line-name">' + demoEsc(def.label) + (def.required ? '' : ' <span style="font-weight:500;color:var(--light);">(optional)</span>') + '</div>' +
+            '<div class="doc-line-meta">' + meta + '</div></div>' +
+          '<div class="doc-line-right">' + action + badge + '</div>' +
+        '</div>';
+      }).join('');
+
+      document.getElementById('demoPortalBody').innerHTML =
+        // worker selector + hint
+        '<div class="demo-card">' +
+          '<div class="demo-form-row" style="margin-bottom:0;align-items:flex-end;">' +
+            '<div class="demo-form-field" style="max-width:280px;"><label>Viewing portal as</label>' +
+              '<select onchange="demoSetPortalWorker(this.value)">' + demoWorkerOptions(demoPortalWorkerId) + '</select></div>' +
+          '</div>' +
+          '<div style="font-size:12px;color:var(--muted);margin-top:10px;">💡 Switch to <strong>Stefan Vasilescu</strong> to see how expired &amp; missing documents appear to a worker.</div>' +
+        '</div>' +
+        // header card with status banner + score
+        '<div class="demo-card">' +
+          '<div style="font-size:18px;font-weight:800;color:var(--navy);margin-bottom:10px;">' + demoEsc(w.name) +
+            ' <span style="font-size:12px;font-weight:600;color:var(--muted);">' + demoEsc(w.type) + ' · ' + demoEsc(w.country) + ' · ' + demoEsc(w.ref) + '</span></div>' +
+          '<div class="demo-portal-banner ' + bannerClass + '"><span class="icon">' + bannerIcon + '</span><span>' + bannerText + '</span></div>' +
+          '<div style="margin-top:10px;font-size:13px;color:var(--muted);"><strong style="color:var(--text);">' + valid + '/' + DEMO_DOC_COUNT + ' documents valid</strong> — your compliance score.</div>' +
+        '</div>' +
+        // documents list
+        '<div class="demo-card">' +
+          '<div style="font-weight:700;color:var(--navy);margin-bottom:12px;">My documents</div>' +
+          lines +
+        '</div>';
+    }
+  </script>
+</body>
+</html>
