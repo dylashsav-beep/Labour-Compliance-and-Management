@@ -6016,25 +6016,45 @@ function openIssueDocDialog(wid,did,docName){
     <div style="font-size:16px;font-weight:700;color:#1a2035;margin-bottom:4px;">Issue Personalised Document</div>
     <div style="font-size:13px;color:var(--text-l);margin-bottom:16px;">${esc(docName)}</div>
     <div style="margin-bottom:12px;"><label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Select file to issue to worker</label><input type="file" id="issueDocFile" accept=".pdf,.doc,.docx" style="font-size:13px;width:100%;"/></div>
-    <div style="font-size:11px;color:var(--text-l);margin-bottom:16px;">The worker will see a Download button in their portal. Once they upload the signed copy it will appear in Approvals for your review.</div>
+    <div style="font-size:11px;color:var(--text-l);margin-bottom:12px;">The worker will see a Download button in their portal. Once they upload the signed copy it will appear in Approvals for your review.</div>
+    <div id="issueDocError" style="display:none;font-size:12px;color:#c53030;background:#fff5f5;border:1px solid #feb2b2;border-radius:6px;padding:8px 10px;margin-bottom:12px;"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;">
-      <button class="btn" onclick="document.getElementById('issueDocOverlay').remove()">Cancel</button>
+      <button class="btn" id="issueDocCancelBtn" onclick="document.getElementById('issueDocOverlay').remove()">Cancel</button>
       <button class="btn btn-primary" id="issueDocSubmitBtn" onclick="issueDocumentToWorker('${wid}','${did}')">Issue Document</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
 }
+function _issueDocShowError(msg){
+  const el=document.getElementById('issueDocError');
+  const btn=document.getElementById('issueDocSubmitBtn');
+  const cancel=document.getElementById('issueDocCancelBtn');
+  if(el){el.textContent=msg;el.style.display='block';}
+  if(btn){btn.disabled=false;btn.textContent='Issue Document';}
+  if(cancel)cancel.disabled=false;
+  console.error('[TMC] issueDocumentToWorker:',msg);
+}
 async function issueDocumentToWorker(wid,did){
   const fileInput=document.getElementById('issueDocFile');
   const file=fileInput?.files?.[0];
-  if(!file){alert('Please select a file to issue.');return;}
+  if(!file){_issueDocShowError('Please select a file to issue.');return;}
   const btn=document.getElementById('issueDocSubmitBtn');
+  const cancel=document.getElementById('issueDocCancelBtn');
+  const errEl=document.getElementById('issueDocError');
   if(btn){btn.disabled=true;btn.textContent='Uploading…';}
-  const ext=file.name.split('.').pop();
+  if(cancel)cancel.disabled=true;
+  if(errEl)errEl.style.display='none';
+  const ext=(file.name.split('.').pop()||'pdf').toLowerCase();
   const filePath=`issued-docs/${wid}/${did}/${Date.now()}.${ext}`;
+  let uploaded=false;
   try{
-    const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
-    if(upErr) throw upErr;
+    const uploadResult=await Promise.race([
+      sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false}),
+      new Promise((_,rej)=>setTimeout(()=>rej(new Error('Upload timed out — check the storage RLS policy for issued-docs/ is applied in Supabase (run migrations/fix_issued_documents_rls.sql).')),30000))
+    ]);
+    if(uploadResult.error) throw uploadResult.error;
+    uploaded=true;
+    if(btn)btn.textContent='Saving…';
     const oid=currentOrgId||SITE_ORG_ID;
     const newId=crypto.randomUUID();
     const {error:dbErr}=await sbClient.from('issued_documents').insert({id:newId,worker_id:wid,doc_key:did,file_path:filePath,file_name:file.name,issued_by:sbSession?.user?.email||'',issued_at:new Date().toISOString(),status:'pending_signature',active:true,org_id:oid});
@@ -6043,9 +6063,8 @@ async function issueDocumentToWorker(wid,did){
     document.getElementById('issueDocOverlay')?.remove();
     rebuildModal(wid);
   }catch(e){
-    sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
-    alert('Failed to issue document: '+e.message);
-    if(btn){btn.disabled=false;btn.textContent='Issue Document';}
+    if(uploaded)sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
+    _issueDocShowError(e.message||String(e));
   }
 }
 async function revokeIssuedDoc(issueId,filePath){
