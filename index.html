@@ -2644,7 +2644,8 @@ function sbSetStatus(text, online){
   const t = text.toLowerCase();
   let label, state;
   if(t.includes('loading')){ label='Loading'; state='loading'; }
-  else if(t.includes('syncing') || t.includes('sync error') || t.includes('sync failed')){ label='Syncing'; state='syncing'; }
+  else if(t.includes('sync error') || t.includes('sync failed') || t.includes('sync timed out')){ label='Error'; state='error'; }
+  else if(t.includes('syncing')){ label='Syncing'; state='syncing'; }
   else if(t.includes('synced') || t.includes('loaded')){ label='Synced'; state='synced'; }
   else if(t.includes('live') || t.includes('subscribed')){ label='Live'; state='live'; }
   else if(t.includes('error') || t.includes('failed') || t.includes('blocked') || t.includes('timed out')){ label='Error'; state='error'; }
@@ -3060,10 +3061,16 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
   };
   const { error } = await sbClient.from('document_set_items').upsert(row);
   if(error){
+    // Most likely cause: the allow_issue column / its schema cache is missing.
+    // Save everything else so the rest of the edit persists, but report that
+    // allow_issue did NOT persist so the caller can warn the user.
     const {allow_issue:_ai,...rowFallback}=row;
     const {error:e2}=await sbClient.from('document_set_items').upsert(rowFallback);
     if(e2) throw e2;
+    const missingAllowIssue = /allow_issue/i.test(error.message||'') || error.code==='PGRST204' || error.code==='42703';
+    return { allowIssuePersisted: false, allowIssueError: missingAllowIssue ? error.message : null };
   }
+  return { allowIssuePersisted: true };
 }
 async function sbRemoteArchiveDocSetItem(setId, docId, archived){
   if(!sbClient || !sbSession) throw new Error('Supabase is not connected.');
@@ -7375,7 +7382,7 @@ async function saveDocItemEdit(setId,docId){
       doc.templateFilePath=newPath;
       doc.templateFileName=tmplFile.name;
     }
-    await sbRemoteUpsertDocSetItem(setId,doc);
+    var _res=await sbRemoteUpsertDocSetItem(setId,doc);
   }catch(e){
     Object.assign(doc,prev);
     alert('Could not save changes: '+e.message);
@@ -7385,6 +7392,10 @@ async function saveDocItemEdit(setId,docId){
   saveDocSets();
   renderDocSetCardInPlace(setId);
   renderTable(); if(curW) rebuildModal(curW);
+  // Warn if the personalised-issuance flag was changed but the DB column is missing.
+  if(_res && _res.allowIssuePersisted===false && newAllowIssue!==prev.allowIssue){
+    alert('Saved — but the "Allow personalised document issuance" setting could NOT be stored in the database because the allow_issue column is missing (or Supabase\'s schema cache is stale).\n\nTo make this setting persist for everyone, run this once in Supabase → SQL Editor:\n\nALTER TABLE document_set_items ADD COLUMN IF NOT EXISTS allow_issue boolean NOT NULL DEFAULT false;\nNOTIFY pgrst, \'reload schema\';\n\nUntil then this tick will reset when the page reloads.');
+  }
 }
 
 function docItemTemplateClear(setId, docId){
