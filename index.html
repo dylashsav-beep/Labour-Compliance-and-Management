@@ -5327,6 +5327,23 @@ async function initWorkerPortal(workerId){
   }
   wpSwitch('docs');
 }
+async function wpDownloadFile(path, name){
+  if(!sbClient||!path) return;
+  const btn=event?.currentTarget;
+  const origTxt=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='…';}
+  try{
+    const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path,300,{download:name||'document'});
+    if(error||!data?.signedUrl) throw new Error(error?.message||'Could not create download link');
+    const a=document.createElement('a');
+    a.href=data.signedUrl;a.download=name||'document';a.target='_blank';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){
+    alert('Download failed: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=origTxt||'Download';}
+  }
+}
 async function wpLoadSubmissions(){
   if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   try{
@@ -5435,10 +5452,10 @@ async function renderWPDocs(){
           ${hasPending?`<div class="wp-pending-badge">${t('awaitingReview')}</div>`:''}
           ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
           ${infoPanel}
-          ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="sbSignedDownload('${_p}','${_n}',true)">${t('download')}</button></div>`;})():''}
+          ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="wpDownloadFile('${_p}','${_n}')">${t('download')}</button></div>`;})():''}
         </div>
       </div>
-      ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");return`<div class="wp-template-banner" style="background:#ede9fe;border-color:#c4b5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#6d28d9;">📤 Personalised document to sign</div><div class="wp-template-banner-sub" style="color:#5b21b6;">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="sbSignedDownload('${_ip}','${_in}',true)">Download</button></div>`;})()}
+      ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");return`<div class="wp-template-banner" style="background:#ede9fe;border-color:#c4b5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#6d28d9;">📤 Personalised document to sign</div><div class="wp-template-banner-sub" style="color:#5b21b6;">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="wpDownloadFile('${_ip}','${_in}')">Download</button></div>`;})()}
       ${isOpen?`<div class="wp-submit-form">
         <div><label>${t('expiryDate')}</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.expiry||''}"/></div>
         <div><label>${t('issueDate')}</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issue||''}"/></div>
