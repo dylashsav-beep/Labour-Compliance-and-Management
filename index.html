@@ -2547,6 +2547,7 @@ let sbLocalWorkerRecoverySnapshot = []; // only used to help recover older local
 let sbRemoteWorkerCount = null;
 let sbLastWorkerLoadProblem = '';
 let sbLastWorkerLoadAt = null;
+let issuedDocuments = [];
 let sbProfile = null;
 let sbUserRole = 'viewer';
 let sbUserActive = false;
@@ -2573,7 +2574,7 @@ function requireAction(action, label){ if(canAction(action)) return true; alert(
 function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
-  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
+  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents'];
   const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
@@ -4779,6 +4780,7 @@ function rebuildModal(id){
           </div>
           <div class="doc-controls">
             ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
+            ${(()=>{const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&x.status==='pending_signature');return ai?`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">📤 Issued</span><button class="file-rm" onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="margin-left:2px;">Revoke</button>`:sbCanWriteTable('worker_documents')?`<button class="attach-btn" style="background:#7c3aed;color:#fff;border-color:#7c3aed;" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:'';})()}
             <select class="status-select ${st}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
               <option value="ok"       ${st==='ok'?'selected':''}>Valid</option>
               <option value="expiring" ${st==='expiring'?'selected':''}>Expiring</option>
@@ -4923,6 +4925,7 @@ let wpSubmissions = []; // pending submissions for current worker (worker mode) 
 let wpActiveTab = 'docs';
 let wpDocFilter = 'missing'; // 'missing' | 'expiring' | 'ok' | 'all'
 let wpDocSubmitOpen = {}; // {docKey: true} tracks which submit forms are open
+let wpIssuedDocs = [];
 let wpAccomAssignments = [];
 let wpVehAssignments = [];
 let wpToolAssignments = [];
@@ -5284,6 +5287,7 @@ function wpLoadPortalData(data){
   wpVehicles=(data.vehicles||[]).map(v=>({id:v.id,desc:v.description||'',reg:v.registration_plate||''}));
   wpTools=(data.tools||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||''}));
   wpReturnRequests=(data.return_requests||[]);
+  wpIssuedDocs=(data.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
 }
 
 // Worker portal init — called from sbAfterAuth when worker login detected
@@ -5329,6 +5333,7 @@ async function wpLoadSubmissions(){
     if(error) throw error;
     wpSubmissions=(data?.submissions)||[];
     wpReturnRequests=(data?.return_requests)||[];
+    wpIssuedDocs=(data?.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
   }catch(e){ console.warn('[TMC] wpLoadSubmissions:',e.message); }
 }
 function wpSwitch(tab){
@@ -5430,6 +5435,7 @@ async function renderWPDocs(){
           ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
           ${infoPanel}
           ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="sbSignedDownload('${_p}','${_n}',true)">${t('download')}</button></div>`;})():''}
+          ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");return`<div class="wp-template-banner" style="border-color:#7c3aed;background:#faf5ff;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#7c3aed;">📤 Personalised document ready to sign</div><div class="wp-template-banner-sub">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="sbSignedDownload('${_ip}','${_in}',true)">Download</button></div>`;})()}
         </div>
       </div>
       ${isOpen?`<div class="wp-submit-form">
@@ -5941,7 +5947,7 @@ function renderAdminPendingSubmissions(){
       <div style="font-size:20px;">${docItem.icon||'📄'}</div>
       <div class="pending-sub-info">
         <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${esc(docItem.name)}</div>
-        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}${issuedDocuments.some(x=>x.workerId===s.worker_id&&x.docKey===s.doc_key&&x.status==='pending_signature')?` <span style="display:inline-block;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">↩ Return of issued doc</span>`:''}</div>
         <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
           ${s.expiry_date?`<span>Expiry: <strong>${s.expiry_date}</strong></span>`:''}
           ${s.issue_date?`<span>Issue: <strong>${s.issue_date}</strong></span>`:''}
@@ -5996,8 +6002,59 @@ async function approveSubmission(subId){
     }).eq('id',subId);
     wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
     approvalsHistory.unshift({...sub,_type:'document',status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:sbSession.user.email,review_notes:reviewNotes||null});
+    const _issuedDoc=issuedDocuments.find(d=>d.workerId===sub.worker_id&&d.docKey===sub.doc_key&&d.status==='pending_signature');
+    if(_issuedDoc){ try{ await sbClient.from('issued_documents').update({status:'returned'}).eq('id',_issuedDoc.id); issuedDocuments=issuedDocuments.map(d=>d.id===_issuedDoc.id?{...d,status:'returned'}:d); sbClient.storage.from(SB_BUCKET).remove([_issuedDoc.filePath]).catch(()=>{}); }catch(_ie){ console.warn('[TMC] issued_doc cleanup failed:',_ie.message); } }
     renderAdminPendingSubmissions(); renderApprovalsHistory('approved'); renderTable(); if(curW) rebuildModal(curW);
   }catch(e){alert('Approve failed: '+e.message);}
+}
+function openIssueDocDialog(wid,did,docName){
+  const ex=document.getElementById('issueDocOverlay');if(ex)ex.remove();
+  const ov=document.createElement('div');ov.id='issueDocOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="font-size:16px;font-weight:700;color:#1a2035;margin-bottom:4px;">Issue Personalised Document</div>
+    <div style="font-size:13px;color:var(--text-l);margin-bottom:16px;">${esc(docName)}</div>
+    <div style="margin-bottom:12px;"><label style="font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:6px;">Select file to issue to worker</label><input type="file" id="issueDocFile" accept=".pdf,.doc,.docx" style="font-size:13px;width:100%;"/></div>
+    <div style="font-size:11px;color:var(--text-l);margin-bottom:16px;">The worker will see a Download button in their portal. Once they upload the signed copy it will appear in Approvals for your review.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn" onclick="document.getElementById('issueDocOverlay').remove()">Cancel</button>
+      <button class="btn btn-primary" id="issueDocSubmitBtn" onclick="issueDocumentToWorker('${wid}','${did}')">Issue Document</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function issueDocumentToWorker(wid,did){
+  const fileInput=document.getElementById('issueDocFile');
+  const file=fileInput?.files?.[0];
+  if(!file){alert('Please select a file to issue.');return;}
+  const btn=document.getElementById('issueDocSubmitBtn');
+  if(btn){btn.disabled=true;btn.textContent='Uploading…';}
+  const ext=file.name.split('.').pop();
+  const filePath=`issued-docs/${wid}/${did}/${Date.now()}.${ext}`;
+  try{
+    const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
+    if(upErr) throw upErr;
+    const oid=currentOrgId||SITE_ORG_ID;
+    const newId=crypto.randomUUID();
+    const {error:dbErr}=await sbClient.from('issued_documents').insert({id:newId,worker_id:wid,doc_key:did,file_path:filePath,file_name:file.name,issued_by:sbSession?.user?.email||'',issued_at:new Date().toISOString(),status:'pending_signature',active:true,org_id:oid});
+    if(dbErr) throw dbErr;
+    issuedDocuments.push({id:newId,workerId:wid,docKey:did,filePath,fileName:file.name,issuedBy:sbSession?.user?.email||'',issuedAt:new Date().toISOString(),status:'pending_signature'});
+    document.getElementById('issueDocOverlay')?.remove();
+    rebuildModal(wid);
+  }catch(e){
+    sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
+    alert('Failed to issue document: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='Issue Document';}
+  }
+}
+async function revokeIssuedDoc(issueId,filePath){
+  if(!confirm('Revoke this issued document? The worker will no longer be able to download it.'))return;
+  try{
+    await sbClient.from('issued_documents').update({active:false}).eq('id',issueId);
+    if(filePath)sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
+    issuedDocuments=issuedDocuments.filter(d=>d.id!==issueId);
+    if(curW)rebuildModal(curW);
+  }catch(e){alert('Failed to revoke issued document: '+e.message);}
 }
 async function rejectSubmission(subId){
   const sub=wpSubmissions.find(s=>s.id===subId); if(!sub) return;
@@ -9633,6 +9690,7 @@ async function sbPersistAll(force=false){
     await sbUpsertRows('tool_assignments',ta);
     await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
+  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false,org_id:oid})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -9857,7 +9915,7 @@ async function sbLoadAll(){
     }catch(e){ clearTimeout(timer); tableErr(name,e); return fallback; }
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
@@ -9879,7 +9937,8 @@ async function sbLoadAll(){
       q('resource_events', sbClient.from('resource_events').select('*').eq('active',true).order('event_date',{ascending:false}), []),
       q('tools', sbClient.from('tools').select('*').eq('active',true).order('name'), []),
       q('tool_assignments', sbClient.from('tool_assignments').select('*').eq('active',true), []),
-      q('tool_charges', sbClient.from('tool_charges').select('*').eq('active',true), [])
+      q('tool_charges', sbClient.from('tool_charges').select('*').eq('active',true), []),
+      q('issued_documents', sbClient.from('issued_documents').select('*').eq('active',true).order('issued_at',{ascending:false}), [])
     ]);
 
     if(workerData === null){
@@ -9919,6 +9978,7 @@ async function sbLoadAll(){
     tools=(toolData||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||'',notes:t.notes||''}));
     toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null,issueFilePath:a.issue_file_path||null,issueFileName:a.issue_file_name||null,returnFilePath:a.return_file_path||null,returnFileName:a.return_file_name||null}); });
     toolCharges=(toolChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
+    issuedDocuments=(issuedDocsData||[]).map(d=>({id:d.id,workerId:d.worker_id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};
@@ -10052,7 +10112,7 @@ async function sbUpdatePassword(){
   }
 }
 async function sbLogout(){
-  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null; wpAccomAssignments=[]; wpVehAssignments=[]; wpToolAssignments=[]; wpProperties=[]; wpVehicles=[]; wpTools=[]; wpReturnRequests=[];
+  wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null; wpAccomAssignments=[]; wpVehAssignments=[]; wpToolAssignments=[]; wpProperties=[]; wpVehicles=[]; wpTools=[]; wpReturnRequests=[]; wpIssuedDocs=[];
   document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
