@@ -3060,11 +3060,9 @@ async function sbRemoteUpsertDocSetItem(setId, doc){
   };
   const { error } = await sbClient.from('document_set_items').upsert(row);
   if(error){
-    if(error.message?.includes('allow_issue') || (error.code==='42703' && error.message?.includes('column'))){
-      const {allow_issue:_ai,...rowFallback}=row;
-      const {error:e2}=await sbClient.from('document_set_items').upsert(rowFallback);
-      if(e2) throw e2;
-    } else throw error;
+    const {allow_issue:_ai,...rowFallback}=row;
+    const {error:e2}=await sbClient.from('document_set_items').upsert(rowFallback);
+    if(e2) throw e2;
   }
 }
 async function sbRemoteArchiveDocSetItem(setId, docId, archived){
@@ -9709,9 +9707,10 @@ async function sbPersistAll(force=false){
   const dsi=[];
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,allow_issue:!!d.allowIssue,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   try{ await sbUpsertRows('document_set_items',dsi); }catch(dsiErr){
-    if(dsiErr.message?.includes('allow_issue') || (dsiErr.code==='42703' && dsiErr.message?.includes('column'))){
-      await sbUpsertRows('document_set_items', dsi.map(({allow_issue:_ai,...r})=>r));
-    } else throw dsiErr;
+    console.warn('[TMC] document_set_items sync failed ('+dsiErr.message+'), retrying without allow_issue');
+    try{ await sbUpsertRows('document_set_items', dsi.map(({allow_issue:_ai,...r})=>r)); }catch(dsiErr2){
+      console.warn('[TMC] document_set_items sync skipped:', dsiErr2.message);
+    }
   }
   await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',contact_phone:p.phone||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
