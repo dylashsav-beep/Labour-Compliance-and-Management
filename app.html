@@ -2548,6 +2548,8 @@ let sbLoadStartTime = null;
 let sbHasLoadedRemote = false;
 let sbLastLoadedAt = 0;      // ms timestamp of last successful sbLoadAll() completion
 let sbDeferredSync = false;  // true when a save was requested while sbIsLoading; fired after load
+let sbPendingSync = false;   // true when state has changed locally but the debounced sync has not yet completed — used to flush on tab-hide/unload so no change is lost on a quick refresh
+let sbSyncInFlight = false;  // true while sbPersistAll is actively running
 let sbRealtimeChannel = null;
 let sbRemoteReloadTimer = null;
 let sbLivePollTimer = null;
@@ -4567,6 +4569,23 @@ async function saveProjectAssignment(){
     }
   }
 
+  // Write the assignment + its contract-file rows to Supabase immediately so the just-uploaded
+  // files persist even if the page is refreshed before the debounced sync runs.
+  async function _persistPAImmediate(id){
+    const a=projectAssignments.find(x=>x.id===id); if(!a||!sbClient||!sbSession) return;
+    const oid=currentOrgId||SITE_ORG_ID;
+    try{
+      if(sbCanWriteTable('project_assignments')){
+        const {error}=await sbClient.from('project_assignments').upsert({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid},{onConflict:'id'});
+        if(error) console.warn('[TMC] saveProjectAssignment: immediate assignment write failed (will retry on sync):',error.message);
+      }
+      if(sbCanWriteTable('project_assignment_files')){
+        const rows=(a.contractFiles||[]).map((f,i)=>(f.file_path||f.storagePath)?{id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}:null).filter(Boolean);
+        if(rows.length){ const {error:fe}=await sbClient.from('project_assignment_files').upsert(rows,{onConflict:'id'}); if(fe) console.warn('[TMC] saveProjectAssignment: immediate file write failed (will retry on sync):',fe.message); }
+      }
+    }catch(e){ console.warn('[TMC] saveProjectAssignment: immediate DB write error, relying on sync:',e.message); }
+  }
+
   if(editingPAId){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx > -1){
@@ -4580,6 +4599,7 @@ async function saveProjectAssignment(){
         projectAssignments[idx].startDate = document.getElementById('paStart').value;
         projectAssignments[idx].endDate   = document.getElementById('paEnd').value;
         projectAssignments[idx].contractFiles = allFiles;
+        await _persistPAImmediate(editingPAId);
         savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW); return;
       }
       projectAssignments[idx] = {id:editingPAId, wid:document.getElementById('paWorker').value,
@@ -4598,6 +4618,7 @@ async function saveProjectAssignment(){
       rate:document.getElementById('paRate').value, rateType:document.getElementById('paRateType').value,
       notes:document.getElementById('paNotes').value.trim(), contractFiles:uploadedNew});
   }
+  await _persistPAImmediate(assignmentId);
   savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW);
 }
 
@@ -9048,6 +9069,7 @@ async function saveToolAssignment(){
     }catch(e){ console.warn('[TMC] tool proof upload failed:',e.message); return {path:null,name:null}; }
   }
 
+  let _savedId=assignToolEntryId;
   if(assignToolEntryId){
     const entry=toolHistory[assignToolWid].find(a=>a.id===assignToolEntryId);
     if(entry){
@@ -9057,12 +9079,24 @@ async function saveToolAssignment(){
     }
   } else {
     const newId=crypto.randomUUID();
+    _savedId=newId;
     const newEntry={id:newId,toolId,startDate:document.getElementById('assignToolStart').value,endDate:document.getElementById('assignToolEnd').value,notes:document.getElementById('assignToolNotes').value.trim(),chargeToOperative:charge,weeklyChargeAmount:chargeAmt,issueFilePath:null,issueFileName:null,returnFilePath:null,returnFileName:null};
     if(issueFile){ const r=await uploadProofFile(issueFile,newId,'issue'); if(r.path){newEntry.issueFilePath=r.path;newEntry.issueFileName=r.name;} }
     if(returnFile){ const r=await uploadProofFile(returnFile,newId,'return'); if(r.path){newEntry.returnFilePath=r.path;newEntry.returnFileName=r.name;} }
     toolHistory[assignToolWid].push(newEntry);
   }
-  saveToolHistory(); sbScheduleSync(); closeM('assignToolOverlay'); renderResources();
+  saveToolHistory();
+  // Write the tool_assignments row immediately so the just-uploaded proof file paths persist even if
+  // the page is refreshed before the debounced sync runs. Mirrors the worker-document-file fix.
+  const _savedEntry=(toolHistory[assignToolWid]||[]).find(a=>a.id===_savedId);
+  if(_savedEntry && sbClient && sbSession && sbCanWriteTable('tool_assignments')){
+    const oid=currentOrgId||SITE_ORG_ID;
+    try{
+      const {error}=await sbClient.from('tool_assignments').upsert({id:_savedEntry.id,worker_id:assignToolWid,tool_id:_savedEntry.toolId,start_date:sbSafeDate(_savedEntry.startDate),end_date:sbSafeDate(_savedEntry.endDate),notes:_savedEntry.notes||'',charge_to_operative:_savedEntry.chargeToOperative||false,weekly_charge_amount:_savedEntry.weeklyChargeAmount||null,issue_file_path:_savedEntry.issueFilePath||null,issue_file_name:_savedEntry.issueFileName||null,return_file_path:_savedEntry.returnFilePath||null,return_file_name:_savedEntry.returnFileName||null,active:true,org_id:oid},{onConflict:'id'});
+      if(error) console.warn('[TMC] saveToolAssignment: immediate DB write failed (will retry on sync):',error.message);
+    }catch(e){ console.warn('[TMC] saveToolAssignment: tool_assignments table unavailable, relying on sync:',e.message); }
+  }
+  sbScheduleSync(); closeM('assignToolOverlay'); renderResources();
   if(curW===assignToolWid) rebuildModal(curW);
 }
 function clearToolAssignment(){
@@ -9686,11 +9720,22 @@ function sbStartRealtime(){
     window.addEventListener('offline',()=>{
       sbSetStatus('Supabase: offline', false);
     });
+    // Flush pending changes the moment the tab is hidden (fires on refresh, navigation, tab switch,
+    // and phone sleep — earlier and more reliably than 'beforeunload'). This closes the 650ms
+    // debounce window so a quick refresh can never silently drop an unsaved change.
+    document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden') sbFlushPendingSync(); });
+    window.addEventListener('pagehide', sbFlushPendingSync);
+    // Last-resort guard: if a save is still queued or mid-flight as the page unloads, warn the user
+    // so they don't lose data by closing too early. Browsers show a generic "Leave site?" prompt.
+    window.addEventListener('beforeunload',(e)=>{
+      if(sbPendingSync || sbSyncInFlight){ sbFlushPendingSync(); e.preventDefault(); e.returnValue=''; return ''; }
+    });
   }
 }
 
 function sbScheduleSync(){
   if(!sbReady||!sbSession||!sbHasLoadedRemote) return;
+  sbPendingSync=true; // mark unsaved local changes so flush-on-exit can persist them before a refresh loses them
   if(sbIsLoading){ sbDeferredSync=true; return; } // queue it — fired after sbLoadAll() finishes
   clearTimeout(sbSyncTimer);
   sbSyncTimer=setTimeout(()=>{
@@ -9702,8 +9747,15 @@ function sbScheduleSync(){
     },30000);
     sbPersistAll()
       .then(()=>{ clearTimeout(_syncWatchdog); sbSetStatus('Supabase: synced',true); })
-      .catch(e=>{ clearTimeout(_syncWatchdog); console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message,false); });
+      .catch(e=>{ clearTimeout(_syncWatchdog); sbSyncInFlight=false; console.error('Supabase sync failed',e); sbSetStatus('Supabase: sync error — '+e.message,false); });
   },650);
+}
+// Flush any pending local change to Supabase immediately (bypass the 650ms debounce).
+// Called when the tab is about to be hidden/closed so a quick refresh can never drop an unsaved change.
+function sbFlushPendingSync(){
+  if(!sbPendingSync || !sbReady || !sbSession || !sbClient || sbIsLoading || sbSyncInFlight) return;
+  clearTimeout(sbSyncTimer);
+  sbPersistAll().catch(e=>{ sbSyncInFlight=false; console.warn('[TMC] flush-on-exit sync failed:', e.message); });
 }
 async function sbForceSync(){ try{ await sbPersistAll(true); alert('Synced to Supabase.'); }catch(e){ alert('Sync failed: '+e.message); } }
 
@@ -9805,6 +9857,7 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
 async function sbPersistAll(force=false){
   if(!sbReady||!sbSession||!sbClient||sbIsLoading) return;
   if(!force && !sbHasLoadedRemote) return;
+  sbSyncInFlight=true;
   sbSuppressRealtimeUntil = Date.now() + 2500;
   sbSetStatus('Supabase: syncing…', true);
   try{ await sbUploadEmbeddedFiles(); }
@@ -9865,6 +9918,7 @@ async function sbPersistAll(force=false){
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:false,org_id:oid})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
+  sbPendingSync=false; sbSyncInFlight=false; // all local state successfully persisted
   sbSetStatus('Supabase: synced', true);
 }
 
