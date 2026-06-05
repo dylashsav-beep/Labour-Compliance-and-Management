@@ -9807,6 +9807,9 @@ async function sbUpsertRows(table, rows){
 }
 async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
   if(!sbClient||!sbSession) return;
+  // A doc_key is "active again" if any currently-loaded document set still contains it (docSetItems only
+  // holds active items). Used to skip stale question-deletions that would otherwise re-delete live data.
+  const _docKeyActive=(key)=> !!key && Object.values(docSetItems||{}).some(arr=>(arr||[]).some(d=>d.id===key));
   for(const it of items||[]){
     if(!it || it.restored) continue;
     const p=it.payload||{}, m=p._meta||{};
@@ -9832,16 +9835,22 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
         if(p.set?.id && sbCanWriteTable('document_sets')) await sbClient.from('document_sets').update({active:false}).eq('id',p.set.id);
         if(p.set?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('document_set_id',p.set.id);
       } else if(it.type==='document_set_item'){
-        if(p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
+        // Stale-deletion guard (see group_delete below): never re-deactivate a question that is live again.
+        if(!_docKeyActive(p.doc?.id) && p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
       } else if(it.type==='document_set_item_group_delete'){
-        if(p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
-        // Scope the worker_documents / file deactivation to ONLY the workers that had this doc at
-        // delete time. A blanket .eq('doc_key',…) update re-runs on every sync and would clobber any
-        // NEW upload to the same doc_key (e.g. BSN) across all workers — orphaning the fresh file on
-        // the next reload. Matching sbRemoteDeleteDocSetItem's scoped .in('id', …) keeps it one-shot.
-        const _grpIds=(p.workerData||[]).map(x=>`${x.wid}__${p.doc?.id}`);
-        if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_documents')) await sbClient.from('worker_documents').update({active:false}).in('id',_grpIds);
-        if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_document_files')) await sbClient.from('worker_document_files').update({active:false}).in('worker_document_id',_grpIds);
+        // STALE-DELETION GUARD — critical. sbApplyArchivedDeletionsToSupabase re-runs on EVERY sync.
+        // If a document question (e.g. BSN) was deleted and later RE-ADDED, this archived entry would
+        // otherwise keep re-deactivating that question's worker_documents AND worker_document_files on
+        // every single sync — so a freshly uploaded file is silently switched off and vanishes on the
+        // next reload. If the doc_key is an active question anywhere again, the deletion is stale: skip it.
+        if(!_docKeyActive(p.doc?.id)){
+          if(p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
+          // Scope the deactivation to ONLY the workers that had this doc at delete time (never a blanket
+          // .eq('doc_key',…) that would also hit unrelated workers).
+          const _grpIds=(p.workerData||[]).map(x=>`${x.wid}__${p.doc?.id}`);
+          if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_documents')) await sbClient.from('worker_documents').update({active:false}).in('id',_grpIds);
+          if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_document_files')) await sbClient.from('worker_document_files').update({active:false}).in('worker_document_id',_grpIds);
+        }
       } else if(it.type==='property'){
         if(p.property?.id && sbCanWriteTable('properties')) await sbClient.from('properties').update({active:false}).eq('id',p.property.id);
         if(p.property?.id && sbCanWriteTable('accommodation_assignments')) await sbClient.from('accommodation_assignments').update({active:false}).eq('property_id',p.property.id);
