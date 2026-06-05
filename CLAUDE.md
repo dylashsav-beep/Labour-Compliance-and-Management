@@ -179,7 +179,9 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `worker_template_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing all sessions to read from doc-templates/ path |
 | `add_worker_types_to_settings.sql` | ⏳ Pending | worker_types JSONB column on settings table for custom worker type definitions |
 | `reactivate_orphaned_doc_parents.sql` | ⚠️ Superseded | First recovery attempt (found 0 — both parent & file were deactivated, not just the parent). Use reactivate_group_deleted_docs.sql instead. |
-| `reactivate_group_deleted_docs.sql` | ⏳ Pending | One-time recovery for the BSN-vanishing bug: reactivates worker_documents AND their files that a stale group-delete re-deactivated on every sync, for questions that are active again. Preserves individual ✕ file deletions. Run after the code fix is deployed. |
+| `reactivate_stale_doc_set_items.sql` | ✅ Run | Reactivates document_set_items stale-deactivated by the group-delete bug. Run FIRST. |
+| `reactivate_group_deleted_docs.sql` | ✅ Run | Reactivates worker_documents + files for doc_keys now active. Run SECOND (after stale_doc_set_items). |
+| `reactivate_orphaned_files.sql` | ⏳ Pending | Final recovery: reactivates worker_document_files still inactive after the above two migrations (62 files: vca_vol×51, vca×7, vog/payroll/scc/twv×1 each). Run this last. |
 
 ---
 
