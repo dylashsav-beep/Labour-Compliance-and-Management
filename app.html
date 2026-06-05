@@ -9814,9 +9814,20 @@ async function sbUpsertRows(table, rows){
 }
 async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
   if(!sbClient||!sbSession) return;
-  // A doc_key is "active again" if any currently-loaded document set still contains it (docSetItems only
-  // holds active items). Used to skip stale question-deletions that would otherwise re-delete live data.
-  const _docKeyActive=(key)=> !!key && Object.values(docSetItems||{}).some(arr=>(arr||[]).some(d=>d.id===key));
+  // Query DB for currently-active doc_keys. We cannot rely on the in-memory docSetItems because
+  // sbLoadAll (triggered by realtime after attachF writes) can clear docSetItems if it sees
+  // document_set_items.active=false in DB — causing _docKeyActive to return false and the stale
+  // deletion to fire immediately after a successful upload. Using the DB directly reads the state
+  // that sbPersistAll just wrote (document_set_items were re-activated earlier in this same sync).
+  let _activeDocKeys = new Set();
+  try{
+    const {data:_dsiRows} = await sbClient.from('document_set_items').select('doc_key').eq('active',true);
+    (_dsiRows||[]).forEach(r=>r.doc_key && _activeDocKeys.add(r.doc_key));
+  }catch(_dsiErr){
+    // Fallback to in-memory on query failure — better than nothing
+    Object.values(docSetItems||{}).forEach(arr=>(arr||[]).forEach(d=>d.id && _activeDocKeys.add(d.id)));
+  }
+  const _docKeyActive=(key)=> !!key && _activeDocKeys.has(key);
   for(const it of items||[]){
     if(!it || it.restored) continue;
     const p=it.payload||{}, m=p._meta||{};
@@ -9883,10 +9894,8 @@ async function sbPersistAll(force=false){
   const userId=sbSession.user.id;
   const oid=currentOrgId||SITE_ORG_ID;
   // Remote guards: prevent stale browser tabs/local caches from reactivating archived items or worker inactive states.
-  const [inactiveDocSets,inactiveDocItems,inactiveWorkerDocs,inactiveProjectAssignments,inactiveProperties,inactiveVehicles,inactiveAccomAssignments,inactiveVehicleAssignments,remoteWorkerActive] = await Promise.all([
+  const [inactiveDocSets,inactiveProjectAssignments,inactiveProperties,inactiveVehicles,inactiveAccomAssignments,inactiveVehicleAssignments,remoteWorkerActive] = await Promise.all([
     sbInactiveIdSet('document_sets'),
-    sbInactiveIdSet('document_set_items'),
-    sbInactiveIdSet('worker_documents'),
     sbInactiveIdSet('project_assignments'),
     sbInactiveIdSet('properties'),
     sbInactiveIdSet('vehicles'),
@@ -9900,7 +9909,11 @@ async function sbPersistAll(force=false){
   const dsi=[];
   // allow_issue is intentionally excluded here — it is written directly by sbRemoteUpsertDocSetItem
   // so the background sync never touches it (avoids failure when the migration hasn't been run).
-  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocItems.has(rowId) || inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
+  // No inactiveDocItems guard here: if an item is in the in-memory docSetItems the admin can see it
+  // and it MUST be active in DB. The old guard prevented the sync from reactivating items that a stale
+  // deletion had deactivated, which in turn made _docKeyActive return false and caused the stale
+  // deletion to fire again on the next sync — a self-reinforcing loop that wiped uploaded files.
+  docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   try{ await sbUpsertRows('document_set_items',dsi); }catch(dsiErr){ console.warn('[TMC] document_set_items sync skipped:', dsiErr.message); }
   await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',contact_phone:p.phone||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
@@ -9910,7 +9923,7 @@ async function sbPersistAll(force=false){
     return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString(),org_id:oid};
   }));
   const wdocs=[], wfiles=[];
-  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveDocItems.has(itemId)) return; if(inactiveWorkerDocs.has(docId) && !Object.values(docSetItems||{}).some(arr=>(arr||[]).some(d=>d.id===did))) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
+  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
