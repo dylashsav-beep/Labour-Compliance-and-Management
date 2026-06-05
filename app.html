@@ -9835,11 +9835,13 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
         if(p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
       } else if(it.type==='document_set_item_group_delete'){
         if(p.setId && p.doc?.id && sbCanWriteTable('document_set_items')) await sbClient.from('document_set_items').update({active:false}).eq('id',`${p.setId}__${p.doc.id}`);
-        if(p.doc?.id && sbCanWriteTable('worker_documents')) await sbClient.from('worker_documents').update({active:false}).eq('doc_key',p.doc.id);
-        if(p.doc?.id && sbCanWriteTable('worker_document_files')) {
-          const ids=(p.workerData||[]).map(x=>`${x.wid}__${p.doc.id}`);
-          if(ids.length) await sbClient.from('worker_document_files').update({active:false}).in('worker_document_id',ids);
-        }
+        // Scope the worker_documents / file deactivation to ONLY the workers that had this doc at
+        // delete time. A blanket .eq('doc_key',…) update re-runs on every sync and would clobber any
+        // NEW upload to the same doc_key (e.g. BSN) across all workers — orphaning the fresh file on
+        // the next reload. Matching sbRemoteDeleteDocSetItem's scoped .in('id', …) keeps it one-shot.
+        const _grpIds=(p.workerData||[]).map(x=>`${x.wid}__${p.doc?.id}`);
+        if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_documents')) await sbClient.from('worker_documents').update({active:false}).in('id',_grpIds);
+        if(p.doc?.id && _grpIds.length && sbCanWriteTable('worker_document_files')) await sbClient.from('worker_document_files').update({active:false}).in('worker_document_id',_grpIds);
       } else if(it.type==='property'){
         if(p.property?.id && sbCanWriteTable('properties')) await sbClient.from('properties').update({active:false}).eq('id',p.property.id);
         if(p.property?.id && sbCanWriteTable('accommodation_assignments')) await sbClient.from('accommodation_assignments').update({active:false}).eq('property_id',p.property.id);
@@ -10261,10 +10263,15 @@ function sbInstallWrappers(){
           const oid=currentOrgId||SITE_ORG_ID;
           const docId=`${wid}__${did}`;
           const w=workers.find(x=>x.id===wid);
-          await sbClient.from('worker_documents').upsert({id:docId,worker_id:wid,doc_key:did,status:w?.docs?.[did]?.status||'missing',issue_date:sbSafeDate(w?.docs?.[did]?.issueDate)||null,expiry_date:sbSafeDate(w?.docs?.[did]?.date)||null,active:true,org_id:oid},{onConflict:'id'});
-          const fileId=`${docId}__${sbSlug(path).slice(-80)}`;
-          const {error:dbErr}=await sbClient.from('worker_document_files').upsert({id:fileId,worker_document_id:docId,worker_id:wid,file_name:file.name,file_path:path,mime_type:file.type||'',size_bytes:file.size||0,superseded:false,active:true,org_id:oid},{onConflict:'id'});
-          if(dbErr) console.warn('[TMC] attachF: direct DB write failed (will retry on sync):',dbErr.message);
+          // Parent worker_documents MUST exist & be active first — worker_document_files has a NOT NULL
+          // FK to it, so inserting the file before the parent (or while the parent is inactive) fails.
+          const {error:pErr}=await sbClient.from('worker_documents').upsert({id:docId,worker_id:wid,doc_key:did,status:w?.docs?.[did]?.status||'missing',issue_date:sbSafeDate(w?.docs?.[did]?.issueDate)||null,expiry_date:sbSafeDate(w?.docs?.[did]?.date)||null,active:true,org_id:oid},{onConflict:'id'});
+          if(pErr){ console.warn('[TMC] attachF: parent worker_documents write failed (will retry on sync):',pErr.message); }
+          else {
+            const fileId=`${docId}__${sbSlug(path).slice(-80)}`;
+            const {error:dbErr}=await sbClient.from('worker_document_files').upsert({id:fileId,worker_document_id:docId,worker_id:wid,file_name:file.name,file_path:path,mime_type:file.type||'',size_bytes:file.size||0,superseded:false,active:true,org_id:oid},{onConflict:'id'});
+            if(dbErr) console.warn('[TMC] attachF: direct DB write failed (will retry on sync):',dbErr.message);
+          }
         }
       }
       else { alert('Cannot upload: you are not signed in. Please sign in and try again — files cannot be saved without an active session.'); }

@@ -178,6 +178,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_doc_set_item_template.sql` | ⏳ Pending | template_file_name + template_file_path on document_set_items (worker-downloadable form templates) |
 | `worker_template_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing all sessions to read from doc-templates/ path |
 | `add_worker_types_to_settings.sql` | ⏳ Pending | worker_types JSONB column on settings table for custom worker type definitions |
+| `reactivate_orphaned_doc_parents.sql` | ⏳ Pending | One-time recovery: reactivates worker_documents wrongly deactivated by the group-delete bug (BSN files vanishing). Run after the code fix is deployed. |
 
 ---
 
