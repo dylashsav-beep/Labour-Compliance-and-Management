@@ -9939,6 +9939,27 @@ async function sbPersistAll(force=false){
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
+  // Auto-resolve stale worker_document_file deletions for files that are LIVE again.
+  // sbApplyArchivedDeletionsToSupabase re-runs on EVERY sync and deactivates files by file_path.
+  // A one-time ✕ deletion therefore re-fires forever — so any file that becomes active again
+  // (recovery migration, or simply a current file on an older worker) is silently switched off on
+  // the very next sync and vanishes on reload. This is the exact "uploads vanish for some old
+  // workers" bug. If a file's path is in the live set we just wrote, the deletion is stale: mark it
+  // restored so it never re-fires. Genuinely-deleted files are not in fileStore (rmFile removes them),
+  // so their deletion entries are left intact and the file stays deleted.
+  {
+    const _activeFilePaths = new Set(wfiles.map(f=>f.file_path).filter(Boolean));
+    let _staleFileResolved = false;
+    deletedItems = deletedItems.map(it=>{
+      if(!it.restored && it.type==='worker_document_file'){
+        const p=it.payload||{}, m=p._meta||{};
+        const fp=m.filePath || p.file?.file_path || p.file?.storagePath || p.file_path;
+        if(fp && _activeFilePaths.has(fp)){ _staleFileResolved=true; return {...it, restored:true}; }
+      }
+      return it;
+    });
+    if(_staleFileResolved) console.log('[TMC] Auto-resolved stale worker_document_file deletions for live files — file deletion loop broken');
+  }
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
   const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
