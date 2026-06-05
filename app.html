@@ -10205,6 +10205,30 @@ async function sbLoadAll(){
       return data ?? fallback;
     }catch(e){ clearTimeout(timer); tableErr(name,e); return fallback; }
   };
+  // Paginated read — PostgREST caps every request at 1000 rows by default, so any table that grows
+  // past 1000 active rows silently returns only the first page. That truncated worker_documents
+  // (1310 rows) so documents past the cutoff never loaded, and their files were dropped as "orphaned"
+  // even though both were fine in the DB. qPaged fetches every page until exhausted. makeBuilder is a
+  // FACTORY (not a builder) because .range()/.abortSignal() consume a builder. A stable .order() in
+  // the factory is required so pages don't skip or repeat rows.
+  const qPaged = async (name, makeBuilder, fallback) => {
+    const PAGE = 1000;
+    let all = [], from = 0;
+    while(true){
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(new Error('Query timeout: '+name)), 15000);
+      try{
+        const {data,error}=await makeBuilder().range(from, from+PAGE-1).abortSignal(ctrl.signal);
+        clearTimeout(timer);
+        if(error){ tableErr(name,error); return all.length?all:fallback; }
+        const batch = data||[];
+        all = all.concat(batch);
+        if(batch.length < PAGE) break;
+        from += PAGE;
+      }catch(e){ clearTimeout(timer); tableErr(name,e); return all.length?all:fallback; }
+    }
+    return all.length?all:fallback;
+  };
   try{
     const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
@@ -10212,10 +10236,10 @@ async function sbLoadAll(){
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
       q('projects', sbClient.from('projects').select('*').order('name'), []),
       q('workers', sbClient.from('workers').select('*').order('full_name'), null),
-      q('worker_documents', sbClient.from('worker_documents').select('*').eq('active',true), []),
-      q('worker_document_files', sbClient.from('worker_document_files').select('*').eq('active',true), []),
-      q('roster_week_allocations', sbClient.from('roster_week_allocations').select('*').eq('active',true), []),
-      q('project_assignments', sbClient.from('project_assignments').select('*').eq('active',true), []),
+      qPaged('worker_documents', ()=>sbClient.from('worker_documents').select('*').eq('active',true).order('id'), []),
+      qPaged('worker_document_files', ()=>sbClient.from('worker_document_files').select('*').eq('active',true).order('id'), []),
+      qPaged('roster_week_allocations', ()=>sbClient.from('roster_week_allocations').select('*').eq('active',true).order('id'), []),
+      qPaged('project_assignments', ()=>sbClient.from('project_assignments').select('*').eq('active',true).order('id'), []),
       q('project_assignment_files', sbClient.from('project_assignment_files').select('*').eq('active',true), []),
       q('properties', sbClient.from('properties').select('*').eq('active',true).order('name'), []),
       q('vehicles', sbClient.from('vehicles').select('*').eq('active',true).order('description'), []),
@@ -10223,8 +10247,8 @@ async function sbLoadAll(){
       q('vehicle_assignments', sbClient.from('vehicle_assignments').select('*').eq('active',true), []),
       q('deleted_items', sbClient.from('deleted_items').select('*').eq('restored',false).order('deleted_at',{ascending:false}), []),
       q('compliance_documents', sbClient.from('compliance_documents').select('*').eq('active',true).order('created_at',{ascending:false}), []),
-      q('accommodation_charges', sbClient.from('accommodation_charges').select('*').eq('active',true), []),
-      q('vehicle_charges', sbClient.from('vehicle_charges').select('*').eq('active',true), []),
+      qPaged('accommodation_charges', ()=>sbClient.from('accommodation_charges').select('*').eq('active',true).order('id'), []),
+      qPaged('vehicle_charges', ()=>sbClient.from('vehicle_charges').select('*').eq('active',true).order('id'), []),
       q('resource_events', sbClient.from('resource_events').select('*').eq('active',true).order('event_date',{ascending:false}), []),
       q('tools', sbClient.from('tools').select('*').eq('active',true).order('name'), []),
       q('tool_assignments', sbClient.from('tool_assignments').select('*').eq('active',true), []),
