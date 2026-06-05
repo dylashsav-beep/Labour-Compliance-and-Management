@@ -6129,21 +6129,28 @@ async function approveSubmission(subId){
       if(sub.issue_date) updates.issue_date=sub.issue_date;
       const {error}=await sbClient.from('worker_documents').upsert({id:docId,...updates,org_id:currentOrgId||SITE_ORG_ID});
       if(error) throw error;
-      // Update in-memory worker doc
+      // Update in-memory worker doc (use the same key names as sbLoadAll: .date / .issueDate)
       if(!w.docs) w.docs={};
       if(!w.docs[sub.doc_key]) w.docs[sub.doc_key]={};
-      if(sub.expiry_date) w.docs[sub.doc_key].expiry=sub.expiry_date;
-      if(sub.issue_date) w.docs[sub.doc_key].issue=sub.issue_date;
+      if(sub.expiry_date) w.docs[sub.doc_key].date=sub.expiry_date;
+      if(sub.issue_date) w.docs[sub.doc_key].issueDate=sub.issue_date;
       w.docs[sub.doc_key].status='ok';
-      // If there's a file, create a worker_document_files entry
+      // If there's a file, create a worker_document_files entry and update fileStore
       if(sub.file_path&&sbCanWriteTable('worker_document_files')){
-        const {error:fe}=await sbClient.from('worker_document_files').insert({
-          worker_id:sub.worker_id,worker_document_id:docId,
+        const fileId=`${docId}__${sbSlug(sub.file_path).slice(-80)}`;
+        const {error:fe}=await sbClient.from('worker_document_files').upsert({
+          id:fileId,worker_id:sub.worker_id,worker_document_id:docId,
           file_name:sub.file_name,file_path:sub.file_path,
-          size_bytes:sub.file_size||0,mime_type:sub.mime_type||'',active:true,
+          size_bytes:sub.file_size||0,mime_type:sub.mime_type||'',superseded:false,active:true,
           org_id:currentOrgId||SITE_ORG_ID
-        });
+        },{onConflict:'id'});
         if(fe) console.warn('[TMC] approveSubmission: file record failed:',fe.message);
+        else {
+          // Add to in-memory fileStore so the modal shows the file immediately without reload
+          if(!fileStore[sub.worker_id]) fileStore[sub.worker_id]={};
+          if(!fileStore[sub.worker_id][sub.doc_key]) fileStore[sub.worker_id][sub.doc_key]=[];
+          fileStore[sub.worker_id][sub.doc_key].push({name:sub.file_name,size:sub.file_size||0,type:sub.mime_type||'',file_path:sub.file_path,storagePath:sub.file_path,superseded:false});
+        }
       }
     }
     // Mark submission reviewed
@@ -6155,7 +6162,7 @@ async function approveSubmission(subId){
     approvalsHistory.unshift({...sub,_type:'document',status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:sbSession.user.email,review_notes:reviewNotes||null});
     const _issuedDoc=issuedDocuments.find(d=>d.workerId===sub.worker_id&&d.docKey===sub.doc_key&&d.status==='pending_signature');
     if(_issuedDoc){ try{ await sbClient.from('issued_documents').update({status:'returned'}).eq('id',_issuedDoc.id); issuedDocuments=issuedDocuments.map(d=>d.id===_issuedDoc.id?{...d,status:'returned'}:d); sbClient.storage.from(SB_BUCKET).remove([_issuedDoc.filePath]).catch(()=>{}); }catch(_ie){ console.warn('[TMC] issued_doc cleanup failed:',_ie.message); } }
-    renderAdminPendingSubmissions(); renderApprovalsHistory('approved'); renderTable(); if(curW) rebuildModal(curW);
+    renderAdminPendingSubmissions(); renderApprovalsHistory('approved'); renderTable(); if(curW) rebuildModal(curW); sbScheduleSync();
   }catch(e){alert('Approve failed: '+e.message);}
 }
 function openIssueDocDialog(wid,did,docName){
@@ -9903,7 +9910,7 @@ async function sbPersistAll(force=false){
     return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString(),org_id:oid};
   }));
   const wdocs=[], wfiles=[];
-  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveWorkerDocs.has(docId) || inactiveDocItems.has(itemId)) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
+  workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; const itemId=`${w.docSetId||''}__${did}`; if(inactiveDocItems.has(itemId)) return; if(inactiveWorkerDocs.has(docId) && !Object.values(docSetItems||{}).some(arr=>(arr||[]).some(d=>d.id===did))) return; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
   await sbUpsertRows('worker_documents',wdocs); await sbUpsertRows('worker_document_files',wfiles);
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
