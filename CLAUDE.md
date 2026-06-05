@@ -6,9 +6,24 @@
 
 ---
 
+## Site Structure — Four HTML Files
+
+| File | Purpose | Notes |
+|---|---|---|
+| `index.html` | **Marketing landing page** — work-force.nl root URL | Links to `login.html` and `worker.html`; no auth |
+| `login.html` | **Management sign-in page** | Email/password + magic link; redirects to `app.html` on success |
+| `worker.html` | **Worker portal** — standalone, email-entry login | Calls `get_worker_portal` RPC (anon); no Supabase Auth session |
+| `app.html` | **Management app** — compliance dashboard | All HTML/CSS/JS (~400KB); requires auth; formerly `index.html` |
+
+When making changes:
+- UI changes to the management dashboard → edit `app.html`
+- Login page changes → edit `login.html`
+- Worker portal changes → edit **both** `worker.html` (standalone) **and** the embedded wp* section in `app.html`
+- Marketing/landing page → edit `index.html`
+
 ## Architecture
 
-- **Single-file app**: All HTML, CSS, JS in `index.html` (~400KB). No build step, no framework.
+- **Single-file management app**: All HTML, CSS, JS in `app.html` (~400KB). No build step, no framework.
 - **Backend**: Supabase (auth, PostgreSQL database, Storage bucket `tmc-documents`)
 - **Hosting**: GitHub Pages (served from `main` branch)
 - **Git workflow**: develop on `claude/debug-error-400-S0q20`, then **immediately fast-forward merge to `main` and push both branches** in the same session. Never leave `main` behind. Every commit session ends with `main` = working branch.

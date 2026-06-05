@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>work-force.nl — My Documents</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1a3082;--navy-d:#112268;
+  --text:#1a2340;--text-m:#4a5568;--text-l:#7a8ba8;
+  --border:#dde3ec;--bg:#f1f5f9;
+  --red:#c53030;--green:#276749;
+}
+html,body{height:100%;font-family:'Inter',-apple-system,sans-serif;font-size:14px;background:var(--bg);}
+body{display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── Login ── */
+#loginScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;}
+.login-card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.09);width:100%;max-width:400px;padding:36px 32px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.login-logo-icon{width:40px;height:40px;background:#1e293b;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.login-logo-text{font-size:17px;font-weight:700;color:#1e293b;letter-spacing:-.02em;}
+.login-logo-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+.login-title{font-size:20px;font-weight:700;color:#1e293b;margin-bottom:6px;}
+.login-sub{font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.55;}
+.login-field label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;}
+.login-field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;color:#1e293b;outline:none;transition:border-color .15s;min-height:46px;}
+.login-field input:focus{border-color:#1e293b;}
+.login-btn{width:100%;margin-top:16px;padding:13px;background:#1e293b;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;min-height:48px;}
+.login-btn:hover{background:#0f172a;}
+.login-btn:disabled{background:#94a3b8;cursor:not-allowed;}
+.login-msg{font-size:13px;padding:10px 14px;border-radius:7px;margin-top:14px;display:none;}
+.login-msg.error{background:#fff5f5;color:var(--red);border:1px solid #fed7d7;}
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:#94a3b8;}
+.login-footer a{color:#94a3b8;text-decoration:none;}
+.login-footer a:hover{color:#475569;}
+
+/* ── Worker portal ── */
+#workerPortal{display:none;flex:1;flex-direction:column;}
+.wp-header{background:#1e293b;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
+.wp-header-left{min-width:0;}
+.wp-header-title{font-size:15px;font-weight:700;color:#fff;white-space:nowrap;letter-spacing:.01em;}
+.wp-header-name{font-size:12px;color:#94a3b8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.wp-header-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.wp-signout-btn{background:rgba(255,255,255,.1);color:#e2e8f0;border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
+.wp-signout-btn:active{background:rgba(255,255,255,.18);}
+.wp-lang-dd{position:relative;flex-shrink:0;}
+.wp-lang-dd-btn{display:flex;align-items:center;gap:5px;padding:7px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#e2e8f0;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;min-height:40px;transition:background .15s;}
+.wp-lang-dd-btn:hover{background:rgba(255,255,255,.18);}
+.wp-lang-caret{font-size:10px;opacity:.6;margin-left:1px;}
+.wp-lang-menu{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.14);z-index:200;overflow:hidden;min-width:148px;}
+.wp-lang-opt{display:flex;align-items:center;gap:9px;width:100%;padding:11px 14px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;text-align:left;}
+.wp-lang-opt:hover{background:#f1f5f9;color:#1e293b;}
+.wp-lang-opt.active{font-weight:700;color:#1e293b;}
+.wp-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.wp-tab{flex:1;min-width:72px;padding:14px 6px 12px;font-size:13px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
+.wp-tab.active{color:#1e293b;border-bottom-color:#1e293b;font-weight:700;}
+.wp-tab:hover:not(.active){color:#334155;}
+.wp-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;width:100%;}
+.wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
+.wp-filter-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:24px;}
+.wp-filter-tab{padding:10px 4px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
+.wp-filter-tab:active{opacity:.85;}
+.wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+.wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.wp-filter-tab.active[data-f="expired"]{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+.wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
+.wp-filter-tab.active[data-f="optional"]{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
+.wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
+.wp-empty-filter{text-align:center;padding:40px 16px;color:#94a3b8;font-size:14px;}
+.wp-empty-icon{font-size:36px;margin-bottom:10px;}
+.wp-doc-row{padding:16px;background:#fff;border-radius:12px;margin-bottom:10px;border:1px solid #e2e8f0;transition:box-shadow .15s;position:relative;}
+.wp-doc-row:last-child{margin-bottom:0;}
+.wp-doc-top{display:flex;align-items:flex-start;gap:12px;}
+.wp-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;width:32px;text-align:center;}
+.wp-doc-info{flex:1;min-width:0;}
+.wp-doc-name-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-bottom:6px;}
+.wp-doc-name{font-size:15px;font-weight:700;color:#1e293b;line-height:1.3;}
+.wp-doc-meta-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:4px;}
+.wp-doc-tip{font-size:12px;color:#64748b;font-style:italic;margin-top:6px;line-height:1.4;}
+.wp-expiry-tag{font-size:12px;color:#64748b;white-space:nowrap;}
+.wp-status-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;margin-top:4px;}
+.wp-status-pill.ok{background:#dcfce7;color:#166534;}
+.wp-status-pill.expiring{background:#fef3c7;color:#92400e;}
+.wp-status-pill.missing{background:#fee2e2;color:#b91c1c;}
+.wp-status-pill.expired{background:#fee2e2;color:#991b1b;}
+.wp-status-pill.opt-neutral{background:#f1f5f9;color:#475569;}
+.wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
+.wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
+.wp-pending-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-top:8px;}
+.wp-submit-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:14px;display:flex;flex-direction:column;gap:12px;}
+.wp-submit-form label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;}
+.wp-submit-form input,.wp-submit-form .form-input{width:100%;max-width:100%;box-sizing:border-box;min-height:46px;font-size:15px;-webkit-appearance:none;appearance:none;}
+.wp-submit-form input[type=file]{min-height:46px;padding:8px;}
+.wp-submit-row{display:flex;gap:10px;}
+.wp-submit-row .wp-doc-btn{flex:1;}
+.wp-doc-btn{display:block;width:100%;margin-top:14px;padding:13px 16px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:48px;transition:background .15s;font-family:inherit;}
+.wp-doc-btn:active{background:#047857;}
+.wp-doc-btn.cancel{background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;}
+.wp-doc-btn.cancel:active{background:#e2e8f0;}
+.wp-doc-btn-secondary{background:#f1f5f9!important;color:#475569!important;border:1px solid #e2e8f0!important;font-size:13px!important;padding:9px 16px!important;min-height:40px!important;margin-top:8px!important;}
+.wp-doc-btn-secondary:active{background:#e2e8f0!important;}
+.form-input{padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:#1e293b;outline:none;transition:border-color .15s;}
+.form-input:focus{border-color:#1e293b;}
+.wp-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:box-shadow .15s,border-color .15s;}
+.wp-assign-card:hover{border-color:#94a3b8;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.wp-assign-card:active{background:#f8fafc;}
+.wp-assign-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.wp-assign-meta{font-size:13px;color:#64748b;line-height:1.6;}
+.wp-assign-chevron{font-size:16px;color:#94a3b8;flex-shrink:0;}
+.wp-section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:20px 0 8px;}
+.wp-section-label:first-child{margin-top:0;}
+.wp-past-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;cursor:pointer;margin:16px 0 0;user-select:none;transition:background .12s;width:100%;font-family:inherit;}
+.wp-past-toggle:hover{background:#f1f5f9;}
+.wp-past-toggle-label{font-size:13px;font-weight:600;color:#475569;}
+.wp-past-toggle-arrow{font-size:14px;color:#94a3b8;transition:transform .2s;}
+.wp-past-toggle-arrow.open{transform:rotate(180deg);}
+.wp-call-link{display:inline-flex;align-items:center;gap:6px;color:#16a34a;font-size:14px;font-weight:700;text-decoration:none;padding:8px 14px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;}
+.wp-call-link:hover{background:#dcfce7;}
+#wpProjDetail{position:fixed;inset:0;background:#f1f5f9;z-index:120;display:none;overflow-y:auto;}
+.wp-proj-detail-header{display:flex;align-items:center;gap:12px;padding:14px 16px;background:#1e293b;color:#fff;position:sticky;top:0;z-index:5;}
+.wp-proj-back-btn{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:2px 6px;line-height:1;opacity:.8;}
+.wp-proj-back-btn:hover{opacity:1;}
+.wp-proj-detail-title{font-size:15px;font-weight:700;color:#fff;}
+.wp-proj-detail-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;}
+.wp-proj-info-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:14px;}
+.wp-proj-info-name{font-size:20px;font-weight:800;color:#1e293b;margin-bottom:4px;}
+.wp-proj-info-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid #f1f5f9;}
+.wp-proj-info-row:first-of-type{border-top:none;padding-top:14px;}
+.wp-proj-info-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;width:110px;flex-shrink:0;padding-top:1px;}
+.wp-proj-info-value{font-size:14px;font-weight:600;color:#1e293b;flex:1;}
+.wp-proj-map-link{display:inline-flex;align-items:center;gap:5px;color:#2563eb;font-size:14px;font-weight:600;text-decoration:none;}
+.wp-proj-map-link:hover{text-decoration:underline;}
+.wp-proj-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:14px;}
+.wp-proj-assign-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px;}
+.wp-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 16px;}
+.wp-profile-title{font-size:16px;font-weight:700;color:#1e293b;margin-bottom:16px;}
+.wp-profile-field{margin-bottom:14px;}
+.wp-profile-field label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:5px;}
+.wp-profile-field input,.wp-profile-field textarea{width:100%;box-sizing:border-box;min-height:46px;font-size:15px;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;color:#1e293b;outline:none;}
+.wp-profile-field input:focus,.wp-profile-field textarea:focus{border-color:#1e293b;}
+.wp-profile-save{width:100%;padding:14px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;min-height:50px;margin-top:6px;transition:background .15s;font-family:inherit;}
+.wp-profile-save:active{background:#047857;}
+.wp-readonly-field{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:14px;color:#475569;min-height:44px;display:flex;align-items:center;}
+.wp-filter-label{display:block;font-size:13px;font-weight:600;}
+.wp-doc-optional-intro{font-size:13px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;line-height:1.5;}
+.wp-doc-row:has(.wp-card-actions) .wp-doc-top{padding-right:72px;}
+.wp-card-actions{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:6px;z-index:1;}
+.wp-card-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;padding:0;flex-shrink:0;font-family:inherit;}
+.wp-card-icon-btn:hover,.wp-card-icon-btn:active{background:#e2e8f0;color:#1e293b;}
+.wp-info-panel{font-size:13px;color:#334155;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.6;}
+.wp-template-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;}
+.wp-template-banner-text{flex:1;min-width:0;}
+.wp-template-banner-label{font-size:12px;font-weight:700;color:#78350f;}
+.wp-template-banner-sub{font-size:11px;color:#92400e;margin-top:1px;}
+.wp-template-dl-btn{flex-shrink:0;padding:6px 12px;background:#f59e0b;border:none;border-radius:6px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;transition:background .15s;font-family:inherit;}
+.wp-template-dl-btn:hover{background:#d97706;}
+.wp-return-form{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:12px;}
+</style>
+</head>
+<body>
+
+<!-- Login screen -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🏗️</div>
+      <div>
+        <div class="login-logo-text">work-force.nl</div>
+        <div class="login-logo-sub">Labour Compliance &amp; Management</div>
+      </div>
+    </div>
+    <div class="login-title">My Documents</div>
+    <div class="login-sub">Enter your work email address to view your compliance documents and assignments.</div>
+    <div class="login-field">
+      <label for="wpEmailInput">Work email address</label>
+      <input type="email" id="wpEmailInput" placeholder="you@company.com" autocomplete="email"
+        onkeydown="if(event.key==='Enter')wpDirectLogin()"/>
+    </div>
+    <button class="login-btn" id="wpLoginBtn" onclick="wpDirectLogin()">View My Documents</button>
+    <div class="login-msg" id="wpLoginMsg"></div>
+    <div class="login-footer">
+      <a href="index.html">← work-force.nl</a>
+      &nbsp;·&nbsp;
+      <a href="login.html">Management Sign In</a>
+    </div>
+  </div>
+</div>
+
+<!-- Worker portal -->
+<div id="workerPortal" style="display:none;flex:1;flex-direction:column;">
+  <div class="wp-header">
+    <div class="wp-header-left">
+      <div class="wp-header-title" id="wpHeaderTitle">Worker Portal</div>
+      <div class="wp-header-name" id="wpHeaderName"></div>
+    </div>
+    <div class="wp-header-right">
+      <span id="wpStatusBadge"></span>
+      <div class="wp-lang-dd" id="wpLangDd">
+        <button class="wp-lang-dd-btn" id="wpLangDdBtn" onclick="wpToggleLangMenu(event)">
+          <span id="wpLangFlag">🇬🇧</span>
+          <span id="wpLangCode">EN</span>
+          <span class="wp-lang-caret">▾</span>
+        </button>
+        <div class="wp-lang-menu" id="wpLangMenu" style="display:none;">
+          <button class="wp-lang-opt" id="wpLangOptEN" onclick="wpSetLang('en')">🇬🇧 English</button>
+          <button class="wp-lang-opt" id="wpLangOptNL" onclick="wpSetLang('nl')">🇳🇱 Nederlands</button>
+          <button class="wp-lang-opt" id="wpLangOptRO" onclick="wpSetLang('ro')">🇷🇴 Română</button>
+        </div>
+      </div>
+      <button class="wp-signout-btn" id="wpSignOutBtn" onclick="wpSignOut()">Sign out</button>
+    </div>
+  </div>
+  <div class="wp-tabs">
+    <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">Documents</button>
+    <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Projects</button>
+    <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
+    <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
+  </div>
+  <div class="wp-body">
+    <div id="wpViewDocs"></div>
+    <div id="wpViewAssign" style="display:none;"></div>
+    <div id="wpViewProfile" style="display:none;"></div>
+    <div id="wpViewResources" style="display:none;"></div>
+  </div>
+  <!-- Project detail full-screen overlay -->
+  <div id="wpProjDetail">
+    <div class="wp-proj-detail-header">
+      <button class="wp-proj-back-btn" onclick="wpCloseProjDetail()">&#8592;</button>
+      <span class="wp-proj-detail-title" id="wpProjDetailTitle">Project Details</span>
+    </div>
+    <div class="wp-proj-detail-body" id="wpProjDetailBody"></div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
+const SB_BUCKET     = 'tmc-documents';
+const SITE_ORG_ID   = '00000000-0000-0000-0001-000000000001';
+const SET_NL_ZZP    = '00000000-0000-0000-0000-000000000001';
+const SET_NL_BLUE   = '00000000-0000-0000-0000-000000000002';
+
+// ── Supabase client ────────────────────────────────────────────────────────
+let sbClient = null;
+
+(function(){
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); };
+  document.head.appendChild(s);
+})();
+
+// ── Global state ───────────────────────────────────────────────────────────
+let settings = { warningDays: 60, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}] };
+let workers = [], docSets = [], docSetItems = {}, fileStore = {}, projectStore = [], projectAssignments = [];
+const DOC_REQ_KEY = 'tmc_doc_req_v1';
+let docReqOverrides = {};
+function loadDocReq(){ try{ const r=localStorage.getItem(DOC_REQ_KEY); if(r) docReqOverrides=JSON.parse(r); }catch(e){ docReqOverrides={}; } }
+loadDocReq();
+
+// Worker portal state
+let wpWorkerId = null, wpWorkerObj = null, wpWorkerEmail = null;
+let wpSubmissions = [], wpActiveTab = 'docs', wpDocFilter = 'missing';
+let wpDocSubmitOpen = {}, wpIssuedDocs = [];
+let wpAccomAssignments = [], wpVehAssignments = [], wpToolAssignments = [];
+let wpProperties = [], wpVehicles = [], wpTools = [], wpReturnRequests = [];
+let wpLang = 'en';
+
+const wpLangMeta = { en:{flag:'🇬🇧',code:'EN'}, nl:{flag:'🇳🇱',code:'NL'}, ro:{flag:'🇷🇴',code:'RO'} };
+const wpInfoCache = new Map();
+
+// ── Default document sets ──────────────────────────────────────────────────
+const DEFAULT_ZZP_DOCS = [
+  {id:'kvk',    name:'KvK Registration',           icon:'🏢',req:true, cat:'Registration',tip:'Chamber of Commerce registration'},
+  {id:'vog',    name:'Certificate of Conduct (VOG)',icon:'📋',req:true, cat:'Registration',tip:'Verklaring Omtrent het Gedrag – max 3 years'},
+  {id:'id',     name:'Valid ID',                    icon:'🪪',req:true, cat:'Registration',tip:'Passport or driving licence'},
+  {id:'bsn',    name:'BSN Verification',            icon:'🔢',req:true, cat:'Registration',tip:'Citizen service number confirmed'},
+  {id:'model',  name:'Model Agreement',             icon:'📄',req:true, cat:'Tax & DBA',   tip:'Approved model agreement (Wet DBA)'},
+  {id:'dba',    name:'DBA Assessment',              icon:'⚖️',req:true, cat:'Tax & DBA',   tip:'False self-employment assessment'},
+  {id:'btw',    name:'VAT Number',                  icon:'💶',req:true, cat:'Tax & DBA',   tip:'VAT identification number registered'},
+  {id:'aansp',  name:'Company insurance (WA verzekering)',icon:'🛡️',req:false,cat:'Insurance',tip:'Company liability insurance'},
+  {id:'arbo',   name:'Arbo Certificate',            icon:'⛑️',req:false,cat:'Safety',      tip:'Occupational health & safety compliance'},
+  {id:'vca_vol',name:'VCA VOL Certificate',         icon:'🦺',req:true, cat:'Safety',      tip:'VCA VOL – required for ZZP'},
+];
+const DEFAULT_BLUE_DOCS = [
+  {id:'id',      name:'Valid ID',                   icon:'🪪',req:true, cat:'Registration',tip:'Passport or driving licence'},
+  {id:'bsn',     name:'BSN Verification',           icon:'🔢',req:true, cat:'Registration',tip:'Citizen service number confirmed'},
+  {id:'vog',     name:'Certificate of Conduct',     icon:'📋',req:true, cat:'Registration',tip:'Verklaring Omtrent het Gedrag'},
+  {id:'contract',name:'Employment Contract',        icon:'✍️',req:true, cat:'Employment',  tip:'Signed employment contract'},
+  {id:'cao',     name:'CAO Confirmation',           icon:'📜',req:true, cat:'Employment',  tip:'Collective Labour Agreement acknowledgement'},
+  {id:'wml',     name:'Minimum Wage Check',         icon:'💰',req:true, cat:'Employment',  tip:'Wet minimumloon compliance confirmed'},
+  {id:'wav',     name:'Foreign Workers Act',        icon:'🌍',req:false,cat:'Migration',   tip:'Required for non-EU workers'},
+  {id:'twv',     name:'Work Permit (TWV)',           icon:'📑',req:false,cat:'Migration',   tip:'Tewerkstellingsvergunning – non-EU'},
+  {id:'vca',     name:'VCA Certificate',            icon:'🦺',req:true, cat:'Safety',      tip:'VCA Basic or VCA VOL'},
+  {id:'bhv',     name:'BHV Certificate',            icon:'🚑',req:false,cat:'Safety',      tip:'Emergency response certification'},
+  {id:'rie',     name:'RI&E',                       icon:'📊',req:true, cat:'Safety',      tip:'Risk inventory & evaluation'},
+  {id:'payroll', name:'Payroll Registration',       icon:'💳',req:true, cat:'Payroll',     tip:'SNA/NBBU/ABU certified payroll'},
+  {id:'greken',  name:'G-Account',                  icon:'🏦',req:false,cat:'Payroll',     tip:'Blocked account for payroll taxes'},
+];
+
+// ── Helper functions ───────────────────────────────────────────────────────
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function weekMonday(date){ const d=new Date(date);const day=d.getDay()||7;d.setDate(d.getDate()-day+1);d.setHours(0,0,0,0);return d; }
+function weekSunday(mon){ const d=new Date(mon);d.setDate(d.getDate()+6);return d; }
+function addWeeks(date,n){ const d=new Date(date);d.setDate(d.getDate()+n*7);return d; }
+
+function workerTypeLabel(typeId){
+  const wt=(settings.workerTypes||[]).find(t=>t.id===typeId);
+  return wt?wt.label:(typeId||'Unknown');
+}
+
+function docStatusAt(doc, refDate){
+  if(!doc||doc.status==='missing') return 'missing';
+  if(!doc.date) return 'ok';
+  const expiry=new Date(doc.date); expiry.setHours(0,0,0,0);
+  const ref=new Date(refDate); ref.setHours(0,0,0,0);
+  if(expiry<ref) return 'expired';
+  const daysLeft=(expiry-ref)/86400000;
+  if(daysLeft<=settings.warningDays) return 'expiring';
+  return 'ok';
+}
+
+function goStatusAt(w, refDate){
+  const tmpl=tmplForWorker(w);
+  const req=tmpl.filter(d=>d.req);
+  const anyMissing=req.some(d=>{ const s=docStatusAt(w.docs[d.id],refDate); return s==='missing'||s==='expired'; });
+  if(anyMissing) return 'nogo';
+  const anyExpiring=req.some(d=>docStatusAt(w.docs[d.id],refDate)==='expiring');
+  if(anyExpiring) return 'warning';
+  return 'go';
+}
+
+function tmplForWorker(w){
+  const items=(w.docSetId&&docSetItems[w.docSetId])
+    ?docSetItems[w.docSetId]
+    :(w.type==='zzp'?(docSetItems[SET_NL_ZZP]||DEFAULT_ZZP_DOCS):(docSetItems[SET_NL_BLUE]||DEFAULT_BLUE_DOCS));
+  const overrides=docReqOverrides[w.id]||{};
+  return items.map(d=>{
+    const baseReq=!d.archived&&!!d.req;
+    const ov=overrides[d.id];
+    const effectiveReq=d.archived?false:(ov!==undefined?!!ov:baseReq);
+    return{...d,req:effectiveReq,_baseReq:baseReq,_overridden:ov!==undefined};
+  });
+}
+
+// ── i18n ──────────────────────────────────────────────────────────────────
+const wpI18n = {
+  en:{
+    workerPortal:'Worker Portal',signOut:'Sign out',
+    tabDocs:'Documents',tabProjects:'Projects',tabProfile:'Profile',tabResources:'Resources',
+    missing:'Missing',expiring:'Expiring',expired:'Expired',valid:'Valid',optional:'Optional',
+    stValid:'Valid',stExpiring:'Expiring soon',stExpired:'Expired',stNotSubmitted:'Not submitted',stMissing:'Missing',
+    required:'Required',reqOptional:'Optional',awaitingReview:'⏳ Awaiting admin review',
+    expires:'Expires',expiredOn:'Expired',
+    officialFormRequired:'📎 Official form required',
+    templateSub:'Download, complete and submit this template — do not use your own format.',
+    download:'📥 Download',
+    expiryDate:'Expiry date',issueDate:'Issue date (optional)',
+    attachDoc:'Attach document (optional)',notes:'Notes (optional)',
+    notesPlaceholder:'Any notes for the reviewer…',
+    submitForReview:'Submit for review',cancel:'Cancel',
+    submitReplacement:'Submit replacement',submitUpdate:'Submit update',
+    emptyMissing:'No required documents missing',emptyExpiring:'No documents expiring soon',
+    emptyExpired:'No expired documents',emptyOk:'All documents are up to date',
+    emptyOptional:'No optional documents to submit',emptyDocs:'No documents',
+    optionalIntro:'These documents are not required but can be submitted to complete your profile.',
+    notSignedIn:'Not signed in.',
+    pleaseAddExpiry:'Please enter an expiry date or attach a file before submitting.',
+    fileUploadFailed:'File upload failed: ',
+    canStillSubmit:'You can still submit without a file — attach it separately if needed.',
+    couldNotSubmit:'Could not submit: ',
+    noProjects:'No projects on record.',
+    currentProject:'Current Project',currentProjects:'Current Projects',
+    client:'Client',period:'Period',ongoing:'ongoing',unknownProject:'Unknown project',
+    pastProjects:'Past Projects',
+    projectLeader:'Project Leader',contact:'Contact',location:'Location',
+    description:'Description',projectDetails:'Project Details',
+    yourAssignment:'Your Assignment',periodLabel:'Period',notesLabel:'Notes',
+    openInMaps:'📍 Open in Maps',
+    myProfile:'My Profile',
+    profileDesc:'Your details below are visible to your compliance team. Changes are saved for review.',
+    fullName:'Full Name',workerType:'Worker Type',
+    zzp:'ZZP (Self-employed)',employed:'Employed Worker',
+    nationality:'Nationality',emailAddress:'Email Address',
+    emailPlaceholder:'your@email.com',phoneNumber:'Phone Number',
+    phonePlaceholder:'e.g. +31 6 12345678',
+    phoneHelp:'Used by your compliance team to contact you.',
+    notesAdditional:'Notes / Additional info',saveChanges:'Save changes',
+    profileNotFound:'Profile not found.',
+    couldNotSaveProfile:'Could not save profile: ',profileSaved:'Profile saved ✓',
+    active:'Active',ended:'Ended',returningSoon:'Returning soon',
+    accommodation:'Accommodation',vehicles:'Vehicles',tools:'Tools',
+    propertyFallback:'Property',vehicleFallback:'Vehicle',toolFallback:'Tool',
+    noAccommodation:'No accommodation on record.',
+    noVehicles:'No vehicles on record.',
+    noTools:'No tools on record.',
+    noResources:'No resource assignments found.',
+    from:'From:',ongoingCap:'Ongoing',
+    returnPending:'Return proof submitted — awaiting review',
+    submitReturn:'Submit return / close out',
+    submitReturnTitle:'Submit Return / Close Out',
+    proposedReturnDate:'Proposed return / close-out date',
+    attachProof:'Attach proof photo / document',
+    returnFileUploadFailed:'File upload failed: ',
+    canStillSubmitReturn:'You can still submit without a file.',
+    returnSubmitted:'Return request submitted! Your manager will review and confirm the closure.',
+    helpInfo:'Help & info',openFormLink:'Open form / link',
+    workerNotFound:'Worker profile not found.',
+  },
+  nl:{
+    workerPortal:'Werknemersportaal',signOut:'Uitloggen',
+    tabDocs:'Documenten',tabProjects:'Projecten',tabProfile:'Profiel',tabResources:'Middelen',
+    missing:'Ontbrekend',expiring:'Verloopt',expired:'Verlopen',valid:'Geldig',optional:'Optioneel',
+    stValid:'Geldig',stExpiring:'Verloopt binnenkort',stExpired:'Verlopen',stNotSubmitted:'Niet ingediend',stMissing:'Ontbrekend',
+    required:'Verplicht',reqOptional:'Optioneel',awaitingReview:'⏳ Wacht op beoordeling',
+    expires:'Verloopt',expiredOn:'Verlopen',
+    officialFormRequired:'📎 Officieel formulier vereist',
+    templateSub:'Download, vul in en dien dit sjabloon in — gebruik geen eigen formaat.',
+    download:'📥 Downloaden',
+    expiryDate:'Vervaldatum',issueDate:'Uitgiftedatum (optioneel)',
+    attachDoc:'Document bijvoegen (optioneel)',notes:'Opmerkingen (optioneel)',
+    notesPlaceholder:'Opmerkingen voor de beoordelaar…',
+    submitForReview:'Indienen voor beoordeling',cancel:'Annuleren',
+    submitReplacement:'Vervanging indienen',submitUpdate:'Update indienen',
+    emptyMissing:'Geen verplichte documenten ontbrekend',emptyExpiring:'Geen documenten die binnenkort verlopen',
+    emptyExpired:'Geen verlopen documenten',emptyOk:'Alle documenten zijn up-to-date',
+    emptyOptional:'Geen optionele documenten in te dienen',emptyDocs:'Geen documenten',
+    optionalIntro:'Deze documenten zijn niet verplicht maar kunnen worden ingediend om uw profiel te voltooien.',
+    notSignedIn:'Niet ingelogd.',
+    pleaseAddExpiry:'Voer een vervaldatum in of voeg een bestand toe voordat u indient.',
+    fileUploadFailed:'Upload mislukt: ',
+    canStillSubmit:'U kunt nog steeds indienen zonder bestand — voeg het indien nodig afzonderlijk toe.',
+    couldNotSubmit:'Kon niet indienen: ',
+    noProjects:'Geen projecten geregistreerd.',
+    currentProject:'Huidig project',currentProjects:'Huidige projecten',
+    client:'Klant',period:'Periode',ongoing:'lopend',unknownProject:'Onbekend project',
+    pastProjects:'Eerdere projecten',
+    projectLeader:'Projectleider',contact:'Contact',location:'Locatie',
+    description:'Beschrijving',projectDetails:'Projectdetails',
+    yourAssignment:'Uw opdracht',periodLabel:'Periode',notesLabel:'Opmerkingen',
+    openInMaps:'📍 Openen in Maps',
+    myProfile:'Mijn profiel',
+    profileDesc:'De onderstaande gegevens zijn zichtbaar voor uw complianceteam. Wijzigingen worden opgeslagen voor beoordeling.',
+    fullName:'Volledige naam',workerType:'Type werknemer',
+    zzp:'ZZP (Zelfstandige)',employed:'Werknemer in loondienst',
+    nationality:'Nationaliteit',emailAddress:'E-mailadres',
+    emailPlaceholder:'uw@email.com',phoneNumber:'Telefoonnummer',
+    phonePlaceholder:'bijv. +31 6 12345678',
+    phoneHelp:'Wordt gebruikt door uw complianceteam om contact met u op te nemen.',
+    notesAdditional:'Opmerkingen / Aanvullende informatie',saveChanges:'Wijzigingen opslaan',
+    profileNotFound:'Profiel niet gevonden.',
+    couldNotSaveProfile:'Profiel kon niet worden opgeslagen: ',profileSaved:'Profiel opgeslagen ✓',
+    active:'Actief',ended:'Beëindigd',returningSoon:'Binnenkort terugkeren',
+    accommodation:'Accommodatie',vehicles:'Voertuigen',tools:'Gereedschap',
+    propertyFallback:'Eigendom',vehicleFallback:'Voertuig',toolFallback:'Gereedschap',
+    noAccommodation:'Geen accommodatie geregistreerd.',noVehicles:'Geen voertuigen geregistreerd.',
+    noTools:'Geen gereedschap geregistreerd.',noResources:'Geen resourcetoewijzingen gevonden.',
+    from:'Van:',ongoingCap:'Lopend',
+    returnPending:'Retourbewijs ingediend — wacht op beoordeling',
+    submitReturn:'Retour / afsluiting indienen',
+    submitReturnTitle:'Retour / Afsluiting indienen',
+    proposedReturnDate:'Voorgestelde retour- / afsluitingsdatum',
+    attachProof:'Bewijs foto / document bijvoegen',
+    returnFileUploadFailed:'Upload mislukt: ',canStillSubmitReturn:'U kunt nog steeds indienen zonder bestand.',
+    returnSubmitted:'Retourverzoek ingediend! Uw manager zal de afsluiting beoordelen en bevestigen.',
+    helpInfo:'Hulp & informatie',openFormLink:'Formulier / link openen',
+    workerNotFound:'Werknemersprofiel niet gevonden.',
+  },
+  ro:{
+    workerPortal:'Portal Lucrător',signOut:'Deconectare',
+    tabDocs:'Documente',tabProjects:'Proiecte',tabProfile:'Profil',tabResources:'Resurse',
+    missing:'Lipsă',expiring:'Expiră',expired:'Expirat',valid:'Valide',optional:'Opționale',
+    stValid:'Valid',stExpiring:'Expiră curând',stExpired:'Expirat',stNotSubmitted:'Neîncărcat',stMissing:'Lipsă',
+    required:'Obligatoriu',reqOptional:'Opțional',awaitingReview:'⏳ În așteptarea verificării',
+    expires:'Expiră',expiredOn:'Expirat',
+    officialFormRequired:'📎 Formular oficial obligatoriu',
+    templateSub:'Descarcă, completează și trimite acest model — nu folosi propriul format.',
+    download:'📥 Descarcă',
+    expiryDate:'Data expirării',issueDate:'Data emiterii (opțional)',
+    attachDoc:'Atașează document (opțional)',notes:'Observații (opțional)',
+    notesPlaceholder:'Observații pentru verificator…',
+    submitForReview:'Trimite spre verificare',cancel:'Anulare',
+    submitReplacement:'Trimite înlocuitor',submitUpdate:'Trimite actualizare',
+    emptyMissing:'Niciun document obligatoriu lipsă',emptyExpiring:'Niciun document care expiră curând',
+    emptyExpired:'Niciun document expirat',emptyOk:'Toate documentele sunt la zi',
+    emptyOptional:'Niciun document opțional de trimis',emptyDocs:'Niciun document',
+    optionalIntro:'Aceste documente nu sunt obligatorii, dar pot fi trimise pentru a-ți completa profilul.',
+    notSignedIn:'Nu ești autentificat.',
+    pleaseAddExpiry:'Introduceți data expirării sau atașați un document înainte de a trimite.',
+    fileUploadFailed:'Eroare la încărcare: ',
+    canStillSubmit:'Poți trimite și fără fișier — atașează-l separat dacă este necesar.',
+    couldNotSubmit:'Nu s-a putut trimite: ',
+    noProjects:'Niciun proiect înregistrat.',
+    currentProject:'Proiect curent',currentProjects:'Proiecte curente',
+    client:'Client',period:'Perioadă',ongoing:'în desfășurare',unknownProject:'Proiect necunoscut',
+    pastProjects:'Proiecte anterioare',
+    projectLeader:'Responsabil proiect',contact:'Contact',location:'Locație',
+    description:'Descriere',projectDetails:'Detalii proiect',
+    yourAssignment:'Misiunea ta',periodLabel:'Perioadă',notesLabel:'Observații',
+    openInMaps:'📍 Deschide în Maps',
+    myProfile:'Profilul meu',
+    profileDesc:'Detaliile de mai jos sunt vizibile pentru echipa de conformitate. Modificările sunt salvate pentru revizuire.',
+    fullName:'Nume complet',workerType:'Tip angajat',
+    zzp:'ZZP (Lucrător independent)',employed:'Angajat',
+    nationality:'Naționalitate',emailAddress:'Adresă de email',
+    emailPlaceholder:'email@tau.com',phoneNumber:'Număr de telefon',
+    phonePlaceholder:'ex. +31 6 12345678',
+    phoneHelp:'Folosit de echipa de conformitate pentru a te contacta.',
+    notesAdditional:'Observații / Informații suplimentare',saveChanges:'Salvează modificările',
+    profileNotFound:'Profil negăsit.',
+    couldNotSaveProfile:'Nu s-a putut salva profilul: ',profileSaved:'Profil salvat ✓',
+    active:'Activ',ended:'Încheiat',returningSoon:'Returnare în curând',
+    accommodation:'Cazare',vehicles:'Vehicule',tools:'Unelte',
+    propertyFallback:'Proprietate',vehicleFallback:'Vehicul',toolFallback:'Unealtă',
+    noAccommodation:'Nicio cazare înregistrată.',noVehicles:'Niciun vehicul înregistrat.',
+    noTools:'Nicio unealtă înregistrată.',noResources:'Nicio alocare de resurse găsită.',
+    from:'De la:',ongoingCap:'În desfășurare',
+    returnPending:'Dovadă returnare trimisă — în așteptarea verificării',
+    submitReturn:'Trimite returnare / închidere',
+    submitReturnTitle:'Trimite returnare / Închidere',
+    proposedReturnDate:'Data propusă de returnare / închidere',
+    attachProof:'Atașează fotografie / document dovadă',
+    returnFileUploadFailed:'Eroare la încărcare: ',canStillSubmitReturn:'Poți trimite și fără fișier.',
+    returnSubmitted:'Cerere de returnare trimisă! Managerul tău va revizui și confirma închiderea.',
+    helpInfo:'Ajutor și informații',openFormLink:'Deschide formular / link',
+    workerNotFound:'Profil lucrător negăsit.',
+  }
+};
+function t(key){ return (wpI18n[wpLang]||wpI18n.en)[key]||wpI18n.en[key]||key; }
+
+// ── Translation helper ─────────────────────────────────────────────────────
+async function wpTranslate(text, targetLang){
+  if(!text||targetLang==='en') return text;
+  const key=`${text}|${targetLang}`;
+  if(wpInfoCache.has(key)) return wpInfoCache.get(key);
+  try{
+    const resp=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0,450))}&langpair=auto|${targetLang}`);
+    if(!resp.ok) throw new Error('http '+resp.status);
+    const data=await resp.json();
+    if(data.responseStatus===200){ const tr=data.responseData.translatedText; wpInfoCache.set(key,tr); return tr; }
+  }catch(e){ console.warn('[WP] translate failed:',e.message); }
+  return text;
+}
+
+// ── Login flow ─────────────────────────────────────────────────────────────
+function loginMsg(text, isError){
+  const el=document.getElementById('wpLoginMsg');
+  el.textContent=text; el.className='login-msg '+(isError?'error':''); el.style.display=text?'block':'none';
+}
+
+async function wpDirectLogin(){
+  if(!sbClient){ loginMsg('Loading, please try again.',true); return; }
+  const email=(document.getElementById('wpEmailInput')?.value||'').trim().toLowerCase();
+  if(!email){ loginMsg('Please enter your email address.',true); return; }
+  loginMsg('');
+  const btn=document.getElementById('wpLoginBtn');
+  btn.disabled=true; btn.textContent='Signing in…';
+  try{
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:SITE_ORG_ID});
+    if(error) throw error;
+    if(!data){ loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true); return; }
+    wpWorkerEmail=email;
+    wpLoadPortalData(data);
+    await initWorkerPortal(data.worker.id);
+  }catch(e){
+    loginMsg('Could not sign in: '+(e.message||e),true);
+  }finally{
+    btn.disabled=false; btn.textContent='View My Documents';
+  }
+}
+
+function wpSignOut(){
+  wpWorkerId=null; wpWorkerObj=null; wpWorkerEmail=null;
+  wpSubmissions=[]; wpIssuedDocs=[];
+  document.getElementById('workerPortal').style.display='none';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('wpEmailInput').value='';
+  document.getElementById('wpEmailInput').focus();
+}
+
+// ── Data loading ───────────────────────────────────────────────────────────
+function wpLoadPortalData(data){
+  const w=data.worker;
+  const workerObj={id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:true,docs:{}};
+  workers=[workerObj];
+  docSets=(data.doc_sets||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
+  docSetItems={};
+  docSets.forEach(s=>docSetItems[s.id]=[]);
+  (data.doc_set_items||[]).forEach(d=>{
+    if(!docSetItems[d.document_set_id]) docSetItems[d.document_set_id]=[];
+    docSetItems[d.document_set_id].push({id:d.doc_key,name:d.name,cat:d.category,icon:d.icon,tip:d.tip,infoText:d.info_text||null,infoUrl:d.info_url||null,templateFileName:d.template_file_name||null,templateFilePath:d.template_file_path||null,allowIssue:!!d.allow_issue,req:!!d.required&&!d.archived,builtIn:d.built_in,custom:!d.built_in,archived:!!d.archived});
+  });
+  tmplForWorker(workerObj).forEach(d=>workerObj.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]});
+  (data.worker_docs||[]).forEach(d=>{ workerObj.docs[d.doc_key]={status:d.status||'missing',date:d.expiry_date,issueDate:d.issue_date,files:[]}; });
+  fileStore[w.id]={};
+  tmplForWorker(workerObj).forEach(d=>fileStore[w.id][d.id]=[]);
+  (data.worker_doc_files||[]).forEach(f=>{
+    const doc=(data.worker_docs||[]).find(x=>x.id===f.worker_document_id);
+    const did=doc?.doc_key;
+    if(did){ if(!fileStore[w.id][did]) fileStore[w.id][did]=[]; fileStore[w.id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); }
+  });
+  projectStore=(data.projects||[]).map(p=>({id:p.id,name:p.name,client:p.client||'',pm:p.project_manager||'',phone:p.contact_phone||'',desc:p.description||'',location:p.location||'',active:p.active!==false}));
+  projectAssignments=(data.assignments||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:[]}));
+  wpSubmissions=data.submissions||[];
+  wpAccomAssignments=(data.accom_assignments||[]).map(a=>({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpVehAssignments=(data.veh_assignments||[]).map(a=>({id:a.id,vehicleId:a.vehicle_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpToolAssignments=(data.tool_assignments||[]).map(a=>({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false}));
+  wpProperties=(data.properties||[]).map(p=>({id:p.id,name:p.name,address:p.address||''}));
+  wpVehicles=(data.vehicles||[]).map(v=>({id:v.id,desc:v.description||'',reg:v.registration_plate||''}));
+  wpTools=(data.tools||[]).map(tl=>({id:tl.id,name:tl.name,desc:tl.description||'',serial:tl.serial_number||''}));
+  wpReturnRequests=(data.return_requests||[]);
+  wpIssuedDocs=(data.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
+}
+
+async function wpLoadSubmissions(){
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
+  try{
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:SITE_ORG_ID});
+    if(error) throw error;
+    wpSubmissions=(data?.submissions)||[];
+    wpReturnRequests=(data?.return_requests)||[];
+    wpIssuedDocs=(data?.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
+  }catch(e){ console.warn('[WP] wpLoadSubmissions:',e.message); }
+}
+
+// ── Portal init ────────────────────────────────────────────────────────────
+async function initWorkerPortal(workerId){
+  wpWorkerId=workerId;
+  wpWorkerObj=workers.find(w=>w.id===workerId)||null;
+  try{ const sl=localStorage.getItem('wpLang'); if(sl&&wpI18n[sl]) wpLang=sl; }catch(e){}
+  await wpLoadSubmissions();
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('workerPortal').style.display='flex';
+  document.body.style.background='var(--bg)';
+  wpDocFilter='missing';
+  wpUpdateLangUI();
+  const w=wpWorkerObj;
+  document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
+  if(w){
+    const st=goStatusAt(w,new Date());
+    const stLabel={go:'✓ GO',warning:'⚠ Warning',nogo:'✕ No-Go'}[st]||'—';
+    const stColor={go:'#276749',warning:'#b45309',nogo:'#c53030'}[st]||'#64748b';
+    document.getElementById('wpStatusBadge').innerHTML=`<span style="padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;color:#fff;background:${stColor};">${stLabel}</span>`;
+  }
+  wpSwitch('docs');
+}
+
+// ── Portal navigation ──────────────────────────────────────────────────────
+function wpSwitch(tab){
+  wpActiveTab=tab;
+  const tabMap={docs:'Docs',assign:'Assign',profile:'Profile',resources:'Resources'};
+  ['docs','assign','profile','resources'].forEach(tp=>{
+    const viewId='wpView'+tp.charAt(0).toUpperCase()+tp.slice(1);
+    const tabId='wpTab'+tabMap[tp];
+    const el=document.getElementById(viewId);
+    if(el) el.style.display=tab===tp?'block':'none';
+    document.getElementById(tabId)?.classList?.toggle('active',tab===tp);
+  });
+  if(tab==='docs') renderWPDocs();
+  if(tab==='assign') renderWPAssignments();
+  if(tab==='profile') renderWPProfile();
+  if(tab==='resources') renderWPResources();
+}
+
+// ── Language ───────────────────────────────────────────────────────────────
+function wpUpdateLangUI(){
+  const m=wpLangMeta[wpLang]||wpLangMeta.en;
+  const flag=document.getElementById('wpLangFlag'),code=document.getElementById('wpLangCode');
+  if(flag) flag.textContent=m.flag;
+  if(code) code.textContent=m.code;
+  ['EN','NL','RO'].forEach(c=>document.getElementById('wpLangOpt'+c)?.classList.toggle('active',wpLang===c.toLowerCase()));
+  const ht=document.getElementById('wpHeaderTitle'); if(ht) ht.textContent=t('workerPortal');
+  const td=document.getElementById('wpTabDocs'); if(td) td.textContent=t('tabDocs');
+  const ta=document.getElementById('wpTabAssign'); if(ta) ta.textContent=t('tabProjects');
+  const tp=document.getElementById('wpTabProfile'); if(tp) tp.textContent=t('tabProfile');
+  const tr=document.getElementById('wpTabResources'); if(tr) tr.textContent=t('tabResources');
+  const so=document.getElementById('wpSignOutBtn'); if(so) so.textContent=t('signOut');
+}
+
+function wpToggleLangMenu(ev){
+  ev?.stopPropagation();
+  const menu=document.getElementById('wpLangMenu');
+  if(!menu) return;
+  const open=menu.style.display==='none';
+  menu.style.display=open?'block':'none';
+  if(open){ const close=()=>{menu.style.display='none';document.removeEventListener('click',close);}; setTimeout(()=>document.addEventListener('click',close),0); }
+}
+
+function wpSetLang(lang){
+  wpLang=lang;
+  wpInfoCache.clear();
+  try{localStorage.setItem('wpLang',lang);}catch(e){}
+  document.getElementById('wpLangMenu').style.display='none';
+  wpUpdateLangUI();
+  const at=wpActiveTab||'docs';
+  if(at==='docs') renderWPDocs();
+  else if(at==='assign') renderWPAssignments();
+  else if(at==='profile') renderWPProfile();
+  else if(at==='resources') renderWPResources();
+}
+
+// ── Documents tab ──────────────────────────────────────────────────────────
+function wpSetDocFilter(f){ wpDocFilter=f; renderWPDocs(); }
+
+async function renderWPDocs(){
+  const el=document.getElementById('wpViewDocs'); if(!el) return;
+  const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('workerNotFound')}</p>`;return;}
+  const today=new Date();
+  const tmpl=tmplForWorker(w);
+  const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId&&s.status==='pending').map(s=>[s.doc_key,s]));
+
+  const filterCounts={missing:0,expiring:0,expired:0,ok:0,optional:0};
+  tmpl.forEach(d=>{
+    const st=docStatusAt(w.docs?.[d.id],today);
+    if(st==='missing'&&d.req) filterCounts.missing++;
+    else if(st==='missing'&&!d.req) filterCounts.optional++;
+    else if(st==='expiring') filterCounts.expiring++;
+    else if(st==='expired') filterCounts.expired++;
+    else if(st==='ok') filterCounts.ok++;
+  });
+
+  let html=`<div class="wp-filter-tabs">
+    <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')"><span class="wp-filter-label">${t('missing')}</span><span class="wp-filter-count">${filterCounts.missing}</span></button>
+    <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')"><span class="wp-filter-label">${t('expiring')}</span><span class="wp-filter-count">${filterCounts.expiring}</span></button>
+    <button class="wp-filter-tab${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')"><span class="wp-filter-label">${t('expired')}</span><span class="wp-filter-count">${filterCounts.expired}</span></button>
+    <button class="wp-filter-tab${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')"><span class="wp-filter-label">${t('valid')}</span><span class="wp-filter-count">${filterCounts.ok}</span></button>
+    <button class="wp-filter-tab${wpDocFilter==='optional'?' active':''}" data-f="optional" onclick="wpSetDocFilter('optional')"><span class="wp-filter-label">${t('optional')}</span><span class="wp-filter-count">${filterCounts.optional}</span></button>
+  </div>`;
+
+  if(wpLang!=='en'){
+    const toTranslate=tmpl.filter(d=>d.infoText&&!wpInfoCache.has(`${d.id}|${wpLang}`));
+    if(toTranslate.length){
+      await Promise.allSettled(toTranslate.map(async d=>{ const tr=await wpTranslate(d.infoText,wpLang); wpInfoCache.set(`${d.id}|${wpLang}`,tr); }));
+    }
+  }
+
+  const renderDocCard=(d)=>{
+    const docData=w.docs?.[d.id];
+    const st=docStatusAt(docData,today);
+    const inOptionalTab=wpDocFilter==='optional';
+    const stLabel={ok:t('stValid'),expiring:t('stExpiring'),expired:t('stExpired'),missing:inOptionalTab?t('stNotSubmitted'):t('stMissing')}[st]||'—';
+    const pillClass={ok:'ok',expiring:'expiring',expired:'expired',missing:inOptionalTab?'opt-neutral':'missing'}[st]||'';
+    const expiryStr=docData?.date?new Date(docData.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
+    const hasPending=!!pendingMap[d.id];
+    const isOpen=wpDocSubmitOpen[d.id];
+    const reqBadge=d.req?`<span class="wp-req-badge">${t('required')}</span>`:`<span class="wp-opt-badge">${t('reqOptional')}</span>`;
+    const safeId=d.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="${t('helpInfo')}" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="${t('openFormLink')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
+    const infoTextDisplay=wpLang!=='en'?(wpInfoCache.get(`${d.id}|${wpLang}`)||d.infoText):d.infoText;
+    const infoPanel=d.infoText?`<div class="wp-info-panel" id="wpit_${safeId}" style="display:none;">${esc(infoTextDisplay)}</div>`:'';
+    return `<div class="wp-doc-row">
+      ${infoIcons}
+      <div class="wp-doc-top">
+        <div class="wp-doc-icon">${d.icon||'📄'}</div>
+        <div class="wp-doc-info">
+          <div class="wp-doc-name-row"><span class="wp-doc-name">${esc(d.name)}</span>${reqBadge}</div>
+          <div class="wp-doc-meta-row">
+            <span class="wp-status-pill ${pillClass}">${stLabel}</span>
+            ${expiryStr?`<span class="wp-expiry-tag">${st==='expiring'?t('expires'):t('expiredOn')}: ${expiryStr}</span>`:''}
+          </div>
+          ${hasPending?`<div class="wp-pending-badge">${t('awaitingReview')}</div>`:''}
+          ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
+          ${infoPanel}
+          ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="wpDownloadFile('${_p}','${_n}')">${t('download')}</button></div>`;})():''}
+        </div>
+      </div>
+      ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");return`<div class="wp-template-banner" style="background:#ede9fe;border-color:#c4b5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#6d28d9;">📤 Personalised document to sign</div><div class="wp-template-banner-sub" style="color:#5b21b6;">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="wpDownloadFile('${_ip}','${_in}')">Download</button></div>`;})()}
+      ${isOpen?`<div class="wp-submit-form">
+        <div><label>${t('expiryDate')}</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.date||''}"/></div>
+        <div><label>${t('issueDate')}</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issueDate||''}"/></div>
+        <div><label>${t('attachDoc')}</label><input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/></div>
+        <div><label>${t('notes')}</label><input type="text" class="form-input" id="wpNote_${d.id}" placeholder="${t('notesPlaceholder')}"/></div>
+        <div class="wp-submit-row">
+          <button class="wp-doc-btn" onclick="submitWPDoc('${d.id}')">${t('submitForReview')}</button>
+          <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">${t('cancel')}</button>
+        </div>
+      </div>`:''}
+      ${!isOpen?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?t('submitReplacement'):t('submitUpdate')}</button>`:''}
+    </div>`;
+  };
+
+  let filtered;
+  if(wpDocFilter==='missing') filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)==='missing'&&d.req);
+  else if(wpDocFilter==='optional') filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)==='missing'&&!d.req);
+  else filtered=tmpl.filter(d=>docStatusAt(w.docs?.[d.id],today)===wpDocFilter);
+
+  if(!filtered.length){
+    const emptyMsg={missing:t('emptyMissing'),expiring:t('emptyExpiring'),expired:t('emptyExpired'),ok:t('emptyOk'),optional:t('emptyOptional')}[wpDocFilter]||t('emptyDocs');
+    const emptyIcon={missing:'✓',expiring:'🟡',expired:'✓',ok:'✓',optional:'✓'}[wpDocFilter]||'—';
+    html+=`<div class="wp-empty-filter"><div class="wp-empty-icon">${emptyIcon}</div><div>${emptyMsg}</div></div>`;
+  } else if(wpDocFilter==='optional'){
+    html+=`<div class="wp-doc-optional-intro">${t('optionalIntro')}</div>`;
+    const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
+    cats.forEach(cat=>{
+      html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+      filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
+    });
+  } else {
+    const cats=[...new Set(filtered.map(d=>d.cat||'General'))];
+    cats.forEach(cat=>{
+      html+=`<div class="wp-section-title">${esc(cat)}</div>`;
+      filtered.filter(d=>(d.cat||'General')===cat).forEach(d=>{ html+=renderDocCard(d); });
+    });
+  }
+  el.innerHTML=html;
+}
+
+function wpToggleSubmit(docKey){ wpDocSubmitOpen[docKey]=!wpDocSubmitOpen[docKey]; renderWPDocs(); }
+
+async function submitWPDoc(docKey){
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert(t('notSignedIn'));return;}
+  const expiryDate=(document.getElementById(`wpExp_${docKey}`)?.value||'').trim()||null;
+  const issueDate=(document.getElementById(`wpIss_${docKey}`)?.value||'').trim()||null;
+  const notes=(document.getElementById(`wpNote_${docKey}`)?.value||'').trim()||null;
+  const fileInput=document.getElementById(`wpFile_${docKey}`);
+  const file=fileInput?.files?.[0]||null;
+  if(!expiryDate&&!file){alert(t('pleaseAddExpiry'));return;}
+
+  let filePath=null,fileName=null,fileSize=null,mimeType=null;
+  if(file){
+    const ext=file.name.split('.').pop();
+    filePath=`worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
+    try{
+      const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
+      if(error) throw error;
+      fileName=file.name; fileSize=file.size; mimeType=file.type;
+    }catch(e){alert(t('fileUploadFailed')+e.message+'\n\n'+t('canStillSubmit'));filePath=null;}
+  }
+
+  try{
+    const {error}=await sbClient.rpc('submit_worker_document',{
+      p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_doc_key:docKey,
+      p_expiry_date:expiryDate||null,p_issue_date:issueDate||null,p_notes:notes||null,
+      p_file_path:filePath||null,p_file_name:fileName||null,p_file_size:fileSize||null,p_mime_type:mimeType||null
+    });
+    if(error) throw error;
+  }catch(e){
+    if(filePath) sbClient.storage.from(SB_BUCKET).remove([filePath]).catch(()=>{});
+    alert(t('couldNotSubmit')+e.message); return;
+  }
+  wpDocSubmitOpen[docKey]=false;
+  if(!wpSubmissions.some(s=>s.worker_id===wpWorkerId&&s.doc_key===docKey&&s.status==='pending')){
+    wpSubmissions.push({id:'_opt_'+Date.now(),worker_id:wpWorkerId,doc_key:docKey,status:'pending',submitted_at:new Date().toISOString()});
+  }
+  renderWPDocs();
+  await wpLoadSubmissions();
+  renderWPDocs();
+}
+
+// ── Projects tab ───────────────────────────────────────────────────────────
+function renderWPAssignments(){
+  const el=document.getElementById('wpViewAssign'); if(!el) return;
+  const myPAs=projectAssignments.filter(a=>a.wid===wpWorkerId).sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  if(!myPAs.length){el.innerHTML=`<p style="color:#94a3b8;font-size:13px;padding:12px 0;">${t('noProjects')}</p>`;return;}
+  const now=new Date().toISOString().slice(0,10);
+  const current=myPAs.filter(a=>(!a.startDate||a.startDate<=now)&&(!a.endDate||a.endDate>=now));
+  const past=myPAs.filter(a=>a.endDate&&a.endDate<now);
+  const mkCard=(a)=>{
+    const proj=projectStore.find(p=>p.id===a.projectId);
+    const ongoing=!a.endDate||a.endDate>=now;
+    return`<div class="wp-assign-card" onclick="wpOpenProjDetail('${a.id}')">
+      <div class="wp-assign-title"><span>${esc(proj?.name||t('unknownProject'))}</span><span class="wp-assign-chevron">›</span></div>
+      <div class="wp-assign-meta">
+        ${proj?.client?`<div>${t('client')}: <strong>${esc(proj.client)}</strong></div>`:''}
+        <div>${t('period')}: <strong>${a.startDate||'?'} → ${ongoing?`<span style="color:#16a34a;">${t('ongoing')}</span>`:esc(a.endDate)}</strong></div>
+      </div>
+    </div>`;
+  };
+  let html='';
+  if(current.length){ html+=`<div class="wp-section-label">${current.length>1?t('currentProjects'):t('currentProject')}</div>`; html+=current.map(mkCard).join(''); }
+  if(past.length){
+    html+=`<button class="wp-past-toggle" onclick="wpTogglePast(this)" aria-expanded="false">
+      <span class="wp-past-toggle-label">${t('pastProjects')} (${past.length})</span>
+      <span class="wp-past-toggle-arrow">▼</span>
+    </button>
+    <div id="wpPastCards" style="display:none;">${past.map(mkCard).join('')}</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function wpTogglePast(btn){
+  const cards=document.getElementById('wpPastCards'); if(!cards) return;
+  const open=cards.style.display==='none';
+  cards.style.display=open?'block':'none';
+  const arrow=btn.querySelector('.wp-past-toggle-arrow');
+  if(arrow) arrow.classList.toggle('open',open);
+  btn.setAttribute('aria-expanded',String(open));
+}
+
+function wpOpenProjDetail(assignmentId){
+  const a=projectAssignments.find(x=>x.id===assignmentId); if(!a) return;
+  const proj=projectStore.find(p=>p.id===a.projectId);
+  const now=new Date().toISOString().slice(0,10);
+  const ongoing=!a.endDate||a.endDate>=now;
+  const isUrl=proj?.location&&/^https?:\/\//i.test(proj.location);
+  const locationHtml=proj?.location
+    ?(isUrl?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">${t('openInMaps')}</a>`:`<span>${esc(proj.location)}</span>`)
+    :'<span style="color:#94a3b8;">—</span>';
+  const phoneHtml=proj?.phone?`<a class="wp-call-link" href="tel:${esc(proj.phone.replace(/\s/g,''))}">📞 ${esc(proj.phone)}</a>`:'';
+  const infoRows=[
+    proj?.client?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('client')}</span><span class="wp-proj-info-value">${esc(proj.client)}</span></div>`:'',
+    proj?.pm?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('projectLeader')}</span><span class="wp-proj-info-value">${esc(proj.pm)}</span></div>`:'',
+    proj?.phone?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('contact')}</span><span class="wp-proj-info-value">${phoneHtml}</span></div>`:'',
+    proj?.location?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('location')}</span><span class="wp-proj-info-value">${locationHtml}</span></div>`:'',
+    proj?.desc?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('description')}</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(proj.desc)}</span></div>`:'',
+  ].filter(Boolean).join('');
+  document.getElementById('wpProjDetailTitle').textContent=proj?.name||t('projectDetails');
+  document.getElementById('wpProjDetailBody').innerHTML=`
+    <div class="wp-proj-info-card">
+      <div class="wp-proj-info-name">${esc(proj?.name||'—')}</div>
+      ${infoRows}
+    </div>
+    <div class="wp-proj-assign-card">
+      <div class="wp-proj-assign-label">${t('yourAssignment')}</div>
+      <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">${t('periodLabel')}</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?`<span style="color:#16a34a;font-weight:700;">${t('ongoing')}</span>`:esc(a.endDate)}</span></div>
+      ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('notesLabel')}</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
+    </div>`;
+  const pd=document.getElementById('wpProjDetail');
+  pd.style.display='block'; pd.scrollTop=0;
+}
+
+function wpCloseProjDetail(){ document.getElementById('wpProjDetail').style.display='none'; }
+
+// ── Profile tab ────────────────────────────────────────────────────────────
+function renderWPProfile(){
+  const el=document.getElementById('wpViewProfile'); if(!el) return;
+  const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('profileNotFound')}</p>`;return;}
+  el.innerHTML=`<div class="wp-profile-card">
+    <div class="wp-profile-title">${t('myProfile')}</div>
+    <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">${t('profileDesc')}</div>
+    <div class="wp-profile-field"><label>${t('fullName')}</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
+    <div class="wp-profile-field"><label>${t('workerType')}</label><div class="wp-readonly-field">${workerTypeLabel(w.type)}</div></div>
+    <div class="wp-profile-field"><label>${t('nationality')}</label><div class="wp-readonly-field">${esc(w.nat||'—')}</div></div>
+    <div class="wp-profile-field"><label>${t('emailAddress')}</label><input class="form-input" id="wpProfEmail" type="email" value="${esc(w.email||'')}" placeholder="${t('emailPlaceholder')}"/></div>
+    <div class="wp-profile-field">
+      <label>${t('phoneNumber')}</label>
+      <input class="form-input" id="wpProfPhone" type="tel" value="${esc(w.phone||'')}" placeholder="${t('phonePlaceholder')}"/>
+      <div style="font-size:11px;color:#94a3b8;margin-top:4px;">${t('phoneHelp')}</div>
+    </div>
+    <div class="wp-profile-field"><label>${t('notesAdditional')}</label><textarea id="wpProfNotes" rows="3" style="resize:vertical;">${esc(w.notes||'')}</textarea></div>
+    <button class="wp-profile-save" onclick="saveWPProfile()">${t('saveChanges')}</button>
+    <div id="wpProfileMsg" style="margin-top:12px;font-size:13px;color:#059669;display:none;"></div>
+  </div>`;
+}
+
+async function saveWPProfile(){
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
+  const email=(document.getElementById('wpProfEmail')?.value||'').trim();
+  const phone=(document.getElementById('wpProfPhone')?.value||'').trim();
+  const notes=(document.getElementById('wpProfNotes')?.value||'').trim();
+  const w=wpWorkerObj; if(!w) return;
+  w.email=email; w.phone=phone; w.notes=notes;
+  try{
+    const {error}=await sbClient.rpc('save_worker_profile',{p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_new_email:email||null,p_notes:notes||null,p_phone:phone||null});
+    if(error) throw error;
+    const msg=document.getElementById('wpProfileMsg');
+    if(msg){msg.textContent=t('profileSaved');msg.style.display='block';setTimeout(()=>msg.style.display='none',3000);}
+  }catch(e){alert(t('couldNotSaveProfile')+e.message);}
+}
+
+// ── Resources tab ──────────────────────────────────────────────────────────
+function renderWPResources(){
+  const el=document.getElementById('wpViewResources'); if(!el) return;
+  const today=new Date().toISOString().slice(0,10);
+
+  function resStatusBadge(endDate){
+    if(!endDate) return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#dcfce7;color:#276749;border:1px solid #86efac;">${t('active')}</span>`;
+    if(endDate<today) return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">${t('ended')}</span>`;
+    return `<span style="padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;">${t('returningSoon')}</span>`;
+  }
+
+  const pendingReturnIds=new Set((wpReturnRequests||[]).map(r=>r.assignment_id));
+
+  function assignmentSection(icon, title, assignments, getName, getDetail, resType, noMsg){
+    if(!assignments.length) return `<div class="wp-section-title">${icon} ${title}</div><div style="color:var(--text-l);font-size:13px;padding:8px 0 16px;">${noMsg}</div>`;
+    let html=`<div class="wp-section-title">${icon} ${title}</div>`;
+    assignments.forEach(a=>{
+      const name=getName(a); const detail=getDetail(a);
+      const hasPending=pendingReturnIds.has(a.id);
+      const isActive=!a.endDate||a.endDate>=today;
+      html+=`<div class="wp-assign-card" style="margin-bottom:12px;">
+        <div class="wp-assign-title">${esc(name)} ${resStatusBadge(a.endDate)}</div>
+        <div class="wp-assign-meta">
+          ${detail?`<div>${esc(detail)}</div>`:''}
+          <div>${t('from')} <strong>${a.startDate||'—'}</strong>${a.endDate?` → <strong>${a.endDate}</strong>`:` → <strong>${t('ongoingCap')}</strong>`}</div>
+          ${a.notes?`<div style="margin-top:4px;color:var(--text-m);">${esc(a.notes)}</div>`:''}
+        </div>
+        ${isActive?hasPending
+          ?`<div style="margin-top:8px;padding:4px 10px;border-radius:8px;background:#fef3c7;color:#b45309;font-size:12px;font-weight:600;display:inline-block;">${t('returnPending')}</div>`
+          :`<button class="wp-doc-btn" style="margin-top:8px;" onclick="wpOpenReturnRequest('${resType}','${a.id}',event)">${t('submitReturn')}</button>`
+        :''}
+      </div>`;
+    });
+    return html;
+  }
+
+  let html='';
+  html+=assignmentSection('🏠',t('accommodation'),wpAccomAssignments,
+    a=>{const p=wpProperties.find(x=>x.id===a.propId);return p?.name||t('propertyFallback');},
+    a=>{const p=wpProperties.find(x=>x.id===a.propId);return p?.address||'';},
+    'accommodation',t('noAccommodation'));
+  html+=assignmentSection('🚗',t('vehicles'),wpVehAssignments,
+    a=>{const v=wpVehicles.find(x=>x.id===a.vehicleId);return v?`${v.desc||''}${v.reg?' ('+v.reg+')':''}`.trim()||t('vehicleFallback'):t('vehicleFallback');},
+    a=>'',
+    'vehicle',t('noVehicles'));
+  html+=assignmentSection('🔧',t('tools'),wpToolAssignments,
+    a=>{const tl=wpTools.find(x=>x.id===a.toolId);return tl?.name||t('toolFallback');},
+    a=>{const tl=wpTools.find(x=>x.id===a.toolId);return tl?.serial?'S/N: '+tl.serial:'';},
+    'tool',t('noTools'));
+
+  el.innerHTML=html||`<p style="color:var(--text-l);">${t('noResources')}</p>`;
+}
+
+function wpOpenReturnRequest(resourceType, assignmentId, ev){
+  document.querySelectorAll('.wp-return-form').forEach(el=>el.remove());
+  const btn=ev?.target;
+  const card=btn?.closest('.wp-assign-card');
+  if(!card) return;
+  const today=new Date().toISOString().slice(0,10);
+  const formHtml=`<div class="wp-return-form">
+    <div style="font-size:13px;font-weight:600;margin-bottom:10px;">${t('submitReturnTitle')}</div>
+    <div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">${t('proposedReturnDate')}</label>
+      <input type="date" class="form-input" id="wpReturnDate_${assignmentId}" value="${today}" style="min-height:44px;width:100%;font-size:13px;"/></div>
+    <div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">${t('attachProof')}</label>
+      <input type="file" id="wpReturnFile_${assignmentId}" accept=".pdf,.jpg,.jpeg,.png" style="width:100%;"/></div>
+    <div style="margin-bottom:8px;"><label style="font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;">${t('notes')}</label>
+      <input type="text" class="form-input" id="wpReturnNote_${assignmentId}" placeholder="${t('notesPlaceholder')}" style="min-height:44px;width:100%;font-size:13px;"/></div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="wp-doc-btn" style="margin-top:0;" onclick="wpSubmitReturn('${resourceType}','${assignmentId}')">${t('submitForReview')}</button>
+      <button class="wp-doc-btn cancel" style="margin-top:0;" onclick="this.closest('.wp-return-form').remove()">${t('cancel')}</button>
+    </div>
+  </div>`;
+  card.insertAdjacentHTML('beforeend', formHtml);
+  if(btn) btn.style.display='none';
+}
+
+async function wpSubmitReturn(resourceType, assignmentId){
+  if(!sbClient||!wpWorkerId||!wpWorkerEmail){alert(t('notSignedIn'));return;}
+  const fileInput=document.getElementById(`wpReturnFile_${assignmentId}`);
+  const file=fileInput?.files?.[0]||null;
+  const notes=(document.getElementById(`wpReturnNote_${assignmentId}`)?.value||'').trim()||null;
+  const proposedDate=(document.getElementById(`wpReturnDate_${assignmentId}`)?.value||'').trim()||new Date().toISOString().slice(0,10);
+
+  let filePath=null,fileName=null,fileSize=null,mimeType=null;
+  if(file){
+    const ext=file.name.split('.').pop();
+    filePath=`worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
+    try{
+      const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
+      if(error) throw error;
+      fileName=file.name; fileSize=file.size; mimeType=file.type;
+    }catch(e){ console.warn('[WP] return file upload failed:',e.message); alert(t('returnFileUploadFailed')+e.message+'\n\n'+t('canStillSubmitReturn')); filePath=null; }
+  }
+
+  try{
+    const {error}=await sbClient.rpc('submit_resource_return',{
+      p_email:wpWorkerEmail,p_worker_id:wpWorkerId,p_resource_type:resourceType,
+      p_assignment_id:assignmentId,p_file_path:filePath||null,p_file_name:fileName||null,
+      p_file_size:fileSize||null,p_mime_type:mimeType||null,p_notes:notes||null,
+      p_proposed_date:proposedDate||null
+    });
+    if(error) throw error;
+    alert(t('returnSubmitted'));
+    try{
+      const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:SITE_ORG_ID});
+      if(!e2&&data) wpLoadPortalData(data);
+    }catch(e){ console.warn('[WP] wpSubmitReturn reload:',e.message); }
+    renderWPResources();
+  }catch(e){ alert(t('couldNotSubmit')+e.message); }
+}
+
+// ── File download ──────────────────────────────────────────────────────────
+async function wpDownloadFile(path, name){
+  if(!sbClient||!path) return;
+  const btn=event?.currentTarget;
+  const origTxt=btn?.textContent;
+  if(btn){btn.disabled=true;btn.textContent='…';}
+  try{
+    const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path,300,{download:name||'document'});
+    if(error||!data?.signedUrl) throw new Error(error?.message||'Could not create download link');
+    const a=document.createElement('a');
+    a.href=data.signedUrl;a.download=name||'document';a.target='_blank';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  }catch(e){ alert('Download failed: '+e.message); }
+  finally{ if(btn){btn.disabled=false;btn.textContent=origTxt||'Download';} }
+}
+</script>
+</body>
+</html>
