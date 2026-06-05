@@ -9915,6 +9915,20 @@ async function sbPersistAll(force=false){
   // deletion to fire again on the next sync — a self-reinforcing loop that wiped uploaded files.
   docSets.forEach(s=>(docSetItems[s.id]||[]).forEach((d,i)=>{ const rowId=`${s.id}__${d.id}`; if(inactiveDocSets.has(s.id)) return; dsi.push({id:rowId,document_set_id:s.id,doc_key:d.id,name:d.name,category:d.cat||'',icon:d.icon||'',tip:d.tip||'',info_text:d.infoText||null,info_url:d.infoUrl||null,required:!!d.req && !d.archived,built_in:!!d.builtIn,archived:!!d.archived,archived_at:d.archivedAt||null,sort_order:i,active:true,org_id:oid}); }));
   try{ await sbUpsertRows('document_set_items',dsi); }catch(dsiErr){ console.warn('[TMC] document_set_items sync skipped:', dsiErr.message); }
+  // Auto-resolve stale deleted-items entries for doc_keys we just confirmed active in DB.
+  // Without this, a stale document_set_item_group_delete entry re-fires on every sync
+  // and keeps undoing uploads even after the doc_key is live again.
+  {
+    const _writtenDocKeys = new Set(dsi.map(r=>r.doc_key).filter(Boolean));
+    let _staleResolved = false;
+    deletedItems = deletedItems.map(it=>{
+      if(!it.restored && (it.type==='document_set_item_group_delete'||it.type==='document_set_item') && _writtenDocKeys.has(it.payload?.doc?.id)){
+        _staleResolved=true; return {...it, restored:true};
+      }
+      return it;
+    });
+    if(_staleResolved) console.log('[TMC] Auto-resolved stale deletion entries for active doc_keys — stale loop broken');
+  }
   await sbUpsertRows('projects', projectStore.map(p=>({id:p.id,name:p.name,client:p.client||'',project_manager:p.pm||'',contact_phone:p.phone||'',description:p.desc||'',location:p.location||'',active:p.active!==false,org_id:oid})));
   await sbUpsertRows('workers', workers.map(w=>{
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
