@@ -10197,7 +10197,22 @@ function sbInstallWrappers(){
     if(!requireAction('workerDocs','upload worker documents')){ input.value=''; return; }
     if(!fileStore[wid])fileStore[wid]={}; if(!fileStore[wid][did])fileStore[wid][did]=[];
     for(const file of Array.from(input.files||[])){
-      if(sbClient&&sbSession){ const path=`workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`; const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true}); if(error){alert('Upload failed: '+error.message);continue;} fileStore[wid][did].push({name:file.name,size:file.size,type:file.type,file_path:path,storagePath:path}); }
+      if(sbClient&&sbSession){
+        const path=`workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+        const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
+        if(error){alert('Upload failed: '+error.message);continue;}
+        fileStore[wid][did].push({name:file.name,size:file.size,type:file.type,file_path:path,storagePath:path});
+        // Write DB record immediately — don't rely solely on debounced sync which can be lost on quick refresh or blocked by concurrent reload
+        if(sbCanWriteTable('worker_document_files')){
+          const oid=currentOrgId||SITE_ORG_ID;
+          const docId=`${wid}__${did}`;
+          const w=workers.find(x=>x.id===wid);
+          await sbClient.from('worker_documents').upsert({id:docId,worker_id:wid,doc_key:did,status:w?.docs?.[did]?.status||'missing',issue_date:sbSafeDate(w?.docs?.[did]?.issueDate)||null,expiry_date:sbSafeDate(w?.docs?.[did]?.date)||null,active:true,org_id:oid},{onConflict:'id'});
+          const fileId=`${docId}__${sbSlug(path).slice(-80)}`;
+          const {error:dbErr}=await sbClient.from('worker_document_files').upsert({id:fileId,worker_document_id:docId,worker_id:wid,file_name:file.name,file_path:path,mime_type:file.type||'',size_bytes:file.size||0,superseded:false,active:true,org_id:oid},{onConflict:'id'});
+          if(dbErr) console.warn('[TMC] attachF: direct DB write failed (will retry on sync):',dbErr.message);
+        }
+      }
       else { alert('Cannot upload: you are not signed in. Please sign in and try again — files cannot be saved without an active session.'); }
     }
     refreshFiles(wid,did); input.value=''; sbScheduleSync();
