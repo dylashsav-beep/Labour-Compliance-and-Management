@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Work-Force — Labour Compliance Platform</title>
-<meta name="description" content="Real-time document compliance tracking, project assignments, and resource management — purpose-built for construction and contract labour in NL, BE and AT.">
+<meta name="description" content="Real-time document compliance tracking, project assignments, and resource management — purpose-built for construction and contract labour. Works globally with customizable document sets, plus pre-built sets for the Netherlands, Belgium, Germany, and Denmark.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -623,6 +623,220 @@ footer{
   .navbar-logo-sub{display:none;}
   .btn-lg{padding:0.7rem 1.25rem;font-size:0.9rem;}
 }
+
+/* ── APP-FAITHFUL UI STYLES ── */
+.app-nav-bar {
+  background: #132642;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  height: 44px;
+  border-radius: 8px 8px 0 0;
+}
+.app-nav-tabs {
+  display: flex;
+  gap: 0;
+  height: 100%;
+  overflow-x: auto;
+}
+.app-nav-tab {
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  border-bottom: 2px solid transparent;
+  cursor: default;
+  white-space: nowrap;
+}
+.app-nav-tab.active {
+  color: #fff;
+  border-bottom-color: #3b82f6;
+}
+.app-week-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.7);
+  white-space: nowrap;
+}
+.app-week-pill {
+  background: #1e3a5f;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.stat-cards-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+.stat-card-app {
+  padding: 0.9rem 1rem;
+  border-right: 1px solid var(--border);
+  background: white;
+}
+.stat-card-app:last-child { border-right: 0; }
+.stat-card-app-label { font-size: 0.7rem; font-weight: 700; margin-bottom: 0.3rem; }
+.stat-card-app-num { font-size: 1.8rem; font-weight: 800; line-height: 1; margin-bottom: 0.2rem; }
+.stat-card-app-sub { font-size: 0.68rem; color: var(--text-l); font-weight: 500; }
+.stat-nogo { color: var(--red); border-left: 3px solid var(--red); }
+.stat-warn { color: var(--amber); border-left: 3px solid var(--amber); }
+.stat-go { color: var(--green); border-left: 3px solid var(--green); }
+.stat-active { color: #2563eb; border-left: 3px solid #3b82f6; }
+.app-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text);
+  background: white;
+  cursor: default;
+  white-space: nowrap;
+}
+.filter-pill-active {
+  background: #132642;
+  color: white;
+  border-color: #132642;
+}
+.app-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #132642;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.app-table-header-right { font-size: 0.7rem; color: rgba(255,255,255,0.6); font-weight: 500; }
+.app-col-headers {
+  display: grid;
+  grid-template-columns: 2fr 0.7fr 1.4fr 1.8fr 0.5fr 0.7fr 0.4fr 0.3fr;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-l);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.worker-row-app {
+  display: grid;
+  grid-template-columns: 2fr 0.7fr 1.4fr 1.8fr 0.5fr 0.7fr 0.4fr 0.3fr;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.worker-row-app:hover { background: #f8fafc; }
+.worker-row-app.nogo-row { border-left: 2px solid #fee2e2; }
+.worker-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 800; color: white; flex-shrink: 0;
+}
+.worker-cell { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.worker-info { min-width: 0; }
+.worker-name-app { font-size: 0.83rem; font-weight: 700; color: #132642; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.worker-ref { font-size: 0.68rem; color: var(--text-l); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.type-pill-app {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.68rem; font-weight: 700;
+  border: 1px solid var(--border); color: var(--text-m); background: white; white-space: nowrap;
+}
+.doc-pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 6px; border-radius: 4px; font-size: 0.62rem; font-weight: 700;
+  margin: 1px; white-space: nowrap;
+}
+.doc-pill-red { background: var(--red-bg); color: var(--red); }
+.doc-pill-amber { background: var(--amber-bg); color: var(--amber); }
+.doc-pill-green { background: var(--green-bg); color: var(--green); }
+.score-cell { font-size: 0.82rem; font-weight: 700; }
+.score-red { color: var(--red); }
+.score-amber { color: var(--amber); }
+.score-green { color: var(--green); }
+.nogo-badge-app { display: inline-flex; align-items: center; gap: 3px; font-size: 0.72rem; font-weight: 700; color: var(--red); white-space: nowrap; }
+.go-badge-app { color: var(--green); }
+.warn-badge-app { color: var(--amber); }
+.arrow-btn { background: none; border: 1px solid var(--border); border-radius: 5px; padding: 3px 7px; cursor: default; color: var(--text-l); font-size: 0.75rem; }
+.doc-pills-wrap { display: flex; flex-wrap: wrap; gap: 2px; }
+/* Gantt styles */
+.gantt-wrap { overflow-x: auto; }
+.gantt-grid { display: grid; min-width: 900px; }
+.gantt-header-row { display: flex; background: #132642; color: rgba(255,255,255,0.7); }
+.gantt-worker-col { width: 160px; flex-shrink: 0; padding: 0.5rem 0.75rem; font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); }
+.gantt-week-headers { display: flex; flex: 1; }
+.gantt-week-col { flex: 1; text-align: center; padding: 0.4rem 0.2rem; font-size: 0.68rem; font-weight: 600; white-space: nowrap; border-left: 1px solid rgba(255,255,255,0.08); }
+.gantt-week-col.current { background: rgba(59,130,246,0.2); color: white; font-weight: 800; }
+.gantt-row { display: flex; border-bottom: 1px solid var(--border); min-height: 60px; }
+.gantt-row:hover { background: #fafbfc; }
+.gantt-worker-info { width: 160px; flex-shrink: 0; padding: 0.5rem 0.75rem; background: #f8fafc; border-right: 1px solid var(--border); }
+.gantt-worker-name-g { font-size: 0.75rem; font-weight: 700; color: #132642; }
+.gantt-worker-sub-g { font-size: 0.62rem; color: var(--text-l); margin-top: 2px; line-height: 1.3; }
+.gantt-assign-btn { font-size: 0.62rem; margin-top: 4px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: default; color: var(--text-m); }
+.gantt-bars-area { flex: 1; position: relative; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 4px 0; }
+.gantt-bar { display: flex; align-items: center; padding: 0 8px; border-radius: 4px; font-size: 0.62rem; font-weight: 700; height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-grey { background: #94a3b8; color: white; }
+.bar-green { background: #15803d; color: white; }
+.bar-amber { background: #d97706; color: white; }
+.bar-red { background: #9b1c1c; color: white; }
+.bar-blue { background: #1d4ed8; color: white; }
+.bar-lightblue { background: #3b82f6; color: white; }
+/* app chrome */
+.app-chrome { background: #132642; padding: 0.6rem 1rem; display: flex; align-items: center; justify-content: space-between; border-radius: 0; }
+.app-chrome-dots { display: flex; gap: 5px; }
+.app-chrome-dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot-red { background: #ff5f57; }
+.dot-yellow { background: #febc2e; }
+.dot-green-dot { background: #28c840; }
+.app-chrome-url { font-size: 0.7rem; color: rgba(255,255,255,0.5); margin: 0 auto; }
+.app-chrome-sync { font-size: 0.65rem; color: #22c55e; font-weight: 700; }
+/* sub-tabs */
+.resource-subtabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); background: white; }
+.resource-subtab { padding: 0.6rem 1rem; font-size: 0.78rem; font-weight: 600; color: var(--text-m); border-bottom: 2px solid transparent; cursor: default; display: flex; align-items: center; gap: 0.4rem; }
+.resource-subtab.active { color: #132642; border-bottom-color: #3b82f6; }
+.gantt-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.85rem; background: #f8fafc; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 0.5rem; }
+.view-toggle { display: flex; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.view-btn { padding: 3px 10px; font-size: 0.72rem; font-weight: 600; cursor: default; background: white; color: var(--text-m); border: none; }
+.view-btn.active { background: #132642; color: white; }
+.demo-dashboard { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: white; box-shadow: 0 4px 20px rgba(19,38,66,0.08); }
+.app-page-head { display:flex; align-items:flex-start; justify-content:space-between; padding:0.85rem 1rem 0.6rem; gap:1rem; flex-wrap:wrap; }
+.app-page-title { font-size:1.05rem; font-weight:800; color:#132642; }
+.app-page-sub { font-size:0.72rem; color:var(--text-m); margin-top:3px; max-width:520px; line-height:1.45; }
+.app-btn-blue { background:#3b82f6; color:#fff; border:none; padding:0.45rem 0.9rem; border-radius:7px; font-size:0.76rem; font-weight:700; cursor:default; white-space:nowrap; }
+.app-search { padding:0.35rem 0.7rem; border:1px solid var(--border); border-radius:6px; font-size:0.74rem; background:#fff; color:var(--text-m); min-width:150px; }
+.app-legend { display:flex; flex-wrap:wrap; gap:1rem; padding:0.5rem 1rem; background:#fff; border-bottom:1px solid var(--border); font-size:0.68rem; color:var(--text-m); }
+.app-legend-item { display:inline-flex; align-items:center; gap:5px; }
+.app-legend-dot { width:8px; height:8px; border-radius:50%; }
+@media(max-width:600px){
+  .stat-cards-row { grid-template-columns: repeat(2,1fr); }
+  .app-col-headers, .worker-row-app { grid-template-columns: 1.6fr 0.6fr 1.4fr 0.5fr 0.4fr; }
+  .app-col-headers .col-hide, .worker-row-app .col-hide { display:none; }
+}
 </style>
 </head>
 <body>
@@ -647,6 +861,7 @@ footer{
     </div>
   </div>
   <div class="navbar-right">
+    <a class="btn btn-ghost-nav" href="worker.html">Worker Portal</a>
     <a class="btn btn-ghost-nav" href="login.html">Log in</a>
     <button class="btn btn-primary" onclick="openDemoModal()">Request Demo</button>
   </div>
@@ -664,13 +879,13 @@ footer{
         Live compliance platform
       </div>
       <h1>Every worker.<br>Every document.<br>Every deadline.<br><span style="color:var(--blue);">Under control.</span></h1>
-      <p class="hero-lead">Stop chasing documents over WhatsApp. Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers across NL, BE and AT.</p>
+      <p class="hero-lead">Stop chasing documents over WhatsApp. Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers anywhere. Customizable document sets work for any country, with pre-built sets for the Netherlands, Belgium, Germany, and Denmark.</p>
       <div class="hero-ctas">
         <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Request Demo</button>
         <a class="btn btn-ghost-nav btn-lg" href="#features">See how it works</a>
       </div>
       <div class="hero-proof">
-        <div class="proof-item"><div class="proof-check">✓</div>Built for NL, BE and AT compliance frameworks</div>
+        <div class="proof-item"><div class="proof-check">✓</div>Works globally — customizable document sets</div>
         <div class="proof-item"><div class="proof-check">✓</div>ZZP and employed workers — one platform</div>
         <div class="proof-item"><div class="proof-check">✓</div>Daily compliance alerts before deadlines hit</div>
       </div>
@@ -698,16 +913,16 @@ footer{
         <!-- Stats row -->
         <div class="mockup-stats">
           <div class="mockup-stat">
-            <div class="stat-num-lg num-green">42</div>
-            <div><div class="stat-lbl">GO</div></div>
+            <div class="stat-num-lg num-red">61</div>
+            <div><div class="stat-lbl">NO-GO</div></div>
           </div>
           <div class="mockup-stat">
-            <div class="stat-num-lg num-amber">7</div>
+            <div class="stat-num-lg num-amber">0</div>
             <div><div class="stat-lbl">WARNING</div></div>
           </div>
           <div class="mockup-stat">
-            <div class="stat-num-lg num-red">3</div>
-            <div><div class="stat-lbl">NO-GO</div></div>
+            <div class="stat-num-lg num-green">1</div>
+            <div><div class="stat-lbl">GO</div></div>
           </div>
         </div>
         <!-- Worker table with slide-in panel -->
@@ -717,47 +932,41 @@ footer{
               <tr>
                 <th>Worker</th>
                 <th>Project</th>
-                <th>Docs</th>
+                <th>Score</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              <tr onclick="openHeroPanel('jansen')" data-worker="jansen">
-                <td><div class="worker-name-cell">M. Jansen</div><div class="worker-sub">ZZP · NL</div></td>
-                <td><span class="proj-tag">Amsterdam DC</span></td>
-                <td style="color:var(--green);font-weight:700;">11/11</td>
-                <td><span class="badge badge-go">GO</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('popescu')" data-worker="popescu">
-                <td><div class="worker-name-cell">A. Popescu</div><div class="worker-sub">Employed · RO</div></td>
-                <td><span class="proj-tag">Antwerp Slab</span></td>
-                <td style="color:var(--amber);font-weight:700;">9/10</td>
-                <td><span class="badge badge-warn">WARNING</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('devries')" data-worker="devries">
-                <td><div class="worker-name-cell">K. de Vries</div><div class="worker-sub">ZZP · NL</div></td>
-                <td><span class="proj-tag">Vienna Fit-Out</span></td>
-                <td style="color:var(--green);font-weight:700;">8/8</td>
-                <td><span class="badge badge-go">GO</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('dobre')" data-worker="dobre" class="nogo-row">
-                <td><div class="worker-name-cell">S. Dobre</div><div class="worker-sub">Employed · RO</div></td>
-                <td><span class="proj-tag">Rotterdam Civil</span></td>
-                <td style="color:var(--red);font-weight:700;">7/10</td>
+              <tr onclick="openHeroPanel('mitrea')" data-worker="mitrea" class="nogo-row">
+                <td><div class="worker-name-cell">Adrian Mitrea</div><div class="worker-sub">ZZP · EU</div></td>
+                <td><span class="proj-tag">00012 - AMS RNG</span></td>
+                <td style="color:var(--red);font-weight:700;">45%</td>
                 <td><span class="badge badge-nogo">NO-GO</span></td>
               </tr>
-              <tr onclick="openHeroPanel('nicolescu')" data-worker="nicolescu">
-                <td><div class="worker-name-cell">T. Nicolescu</div><div class="worker-sub">Employed · RO</div></td>
-                <td><span class="proj-tag">Brussels Site</span></td>
-                <td style="color:var(--amber);font-weight:700;">9/10</td>
-                <td><span class="badge badge-warn">WARNING</span></td>
+              <tr onclick="openHeroPanel('ciolos')" data-worker="ciolos" class="nogo-row">
+                <td><div class="worker-name-cell">Alexandru Ciolos</div><div class="worker-sub">ZZP · EU</div></td>
+                <td><span class="proj-tag">00002 - Schiphol</span></td>
+                <td style="color:var(--amber);font-weight:700;">55%</td>
+                <td><span class="badge badge-nogo">NO-GO</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('leon')" data-worker="leon" class="nogo-row">
+                <td><div class="worker-name-cell">Alexandru Leon</div><div class="worker-sub">Employed · NL</div></td>
+                <td><span class="proj-tag">Rotterdam TMCP</span></td>
+                <td style="color:var(--amber);font-weight:700;">50%</td>
+                <td><span class="badge badge-nogo">NO-GO</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('pinau')" data-worker="pinau">
+                <td><div class="worker-name-cell">Gheorghe Pinau</div><div class="worker-sub">ZZP · EU</div></td>
+                <td><span class="proj-tag">00008 - Schagen</span></td>
+                <td style="color:var(--green);font-weight:700;">100%</td>
+                <td><span class="badge badge-go">GO</span></td>
               </tr>
             </tbody>
           </table>
           <!-- Notification -->
           <div class="mockup-notification">
             <span class="notif-icon">📧</span>
-            <span>Daily digest ready — 3 missing docs, 7 expiry warnings</span>
+            <span>Daily digest ready — 61 workers with missing required docs</span>
           </div>
           <!-- Slide-in detail panel -->
           <div class="worker-detail-panel" id="heroPanel">
@@ -816,8 +1025,8 @@ footer{
       </div>
       <div class="pain-card fade-up fade-up-d3">
         <div class="pain-emoji-wrap">🇪🇺</div>
-        <div class="pain-card-title">Workers in NL, BE and AT — each with different requirements</div>
-        <div class="pain-card-desc">Cross-border postings mean A1 forms, local registrations, and country-specific compliance sets — for every worker.</div>
+        <div class="pain-card-title">Workers across borders — each country with different requirements</div>
+        <div class="pain-card-desc">Cross-border postings mean A1 forms, local registrations, and country-specific compliance sets — for every worker, anywhere they're posted.</div>
       </div>
     </div>
   </div>
@@ -835,7 +1044,7 @@ footer{
       <div class="step fade-up fade-up-d1">
         <div class="step-num">1</div>
         <div class="step-title">Set up your document sets</div>
-        <div class="step-desc">Choose from built-in compliance sets for NL ZZP, NL Blue Card, Belgian employed, and Austrian workers — or create custom sets for any worker type. Each set defines exactly which documents are required, with names, categories, and expiry tracking.</div>
+        <div class="step-desc">Choose from pre-built compliance sets for the Netherlands, Belgium, Germany, and Denmark — or build your own for any country or worker type. Each set defines exactly which documents are required, with names, categories, and expiry tracking.</div>
       </div>
       <div class="step fade-up fade-up-d2">
         <div class="step-num">2</div>
@@ -898,7 +1107,7 @@ footer{
       <div class="feature-card fade-up fade-up-d2">
         <div class="feature-icon">📋</div>
         <div class="feature-title">Document Sets & Templates</div>
-        <div class="feature-desc">Four built-in compliance sets covering NL ZZP, NL Blue Card, Belgian, and Austrian workers. Build custom sets for subcontractors or specialist workers. Attach downloadable form templates for each document type.</div>
+        <div class="feature-desc">Pre-built compliance sets for the Netherlands, Belgium, Germany, and Denmark — or build your own for any country or worker type. Build custom sets for subcontractors or specialist workers. Attach downloadable form templates for each document type.</div>
       </div>
       <div class="feature-card fade-up fade-up-d3">
         <div class="feature-icon">🗂️</div>
@@ -931,68 +1140,162 @@ footer{
     <div class="demo-panel-wrapper active fade-up fade-up-d3" id="demo-tab-dashboard">
       <div class="demo-hint">👆 Click any worker row to view their document details</div>
       <div class="demo-dashboard">
-        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
-          <div class="mockup-dot dot-r"></div>
-          <div class="mockup-dot dot-y"></div>
-          <div class="mockup-dot dot-g"></div>
-          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Workers</div>
-          <div class="mockup-sync">● Synced</div>
+        <!-- App nav bar -->
+        <div class="app-nav-bar">
+          <div class="app-nav-tabs">
+            <div class="app-nav-tab active">Workers</div>
+            <div class="app-nav-tab">Worker Assignments</div>
+            <div class="app-nav-tab">Projects</div>
+            <div class="app-nav-tab">Resources</div>
+            <div class="app-nav-tab">Approvals</div>
+            <div class="app-nav-tab">Documents</div>
+            <div class="app-nav-tab">Settings</div>
+          </div>
+          <div class="app-week-picker">
+            <span>‹</span>
+            <span>Week 23, 2026</span>
+            <span class="app-week-pill">This Week</span>
+            <span>›</span>
+            <span style="color:#3b82f6;">Today</span>
+          </div>
         </div>
-        <div class="mockup-stats">
-          <div class="mockup-stat"><div class="stat-num-lg num-green">42</div><div><div class="stat-lbl">GO</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-amber">7</div><div><div class="stat-lbl">WARNING</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-red">3</div><div><div class="stat-lbl">NO-GO</div></div></div>
-          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · June 2026</span></div>
+        <!-- Stat cards -->
+        <div class="stat-cards-row">
+          <div class="stat-card-app stat-nogo">
+            <div class="stat-card-app-label" style="color:var(--red);">No-Go (W23)</div>
+            <div class="stat-card-app-num" style="color:var(--red);">61</div>
+            <div class="stat-card-app-sub">Missing required documents</div>
+          </div>
+          <div class="stat-card-app stat-warn">
+            <div class="stat-card-app-label" style="color:var(--amber);">Warning (W23)</div>
+            <div class="stat-card-app-num" style="color:var(--amber);">0</div>
+            <div class="stat-card-app-sub">Documents expiring soon</div>
+          </div>
+          <div class="stat-card-app stat-go">
+            <div class="stat-card-app-label" style="color:var(--green);">Go (W23)</div>
+            <div class="stat-card-app-num" style="color:var(--green);">1</div>
+            <div class="stat-card-app-sub">All required documents on file</div>
+          </div>
+          <div class="stat-card-app stat-active">
+            <div class="stat-card-app-label" style="color:#132642;">Active Workers</div>
+            <div class="stat-card-app-num" style="color:#132642;">62</div>
+            <div class="stat-card-app-sub">52 ZZP · 10 Employed · 1 inactive</div>
+          </div>
+        </div>
+        <!-- Filter bar -->
+        <div class="app-filter-bar">
+          <span class="filter-pill">All Doc Sets ▾</span>
+          <span class="filter-pill">Worker: All · <b>Active</b> · Inactive</span>
+          <span class="filter-pill">Compliance: All · ✓ Go · ⚠ Warning · ✗ No-Go</span>
+          <span class="filter-pill">All Projects ▾</span>
+          <span class="filter-pill">Any Missing Doc ▾</span>
+          <input class="app-search" placeholder="Search workers…">
+        </div>
+        <!-- Legend -->
+        <div class="app-legend">
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--green);"></span>Document on file</span>
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--amber);"></span>Expiring within 14 days</span>
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--red);"></span>Missing or expired</span>
+        </div>
+        <!-- Table header -->
+        <div class="app-table-header">
+          <span>Workers</span>
+          <span class="app-table-header-right">62 shown · 62 active · 1 inactive</span>
+        </div>
+        <!-- Column headers -->
+        <div class="app-col-headers">
+          <span>Name</span>
+          <span>Type</span>
+          <span class="col-hide">W23 Worker Assignment</span>
+          <span class="col-hide">Required Docs</span>
+          <span>Score</span>
+          <span>Go/No-Go</span>
+          <span class="col-hide"></span>
+          <span></span>
         </div>
         <div class="demo-table-wrap" id="demoTableWrap">
-          <table class="demo-table">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Worker Type</th>
-                <th>Project</th>
-                <th>Documents</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr onclick="openDemoPanel('jansen')" data-worker="jansen">
-                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.75rem;color:var(--text-l);">NL ZZP · Ref #NL-0041</div></td>
-                <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
-                <td><span class="proj-tag">Amsterdam DC</span></td>
-                <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">11/11</span></td>
-                <td><span class="badge badge-go">✓ GO</span></td>
-              </tr>
-              <tr onclick="openDemoPanel('popescu')" data-worker="popescu">
-                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.75rem;color:var(--text-l);">NL Blue Card · Ref #NL-0089</div></td>
-                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
-                <td><span class="proj-tag">Antwerp Slab</span></td>
-                <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
-                <td><span class="badge badge-warn">⚠ WARNING</span></td>
-              </tr>
-              <tr onclick="openDemoPanel('devries')" data-worker="devries">
-                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.75rem;color:var(--text-l);">NL ZZP · Ref #NL-0023</div></td>
-                <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
-                <td><span class="proj-tag">Vienna Fit-Out</span></td>
-                <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">8/8</span></td>
-                <td><span class="badge badge-go">✓ GO</span></td>
-              </tr>
-              <tr onclick="openDemoPanel('dobre')" data-worker="dobre" class="nogo-row">
-                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.75rem;color:var(--text-l);">BE Employed · Ref #BE-0014</div></td>
-                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
-                <td><span class="proj-tag">Rotterdam Civil</span></td>
-                <td><span style="color:var(--red);font-weight:700;font-size:0.85rem;">7/10</span></td>
-                <td><span class="badge badge-nogo">✕ NO-GO</span></td>
-              </tr>
-              <tr onclick="openDemoPanel('nicolescu')" data-worker="nicolescu">
-                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.75rem;color:var(--text-l);">BE Employed · Ref #BE-0031</div></td>
-                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
-                <td><span class="proj-tag">Brussels Site</span></td>
-                <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
-                <td><span class="badge badge-warn">⚠ WARNING</span></td>
-              </tr>
-            </tbody>
-          </table>
+          <!-- Worker rows -->
+          <div class="worker-row-app nogo-row" onclick="openDemoPanel('mitrea')">
+            <div class="worker-cell">
+              <span class="worker-avatar" style="background:#64748b;">AM</span>
+              <div class="worker-info">
+                <div class="worker-name-app">Adrian Mitrea</div>
+                <div class="worker-ref">93842600 · EU · MITCONS</div>
+              </div>
+            </div>
+            <div><span class="type-pill-app">ZZP</span></div>
+            <div class="col-hide worker-ref">00012 - AMS RNG <span style="color:var(--amber);">⚠</span></div>
+            <div class="col-hide doc-pills-wrap">
+              <span class="doc-pill doc-pill-red">📄 Model</span>
+              <span class="doc-pill doc-pill-red">📄 ZZP</span>
+              <span class="doc-pill doc-pill-amber">📄 Payment</span>
+              <span class="doc-pill doc-pill-red">📄 Ondernemerscheck</span>
+            </div>
+            <div class="score-cell score-red">45%</div>
+            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
+            <div class="col-hide"></div>
+            <div><button class="arrow-btn">→</button></div>
+          </div>
+          <div class="worker-row-app nogo-row" onclick="openDemoPanel('ciolos')">
+            <div class="worker-cell">
+              <span class="worker-avatar" style="background:#0d9488;">AC</span>
+              <div class="worker-info">
+                <div class="worker-name-app">Alexandru Ciolos</div>
+                <div class="worker-ref">93835752 · EU · Ciolos Bouwbedrijf</div>
+              </div>
+            </div>
+            <div><span class="type-pill-app">ZZP</span></div>
+            <div class="col-hide worker-ref">00002 - Schiphol Main Statio… <span style="color:var(--amber);">⚠</span></div>
+            <div class="col-hide doc-pills-wrap">
+              <span class="doc-pill doc-pill-red">📄 VCA</span>
+              <span class="doc-pill doc-pill-amber">📄 Payment</span>
+              <span class="doc-pill doc-pill-red">📄 Ondernemerscheck</span>
+              <span class="doc-pill doc-pill-red">📄 Previous</span>
+              <span class="doc-pill doc-pill-red">📄 Declaration</span>
+            </div>
+            <div class="score-cell score-amber">55%</div>
+            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
+            <div class="col-hide"></div>
+            <div><button class="arrow-btn">→</button></div>
+          </div>
+          <div class="worker-row-app nogo-row" onclick="openDemoPanel('leon')">
+            <div class="worker-cell">
+              <span class="worker-avatar" style="background:#16a34a;">AL</span>
+              <div class="worker-info">
+                <div class="worker-name-app">Alexandru Leon</div>
+                <div class="worker-ref">BSN/623254244 · NL · TMC PERSONEELSDIENSTEN BV</div>
+              </div>
+            </div>
+            <div><span class="type-pill-app">Employed</span></div>
+            <div class="col-hide worker-ref">Rotterdam TMCP Project <span style="color:var(--amber);">⚠</span></div>
+            <div class="col-hide doc-pills-wrap">
+              <span class="doc-pill doc-pill-red">📄 Employment</span>
+              <span class="doc-pill doc-pill-red">📄 Payroll</span>
+              <span class="doc-pill doc-pill-red">📄 Website</span>
+            </div>
+            <div class="score-cell score-amber">50%</div>
+            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
+            <div class="col-hide"></div>
+            <div><button class="arrow-btn">→</button></div>
+          </div>
+          <div class="worker-row-app" onclick="openDemoPanel('pinau')">
+            <div class="worker-cell">
+              <span class="worker-avatar" style="background:#1e3a5f;">GP</span>
+              <div class="worker-info">
+                <div class="worker-name-app">Gheorghe Pinau</div>
+                <div class="worker-ref">95136444 · EU · Power Construct</div>
+              </div>
+            </div>
+            <div><span class="type-pill-app">ZZP</span></div>
+            <div class="col-hide worker-ref">00002 - Schiphol Main Statio…</div>
+            <div class="col-hide doc-pills-wrap">
+              <span class="doc-pill doc-pill-green">✓ All valid</span>
+            </div>
+            <div class="score-cell score-green">100%</div>
+            <div><span class="nogo-badge-app go-badge-app">● ✓ Go</span></div>
+            <div class="col-hide"></div>
+            <div><button class="arrow-btn">→</button></div>
+          </div>
           <!-- Large demo panel -->
           <div class="demo-detail-panel" id="demoDetailPanel">
             <div class="ddp-header">
@@ -1014,121 +1317,213 @@ footer{
 
     <!-- ── Assignments tab ───────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-assignments">
-      <div class="demo-hint">📋 Project assignment Gantt — see who is on which site and when. Click a row for details.</div>
+      <div class="demo-hint">📋 Project assignment Gantt — see who is on which site and when, with sequential and overlapping assignments.</div>
       <div class="demo-dashboard">
-        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
-          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
-          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Assignments</div>
-          <div class="mockup-sync">● Synced</div>
+        <!-- Page header -->
+        <div class="app-page-head">
+          <div>
+            <div class="app-page-title">Worker Assignments</div>
+            <div class="app-page-sub">Each assignment includes a contract and rate. Workers can have sequential or overlapping assignments across projects.</div>
+          </div>
+          <button class="app-btn-blue">+ New Assignment</button>
         </div>
-        <div class="mockup-stats">
-          <div class="mockup-stat"><div class="stat-num-lg num-green">18</div><div><div class="stat-lbl">Active</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-amber">4</div><div><div class="stat-lbl">Ending Soon</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--navy)">5</div><div><div class="stat-lbl">Projects</div></div></div>
-          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · Jun 2026</span></div>
+        <!-- Filter bar -->
+        <div class="app-filter-bar">
+          <input class="app-search" placeholder="Search…">
+          <span class="filter-pill">All projects ▾</span>
+          <span class="filter-pill filter-pill-active">Reference: W23 · 1 Jun – 7 Jun</span>
+          <span style="font-size:0.72rem;color:var(--blue);cursor:default;">× Clear</span>
         </div>
-        <div style="overflow-x:auto;border-top:1px solid var(--border);">
-          <table class="demo-table">
-            <thead><tr>
-              <th>Worker</th><th>Project</th><th>Start</th><th>End</th><th>Rate</th><th>Timeline</th>
-            </tr></thead>
-            <tbody>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.72rem;color:var(--text-l);">ZZP · NL</div></td>
-                <td><span class="proj-tag">Amsterdam DC</span></td>
-                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">29 Aug 2026</td>
-                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€65/hr</td>
-                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:85%;opacity:.85;"></div></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.72rem;color:var(--text-l);">Blue Card · RO</div></td>
-                <td><span class="proj-tag">Antwerp Slab</span></td>
-                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
-                <td style="font-size:0.8rem;color:var(--amber);font-weight:700;">30 Jun 2026 ⚠</td>
-                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€28/hr</td>
-                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--amber);width:55%;opacity:.85;"></div></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.72rem;color:var(--text-l);">ZZP · NL</div></td>
-                <td><span class="proj-tag">Vienna Fit-Out</span></td>
-                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">30 Nov 2026</td>
-                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€70/hr</td>
-                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:40%;opacity:.85;"></div></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.72rem;color:var(--text-l);">Employed · BE</div></td>
-                <td><span class="proj-tag">Rotterdam Civil</span></td>
-                <td style="font-size:0.8rem;color:var(--text-m);">10 Mar 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">25 Sep 2026</td>
-                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€25/hr</td>
-                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:70%;opacity:.85;"></div></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.72rem;color:var(--text-l);">Employed · BE</div></td>
-                <td><span class="proj-tag">Brussels Site</span></td>
-                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
-                <td style="font-size:0.8rem;color:var(--amber);font-weight:700;">15 Jul 2026 ⚠</td>
-                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€26/hr</td>
-                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--amber);width:45%;opacity:.85;"></div></td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Gantt header bar -->
+        <div class="app-table-header">
+          <span>Worker Assignment Timeline</span>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="app-table-header-right">43 workers · 2026-W23</span>
+            <span class="view-toggle"><span class="view-btn">Day</span><span class="view-btn active">Week</span><span class="view-btn">Month</span></span>
+            <span class="app-table-header-right">‹ Today ›</span>
+          </div>
+        </div>
+        <!-- Gantt grid -->
+        <div class="gantt-wrap">
+          <div style="min-width:900px;">
+            <!-- Week header row -->
+            <div class="gantt-header-row">
+              <div class="gantt-worker-col">Worker</div>
+              <div class="gantt-week-headers">
+                <div class="gantt-week-col">W17<br>20 Apr</div>
+                <div class="gantt-week-col">W18<br>27 Apr</div>
+                <div class="gantt-week-col">W19<br>04 May</div>
+                <div class="gantt-week-col">W20<br>11 May</div>
+                <div class="gantt-week-col">W21<br>18 May</div>
+                <div class="gantt-week-col">W22<br>25 May</div>
+                <div class="gantt-week-col current">W23<br>01 Jun</div>
+                <div class="gantt-week-col">W24<br>08 Jun</div>
+                <div class="gantt-week-col">W25<br>15 Jun</div>
+                <div class="gantt-week-col">W26<br>22 Jun</div>
+                <div class="gantt-week-col">W27<br>29 Jun</div>
+                <div class="gantt-week-col">W28<br>06 Jul</div>
+                <div class="gantt-week-col">W29<br>13 Jul</div>
+              </div>
+            </div>
+            <!-- Row 1 — Adrian Mitrea -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Adrian Mitrea</div>
+                <div class="gantt-worker-sub-g">93842600 · EU<br>MITCONS</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-grey" style="margin-left:0%;width:15.4%;">✓ 00029 - GRQ6A - Rei…</div>
+                <div class="gantt-bar bar-red" style="margin-left:7.7%;width:77%;">00012 - AMS RNG</div>
+                <div class="gantt-bar bar-grey" style="margin-left:7.7%;width:38.5%;">⚠ 00002 - Schiphol Main Station Phase 1</div>
+              </div>
+            </div>
+            <!-- Row 2 — Alexandru Ciolos -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Alexandru Ciolos</div>
+                <div class="gantt-worker-sub-g">93835752 · EU<br>Ciolos Bouwbedrijf</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
+                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:53.8%;">⚠ 00002 - Schiphol Main Station Phase 2</div>
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:15.4%;">✓ 00016 - AMSE GS</div>
+              </div>
+            </div>
+            <!-- Row 3 — David A. Andronache -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">David A. Andronache</div>
+                <div class="gantt-worker-sub-g">93840012 · EU<br>Andronache Constr.</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:7.7%;">✓ 00016 - AMSE GS</div>
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
+                <div class="gantt-bar bar-red" style="margin-left:15.4%;width:69.3%;">00012 - AMS RNG</div>
+                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:53.8%;">⚠ 00002 - Schiphol Main Station Phase 2</div>
+              </div>
+            </div>
+            <!-- Row 4 — Gheorghe Pinau -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Gheorghe Pinau</div>
+                <div class="gantt-worker-sub-g">95136444 · EU<br>Power Construct</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
+                <div class="gantt-bar bar-green" style="margin-left:0%;width:100%;">00008 - Gemeente Schagen</div>
+                <div class="gantt-bar bar-red" style="margin-left:0%;width:84.7%;">00012 - AMS RNG</div>
+                <div class="gantt-bar bar-green" style="margin-left:46.2%;width:53.8%;">00002 - Schiphol Main Station Phase 2</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ── Accommodation tab ──────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-accommodation">
-      <div class="demo-hint">🏠 Accommodation assignments — track which workers are in which property, weekly charges, and billing status.</div>
+      <div class="demo-hint">🏠 Accommodation register — track which workers are staying where and until when, on a live timeline.</div>
       <div class="demo-dashboard">
-        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
-          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
-          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Accommodation</div>
-          <div class="mockup-sync">● Synced</div>
+        <!-- Resource sub-tabs -->
+        <div class="resource-subtabs">
+          <div class="resource-subtab active">🏠 Accommodation</div>
+          <div class="resource-subtab">🚗 Vehicles</div>
+          <div class="resource-subtab">🔧 Tools</div>
         </div>
-        <div class="mockup-stats">
-          <div class="mockup-stat"><div class="stat-num-lg num-green">12</div><div><div class="stat-lbl">Occupied</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--navy)">3</div><div><div class="stat-lbl">Properties</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-amber">5</div><div><div class="stat-lbl">Unbilled Weeks</div></div></div>
-          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · Jun 2026</span></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border);">
-          <div style="background:#fff;padding:1rem 1.1rem;">
-            <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-l);margin-bottom:0.75rem;">PROPERTIES</div>
-            <div style="margin-bottom:0.6rem;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
-              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Keizersgracht 214</div>
-              <div style="font-size:0.75rem;color:var(--text-l);">Amsterdam · 4 rooms · €180/wk each</div>
-              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">4 occupied</span></div>
-            </div>
-            <div style="margin-bottom:0.6rem;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
-              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Meir 56 B</div>
-              <div style="font-size:0.75rem;color:var(--text-l);">Antwerp · 6 rooms · €155/wk each</div>
-              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">5 occupied</span><span style="background:#f1f5f9;color:var(--text-m);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">1 free</span></div>
-            </div>
-            <div style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
-              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Mariahilfer Str 88</div>
-              <div style="font-size:0.75rem;color:var(--text-l);">Vienna · 4 rooms · €190/wk each</div>
-              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">3 occupied</span><span style="background:#f1f5f9;color:var(--text-m);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">1 free</span></div>
-            </div>
+        <!-- Page header -->
+        <div class="app-page-head">
+          <div>
+            <div class="app-page-title">Accommodation Register</div>
+            <div class="app-page-sub">Manage properties and track which workers are staying where and until when.</div>
           </div>
-          <div style="background:#fff;padding:1rem 1.1rem;">
-            <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-l);margin-bottom:0.75rem;">CURRENT ASSIGNMENTS</div>
-            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
-              <thead><tr style="background:#f8fafc;">
-                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Worker</th>
-                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Property</th>
-                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">From</th>
-                <th style="text-align:center;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Billing</th>
-              </tr></thead>
-              <tbody>
-                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">M. Jansen</td><td style="padding:6px 8px;color:var(--text-m);">Keizersgracht 214</td><td style="padding:6px 8px;color:var(--text-m);">3 Mar</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Charged</span></td></tr>
-                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">A. Popescu</td><td style="padding:6px 8px;color:var(--text-m);">Meir 56 B</td><td style="padding:6px 8px;color:var(--text-m);">14 Apr</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--amber-bg);color:var(--amber);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Unbilled</span></td></tr>
-                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">K. de Vries</td><td style="padding:6px 8px;color:var(--text-m);">Mariahilfer Str 88</td><td style="padding:6px 8px;color:var(--text-m);">1 Jun</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--amber-bg);color:var(--amber);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Unbilled</span></td></tr>
-                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">S. Dobre</td><td style="padding:6px 8px;color:var(--text-m);">Keizersgracht 214</td><td style="padding:6px 8px;color:var(--text-m);">10 Mar</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Charged</span></td></tr>
-              </tbody>
-            </table>
+          <button class="app-btn-blue">+ Add Property</button>
+        </div>
+        <!-- Gantt header bar -->
+        <div class="app-table-header">
+          <span>Accommodation Timeline</span>
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <span class="app-table-header-right">9 workers</span>
+            <span class="view-toggle"><span class="view-btn">Day</span><span class="view-btn active">Week</span><span class="view-btn">Month</span></span>
+            <span class="app-table-header-right">‹ Today ›</span>
+          </div>
+        </div>
+        <!-- Sort/filter bar -->
+        <div class="app-filter-bar">
+          <span class="filter-pill">Sort: Worker A–Z ▾</span>
+          <span class="filter-pill">All projects ▾</span>
+          <span class="filter-pill filter-pill-active">Ref: W23 · 1 Jun – 7 Jun</span>
+        </div>
+        <!-- Gantt grid -->
+        <div class="gantt-wrap">
+          <div style="min-width:900px;">
+            <!-- Week header row -->
+            <div class="gantt-header-row">
+              <div class="gantt-worker-col">Worker</div>
+              <div class="gantt-week-headers">
+                <div class="gantt-week-col">W17<br>20 Apr</div>
+                <div class="gantt-week-col">W18<br>27 Apr</div>
+                <div class="gantt-week-col">W19<br>04 May</div>
+                <div class="gantt-week-col">W20<br>11 May</div>
+                <div class="gantt-week-col">W21<br>18 May</div>
+                <div class="gantt-week-col">W22<br>25 May</div>
+                <div class="gantt-week-col current">W23<br>01 Jun</div>
+                <div class="gantt-week-col">W24<br>08 Jun</div>
+                <div class="gantt-week-col">W25<br>15 Jun</div>
+                <div class="gantt-week-col">W26<br>22 Jun</div>
+                <div class="gantt-week-col">W27<br>29 Jun</div>
+                <div class="gantt-week-col">W28<br>06 Jul</div>
+                <div class="gantt-week-col">W29<br>13 Jul</div>
+              </div>
+            </div>
+            <!-- Row 1 — Alexandru Leon -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Alexandru Leon</div>
+                <div class="gantt-worker-sub-g">BSN/623254244 · NL<br>Rotterdam TMCP Project</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-amber" style="margin-left:38.5%;width:15.4%;">RCN de Flaasbl…</div>
+              </div>
+            </div>
+            <!-- Row 2 — Costel Ungureanu -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Costel Ungureanu</div>
+                <div class="gantt-worker-sub-g">EU · ASM11<br>TMC Personeelsdiensten B.V.</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-red" style="margin-left:38.5%;width:23.1%;background:#1e3a5f;">RCN Zeewolde</div>
+              </div>
+            </div>
+            <!-- Row 3 — Costica Andries -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Costica Andries</div>
+                <div class="gantt-worker-sub-g">BSN · EU<br>TMC PERSONEELSDIENSTEN</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-blue" style="margin-left:46.2%;width:53.8%;">RCN Zeewolde</div>
+              </div>
+            </div>
+            <!-- Row 4 — Danut Grigorean -->
+            <div class="gantt-row">
+              <div class="gantt-worker-info">
+                <div class="gantt-worker-name-g">Danut Grigorean</div>
+                <div class="gantt-worker-sub-g">95220445 · EU · Dany Conect<br>00015 - Het Foort Amersfc</div>
+                <div class="gantt-assign-btn">+ Assign</div>
+              </div>
+              <div class="gantt-bars-area">
+                <div class="gantt-bar bar-blue" style="margin-left:46.2%;width:38.5%;">RCN Het Grote Bos</div>
+                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:7.7%;">RC…</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1136,22 +1531,30 @@ footer{
 
     <!-- ── Vehicles tab ───────────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-vehicles">
-      <div class="demo-hint">🚐 Vehicle assignments — track company vans, charge workers, and log fleet events.</div>
+      <div class="demo-hint">🚐 Vehicle register — track company vans, charge workers, and log fleet events.</div>
       <div class="demo-dashboard">
-        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
-          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
-          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Vehicles</div>
-          <div class="mockup-sync">● Synced</div>
+        <!-- Resource sub-tabs -->
+        <div class="resource-subtabs">
+          <div class="resource-subtab">🏠 Accommodation</div>
+          <div class="resource-subtab active">🚗 Vehicles</div>
+          <div class="resource-subtab">🔧 Tools</div>
         </div>
-        <div class="mockup-stats">
-          <div class="mockup-stat"><div class="stat-num-lg num-green">8</div><div><div class="stat-lbl">In Use</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--text-m)">2</div><div><div class="stat-lbl">Available</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-amber">3</div><div><div class="stat-lbl">Unbilled Weeks</div></div></div>
+        <!-- Page header -->
+        <div class="app-page-head">
+          <div>
+            <div class="app-page-title">Vehicle Register</div>
+            <div class="app-page-sub">Manage fleet vehicles and track which workers are using them, with weekly charge-back.</div>
+          </div>
+          <button class="app-btn-blue">+ Add Vehicle</button>
         </div>
-        <div style="overflow-x:auto;border-top:1px solid var(--border);">
+        <div class="app-table-header">
+          <span>Vehicles</span>
+          <span class="app-table-header-right">4 assigned · 2 available</span>
+        </div>
+        <div style="overflow-x:auto;">
           <table class="demo-table">
             <thead><tr>
-              <th>Vehicle</th><th>Worker</th><th>From</th><th>To</th><th>Weekly</th><th>Charge To</th><th>Status</th>
+              <th>Vehicle</th><th>Assigned To</th><th>From</th><th>To</th><th>Weekly Charge</th><th>Charge To</th><th>Status</th>
             </tr></thead>
             <tbody>
               <tr>
@@ -1198,19 +1601,27 @@ footer{
 
     <!-- ── Tools tab ──────────────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-tools">
-      <div class="demo-hint">🔧 Tool assignments — track which worker has which equipment, with optional weekly charge-back.</div>
+      <div class="demo-hint">🔧 Tool register — track which worker has which equipment, with optional weekly charge-back.</div>
       <div class="demo-dashboard">
-        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
-          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
-          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Tools</div>
-          <div class="mockup-sync">● Synced</div>
+        <!-- Resource sub-tabs -->
+        <div class="resource-subtabs">
+          <div class="resource-subtab">🏠 Accommodation</div>
+          <div class="resource-subtab">🚗 Vehicles</div>
+          <div class="resource-subtab active">🔧 Tools</div>
         </div>
-        <div class="mockup-stats">
-          <div class="mockup-stat"><div class="stat-num-lg num-green">14</div><div><div class="stat-lbl">Issued</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--text-m)">6</div><div><div class="stat-lbl">In Stock</div></div></div>
-          <div class="mockup-stat"><div class="stat-num-lg num-amber">4</div><div><div class="stat-lbl">Charged Back</div></div></div>
+        <!-- Page header -->
+        <div class="app-page-head">
+          <div>
+            <div class="app-page-title">Tool Register</div>
+            <div class="app-page-sub">Track which worker holds which equipment, with optional weekly charge-back.</div>
+          </div>
+          <button class="app-btn-blue">+ Add Tool</button>
         </div>
-        <div style="overflow-x:auto;border-top:1px solid var(--border);">
+        <div class="app-table-header">
+          <span>Tools &amp; Equipment</span>
+          <span class="app-table-header-right">14 issued · 6 in stock</span>
+        </div>
+        <div style="overflow-x:auto;">
           <table class="demo-table">
             <thead><tr>
               <th>Tool / Equipment</th><th>Worker</th><th>Issued</th><th>Project</th><th>Weekly</th><th>Status</th>
@@ -1268,7 +1679,14 @@ footer{
       <div style="display:flex;justify-content:center;">
         <div class="phone-frame">
           <div class="phone-screen">
-            <div class="phone-header">
+            <div style="background:#0d1f36;padding:0.5rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <div style="width:22px;height:22px;border-radius:6px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:900;color:#fff;">WF</div>
+                <span style="font-size:0.72rem;font-weight:700;color:#fff;">Work-Force</span>
+              </div>
+              <span style="font-size:0.62rem;color:#22c55e;font-weight:700;">● Synced</span>
+            </div>
+            <div class="phone-header" style="background:#132642;">
               <div class="phone-h-title">My Compliance Status</div>
               <div class="phone-h-sub">Hi Andrei — 1 document needs attention</div>
             </div>
@@ -1451,61 +1869,53 @@ fadeEls.forEach(el => observer.observe(el));
 
 // ── Worker data ──
 const workerData = {
-  jansen: {
-    name: 'M. Jansen',
-    project: 'Amsterdam DC · ZZP · NL',
-    badge: 'go',
-    docs: [
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2028'},
-      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Active'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until Mar 2027'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2026'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2026'},
-    ]
-  },
-  popescu: {
-    name: 'A. Popescu',
-    project: 'Antwerp Slab · Employed · RO',
-    badge: 'warn',
-    docs: [
-      {icon:'⚠',ok:'warn',name:'Passport',date:'Expires Sept 2025 — renew now'},
-      {icon:'⚠',ok:'warn',name:'VCA Diploma',date:'Expires Dec 2025'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2025'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2025'},
-    ]
-  },
-  devries: {
-    name: 'K. de Vries',
-    project: 'Vienna Fit-Out · ZZP · NL',
-    badge: 'go',
-    docs: [
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2030'},
-      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Active'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2026'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2026'},
-    ]
-  },
-  dobre: {
-    name: 'S. Dobre',
-    project: 'Rotterdam Civil · Employed · RO',
+  mitrea: {
+    name: 'Adrian Mitrea',
+    project: '00012 - AMS RNG  ·  €38/hr',
     badge: 'nogo',
     docs: [
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2028'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid Nov 2025'},
-      {icon:'✗',ok:'miss',name:'A1 Form',date:'Missing — not uploaded'},
-      {icon:'✗',ok:'miss',name:'BSN Number',date:'Missing — not provided'},
+      {icon:'✗',ok:'miss',name:'Model Agreement',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'ZZP Assessment',date:'Required — not uploaded'},
+      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Valid · Expires Aug 2026'},
+      {icon:'⚠',ok:'warn',name:'Payment History Certificate',date:'Expiring in 28 days'},
+      {icon:'✗',ok:'miss',name:'Ondernemerscheck',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'Previous Clients Check',date:'Required — not uploaded'},
     ]
   },
-  nicolescu: {
-    name: 'T. Nicolescu',
-    project: 'Brussels Site · Employed · RO',
-    badge: 'warn',
+  ciolos: {
+    name: 'Alexandru Ciolos',
+    project: '00002 - Schiphol Main Station Phase 1  ·  €42/hr',
+    badge: 'nogo',
     docs: [
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid 2026'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2025'},
-      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expires in 55 days'},
+      {icon:'✗',ok:'miss',name:'VCA Certificate',date:'Required — not uploaded'},
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid · Expires 2028'},
+      {icon:'⚠',ok:'warn',name:'Payment History Certificate',date:'Expiring in 14 days'},
+      {icon:'✗',ok:'miss',name:'Ondernemerscheck',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'Declaration of Independence',date:'Required — not uploaded'},
+    ]
+  },
+  leon: {
+    name: 'Alexandru Leon',
+    project: 'Rotterdam TMCP Project  ·  €28/hr',
+    badge: 'nogo',
+    docs: [
+      {icon:'✗',ok:'miss',name:'Employment Contract',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'Payroll Registration',date:'Required — not uploaded'},
+      {icon:'✓',ok:'ok',name:'Passport / ID',date:'Valid · Expires 2029'},
+      {icon:'✓',ok:'ok',name:'BSN Verification',date:'Verified'},
+      {icon:'✗',ok:'miss',name:'A1/Work Permit',date:'Required — not uploaded'},
+    ]
+  },
+  pinau: {
+    name: 'Gheorghe Pinau',
+    project: '00008 - Gemeente Schagen  ·  €65/hr',
+    badge: 'go',
+    docs: [
+      {icon:'✓',ok:'ok',name:'Model Agreement',date:'Valid · Expires Nov 2026'},
+      {icon:'✓',ok:'ok',name:'ZZP Assessment',date:'Valid · Expires Mar 2027'},
+      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Valid · Expires Dec 2026'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid · Expires Aug 2027'},
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid · Expires 2030'},
     ]
   }
 };
