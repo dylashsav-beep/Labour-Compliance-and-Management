@@ -225,6 +225,37 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 
 ---
 
+## Scalability Notes
+
+### Architecture model
+The app uses a **"load everything on login"** model: `sbLoadAll()` fetches all rows from every table into memory on sign-in, and `sbPersistAll()` writes all state back on every sync. This is simple and fast at current scale.
+
+### Scale ceiling
+| Worker count | State |
+|---|---|
+| 0–500 | Comfortable — login and sync feel instant |
+| 500–1,500 | Noticeably slower on login/sync; still functional |
+| 1,500–2,000 | Sluggish; user experience degrades |
+| 2,000+ | Needs architectural redesign |
+
+### Hard limits already solved
+- **Supabase/PostgREST 1,000-row cap**: All growth tables in `sbLoadAll` use `qPaged()` (paginated fetcher, 1,000 rows per request until exhausted). Never use the bare `q()` helper for tables that grow with workers or documents.
+- **Upsert timeout on large batches**: `sbUpsertRows()` chunks writes at 500 rows. Safe for any realistic batch size.
+
+### Warning signal
+If login or saving ever starts feeling slow as you grow, that is the signal to revisit the architecture — not before. Do **not** redesign pre-emptively.
+
+### Future redesign direction (if needed)
+- Load only active workers + recent data on login; fetch individual worker detail on demand
+- Delta sync: only upsert rows that actually changed since last write (track a `dirty` flag per entity)
+- Background sync: move `sbPersistAll` off the main thread using a Web Worker
+- Supabase Realtime: subscribe to row-level changes instead of polling
+
+### Tables to watch
+`worker_documents` and `worker_document_files` grow fastest (one doc + multiple files per worker per doc type). At 500 workers with 10 doc types each that is ~5,000 document rows and potentially 15,000+ file rows — all paginated safely by `qPaged`.
+
+---
+
 ## Checkpoint — Production State as of 2026-06-01
 
 **140 commits on main**. System fully live with:
