@@ -84,6 +84,8 @@ body.sb-auth-lock .sticky-chrome{visibility:hidden;}
 /* Demo mode */
 #demoBanner{display:none;position:sticky;top:0;z-index:201;background:#92400e;color:#fff;padding:8px 16px;min-height:38px;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:500;}
 body.demo-mode .sticky-chrome{top:38px;}
+body.demo-mode #hdrLoginBtn,body.demo-mode #hdrSyncBtn,body.demo-mode #hdrLogoutBtn{display:none!important;}
+body.demo-mode #headerSyncPill{display:none!important;}
 .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px;}
 
 /* FILTER BAR */
@@ -3017,38 +3019,41 @@ function loadDemoDefaults(){
     if(w.docs[k]!==undefined) w.docs[k]={status,date:expiry||null,issueDate:issue||null,files:[]};
   }
 
+  // Relative date helpers — ensures demo statuses stay current regardless of when demo is opened
+  function demoDate(offsetDays){ const d=new Date(); d.setDate(d.getDate()+offsetDays); return d.toISOString().slice(0,10); }
+
   // Worker 1 (van den Berg) — NO-GO: some missing, one expiring, some ok
   const k1=Object.keys(workers[0].docs);
   k1.forEach((k,i)=>{
-    if(i===0) setDoc(workers[0],k,'ok','2029-03-15','2019-03-15');         // passport ok
-    else if(i===1) setDoc(workers[0],k,'missing',null,null);               // vca missing
-    else if(i===2) setDoc(workers[0],k,'expiring','2026-06-20','2025-06-20'); // kvk expiring
-    else if(i===3) setDoc(workers[0],k,'missing',null,null);               // a1 missing
-    else if(i===4) setDoc(workers[0],k,'ok','2027-01-01','2023-01-01');    // vog ok
-    else if(i===5) setDoc(workers[0],k,'ok','2027-05-01','2025-05-01');    // insurance ok
-    else setDoc(workers[0],k,'missing',null,null);                          // rest missing
+    if(i===0) setDoc(workers[0],k,'ok',demoDate(1095),demoDate(-2555));      // passport ok, expires ~3yr
+    else if(i===1) setDoc(workers[0],k,'missing',null,null);                  // vca missing
+    else if(i===2) setDoc(workers[0],k,'expiring',demoDate(14),demoDate(-365)); // expiring in 14 days
+    else if(i===3) setDoc(workers[0],k,'missing',null,null);                  // a1 missing
+    else if(i===4) setDoc(workers[0],k,'ok',demoDate(730),demoDate(-1095));   // vog ok
+    else if(i===5) setDoc(workers[0],k,'ok',demoDate(700),demoDate(-365));    // insurance ok
+    else setDoc(workers[0],k,'missing',null,null);
   });
 
   // Worker 2 (Schmidt) — NO-GO: passport, a1, vog missing
   const k2=Object.keys(workers[1].docs);
   k2.forEach((k,i)=>{
-    if(i===0) setDoc(workers[1],k,'missing',null,null);                    // passport missing
-    else if(i===1) setDoc(workers[1],k,'ok','2027-09-01','2025-09-01');   // vca ok
-    else if(i===2) setDoc(workers[1],k,'ok','2027-01-01','2025-01-01');   // kvk ok
-    else if(i===3) setDoc(workers[1],k,'missing',null,null);              // a1 missing
-    else if(i===4) setDoc(workers[1],k,'missing',null,null);              // vog missing
-    else setDoc(workers[1],k,'ok','2028-02-01','2025-02-01');             // rest ok
+    if(i===0) setDoc(workers[1],k,'missing',null,null);                       // passport missing
+    else if(i===1) setDoc(workers[1],k,'ok',demoDate(455),demoDate(-365));    // vca ok
+    else if(i===2) setDoc(workers[1],k,'ok',demoDate(580),demoDate(-365));    // kvk ok
+    else if(i===3) setDoc(workers[1],k,'missing',null,null);                  // a1 missing
+    else if(i===4) setDoc(workers[1],k,'missing',null,null);                  // vog missing
+    else setDoc(workers[1],k,'ok',demoDate(610),demoDate(-365));
   });
 
-  // Worker 3 (Kowalski) — WARNING: insurance expiring, rest ok
+  // Worker 3 (Kowalski) — WARNING: one doc expiring within warning window, rest ok
   const k3=Object.keys(workers[2].docs);
   k3.forEach((k,i)=>{
-    if(i===5) setDoc(workers[2],k,'expiring','2026-06-25','2024-06-25');  // insurance expiring
-    else setDoc(workers[2],k,'ok','2028-01-01','2025-01-01');             // all others ok
+    if(i===5) setDoc(workers[2],k,'expiring',demoDate(19),demoDate(-730));    // insurance expiring ~19 days
+    else setDoc(workers[2],k,'ok',demoDate(760),demoDate(-365));
   });
 
   // Worker 4 (Ionescu) — GO: all ok
-  Object.keys(workers[3].docs).forEach(k=>setDoc(workers[3],k,'ok','2028-06-01','2025-06-01'));
+  Object.keys(workers[3].docs).forEach(k=>setDoc(workers[3],k,'ok',demoDate(730),demoDate(-365)));
 
   // Projects
   projectStore=[
@@ -3102,6 +3107,7 @@ function loadDemoDefaults(){
   workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
 
   settings.warningDays=60;
+  settings.complianceReportEmail='hello@work-force.nl';
   saveDemoState();
 }
 
@@ -3144,6 +3150,8 @@ function sbInitDemo(){
   // Update user display
   const uel=document.getElementById('sbUser');
   if(uel) uel.innerHTML='<span style="font-size:12px;font-weight:500;color:#a8c8e8;padding:0 6px;">👤 Demo User (admin)</span>';
+  // Reset all filters to show everything by default
+  fActive = 'all'; fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = '';
   // Render
   try{ renderProjFilters(); }catch(e){}
   try{ renderDocSetFilters(); }catch(e){}
@@ -3159,6 +3167,16 @@ function sbInitDemo(){
 function showDemoBanner(){
   const b=document.getElementById('demoBanner');
   if(b){ b.style.display='flex'; document.body.classList.add('demo-mode'); }
+  // Replace header sync area with demo pill + contact link
+  const wrap=document.getElementById('headerSyncWrap');
+  if(wrap && !wrap.querySelector('#demoPill')){
+    wrap.insertAdjacentHTML('afterbegin','<span id="demoPill" class="hsync-pill" style="background:rgba(251,191,36,.18);color:#fbbf24;">🎭 Demo</span><a href="mailto:hello@work-force.nl" id="demoContactBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 11px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">Contact us</a>');
+  }
+  // Swap header branding for demo
+  const logoImg=document.getElementById('headerLogoImg');
+  if(logoImg) logoImg.src='data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56"><rect width="56" height="56" rx="10" fill="#1a3082"/><text x="28" y="36" font-family="Inter,Arial,sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">WF</text></svg>');
+  const logoName=document.getElementById('headerAppTitle');
+  if(logoName) logoName.textContent='Work Force Compliance';
 }
 
 function resetDemoData(){
@@ -7268,7 +7286,7 @@ function complianceReportText(){
   const today=new Date().toLocaleDateString('en-GB');
   const warning=rows.filter(r=>r.status==='warning').length;
   const nogo=rows.filter(r=>r.status==='nogo').length;
-  let txt=`TMC Compliance Report - ${today}\n\n`;
+  let txt=`${DEMO_MODE?'Work Force':'TMC'} Compliance Report - ${today}\n\n`;
   txt+=`Active workers requiring attention: ${rows.length}\n`;
   txt+=`No-Go: ${nogo}\n`;
   txt+=`Warning: ${warning}\n\n`;
@@ -7304,7 +7322,7 @@ function renderComplianceReportSettings(){
 }
 function openComplianceEmailReport(){
   const recipient=complianceReportRecipient();
-  const subject=`TMC Compliance Report - ${new Date().toLocaleDateString('en-GB')}`;
+  const subject=`${DEMO_MODE?'Work Force':'TMC'} Compliance Report - ${new Date().toLocaleDateString('en-GB')}`;
   const body=complianceReportText();
   window.location.href=`mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
