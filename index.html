@@ -1908,7 +1908,7 @@ footer{
     <div class="section-sub fade-up fade-up-d1" style="text-align:center;">We set up your account, import your workers, and configure your document sets together. Dedicated onboarding included — no extra charge.</div>
     <div class="cta-buttons fade-up fade-up-d2">
       <button class="btn btn-white btn-lg" onclick="openDemoModal()">Request Demo</button>
-      <a class="btn btn-navy-outline btn-lg" href="mailto:compliance@tmconstruction.nl">compliance@tmconstruction.nl</a>
+      <a class="btn btn-navy-outline btn-lg" href="mailto:sales@work-force.nl">sales@work-force.nl</a>
     </div>
   </div>
 </section>
@@ -1922,7 +1922,7 @@ footer{
     <div class="footer-links">
       <a href="app.html">Management Login</a>
       <a href="worker.html">Worker Portal</a>
-      <a href="mailto:compliance@tmconstruction.nl">Contact</a>
+      <a href="mailto:sales@work-force.nl">Contact</a>
     </div>
   </div>
 </footer>
@@ -1975,9 +1975,9 @@ footer{
         <button class="modal-close" onclick="closeDemoModal()">×</button>
       </div>
       <div class="modal-success">
-        <div class="success-icon">✅</div>
+        <div class="success-icon"></div>
         <div class="success-title">Request sent!</div>
-        <div class="success-text">We'll be in touch within one business day to set up your demo. In the meantime, feel free to explore the worker portal or reach out directly at <a href="mailto:compliance@tmconstruction.nl" style="color:var(--blue);">compliance@tmconstruction.nl</a>.</div>
+        <div class="success-text">We'll be in touch within one business day to set up your demo.</div>
         <a class="success-back" onclick="closeDemoModal()">← Back to site</a>
       </div>
     </div>
@@ -2230,20 +2230,35 @@ function closeDemoModal() {
 function handleModalOverlayClick(e) {
   if (e.target === document.getElementById('demoModal')) closeDemoModal();
 }
-function submitDemoForm(e) {
+async function submitDemoForm(e) {
   e.preventDefault();
-  const name = document.getElementById('demoName').value.trim();
+  const name    = document.getElementById('demoName').value.trim();
   const company = document.getElementById('demoCompany').value.trim();
-  const email = document.getElementById('demoEmail').value.trim();
+  const email   = document.getElementById('demoEmail').value.trim();
   const workers = document.getElementById('demoWorkers').value;
   const message = document.getElementById('demoMessage').value.trim();
-  const subject = encodeURIComponent(`Demo Request — ${company}`);
-  const body = encodeURIComponent(
-    `Demo Request\n\nName: ${name}\nCompany: ${company}\nEmail: ${email}\nWorkers: ${workers}\n\nMessage:\n${message || '(none)'}`
-  );
-  window.location.href = `mailto:dylan@tmconstruction.nl?subject=${subject}&body=${body}`;
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  try {
+    await fetch(
+      'https://gmuyvostwcqorspgzvjv.supabase.co/functions/v1/demo-request',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, company, email, workers, message })
+      }
+    );
+  } catch (_) {
+    // Silently ignore network errors — visitor still sees success
+  }
+
   document.getElementById('modalFormState').style.display = 'none';
   document.getElementById('modalSuccessState').style.display = '';
+  btn.disabled = false;
+  btn.textContent = 'Send Request';
 }
 
 // Escape key closes modal
