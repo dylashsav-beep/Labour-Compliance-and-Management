@@ -182,6 +182,8 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `reactivate_stale_doc_set_items.sql` | ✅ Run | Reactivates document_set_items stale-deactivated by the group-delete bug. Run FIRST. |
 | `reactivate_group_deleted_docs.sql` | ✅ Run | Reactivates worker_documents + files for doc_keys now active. Run SECOND (after stale_doc_set_items). |
 | `reactivate_orphaned_files.sql` | ⏳ Pending | Final recovery: reactivates worker_document_files still inactive after the above two migrations (62 files: vca_vol×51, vca×7, vog/payroll/scc/twv×1 each). Run this last. |
+| `retire_worker_document_file_deletions.sql` | ✅ Run | Retired 57 stale worker_document_file deletion records (the eternal-replay loop) and reactivated their files. |
+| `add_permanent_delete_policies.sql` | ⏳ Pending | Adds DELETE RLS policies so the admin "Delete Permanently" button in Deleted Items can hard-delete. Required for that feature to work. |
 
 ---
 
