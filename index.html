@@ -1208,11 +1208,10 @@ footer{
         <div class="app-nav-bar">
           <div class="app-nav-tabs">
             <div class="app-nav-tab active">Workers</div>
-            <div class="app-nav-tab">Worker Assignments</div>
+            <div class="app-nav-tab">Assignments</div>
             <div class="app-nav-tab">Projects</div>
             <div class="app-nav-tab">Resources</div>
             <div class="app-nav-tab">Approvals</div>
-            <div class="app-nav-tab">Documents</div>
             <div class="app-nav-tab">Settings</div>
           </div>
           <div class="app-week-picker">
@@ -1223,144 +1222,156 @@ footer{
             <span style="color:#3b82f6;">Today</span>
           </div>
         </div>
-        <!-- Stat cards -->
-        <div class="stat-cards-row">
-          <div class="stat-card-app stat-nogo">
-            <div class="stat-card-app-label" style="color:var(--red);">No-Go (W23)</div>
-            <div class="stat-card-app-num" style="color:var(--red);">61</div>
-            <div class="stat-card-app-sub">Missing required documents</div>
+        <!-- Stat cards — real app layout -->
+        <div class="stats-row">
+          <div class="stat s-red">
+            <div class="stat-label">No-Go (W23)</div>
+            <div class="stat-value">4</div>
+            <div class="stat-note">Missing required documents</div>
           </div>
-          <div class="stat-card-app stat-warn">
-            <div class="stat-card-app-label" style="color:var(--amber);">Warning (W23)</div>
-            <div class="stat-card-app-num" style="color:var(--amber);">0</div>
-            <div class="stat-card-app-sub">Documents expiring soon</div>
+          <div class="stat s-amber">
+            <div class="stat-label">Warning (W23)</div>
+            <div class="stat-value">2</div>
+            <div class="stat-note">Documents expiring soon</div>
           </div>
-          <div class="stat-card-app stat-go">
-            <div class="stat-card-app-label" style="color:var(--green);">Go (W23)</div>
-            <div class="stat-card-app-num" style="color:var(--green);">1</div>
-            <div class="stat-card-app-sub">All required documents on file</div>
+          <div class="stat s-green">
+            <div class="stat-label">Go (W23)</div>
+            <div class="stat-value">12</div>
+            <div class="stat-note">All required documents on file</div>
           </div>
-          <div class="stat-card-app stat-active">
-            <div class="stat-card-app-label" style="color:#132642;">Active Workers</div>
-            <div class="stat-card-app-num" style="color:#132642;">62</div>
-            <div class="stat-card-app-sub">52 ZZP · 10 Employed · 1 inactive</div>
+          <div class="stat s-blue">
+            <div class="stat-label">Active Workers</div>
+            <div class="stat-value">18</div>
+            <div class="stat-note">11 ZZP · 7 Employed · 3 inactive</div>
           </div>
         </div>
         <!-- Filter bar -->
         <div class="app-filter-bar">
           <span class="filter-pill">All Doc Sets ▾</span>
-          <span class="filter-pill">Worker: All · <b>Active</b> · Inactive</span>
-          <span class="filter-pill">Compliance: All · ✓ Go · ⚠ Warning · ✗ No-Go</span>
+          <span class="filter-pill">Active ▾</span>
+          <span class="filter-pill">Compliance: All ▾</span>
           <span class="filter-pill">All Projects ▾</span>
-          <span class="filter-pill">Any Missing Doc ▾</span>
-          <input class="app-search" placeholder="Search workers…">
+          <input class="app-search" placeholder="Search workers…" style="pointer-events:none;">
         </div>
         <!-- Legend -->
         <div class="app-legend">
-          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--green);"></span>Document on file</span>
-          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--amber);"></span>Expiring within 14 days</span>
-          <span class="app-legend-item"><span class="app-legend-dot" style="background:var(--red);"></span>Missing or expired</span>
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:#276749;"></span>Document on file</span>
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:#b45309;"></span>Expiring within warning window</span>
+          <span class="app-legend-item"><span class="app-legend-dot" style="background:#c53030;"></span>Missing or expired</span>
         </div>
-        <!-- Table header -->
-        <div class="app-table-header">
-          <span>Workers</span>
-          <span class="app-table-header-right">62 shown · 62 active · 1 inactive</span>
-        </div>
-        <!-- Column headers -->
-        <div class="app-col-headers">
-          <span>Name</span>
-          <span>Type</span>
-          <span class="col-hide">W23 Worker Assignment</span>
-          <span class="col-hide">Required Docs</span>
-          <span>Score</span>
-          <span>Go/No-Go</span>
-          <span class="col-hide"></span>
-          <span></span>
+        <!-- Table -->
+        <div class="table-head">
+          <span class="table-head-title">Workers</span>
+          <span class="table-head-count">18 shown · 18 active · 3 inactive</span>
         </div>
         <div class="demo-table-wrap" id="demoTableWrap">
-          <!-- Worker rows -->
-          <div class="worker-row-app nogo-row" onclick="openDemoPanel('mitrea')">
-            <div class="worker-cell">
-              <span class="worker-avatar" style="background:#64748b;">AM</span>
-              <div class="worker-info">
-                <div class="worker-name-app">Adrian Mitrea</div>
-                <div class="worker-ref">93842600 · EU · MITCONS</div>
-              </div>
-            </div>
-            <div><span class="type-pill-app">ZZP</span></div>
-            <div class="col-hide worker-ref">00012 - AMS RNG <span style="color:var(--amber);">⚠</span></div>
-            <div class="col-hide doc-pills-wrap">
-              <span class="doc-pill doc-pill-red">📄 Model</span>
-              <span class="doc-pill doc-pill-red">📄 ZZP</span>
-              <span class="doc-pill doc-pill-amber">📄 Payment</span>
-              <span class="doc-pill doc-pill-red">📄 Ondernemerscheck</span>
-            </div>
-            <div class="score-cell score-red">45%</div>
-            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
-            <div class="col-hide"></div>
-            <div><button class="arrow-btn">→</button></div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width:180px;">Name</th>
+                  <th>Type</th>
+                  <th style="min-width:140px;">Assignment W23</th>
+                  <th style="min-width:180px;">Required Docs</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="background:#fff5f5;cursor:pointer;" onclick="openDemoPanel('berg')">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#64748b;">JB</div>
+                      <div>
+                        <div class="worker-name">J. van den Berg</div>
+                        <div class="worker-id">Ref NL-041 · EU</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Amsterdam North DC</span></td>
+                  <td>
+                    <div class="doc-chips">
+                      <span class="chip missing"><span class="chip-dot"></span>VCA Cert</span>
+                      <span class="chip missing"><span class="chip-dot"></span>A1 Form</span>
+                      <span class="chip expiring"><span class="chip-dot"></span>KvK Extract</span>
+                    </div>
+                  </td>
+                  <td><span class="score-num" style="color:#c53030;">45%</span></td>
+                  <td><span class="status-badge nogo"><span class="go-dot nogo"></span>No-Go</span></td>
+                  <td><button class="detail-btn">→</button></td>
+                </tr>
+                <tr style="background:#fff5f5;cursor:pointer;" onclick="openDemoPanel('schmidt')">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#0d9488;">MS</div>
+                      <div>
+                        <div class="worker-name">M. Schmidt</div>
+                        <div class="worker-id">Ref DE-027 · EU</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Brussels Infra Site</span></td>
+                  <td>
+                    <div class="doc-chips">
+                      <span class="chip missing"><span class="chip-dot"></span>Passport</span>
+                      <span class="chip missing"><span class="chip-dot"></span>VOG</span>
+                      <span class="chip missing"><span class="chip-dot"></span>A1 Form</span>
+                    </div>
+                  </td>
+                  <td><span class="score-num" style="color:#c53030;">30%</span></td>
+                  <td><span class="status-badge nogo"><span class="go-dot nogo"></span>No-Go</span></td>
+                  <td><button class="detail-btn">→</button></td>
+                </tr>
+                <tr style="background:#fffbeb;cursor:pointer;" onclick="openDemoPanel('kowalski')">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#1e3a5f;">PK</div>
+                      <div>
+                        <div class="worker-name">P. Kowalski</div>
+                        <div class="worker-id">Ref BE-089 · EU</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge blue">Employed</span></td>
+                  <td><span class="assign-tag">Antwerp Slab Works</span></td>
+                  <td>
+                    <div class="doc-chips">
+                      <span class="chip expiring"><span class="chip-dot"></span>Health Insurance</span>
+                      <span class="chip ok"><span class="chip-dot"></span>Passport</span>
+                    </div>
+                  </td>
+                  <td><span class="score-num" style="color:#b45309;">75%</span></td>
+                  <td><span class="status-badge warning"><span class="go-dot warning"></span>Warning</span></td>
+                  <td><button class="detail-btn">→</button></td>
+                </tr>
+                <tr style="cursor:pointer;" onclick="openDemoPanel('ionescu')">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#16a34a;">DI</div>
+                      <div>
+                        <div class="worker-name">D. Ionescu</div>
+                        <div class="worker-id">Ref NL-055 · EU</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Rotterdam Civil</span></td>
+                  <td>
+                    <div class="doc-chips">
+                      <span class="chip ok"><span class="chip-dot"></span>All valid</span>
+                    </div>
+                  </td>
+                  <td><span class="score-num" style="color:#276749;">100%</span></td>
+                  <td><span class="status-badge go"><span class="go-dot go"></span>Go</span></td>
+                  <td><button class="detail-btn">→</button></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="worker-row-app nogo-row" onclick="openDemoPanel('ciolos')">
-            <div class="worker-cell">
-              <span class="worker-avatar" style="background:#0d9488;">AC</span>
-              <div class="worker-info">
-                <div class="worker-name-app">Alexandru Ciolos</div>
-                <div class="worker-ref">93835752 · EU · Ciolos Bouwbedrijf</div>
-              </div>
-            </div>
-            <div><span class="type-pill-app">ZZP</span></div>
-            <div class="col-hide worker-ref">00002 - Schiphol Main Statio… <span style="color:var(--amber);">⚠</span></div>
-            <div class="col-hide doc-pills-wrap">
-              <span class="doc-pill doc-pill-red">📄 VCA</span>
-              <span class="doc-pill doc-pill-amber">📄 Payment</span>
-              <span class="doc-pill doc-pill-red">📄 Ondernemerscheck</span>
-              <span class="doc-pill doc-pill-red">📄 Previous</span>
-              <span class="doc-pill doc-pill-red">📄 Declaration</span>
-            </div>
-            <div class="score-cell score-amber">55%</div>
-            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
-            <div class="col-hide"></div>
-            <div><button class="arrow-btn">→</button></div>
-          </div>
-          <div class="worker-row-app nogo-row" onclick="openDemoPanel('leon')">
-            <div class="worker-cell">
-              <span class="worker-avatar" style="background:#16a34a;">AL</span>
-              <div class="worker-info">
-                <div class="worker-name-app">Alexandru Leon</div>
-                <div class="worker-ref">BSN/623254244 · NL · TMC PERSONEELSDIENSTEN BV</div>
-              </div>
-            </div>
-            <div><span class="type-pill-app">Employed</span></div>
-            <div class="col-hide worker-ref">Rotterdam TMCP Project <span style="color:var(--amber);">⚠</span></div>
-            <div class="col-hide doc-pills-wrap">
-              <span class="doc-pill doc-pill-red">📄 Employment</span>
-              <span class="doc-pill doc-pill-red">📄 Payroll</span>
-              <span class="doc-pill doc-pill-red">📄 Website</span>
-            </div>
-            <div class="score-cell score-amber">50%</div>
-            <div><span class="nogo-badge-app">● ✗ No-Go</span></div>
-            <div class="col-hide"></div>
-            <div><button class="arrow-btn">→</button></div>
-          </div>
-          <div class="worker-row-app" onclick="openDemoPanel('pinau')">
-            <div class="worker-cell">
-              <span class="worker-avatar" style="background:#1e3a5f;">GP</span>
-              <div class="worker-info">
-                <div class="worker-name-app">Gheorghe Pinau</div>
-                <div class="worker-ref">95136444 · EU · Power Construct</div>
-              </div>
-            </div>
-            <div><span class="type-pill-app">ZZP</span></div>
-            <div class="col-hide worker-ref">00002 - Schiphol Main Statio…</div>
-            <div class="col-hide doc-pills-wrap">
-              <span class="doc-pill doc-pill-green">✓ All valid</span>
-            </div>
-            <div class="score-cell score-green">100%</div>
-            <div><span class="nogo-badge-app go-badge-app">● ✓ Go</span></div>
-            <div class="col-hide"></div>
-            <div><button class="arrow-btn">→</button></div>
-          </div>
-          <!-- Large demo panel -->
+          <!-- Detail panel -->
           <div class="demo-detail-panel" id="demoDetailPanel">
             <div class="ddp-header">
               <div>
@@ -1381,41 +1392,38 @@ footer{
 
     <!-- ── Assignments tab ───────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-assignments">
-      <div class="demo-hint">📋 Project assignment Gantt — see who is on which site and when, with sequential and overlapping assignments.</div>
+      <div class="demo-hint">📋 Project assignment Gantt — see who is on which site and when. Workers can have sequential and overlapping assignments.</div>
       <div class="demo-dashboard">
-        <!-- Page header -->
+        <div class="app-nav-bar" style="border-radius:8px 8px 0 0;">
+          <div class="app-nav-tabs">
+            <div class="app-nav-tab">Workers</div>
+            <div class="app-nav-tab active">Assignments</div>
+            <div class="app-nav-tab">Projects</div>
+            <div class="app-nav-tab">Resources</div>
+          </div>
+          <div class="app-week-picker">
+            <span>‹</span><span>W23 · 1 Jun – 7 Jun</span><span>›</span>
+          </div>
+        </div>
         <div class="app-page-head">
           <div>
             <div class="app-page-title">Worker Assignments</div>
-            <div class="app-page-sub">Each assignment includes a contract and rate. Workers can have sequential or overlapping assignments across projects.</div>
+            <div class="app-page-sub">Project Gantt — sequential and overlapping assignments with contract and rate storage.</div>
           </div>
           <button class="app-btn-blue">+ New Assignment</button>
         </div>
-        <!-- Filter bar -->
-        <div class="app-filter-bar">
-          <input class="app-search" placeholder="Search…">
-          <span class="filter-pill">All projects ▾</span>
-          <span class="filter-pill filter-pill-active">Reference: W23 · 1 Jun – 7 Jun</span>
-          <span style="font-size:0.72rem;color:var(--blue);cursor:default;">× Clear</span>
-        </div>
-        <!-- Gantt header bar -->
-        <div class="app-table-header">
-          <span>Worker Assignment Timeline</span>
+        <div class="table-head">
+          <span class="table-head-title">Assignment Timeline</span>
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <span class="app-table-header-right">43 workers · 2026-W23</span>
+            <span class="table-head-count">18 workers · 2026-W23 reference</span>
             <span class="view-toggle"><span class="view-btn">Day</span><span class="view-btn active">Week</span><span class="view-btn">Month</span></span>
-            <span class="app-table-header-right">‹ Today ›</span>
           </div>
         </div>
-        <!-- Gantt grid -->
         <div class="gantt-wrap">
           <div style="min-width:900px;">
-            <!-- Week header row -->
             <div class="gantt-header-row">
               <div class="gantt-worker-col">Worker</div>
               <div class="gantt-week-headers">
-                <div class="gantt-week-col">W17<br>20 Apr</div>
-                <div class="gantt-week-col">W18<br>27 Apr</div>
                 <div class="gantt-week-col">W19<br>04 May</div>
                 <div class="gantt-week-col">W20<br>11 May</div>
                 <div class="gantt-week-col">W21<br>18 May</div>
@@ -1427,109 +1435,98 @@ footer{
                 <div class="gantt-week-col">W27<br>29 Jun</div>
                 <div class="gantt-week-col">W28<br>06 Jul</div>
                 <div class="gantt-week-col">W29<br>13 Jul</div>
+                <div class="gantt-week-col">W30<br>20 Jul</div>
+                <div class="gantt-week-col">W31<br>27 Jul</div>
               </div>
             </div>
-            <!-- Row 1 — Adrian Mitrea -->
+            <!-- J. van den Berg -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Adrian Mitrea</div>
-                <div class="gantt-worker-sub-g">93842600 · EU<br>MITCONS</div>
+                <div class="gantt-worker-name-g">J. van den Berg</div>
+                <div class="gantt-worker-sub-g">Ref NL-041 · EU · ZZP</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-grey" style="margin-left:0%;width:15.4%;">✓ 00029 - GRQ6A - Rei…</div>
-                <div class="gantt-bar bar-red" style="margin-left:7.7%;width:77%;">00012 - AMS RNG</div>
-                <div class="gantt-bar bar-grey" style="margin-left:7.7%;width:38.5%;">⚠ 00002 - Schiphol Main Station Phase 1</div>
+                <div class="gantt-bar gb-expired" style="margin-left:0%;width:15.4%;">P004 - Rotterdam Civil</div>
+                <div class="gantt-bar gb-active" style="margin-left:15.4%;width:69.2%;">P001 - Amsterdam North DC</div>
               </div>
             </div>
-            <!-- Row 2 — Alexandru Ciolos -->
+            <!-- M. Schmidt -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Alexandru Ciolos</div>
-                <div class="gantt-worker-sub-g">93835752 · EU<br>Ciolos Bouwbedrijf</div>
+                <div class="gantt-worker-name-g">M. Schmidt</div>
+                <div class="gantt-worker-sub-g">Ref DE-027 · EU · ZZP</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
-                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:53.8%;">⚠ 00002 - Schiphol Main Station Phase 2</div>
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:15.4%;">✓ 00016 - AMSE GS</div>
+                <div class="gantt-bar gb-active" style="margin-left:0%;width:53.8%;">P002 - Brussels Infra Site</div>
+                <div class="gantt-bar gb-future" style="margin-left:53.8%;width:46.2%;">P003 - Antwerp Slab Works</div>
               </div>
             </div>
-            <!-- Row 3 — David A. Andronache -->
+            <!-- P. Kowalski -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">David A. Andronache</div>
-                <div class="gantt-worker-sub-g">93840012 · EU<br>Andronache Constr.</div>
+                <div class="gantt-worker-name-g">P. Kowalski</div>
+                <div class="gantt-worker-sub-g">Ref BE-089 · EU · Employed</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:7.7%;">✓ 00016 - AMSE GS</div>
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
-                <div class="gantt-bar bar-red" style="margin-left:15.4%;width:69.3%;">00012 - AMS RNG</div>
-                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:53.8%;">⚠ 00002 - Schiphol Main Station Phase 2</div>
+                <div class="gantt-bar gb-active" style="margin-left:0%;width:46.2%;">P003 - Antwerp Slab Works</div>
+                <div class="gantt-bar gb-expiring" style="margin-left:46.2%;width:53.8%;">P005 - Vienna Fit-Out</div>
               </div>
             </div>
-            <!-- Row 4 — Gheorghe Pinau -->
+            <!-- D. Ionescu -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Gheorghe Pinau</div>
-                <div class="gantt-worker-sub-g">95136444 · EU<br>Power Construct</div>
+                <div class="gantt-worker-name-g">D. Ionescu</div>
+                <div class="gantt-worker-sub-g">Ref NL-055 · EU · ZZP</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:46.2%;">✓ 00002 - Schiphol Main Station Phase 1</div>
-                <div class="gantt-bar bar-green" style="margin-left:0%;width:100%;">00008 - Gemeente Schagen</div>
-                <div class="gantt-bar bar-red" style="margin-left:0%;width:84.7%;">00012 - AMS RNG</div>
-                <div class="gantt-bar bar-green" style="margin-left:46.2%;width:53.8%;">00002 - Schiphol Main Station Phase 2</div>
+                <div class="gantt-bar gb-active" style="margin-left:0%;width:100%;">P004 - Rotterdam Civil</div>
               </div>
             </div>
           </div>
+        </div>
+        <!-- Legend -->
+        <div class="gantt-legend">
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#1a3082;"></div>Active assignment</div>
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#b45309;"></div>Expiring soon</div>
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#5b9bd5;"></div>Future / upcoming</div>
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#9aa5b8;"></div>Completed</div>
         </div>
       </div>
     </div>
 
     <!-- ── Accommodation tab ──────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-accommodation">
-      <div class="demo-hint">🏠 Accommodation register — track which workers are staying where and until when, on a live timeline.</div>
+      <div class="demo-hint">🏠 Accommodation register — track which workers are staying where and until when, with weekly charge-back.</div>
       <div class="demo-dashboard">
-        <!-- Resource sub-tabs -->
         <div class="resource-subtabs">
           <div class="resource-subtab active">🏠 Accommodation</div>
-          <div class="resource-subtab">🚗 Vehicles</div>
+          <div class="resource-subtab">🚐 Vehicles</div>
           <div class="resource-subtab">🔧 Tools</div>
         </div>
-        <!-- Page header -->
         <div class="app-page-head">
           <div>
             <div class="app-page-title">Accommodation Register</div>
-            <div class="app-page-sub">Manage properties and track which workers are staying where and until when.</div>
+            <div class="app-page-sub">Track properties and which workers are staying where, with weekly billing.</div>
           </div>
           <button class="app-btn-blue">+ Add Property</button>
         </div>
-        <!-- Gantt header bar -->
-        <div class="app-table-header">
-          <span>Accommodation Timeline</span>
+        <div class="table-head">
+          <span class="table-head-title">Accommodation Timeline</span>
           <div style="display:flex;align-items:center;gap:0.75rem;">
-            <span class="app-table-header-right">9 workers</span>
+            <span class="table-head-count">6 workers</span>
             <span class="view-toggle"><span class="view-btn">Day</span><span class="view-btn active">Week</span><span class="view-btn">Month</span></span>
-            <span class="app-table-header-right">‹ Today ›</span>
+            <span class="table-head-count">‹ Today ›</span>
           </div>
         </div>
-        <!-- Sort/filter bar -->
-        <div class="app-filter-bar">
-          <span class="filter-pill">Sort: Worker A–Z ▾</span>
-          <span class="filter-pill">All projects ▾</span>
-          <span class="filter-pill filter-pill-active">Ref: W23 · 1 Jun – 7 Jun</span>
-        </div>
-        <!-- Gantt grid -->
         <div class="gantt-wrap">
           <div style="min-width:900px;">
-            <!-- Week header row -->
             <div class="gantt-header-row">
               <div class="gantt-worker-col">Worker</div>
               <div class="gantt-week-headers">
-                <div class="gantt-week-col">W17<br>20 Apr</div>
-                <div class="gantt-week-col">W18<br>27 Apr</div>
                 <div class="gantt-week-col">W19<br>04 May</div>
                 <div class="gantt-week-col">W20<br>11 May</div>
                 <div class="gantt-week-col">W21<br>18 May</div>
@@ -1541,54 +1538,61 @@ footer{
                 <div class="gantt-week-col">W27<br>29 Jun</div>
                 <div class="gantt-week-col">W28<br>06 Jul</div>
                 <div class="gantt-week-col">W29<br>13 Jul</div>
+                <div class="gantt-week-col">W30<br>20 Jul</div>
+                <div class="gantt-week-col">W31<br>27 Jul</div>
               </div>
             </div>
-            <!-- Row 1 — Alexandru Leon -->
+            <!-- J. van den Berg -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Alexandru Leon</div>
-                <div class="gantt-worker-sub-g">BSN/623254244 · NL<br>Rotterdam TMCP Project</div>
+                <div class="gantt-worker-name-g">J. van den Berg</div>
+                <div class="gantt-worker-sub-g">Ref NL-041 · Amsterdam North DC</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-amber" style="margin-left:38.5%;width:15.4%;">RCN de Flaasbl…</div>
+                <div class="gantt-bar gb-expiring" style="margin-left:30.8%;width:30.8%;">City View Apartments</div>
               </div>
             </div>
-            <!-- Row 2 — Costel Ungureanu -->
+            <!-- M. Schmidt -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Costel Ungureanu</div>
-                <div class="gantt-worker-sub-g">EU · ASM11<br>TMC Personeelsdiensten B.V.</div>
+                <div class="gantt-worker-name-g">M. Schmidt</div>
+                <div class="gantt-worker-sub-g">Ref DE-027 · Brussels Infra Site</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-red" style="margin-left:38.5%;width:23.1%;background:#1e3a5f;">RCN Zeewolde</div>
+                <div class="gantt-bar gb-active" style="margin-left:23.1%;width:46.2%;">Park Lodge East</div>
               </div>
             </div>
-            <!-- Row 3 — Costica Andries -->
+            <!-- P. Kowalski -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Costica Andries</div>
-                <div class="gantt-worker-sub-g">BSN · EU<br>TMC PERSONEELSDIENSTEN</div>
+                <div class="gantt-worker-name-g">P. Kowalski</div>
+                <div class="gantt-worker-sub-g">Ref BE-089 · Antwerp Slab Works</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-blue" style="margin-left:46.2%;width:53.8%;">RCN Zeewolde</div>
+                <div class="gantt-bar gb-future" style="margin-left:46.2%;width:53.8%;">Harbor Residences</div>
               </div>
             </div>
-            <!-- Row 4 — Danut Grigorean -->
+            <!-- D. Ionescu -->
             <div class="gantt-row">
               <div class="gantt-worker-info">
-                <div class="gantt-worker-name-g">Danut Grigorean</div>
-                <div class="gantt-worker-sub-g">95220445 · EU · Dany Conect<br>00015 - Het Foort Amersfc</div>
+                <div class="gantt-worker-name-g">D. Ionescu</div>
+                <div class="gantt-worker-sub-g">Ref NL-055 · Rotterdam Civil</div>
                 <div class="gantt-assign-btn">+ Assign</div>
               </div>
               <div class="gantt-bars-area">
-                <div class="gantt-bar bar-blue" style="margin-left:46.2%;width:38.5%;">RCN Het Grote Bos</div>
-                <div class="gantt-bar bar-amber" style="margin-left:46.2%;width:7.7%;">RC…</div>
+                <div class="gantt-bar gb-active" style="margin-left:0%;width:38.5%;">City View Apartments</div>
+                <div class="gantt-bar gb-active" style="margin-left:46.2%;width:38.5%;">Park Lodge East</div>
               </div>
             </div>
           </div>
+        </div>
+        <div class="gantt-legend">
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#1a3082;"></div>Active stay</div>
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#b45309;"></div>Ending soon</div>
+          <div class="gantt-leg-item"><div class="gantt-leg-swatch" style="background:#5b9bd5;"></div>Upcoming</div>
         </div>
       </div>
     </div>
@@ -1597,13 +1601,11 @@ footer{
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-vehicles">
       <div class="demo-hint">🚐 Vehicle register — track company vans, charge workers, and log fleet events.</div>
       <div class="demo-dashboard">
-        <!-- Resource sub-tabs -->
         <div class="resource-subtabs">
           <div class="resource-subtab">🏠 Accommodation</div>
-          <div class="resource-subtab active">🚗 Vehicles</div>
+          <div class="resource-subtab active">🚐 Vehicles</div>
           <div class="resource-subtab">🔧 Tools</div>
         </div>
-        <!-- Page header -->
         <div class="app-page-head">
           <div>
             <div class="app-page-title">Vehicle Register</div>
@@ -1611,51 +1613,83 @@ footer{
           </div>
           <button class="app-btn-blue">+ Add Vehicle</button>
         </div>
-        <div class="app-table-header">
-          <span>Vehicles</span>
-          <span class="app-table-header-right">4 assigned · 2 available</span>
+        <div class="table-head">
+          <span class="table-head-title">Vehicles</span>
+          <span class="table-head-count">4 assigned · 2 available</span>
         </div>
         <div style="overflow-x:auto;">
-          <table class="demo-table">
+          <table>
             <thead><tr>
-              <th>Vehicle</th><th>Assigned To</th><th>From</th><th>To</th><th>Weekly Charge</th><th>Charge To</th><th>Status</th>
+              <th>Vehicle</th><th>Assigned To</th><th>From</th><th>To</th><th>Weekly</th><th>Charge To</th><th>Status</th>
             </tr></thead>
             <tbody>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">VW Crafter</div><div style="font-size:0.72rem;color:var(--text-l);">NL-234-TG</div></td>
-                <td style="font-weight:600;color:var(--text);">M. Jansen</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">29 Aug 2026</td>
-                <td style="font-weight:700;color:var(--navy);">€65</td>
-                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
-                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+                <td>
+                  <div class="worker-name">VW Crafter</div>
+                  <div class="worker-id">NL-234-TG</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#64748b;width:24px;height:24px;font-size:10px;">JB</div>
+                    <span class="worker-name">J. van den Berg</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">3 Mar 2026</td>
+                <td style="color:var(--text-m);font-size:12px;">29 Aug 2026</td>
+                <td><strong style="color:var(--navy);">€65</strong></td>
+                <td><span class="type-badge zzp">Operative</span></td>
+                <td><span class="status-badge go"><span class="go-dot go"></span>Charged</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Ford Transit</div><div style="font-size:0.72rem;color:var(--text-l);">1-ABC-234</div></td>
-                <td style="font-weight:600;color:var(--text);">A. Popescu</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">30 Jun 2026</td>
-                <td style="font-weight:700;color:var(--navy);">€60</td>
-                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
-                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+                <td>
+                  <div class="worker-name">Ford Transit</div>
+                  <div class="worker-id">1-ABC-234</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#0d9488;width:24px;height:24px;font-size:10px;">MS</div>
+                    <span class="worker-name">M. Schmidt</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">14 Apr 2026</td>
+                <td style="color:var(--text-m);font-size:12px;">30 Jun 2026</td>
+                <td><strong style="color:var(--navy);">€60</strong></td>
+                <td><span class="type-badge zzp">Operative</span></td>
+                <td><span class="status-badge warning"><span class="go-dot warning"></span>Unbilled</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Mercedes Sprinter</div><div style="font-size:0.72rem;color:var(--text-l);">W-KP-1144</div></td>
-                <td style="font-weight:600;color:var(--text);">K. de Vries</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">30 Nov 2026</td>
-                <td style="font-weight:700;color:var(--navy);">€70</td>
-                <td style="font-size:0.78rem;"><span style="background:#f3f4f6;color:var(--text-m);padding:2px 7px;border-radius:4px;font-weight:600;">Company</span></td>
-                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+                <td>
+                  <div class="worker-name">Mercedes Sprinter</div>
+                  <div class="worker-id">W-KP-1144</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#1e3a5f;width:24px;height:24px;font-size:10px;">PK</div>
+                    <span class="worker-name">P. Kowalski</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">1 Jun 2026</td>
+                <td style="color:var(--text-m);font-size:12px;">30 Nov 2026</td>
+                <td><strong style="color:var(--navy);">€70</strong></td>
+                <td><span class="type-badge blue">Company</span></td>
+                <td><span class="status-badge warning"><span class="go-dot warning"></span>Unbilled</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">VW Transporter</div><div style="font-size:0.72rem;color:var(--text-l);">17-GHD-4</div></td>
-                <td style="font-weight:600;color:var(--text);">T. Nicolescu</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">15 Jul 2026</td>
-                <td style="font-weight:700;color:var(--navy);">€55</td>
-                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
-                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+                <td>
+                  <div class="worker-name">VW Transporter</div>
+                  <div class="worker-id">17-GHD-4</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#16a34a;width:24px;height:24px;font-size:10px;">DI</div>
+                    <span class="worker-name">D. Ionescu</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">20 May 2026</td>
+                <td style="color:var(--text-m);font-size:12px;">15 Jul 2026</td>
+                <td><strong style="color:var(--navy);">€55</strong></td>
+                <td><span class="type-badge zzp">Operative</span></td>
+                <td><span class="status-badge go"><span class="go-dot go"></span>Charged</span></td>
               </tr>
             </tbody>
           </table>
@@ -1665,15 +1699,13 @@ footer{
 
     <!-- ── Tools tab ──────────────────────────────────────── -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-tools">
-      <div class="demo-hint">🔧 Tool register — track which worker has which equipment, with optional weekly charge-back.</div>
+      <div class="demo-hint">🔧 Tool register — track which worker holds which equipment, with optional weekly charge-back.</div>
       <div class="demo-dashboard">
-        <!-- Resource sub-tabs -->
         <div class="resource-subtabs">
           <div class="resource-subtab">🏠 Accommodation</div>
-          <div class="resource-subtab">🚗 Vehicles</div>
+          <div class="resource-subtab">🚐 Vehicles</div>
           <div class="resource-subtab active">🔧 Tools</div>
         </div>
-        <!-- Page header -->
         <div class="app-page-head">
           <div>
             <div class="app-page-title">Tool Register</div>
@@ -1681,55 +1713,79 @@ footer{
           </div>
           <button class="app-btn-blue">+ Add Tool</button>
         </div>
-        <div class="app-table-header">
-          <span>Tools &amp; Equipment</span>
-          <span class="app-table-header-right">14 issued · 6 in stock</span>
+        <div class="table-head">
+          <span class="table-head-title">Tools &amp; Equipment</span>
+          <span class="table-head-count">14 issued · 6 in stock</span>
         </div>
         <div style="overflow-x:auto;">
-          <table class="demo-table">
+          <table>
             <thead><tr>
               <th>Tool / Equipment</th><th>Worker</th><th>Issued</th><th>Project</th><th>Weekly</th><th>Status</th>
             </tr></thead>
             <tbody>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Hilti TE 60 Drill</div><div style="font-size:0.72rem;color:var(--text-l);">SN: HLT-2024-0041</div></td>
-                <td style="font-weight:600;color:var(--text);">M. Jansen</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
-                <td><span class="proj-tag">Amsterdam DC</span></td>
-                <td style="font-weight:700;color:var(--navy);">€18</td>
-                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+                <td>
+                  <div class="worker-name">Hilti TE 60 Drill</div>
+                  <div class="worker-id">SN: HLT-2024-0041</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#64748b;width:24px;height:24px;font-size:10px;">JB</div>
+                    <span class="worker-name">J. van den Berg</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">3 Mar 2026</td>
+                <td><span style="background:#f5f7fa;border:1px solid #dde3ec;padding:2px 7px;border-radius:4px;font-size:11px;color:#4a5568;">Amsterdam North DC</span></td>
+                <td><strong style="color:var(--navy);">€18</strong></td>
+                <td><span class="status-badge go"><span class="go-dot go"></span>Charged</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Dewalt Circular Saw</div><div style="font-size:0.72rem;color:var(--text-l);">SN: DWL-9912-B</div></td>
-                <td style="font-weight:600;color:var(--text);">K. de Vries</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
-                <td><span class="proj-tag">Vienna Fit-Out</span></td>
-                <td style="font-weight:700;color:var(--navy);">€12</td>
-                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+                <td>
+                  <div class="worker-name">Dewalt Circular Saw</div>
+                  <div class="worker-id">SN: DWL-9912-B</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#1e3a5f;width:24px;height:24px;font-size:10px;">PK</div>
+                    <span class="worker-name">P. Kowalski</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">1 Jun 2026</td>
+                <td><span style="background:#f5f7fa;border:1px solid #dde3ec;padding:2px 7px;border-radius:4px;font-size:11px;color:#4a5568;">Vienna Fit-Out</span></td>
+                <td><strong style="color:var(--navy);">€12</strong></td>
+                <td><span class="status-badge warning"><span class="go-dot warning"></span>Unbilled</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Safety Harness Kit</div><div style="font-size:0.72rem;color:var(--text-l);">Lot: SAF-2025-12</div></td>
-                <td style="font-weight:600;color:var(--text);">A. Popescu</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
-                <td><span class="proj-tag">Antwerp Slab</span></td>
-                <td style="font-weight:700;color:var(--text-l);">—</td>
-                <td><span style="background:#f1f5f9;color:var(--text-m);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">No Charge</span></td>
+                <td>
+                  <div class="worker-name">Safety Harness Kit</div>
+                  <div class="worker-id">Lot: SAF-2025-12</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#0d9488;width:24px;height:24px;font-size:10px;">MS</div>
+                    <span class="worker-name">M. Schmidt</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">14 Apr 2026</td>
+                <td><span style="background:#f5f7fa;border:1px solid #dde3ec;padding:2px 7px;border-radius:4px;font-size:11px;color:#4a5568;">Brussels Infra Site</span></td>
+                <td style="color:var(--text-l);">—</td>
+                <td><span class="status-badge" style="background:#f5f7fa;color:#4a5568;border:1px solid #dde3ec;">No Charge</span></td>
               </tr>
               <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Makita Angle Grinder</div><div style="font-size:0.72rem;color:var(--text-l);">SN: MKT-AG-8821</div></td>
-                <td style="font-weight:600;color:var(--text);">T. Nicolescu</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
-                <td><span class="proj-tag">Brussels Site</span></td>
-                <td style="font-weight:700;color:var(--navy);">€10</td>
-                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
-              </tr>
-              <tr>
-                <td><div style="font-weight:700;color:var(--navy);">Bosch Laser Level</div><div style="font-size:0.72rem;color:var(--text-l);">SN: BSH-LL-3345</div></td>
-                <td style="font-weight:600;color:var(--text);">S. Dobre</td>
-                <td style="font-size:0.8rem;color:var(--text-m);">10 Mar 2026</td>
-                <td><span class="proj-tag">Rotterdam Civil</span></td>
-                <td style="font-weight:700;color:var(--text-l);">—</td>
-                <td><span style="background:#f1f5f9;color:var(--text-m);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">No Charge</span></td>
+                <td>
+                  <div class="worker-name">Makita Angle Grinder</div>
+                  <div class="worker-id">SN: MKT-AG-8821</div>
+                </td>
+                <td>
+                  <div class="worker-cell">
+                    <div class="avatar" style="background:#16a34a;width:24px;height:24px;font-size:10px;">DI</div>
+                    <span class="worker-name">D. Ionescu</span>
+                  </div>
+                </td>
+                <td style="color:var(--text-m);font-size:12px;">20 May 2026</td>
+                <td><span style="background:#f5f7fa;border:1px solid #dde3ec;padding:2px 7px;border-radius:4px;font-size:11px;color:#4a5568;">Rotterdam Civil</span></td>
+                <td><strong style="color:var(--navy);">€10</strong></td>
+                <td><span class="status-badge go"><span class="go-dot go"></span>Charged</span></td>
               </tr>
             </tbody>
           </table>
@@ -1932,60 +1988,57 @@ const observer = new IntersectionObserver((entries) => {
 fadeEls.forEach(el => observer.observe(el));
 
 // ── Worker data ──
+// ── Hero panel worker data (kept for hero section) ──
 const workerData = {
   mitrea: {
-    name: 'Adrian Mitrea',
-    project: '00012 - AMS RNG  ·  €38/hr',
-    badge: 'nogo',
-    docs: [
-      {icon:'✗',ok:'miss',name:'Model Agreement',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'ZZP Assessment',date:'Required — not uploaded'},
-      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Valid · Expires Aug 2026'},
-      {icon:'⚠',ok:'warn',name:'Payment History Certificate',date:'Expiring in 28 days'},
-      {icon:'✗',ok:'miss',name:'Ondernemerscheck',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'Previous Clients Check',date:'Required — not uploaded'},
-    ]
-  },
-  ciolos: {
-    name: 'Alexandru Ciolos',
-    project: '00002 - Schiphol Main Station Phase 1  ·  €42/hr',
+    name: 'J. van den Berg',
+    project: 'Amsterdam North DC · ZZP · Ref NL-041',
     badge: 'nogo',
     docs: [
       {icon:'✗',ok:'miss',name:'VCA Certificate',date:'Required — not uploaded'},
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid · Expires 2028'},
-      {icon:'⚠',ok:'warn',name:'Payment History Certificate',date:'Expiring in 14 days'},
-      {icon:'✗',ok:'miss',name:'Ondernemerscheck',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'Declaration of Independence',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
+      {icon:'⚠',ok:'warn',name:'KvK Extract',date:'Expiring in 12 days'},
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2029'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2027'},
+    ]
+  },
+  ciolos: {
+    name: 'M. Schmidt',
+    project: 'Brussels Infra Site · ZZP · Ref DE-027',
+    badge: 'nogo',
+    docs: [
+      {icon:'✗',ok:'miss',name:'Passport',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'VOG Certificate',date:'Required — not uploaded'},
+      {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
+      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2027'},
     ]
   },
   leon: {
-    name: 'Alexandru Leon',
-    project: 'Rotterdam TMCP Project  ·  €28/hr',
-    badge: 'nogo',
+    name: 'P. Kowalski',
+    project: 'Antwerp Slab Works · Employed · Ref BE-089',
+    badge: 'warn',
     docs: [
-      {icon:'✗',ok:'miss',name:'Employment Contract',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'Payroll Registration',date:'Required — not uploaded'},
-      {icon:'✓',ok:'ok',name:'Passport / ID',date:'Valid · Expires 2029'},
-      {icon:'✓',ok:'ok',name:'BSN Verification',date:'Verified'},
-      {icon:'✗',ok:'miss',name:'A1/Work Permit',date:'Required — not uploaded'},
+      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expires 12 Jul 2026'},
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2030'},
+      {icon:'✓',ok:'ok',name:'Employment Contract',date:'Valid'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
     ]
   },
   pinau: {
-    name: 'Gheorghe Pinau',
-    project: '00008 - Gemeente Schagen  ·  €65/hr',
+    name: 'D. Ionescu',
+    project: 'Rotterdam Civil · ZZP · Ref NL-055',
     badge: 'go',
     docs: [
-      {icon:'✓',ok:'ok',name:'Model Agreement',date:'Valid · Expires Nov 2026'},
-      {icon:'✓',ok:'ok',name:'ZZP Assessment',date:'Valid · Expires Mar 2027'},
-      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Valid · Expires Dec 2026'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid · Expires Aug 2027'},
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid · Expires 2030'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2028'},
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2031'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
+      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2026'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2027'},
     ]
   }
 };
 
 function buildDocList(docs, containerEl, isSmall) {
-  const sz = isSmall ? '0.73rem' : '0.85rem';
   containerEl.innerHTML = docs.map(d => {
     const iconCol = d.ok==='ok' ? 'var(--green)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
     const dateCol = d.ok==='ok' ? 'var(--text-m)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
@@ -2041,20 +2094,77 @@ function switchDemoTab(tab, btn) {
 }
 
 // ── Demo dashboard panel ──
-let demoCurrentWorker = null;
-function openDemoPanel(wid) {
-  const w = workerData[wid];
-  if (!w) return;
-  demoCurrentWorker = wid;
+const demoWorkers = {
+  berg: {
+    name: 'J. van den Berg',
+    proj: 'Amsterdam North DC — ZZP · Ref NL-041',
+    status: 'nogo',
+    docs: [
+      {icon:'🔨',name:'VCA Certificate',date:'Missing',st:'nogo'},
+      {icon:'📋',name:'A1 Form',date:'Missing',st:'nogo'},
+      {icon:'📄',name:'KvK Extract',date:'Expires 18 Jun 2026',st:'warn'},
+      {icon:'🪪',name:'Passport',date:'Valid until 2029',st:'go'},
+      {icon:'🏥',name:'Health Insurance',date:'Valid until 2027',st:'go'},
+    ]
+  },
+  schmidt: {
+    name: 'M. Schmidt',
+    proj: 'Brussels Infra Site — ZZP · Ref DE-027',
+    status: 'nogo',
+    docs: [
+      {icon:'🪪',name:'Passport',date:'Missing',st:'nogo'},
+      {icon:'📋',name:'VOG Certificate',date:'Missing',st:'nogo'},
+      {icon:'📋',name:'A1 Form',date:'Missing',st:'nogo'},
+      {icon:'📄',name:'KvK Extract',date:'Valid until 2027',st:'go'},
+    ]
+  },
+  kowalski: {
+    name: 'P. Kowalski',
+    proj: 'Antwerp Slab Works — Employed · Ref BE-089',
+    status: 'warning',
+    docs: [
+      {icon:'🏥',name:'Health Insurance',date:'Expires 12 Jul 2026',st:'warn'},
+      {icon:'🪪',name:'Passport',date:'Valid until 2030',st:'go'},
+      {icon:'📄',name:'Employment Contract',date:'Valid',st:'go'},
+      {icon:'📋',name:'A1 Form',date:'Valid until 2027',st:'go'},
+    ]
+  },
+  ionescu: {
+    name: 'D. Ionescu',
+    proj: 'Rotterdam Civil — ZZP · Ref NL-055',
+    status: 'go',
+    docs: [
+      {icon:'🔨',name:'VCA Certificate',date:'Valid until 2028',st:'go'},
+      {icon:'🪪',name:'Passport',date:'Valid until 2031',st:'go'},
+      {icon:'📋',name:'A1 Form',date:'Valid until 2027',st:'go'},
+      {icon:'📄',name:'KvK Extract',date:'Valid until 2026',st:'go'},
+      {icon:'🏥',name:'Health Insurance',date:'Valid until 2027',st:'go'},
+    ]
+  }
+};
+function openDemoPanel(id) {
+  const w = demoWorkers[id]; if(!w) return;
   document.getElementById('ddpName').textContent = w.name;
-  document.getElementById('ddpProj').textContent = w.project;
-  document.getElementById('ddpBadge').innerHTML = badgeHtml(w.badge);
-  buildDocList(w.docs, document.getElementById('ddpDocs'), false);
+  document.getElementById('ddpProj').textContent = w.proj;
+  const statusColors = {go:'#276749',warning:'#b45309',nogo:'#c53030'};
+  const statusLabels = {go:'✓ Go',warning:'⚠ Warning',nogo:'✗ No-Go'};
+  const statusBgs = {go:'#f0fff4',warning:'#fffbeb',nogo:'#fff5f5'};
+  const statusBorders = {go:'#c6f6d5',warning:'#fde68a',nogo:'#fed7d7'};
+  document.getElementById('ddpBadge').innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:12px;font-weight:700;background:${statusBgs[w.status]};color:${statusColors[w.status]};border:1px solid ${statusBorders[w.status]};">${statusLabels[w.status]}</span>`;
+  const stColors = {go:'#276749',warn:'#b45309',nogo:'#c53030'};
+  document.getElementById('ddpDocs').innerHTML = w.docs.map(d=>
+    `<div class="ddp-doc" style="border-left:3px solid ${stColors[d.st]};">
+      <div class="ddp-doc-icon">${d.icon}</div>
+      <div class="ddp-doc-info">
+        <div class="ddp-doc-name">${d.name}</div>
+        <div class="ddp-doc-date" style="color:${stColors[d.st]};">${d.date}</div>
+      </div>
+    </div>`
+  ).join('');
   document.getElementById('demoDetailPanel').classList.add('open');
 }
 function closeDemoPanel() {
   document.getElementById('demoDetailPanel').classList.remove('open');
-  demoCurrentWorker = null;
 }
 
 // ── Worker portal upload simulation ──
