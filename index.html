@@ -418,39 +418,53 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 .demo-table tbody tr:hover td{background:#f8fafc;}
 .demo-table tbody tr.nogo-row td{background:#fff8f8;}
 .demo-table tbody tr.nogo-row:hover td{background:#fff0f0;}
+/* Worker detail — full overlay modal matching the real app */
+.demo-worker-overlay{
+  display:none;position:fixed;inset:0;z-index:600;
+  background:rgba(0,0,0,.45);
+  align-items:center;justify-content:center;padding:20px;
+}
+.demo-worker-overlay.open{display:flex;}
 .demo-detail-panel{
-  position:absolute;top:0;right:0;bottom:0;width:340px;
-  background:#fff;border-left:1px solid var(--border);
-  padding:1.5rem;
-  transform:translateX(100%);
-  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
-  z-index:10;box-shadow:-4px 0 20px rgba(0,0,0,0.08);
+  background:#fff;border-radius:8px;
+  width:100%;max-width:680px;max-height:88vh;
+  overflow-y:auto;
+  box-shadow:0 8px 32px rgba(0,0,0,.22);
+  animation:ddpIn .18s ease;
 }
-.demo-detail-panel.open{transform:translateX(0);}
+@keyframes ddpIn{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
 .ddp-header{
-  display:flex;align-items:flex-start;justify-content:space-between;
-  padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1rem;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:16px 20px;border-bottom:1px solid #dde3ec;
+  background:#112268;border-radius:8px 8px 0 0;
 }
-.ddp-name{font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:3px;}
-.ddp-proj{font-size:0.8rem;color:var(--text-m);}
+.ddp-name{font-size:15px;font-weight:700;color:#fff;margin-bottom:3px;}
+.ddp-proj{font-size:12px;color:#a8c8e8;}
 .ddp-close{
   background:none;border:none;cursor:pointer;
-  font-size:1.2rem;color:var(--text-l);line-height:1;padding:2px;
-  transition:color 0.15s;
+  font-size:18px;color:rgba(255,255,255,.6);line-height:1;padding:2px 4px;border-radius:3px;
+  transition:color 0.15s,background 0.15s;flex-shrink:0;
 }
-.ddp-close:hover{color:var(--red);}
-.ddp-section-title{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-l);margin-bottom:0.6rem;}
-.ddp-docs{display:flex;flex-direction:column;gap:0.5rem;}
+.ddp-close:hover{color:#fff;background:rgba(255,255,255,.1);}
+.ddp-body{padding:20px;}
+.ddp-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#7a8ba8;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #dde3ec;}
+.ddp-docs{display:flex;flex-direction:column;gap:5px;}
 .ddp-doc{
-  display:flex;align-items:center;gap:0.65rem;
-  padding:0.6rem 0.8rem;border-radius:9px;
-  border:1px solid var(--border);background:var(--bg);
+  display:flex;align-items:center;gap:10px;
+  padding:9px 14px;border-radius:0;
+  border:1px solid #dde3ec;border-radius:5px;
+  border-left:3px solid #dde3ec;overflow:hidden;
 }
-.ddp-doc-icon{font-size:0.9rem;flex-shrink:0;}
+.ddp-doc.ddp-ok{border-left-color:#276749;}
+.ddp-doc.ddp-warn{border-left-color:#b45309;}
+.ddp-doc.ddp-nogo{border-left-color:#c53030;}
+.ddp-doc-icon{font-size:15px;flex-shrink:0;}
 .ddp-doc-info{flex:1;}
-.ddp-doc-name{font-size:0.82rem;font-weight:600;color:var(--text);}
-.ddp-doc-date{font-size:0.72rem;color:var(--text-m);margin-top:1px;}
-.ddp-doc-badge{}
+.ddp-doc-name{font-size:13px;font-weight:500;color:#1a2340;}
+.ddp-doc-date{font-size:11px;margin-top:1px;}
+.ddp-doc.ddp-ok .ddp-doc-date{color:#276749;}
+.ddp-doc.ddp-warn .ddp-doc-date{color:#b45309;}
+.ddp-doc.ddp-nogo .ddp-doc-date{color:#c53030;}
 
 /* Phone mockup for worker portal */
 .phone-frame{
@@ -1371,20 +1385,24 @@ footer{
               </tbody>
             </table>
           </div>
-          <!-- Detail panel -->
-          <div class="demo-detail-panel" id="demoDetailPanel">
-            <div class="ddp-header">
-              <div>
-                <div class="ddp-name" id="ddpName">—</div>
-                <div class="ddp-proj" id="ddpProj">—</div>
+          <!-- Detail modal overlay -->
+          <div class="demo-worker-overlay" id="demoWorkerOverlay" onclick="if(event.target===this)closeDemoPanel()">
+            <div class="demo-detail-panel" id="demoDetailPanel">
+              <div class="ddp-header">
+                <div>
+                  <div class="ddp-name" id="ddpName">—</div>
+                  <div class="ddp-proj" id="ddpProj">—</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <div id="ddpBadge"></div>
+                  <button class="ddp-close" onclick="closeDemoPanel()">×</button>
+                </div>
               </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;">
-                <div id="ddpBadge"></div>
-                <button class="ddp-close" onclick="closeDemoPanel()">×</button>
+              <div class="ddp-body">
+                <div class="ddp-section-title">Document Checklist</div>
+                <div class="ddp-docs" id="ddpDocs"></div>
               </div>
             </div>
-            <div class="ddp-section-title">Document Checklist</div>
-            <div class="ddp-docs" id="ddpDocs"></div>
           </div>
         </div>
       </div>
@@ -2151,20 +2169,23 @@ function openDemoPanel(id) {
   const statusBgs = {go:'#f0fff4',warning:'#fffbeb',nogo:'#fff5f5'};
   const statusBorders = {go:'#c6f6d5',warning:'#fde68a',nogo:'#fed7d7'};
   document.getElementById('ddpBadge').innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;font-size:12px;font-weight:700;background:${statusBgs[w.status]};color:${statusColors[w.status]};border:1px solid ${statusBorders[w.status]};">${statusLabels[w.status]}</span>`;
-  const stColors = {go:'#276749',warn:'#b45309',nogo:'#c53030'};
+  const stClass = {go:'ddp-ok',warn:'ddp-warn',nogo:'ddp-nogo'};
+  const stLabel = {go:'✓ Valid',warn:'⚠ Expiring soon',nogo:'✗ Missing'};
   document.getElementById('ddpDocs').innerHTML = w.docs.map(d=>
-    `<div class="ddp-doc" style="border-left:3px solid ${stColors[d.st]};">
+    `<div class="ddp-doc ${stClass[d.st]}">
       <div class="ddp-doc-icon">${d.icon}</div>
       <div class="ddp-doc-info">
         <div class="ddp-doc-name">${d.name}</div>
-        <div class="ddp-doc-date" style="color:${stColors[d.st]};">${d.date}</div>
+        <div class="ddp-doc-date">${d.date}</div>
       </div>
     </div>`
   ).join('');
-  document.getElementById('demoDetailPanel').classList.add('open');
+  document.getElementById('demoWorkerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
 function closeDemoPanel() {
-  document.getElementById('demoDetailPanel').classList.remove('open');
+  document.getElementById('demoWorkerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
 }
 
 // ── Worker portal upload simulation ──
