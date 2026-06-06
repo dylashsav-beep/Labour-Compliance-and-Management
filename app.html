@@ -932,7 +932,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         </div>
         <div class="sbLoginActions">
           <button class="btn btn-save" id="sbLoginBtn" onclick="sbLogin()">Sign in</button>
-          <button class="btn btn-cancel" id="sbSignupBtn" type="button" onclick="sbSignup()">Create account</button>
+          <button class="btn btn-cancel" id="sbSignupBtn" type="button" onclick="sbSignup()">Request Access</button>
           <button class="sbForgotBtn" type="button" onclick="sbForgotPassword()">Forgot password?</button>
           <button class="sbForgotBtn" type="button" onclick="sbShowRoleSelect()">← Back</button>
         </div>
@@ -10232,8 +10232,9 @@ async function renderRolesPanel(){
     const isPending = u.role === 'no_access' && u.active === false;
     const lockTitle = isOwner ? 'Owner account — permanently Admin, cannot be changed.' : (isOnlyActiveAdmin ? 'You are the only active admin. Add another admin before changing your own role or deactivating yourself.' : (isMe ? 'Be careful changing your own role' : ''));
     const lockNote = isOwner ? '<div style="font-size:11px;color:var(--sky);margin-top:3px;font-weight:600;">⭐ Owner — permanent Admin</div>' : (isOnlyActiveAdmin ? '<div style="font-size:11px;color:var(--amber);margin-top:3px;font-weight:600;">Locked: last active admin</div>' : (isPending ? '<div style="font-size:11px;color:#b45309;margin-top:3px;font-weight:700;">⏳ Pending approval</div>' : ''));
+    const quickApproveBtn = isPending ? `<button class="btn btn-save" style="padding:4px 12px;font-size:12px;margin-top:4px;" onclick="quickApproveUser('${u.id}')" title="Approve as Viewer and activate account">Approve</button>` : '';
     return `<tr style="${isPending?'background:#fffbeb;':''}">
-      <td><strong>${esc(u.full_name||u.email||u.id)}</strong><div style="font-size:11px;color:var(--text-l);">${esc(u.email||'')}</div>${lockNote}</td>
+      <td><strong>${esc(u.full_name||u.email||u.id)}</strong><div style="font-size:11px;color:var(--text-l);">${esc(u.email||'')}</div>${lockNote}${quickApproveBtn}</td>
       <td><select class="form-select" style="width:150px;padding:5px 8px;" onchange="updateUserRole('${u.id}',this.value)" ${locked?'disabled':''} title="${esc(lockTitle)}">${roleOptions.map(r=>`<option value="${r}" ${(isOwner?'admin':u.role)===r?'selected':''}>${ROLE_LABELS[r]}</option>`).join('')}</select></td>
       <td><label class="tog" title="${esc(lockTitle)}"><input type="checkbox" ${(isOwner||u.active!==false)?'checked':''} ${locked?'disabled':''} onchange="updateUserActive('${u.id}',this.checked)"><span class="tog-slider"></span></label></td>
       <td style="font-size:12px;color:var(--text-m);">${esc(isOwner?'Owner — permanent full access':ROLE_SUMMARY[u.role]||'')}</td>
@@ -10276,6 +10277,13 @@ async function updateUserActive(userId, active){
   if(error){alert(error.message);return;}
   if(!upd?.length){alert('Active status was not saved — Supabase RLS blocked the update. Run migrations/fix_profiles_rls_circular.sql in Supabase SQL Editor.');return;}
   if(userId === sbSession?.user?.id) await sbLoadProfile();
+  await renderRolesPanel(); applyRoleUI();
+}
+
+async function quickApproveUser(userId){
+  if(!requireAction('roles','approve user accounts')) return;
+  const {error}=await sbClient.from('profiles').update({role:'viewer',active:true,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID);
+  if(error){alert('Could not approve account: '+error.message);return;}
   await renderRolesPanel(); applyRoleUI();
 }
 
@@ -10510,13 +10518,13 @@ async function sbSignup(){
     const c=sbInitClient();
     const email=document.getElementById('sbEmail').value.trim();
     const password=document.getElementById('sbPassword').value;
-    if(!email || !password){ sbMsg('Enter an email and password first, then click Create account.', true); return; }
+    if(!email || !password){ sbMsg('Enter an email and password first, then click Request Access.', true); return; }
     if(password.length < 8){ sbMsg('Password must be at least 8 characters.', true); return; }
-    sbMsg('Creating account…');
+    sbMsg('Submitting access request…');
     const {data,error}=await c.auth.signUp({email,password,options:{emailRedirectTo:sbRecoveryRedirectUrl()}});
     if(error) throw error;
     if(data.session){ sbSession=data.session; await sbAfterAuth(); return; }
-    sbMsg('Account created. Check your email for the confirmation link, then sign in. If buttons are still hidden after signing in, run the v44.2 role SQL to make your account Admin.');
+    sbMsg('Request submitted. Check your email for a confirmation link. Once confirmed, an administrator will review and approve your access.');
   }catch(e){
     sbMsg('Could not create account: ' + (e.message || e), true);
   }
@@ -10593,7 +10601,7 @@ async function sbAfterAuth(){
     sbLockScreen(false);
     sbSetStatus('Supabase: pending approval', false);
     const hint = sbLastWorkerLoadProblem ? `<br><small style="color:var(--red);">${esc(sbLastWorkerLoadProblem)}</small>` : '';
-    sbShowLoginPrompt(true, `<strong>Account pending approval.</strong> You have signed in successfully as <em>${esc(user.email)}</em>, but your account is awaiting admin approval before you can access the dashboard. Please contact your administrator.${hint}`);
+    sbShowLoginPrompt(true, `<strong>Access pending admin approval.</strong> You are signed in as <em>${esc(user.email)}</em>. An administrator must approve your account before you can access the dashboard. <button class="btn btn-cancel" style="margin-left:8px;padding:3px 10px;font-size:12px;" onclick="sbLogout()">Sign out</button>${hint}`);
     applyRoleUI();
     return;
   }

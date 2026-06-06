@@ -184,6 +184,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `reactivate_orphaned_files.sql` | ⏳ Pending | Final recovery: reactivates worker_document_files still inactive after the above two migrations (62 files: vca_vol×51, vca×7, vog/payroll/scc/twv×1 each). Run this last. |
 | `retire_worker_document_file_deletions.sql` | ✅ Run | Retired 57 stale worker_document_file deletion records (the eternal-replay loop) and reactivated their files. |
 | `add_permanent_delete_policies.sql` | ⏳ Pending | Adds DELETE RLS policies so the admin "Delete Permanently" button in Deleted Items can hard-delete. Required for that feature to work. |
+| `block_new_signups_pending_approval.sql` | ⏳ Pending | Changes handle_new_user() trigger to set role='no_access' + active=FALSE so new signups require admin approval before getting any access. Run once — safe to re-run. |
 
 ---
 
