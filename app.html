@@ -81,6 +81,9 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);}
 .main-nav-inner{max-width:1480px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 body.wp-mode .sticky-chrome{display:none!important;}
 body.sb-auth-lock .sticky-chrome{visibility:hidden;}
+/* Demo mode */
+#demoBanner{display:none;position:sticky;top:0;z-index:201;background:#92400e;color:#fff;padding:8px 16px;min-height:38px;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;font-weight:500;}
+body.demo-mode .sticky-chrome{top:38px;}
 .toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:14px;}
 
 /* FILTER BAR */
@@ -963,6 +966,13 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
 </div>
 
+<!-- Demo mode banner — shown only when ?demo=1 -->
+<div id="demoBanner">
+  <span>🎭 <strong>Demo Mode</strong> — Explore the full app. No sign-in needed. Changes are saved to your browser only.</span>
+  <span style="flex:1;min-width:12px;"></span>
+  <button onclick="resetDemoData()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;">Reset Demo</button>
+  <a href="app.html" style="background:#fff;color:#92400e;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Sign In →</a>
+</div>
 <div class="sticky-chrome">
 <header>
   <div class="wrap">
@@ -2963,6 +2973,10 @@ let docSetItems= {};
 let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}] };
 
 // Built-in set IDs (cannot be deleted)
+// ── DEMO MODE (no-auth, sessionStorage persistence) ──────────────────
+const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+const DEMO_SS_KEY = 'wf_demo_v1';
+
 const SET_NL_ZZP  = '00000000-0000-0000-0000-000000000001';
 const SET_NL_BLUE = '00000000-0000-0000-0000-000000000002';
 const SET_BE_EMP  = '00000000-0000-0000-0000-000000000003';
@@ -2979,6 +2993,178 @@ function initDefaultSets(){
   docSetItems[SET_NL_BLUE] = DEFAULT_BLUE_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_BE_EMP]  = DEFAULT_BE_DOCS.map(d=>({...d,builtIn:true}));
   docSetItems[SET_AT_EMP]  = DEFAULT_AT_DOCS.map(d=>({...d,builtIn:true}));
+}
+
+// ─────────── DEMO MODE FUNCTIONS ─────────────────────────────────────────
+function loadDemoDefaults(){
+  // Reuse the app's own built-in doc set definitions — NL-ZZP only
+  initDefaultSets();
+  docSets = docSets.filter(s => s.id === SET_NL_ZZP);
+  docSetItems = { [SET_NL_ZZP]: (docSetItems[SET_NL_ZZP]||[]).map(d=>({...d})) };
+
+  // Workers — internal format: {id,name,type,ref,nat,agency,email,phone,docSetId,notes,active,docs:{}}
+  workers = [
+    {id:'demo-w1',name:'J. van den Berg',type:'zzp',ref:'NL-041',nat:'NL',agency:'',email:'',phone:'',docSetId:SET_NL_ZZP,notes:'Site lead — check VCA renewal',active:true,docs:{}},
+    {id:'demo-w2',name:'M. Schmidt',type:'zzp',ref:'DE-027',nat:'DE',agency:'',email:'',phone:'',docSetId:SET_NL_ZZP,notes:'',active:true,docs:{}},
+    {id:'demo-w3',name:'P. Kowalski',type:'blue',ref:'BE-089',nat:'BE',agency:'',email:'',phone:'',docSetId:SET_NL_ZZP,notes:'',active:true,docs:{}},
+    {id:'demo-w4',name:'D. Ionescu',type:'zzp',ref:'NL-055',nat:'RO',agency:'',email:'',phone:'',docSetId:SET_NL_ZZP,notes:'All documents in order',active:true,docs:{}},
+  ];
+
+  // Init all docs as missing, then set specifics by key index
+  workers.forEach(w=>{ tmplForWorker(w).forEach(d=>{ w.docs[d.id]={status:'missing',date:null,issueDate:null,files:[]}; }); });
+
+  function setDoc(w,k,status,expiry,issue){
+    if(w.docs[k]!==undefined) w.docs[k]={status,date:expiry||null,issueDate:issue||null,files:[]};
+  }
+
+  // Worker 1 (van den Berg) — NO-GO: some missing, one expiring, some ok
+  const k1=Object.keys(workers[0].docs);
+  k1.forEach((k,i)=>{
+    if(i===0) setDoc(workers[0],k,'ok','2029-03-15','2019-03-15');         // passport ok
+    else if(i===1) setDoc(workers[0],k,'missing',null,null);               // vca missing
+    else if(i===2) setDoc(workers[0],k,'expiring','2026-06-20','2025-06-20'); // kvk expiring
+    else if(i===3) setDoc(workers[0],k,'missing',null,null);               // a1 missing
+    else if(i===4) setDoc(workers[0],k,'ok','2027-01-01','2023-01-01');    // vog ok
+    else if(i===5) setDoc(workers[0],k,'ok','2027-05-01','2025-05-01');    // insurance ok
+    else setDoc(workers[0],k,'missing',null,null);                          // rest missing
+  });
+
+  // Worker 2 (Schmidt) — NO-GO: passport, a1, vog missing
+  const k2=Object.keys(workers[1].docs);
+  k2.forEach((k,i)=>{
+    if(i===0) setDoc(workers[1],k,'missing',null,null);                    // passport missing
+    else if(i===1) setDoc(workers[1],k,'ok','2027-09-01','2025-09-01');   // vca ok
+    else if(i===2) setDoc(workers[1],k,'ok','2027-01-01','2025-01-01');   // kvk ok
+    else if(i===3) setDoc(workers[1],k,'missing',null,null);              // a1 missing
+    else if(i===4) setDoc(workers[1],k,'missing',null,null);              // vog missing
+    else setDoc(workers[1],k,'ok','2028-02-01','2025-02-01');             // rest ok
+  });
+
+  // Worker 3 (Kowalski) — WARNING: insurance expiring, rest ok
+  const k3=Object.keys(workers[2].docs);
+  k3.forEach((k,i)=>{
+    if(i===5) setDoc(workers[2],k,'expiring','2026-06-25','2024-06-25');  // insurance expiring
+    else setDoc(workers[2],k,'ok','2028-01-01','2025-01-01');             // all others ok
+  });
+
+  // Worker 4 (Ionescu) — GO: all ok
+  Object.keys(workers[3].docs).forEach(k=>setDoc(workers[3],k,'ok','2028-06-01','2025-06-01'));
+
+  // Projects
+  projectStore=[
+    {id:'demo-p1',name:'Amsterdam North DC',client:'AMS Logistics BV',pm:'Demo Admin',phone:'',desc:'Warehouse construction phase 2',location:'Amsterdam, NL',active:true},
+    {id:'demo-p2',name:'Brussels Infra Site',client:'BXL Infrastructure NV',pm:'Demo Admin',phone:'',desc:'Infrastructure upgrade',location:'Brussels, BE',active:true},
+    {id:'demo-p3',name:'Rotterdam Civil Works',client:'RTD Civil Contractors',pm:'Demo Admin',phone:'',desc:'Civil engineering contract',location:'Rotterdam, NL',active:true},
+  ];
+
+  // Project assignments — internal format: {id,wid,projectId,startDate,endDate,rate,rateType,notes,contractFiles}
+  projectAssignments=[
+    {id:'demo-pa1',wid:'demo-w1',projectId:'demo-p1',startDate:'2026-04-14',endDate:'2026-08-31',rate:425,rateType:'day',notes:'',contractFiles:[]},
+    {id:'demo-pa2',wid:'demo-w2',projectId:'demo-p2',startDate:'2026-05-01',endDate:'2026-07-25',rate:390,rateType:'day',notes:'',contractFiles:[]},
+    {id:'demo-pa3',wid:'demo-w3',projectId:'demo-p1',startDate:'2026-03-10',endDate:'2026-09-30',rate:2800,rateType:'week',notes:'',contractFiles:[]},
+    {id:'demo-pa4',wid:'demo-w4',projectId:'demo-p3',startDate:'2026-01-06',endDate:'2026-12-19',rate:410,rateType:'day',notes:'',contractFiles:[]},
+  ];
+
+  // Properties — {id,name,address,costPerNight,notes}
+  properties=[
+    {id:'demo-prop1',name:'City View Apartments',address:'Keizersgracht 12, Amsterdam',costPerNight:null,notes:'Shared worker accommodation'},
+    {id:'demo-prop2',name:'Park Lodge East',address:'Brussel Oost 44, Brussels',costPerNight:null,notes:''},
+  ];
+
+  // Vehicles — {id,desc,reg,make,model,colour,notes}
+  vehicles=[
+    {id:'demo-v1',desc:'VW Crafter',reg:'NL-234-TG',make:'VW',model:'Crafter',colour:'White',notes:''},
+    {id:'demo-v2',desc:'Ford Transit',reg:'1-ABC-234',make:'Ford',model:'Transit',colour:'White',notes:''},
+  ];
+
+  // Accommodation history — {id,propId,startDate,endDate,notes,chargeToOperative,weeklyChargeAmount}
+  accomHistory={
+    'demo-w1':[{id:'demo-aa1',propId:'demo-prop1',startDate:'2026-05-12',endDate:'2026-07-06',notes:'',chargeToOperative:true,weeklyChargeAmount:120}],
+    'demo-w2':[{id:'demo-aa2',propId:'demo-prop2',startDate:'2026-05-04',endDate:'2026-07-27',notes:'',chargeToOperative:true,weeklyChargeAmount:110}],
+  };
+
+  // Vehicle history — {id,vehicleId,startDate,endDate,notes,chargeToOperative,weeklyChargeAmount}
+  vehHistory={
+    'demo-w1':[{id:'demo-va1',vehicleId:'demo-v1',startDate:'2026-03-03',endDate:'2026-08-29',notes:'',chargeToOperative:true,weeklyChargeAmount:65}],
+    'demo-w2':[{id:'demo-va2',vehicleId:'demo-v2',startDate:'2026-04-14',endDate:'2026-06-30',notes:'',chargeToOperative:true,weeklyChargeAmount:60}],
+  };
+
+  // Tools if the variable exists
+  try{ tools=[{id:'demo-t1',name:'Hilti TE 60 Drill',desc:'Rotary hammer',serial:'HLT-2024-0041',notes:''},{id:'demo-t2',name:'Dewalt Circular Saw',desc:'7¼" circular saw',serial:'DWL-9912-B',notes:''}]; }catch(e){}
+  try{ toolHistory={'demo-w1':[{id:'demo-ta1',toolId:'demo-t1',startDate:'2026-03-03',endDate:'2026-08-29',notes:'',chargeToOperative:true,weeklyChargeAmount:18,issueFilePath:null,issueFileName:null,returnFilePath:null,returnFileName:null}],'demo-w3':[{id:'demo-ta2',toolId:'demo-t2',startDate:'2026-06-01',endDate:'2026-09-30',notes:'',chargeToOperative:true,weeklyChargeAmount:12,issueFilePath:null,issueFileName:null,returnFilePath:null,returnFileName:null}]}; }catch(e){}
+  try{ toolCharges=[]; }catch(e){}
+  try{ issuedDocuments=[]; }catch(e){}
+  try{ roster={}; }catch(e){}
+  accomCharges=[]; vehCharges=[]; resourceEvents=[]; deletedItems=[]; complianceDocs=[];
+
+  // fileStore
+  fileStore={};
+  workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
+
+  settings.warningDays=60;
+  saveDemoState();
+}
+
+function saveDemoState(){
+  if(!DEMO_MODE) return;
+  try{
+    const sf={};
+    Object.keys(fileStore||{}).forEach(wid=>{ sf[wid]={}; Object.keys(fileStore[wid]||{}).forEach(did=>{ sf[wid][did]=(fileStore[wid][did]||[]).filter(f=>f.file_path||f.storagePath).map(f=>({name:f.name,size:f.size,type:f.type,file_path:f.file_path,storagePath:f.storagePath,superseded:!!f.superseded})); }); });
+    const state={workers:workers.map(w=>({...w,docs:{...w.docs}})),docSets:[...docSets],docSetItems:JSON.parse(JSON.stringify(docSetItems)),projectStore:[...projectStore],projectAssignments:[...projectAssignments],properties:[...properties],vehicles:[...vehicles],accomHistory:JSON.parse(JSON.stringify(accomHistory)),vehHistory:JSON.parse(JSON.stringify(vehHistory)),accomCharges:[...accomCharges],vehCharges:[...vehCharges],resourceEvents:[...resourceEvents],deletedItems:[...deletedItems],fileStore:sf,settings:{warningDays:settings.warningDays}};
+    try{ state.tools=[...(typeof tools!=='undefined'?tools:[])]; state.toolHistory=JSON.parse(JSON.stringify(typeof toolHistory!=='undefined'?toolHistory:{})); state.toolCharges=[...(typeof toolCharges!=='undefined'?toolCharges:[])]; }catch(e){}
+    sessionStorage.setItem(DEMO_SS_KEY,JSON.stringify(state));
+    if(typeof sbSetStatus==='function') sbSetStatus('Demo: saved locally',true);
+  }catch(e){ console.warn('[Demo] save failed:',e); }
+}
+
+function restoreDemoState(s){
+  workers=s.workers||[]; docSets=s.docSets||[]; docSetItems=s.docSetItems||{}; projectStore=s.projectStore||[]; projectAssignments=s.projectAssignments||[]; properties=s.properties||[]; vehicles=s.vehicles||[]; accomHistory=s.accomHistory||{}; vehHistory=s.vehHistory||{}; accomCharges=s.accomCharges||[]; vehCharges=s.vehCharges||[]; resourceEvents=s.resourceEvents||[]; deletedItems=s.deletedItems||[];
+  try{ if(s.tools) tools=s.tools; if(s.toolHistory) toolHistory=s.toolHistory; if(s.toolCharges) toolCharges=s.toolCharges; }catch(e){}
+  try{ issuedDocuments=[]; }catch(e){} try{ roster={}; }catch(e){} try{ complianceDocs=s.complianceDocs||[]; }catch(e){}
+  if(s.settings) settings.warningDays=s.settings.warningDays||60;
+  fileStore={};
+  workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
+  if(s.fileStore){ Object.keys(s.fileStore).forEach(wid=>{ if(!fileStore[wid])fileStore[wid]={}; Object.keys(s.fileStore[wid]||{}).forEach(did=>{ fileStore[wid][did]=s.fileStore[wid][did]||[]; }); }); }
+}
+
+function sbInitDemo(){
+  // Set up demo user (admin role — all features visible)
+  if(typeof sbProfile!=='undefined') sbProfile={id:'demo-user',email:'demo@work-force.nl',role:'admin',active:true,full_name:'Demo User'};
+  if(typeof sbUserRole!=='undefined') sbUserRole='admin';
+  if(typeof sbUserActive!=='undefined') sbUserActive=true;
+  if(typeof sbReady!=='undefined') sbReady=true;
+  if(typeof sbHasLoadedRemote!=='undefined') sbHasLoadedRemote=true;
+  // Hide login overlay and unlock screen
+  document.getElementById('sbLoginOverlay')?.classList.remove('open');
+  if(typeof sbLockScreen==='function') sbLockScreen(false);
+  // Load data
+  const saved=sessionStorage.getItem(DEMO_SS_KEY);
+  if(saved){ try{ restoreDemoState(JSON.parse(saved)); }catch(e){ console.warn('[Demo] restore failed:',e); loadDemoDefaults(); } }
+  else { loadDemoDefaults(); }
+  // Update user display
+  const uel=document.getElementById('sbUser');
+  if(uel) uel.innerHTML='<span style="font-size:12px;font-weight:500;color:#a8c8e8;padding:0 6px;">👤 Demo User (admin)</span>';
+  // Render
+  try{ renderProjFilters(); }catch(e){}
+  try{ renderDocSetFilters(); }catch(e){}
+  try{ if(typeof renderMissingDocFilter==='function')renderMissingDocFilter(); }catch(e){}
+  try{ renderWeekLabel(); }catch(e){}
+  try{ renderTable(); }catch(e){}
+  try{ if(typeof renderDeletedItems==='function')renderDeletedItems(); }catch(e){}
+  try{ applyRoleUI(); }catch(e){}
+  showDemoBanner();
+  if(typeof sbSetStatus==='function') sbSetStatus('Demo mode — data saved locally',true);
+}
+
+function showDemoBanner(){
+  const b=document.getElementById('demoBanner');
+  if(b){ b.style.display='flex'; document.body.classList.add('demo-mode'); }
+}
+
+function resetDemoData(){
+  if(!confirm('Reset all demo data back to the defaults?\n\nAll your demo changes will be lost.')) return;
+  sessionStorage.removeItem(DEMO_SS_KEY);
+  location.href=location.pathname+'?demo=1';
 }
 
 function loadSettings(){
@@ -9892,6 +10078,7 @@ async function sbUploadEmbeddedFiles(){
 }
 
 async function sbUpsertRows(table, rows){
+  if(DEMO_MODE) return;
   if(!sbClient) return;
   if(!sbCanWriteTable(table)){ console.debug('[TMC] sbUpsertRows: skipped', table, '— role:', sbUserRole); return; }
   if(!rows.length) return;
@@ -9991,6 +10178,7 @@ async function sbApplyArchivedDeletionsToSupabase(items=deletedItems){
   }
 }
 async function sbPersistAll(force=false){
+  if(DEMO_MODE){ saveDemoState(); return; }
   if(!sbReady||!sbSession||!sbClient||sbIsLoading) return;
   if(!force && !sbHasLoadedRemote) return;
   sbSyncInFlight=true;
@@ -10640,6 +10828,7 @@ async function sbAfterAuth(){
   applyRoleUI();
 }
 async function sbBoot(){
+  if(DEMO_MODE){ sbInitDemo(); return; }
   sbInstallWrappers(); const c=sbInitClient(); if(!c){sbSetStatus('Supabase script not loaded',false);return;}
   const {data}=await c.auth.getSession(); sbSession=data.session;
   c.auth.onAuthStateChange(async (event,session)=>{
