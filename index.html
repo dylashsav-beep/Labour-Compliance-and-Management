@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TMC Work-Force — Labour Compliance Platform</title>
+<title>Work-Force — Labour Compliance Platform</title>
 <meta name="description" content="Real-time document compliance tracking, project assignments, and resource management — purpose-built for construction and contract labour in NL, BE and AT.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -380,12 +380,12 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 .demo-section .section-title{color:#fff;}
 .demo-section .section-sub{color:rgba(255,255,255,0.6);}
 .demo-tabs{
-  display:flex;gap:0.5rem;margin:2rem 0 1.5rem;
+  display:flex;flex-wrap:wrap;gap:0.4rem;margin:2rem 0 1.5rem;
 }
 .demo-tab-btn{
-  display:inline-flex;align-items:center;gap:0.5rem;
-  padding:0.55rem 1.25rem;border-radius:8px;
-  font-size:0.875rem;font-weight:600;font-family:'Inter',sans-serif;
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.45rem 0.95rem;border-radius:8px;
+  font-size:0.8rem;font-weight:600;font-family:'Inter',sans-serif;
   cursor:pointer;transition:all 0.18s;border:1.5px solid rgba(255,255,255,0.2);
   background:transparent;color:rgba(255,255,255,0.65);
 }
@@ -635,7 +635,7 @@ footer{
     <a class="navbar-logo" href="index.html">
       <div class="logo-mark">WF</div>
       <div class="navbar-logo-text">
-        <span class="navbar-logo-main">TMC Work-Force</span>
+        <span class="navbar-logo-main">Work-Force</span>
         <span class="navbar-logo-sub">Labour Compliance Platform</span>
       </div>
     </a>
@@ -663,8 +663,8 @@ footer{
         <span class="hero-badge-dot"></span>
         Live compliance platform
       </div>
-      <h1>Every worker. Every document. Every deadline. Under control.</h1>
-      <p class="hero-lead">Stop chasing documents over WhatsApp. TMC Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers across NL, BE and AT.</p>
+      <h1>Every worker.<br>Every document.<br>Every deadline.<br><span style="color:var(--blue);">Under control.</span></h1>
+      <p class="hero-lead">Stop chasing documents over WhatsApp. Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers across NL, BE and AT.</p>
       <div class="hero-ctas">
         <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Request Demo</button>
         <a class="btn btn-ghost-nav btn-lg" href="#features">See how it works</a>
@@ -787,7 +787,7 @@ footer{
   <div class="section-inner">
     <div class="section-kicker fade-up">Sound familiar?</div>
     <div class="section-title fade-up fade-up-d1">Managing compliance without the right tool is painful.</div>
-    <div class="section-sub fade-up fade-up-d2">If any of these feel too familiar, TMC Work-Force was built exactly for you.</div>
+    <div class="section-sub fade-up fade-up-d2">If any of these feel too familiar, Work-Force was built exactly for you.</div>
     <div class="pain-grid">
       <div class="pain-card fade-up fade-up-d1">
         <div class="pain-emoji-wrap">💬</div>
@@ -920,6 +920,10 @@ footer{
 
     <div class="demo-tabs fade-up fade-up-d2">
       <button class="demo-tab-btn active" onclick="switchDemoTab('dashboard', this)">🖥 Dashboard</button>
+      <button class="demo-tab-btn" onclick="switchDemoTab('assignments', this)">📋 Assignments</button>
+      <button class="demo-tab-btn" onclick="switchDemoTab('accommodation', this)">🏠 Accommodation</button>
+      <button class="demo-tab-btn" onclick="switchDemoTab('vehicles', this)">🚐 Vehicles</button>
+      <button class="demo-tab-btn" onclick="switchDemoTab('tools', this)">🔧 Tools</button>
       <button class="demo-tab-btn" onclick="switchDemoTab('portal', this)">📱 Worker Portal</button>
     </div>
 
@@ -953,35 +957,35 @@ footer{
             </thead>
             <tbody>
               <tr onclick="openDemoPanel('jansen')" data-worker="jansen">
-                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.75rem;color:var(--text-l);">michael.jansen@tmconstruction.nl</div></td>
+                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.75rem;color:var(--text-l);">NL ZZP · Ref #NL-0041</div></td>
                 <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
                 <td><span class="proj-tag">Amsterdam DC</span></td>
                 <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">11/11</span></td>
                 <td><span class="badge badge-go">✓ GO</span></td>
               </tr>
               <tr onclick="openDemoPanel('popescu')" data-worker="popescu">
-                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.75rem;color:var(--text-l);">a.popescu@tmconstruction.nl</div></td>
+                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.75rem;color:var(--text-l);">NL Blue Card · Ref #NL-0089</div></td>
                 <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
                 <td><span class="proj-tag">Antwerp Slab</span></td>
                 <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
                 <td><span class="badge badge-warn">⚠ WARNING</span></td>
               </tr>
               <tr onclick="openDemoPanel('devries')" data-worker="devries">
-                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.75rem;color:var(--text-l);">k.devries@tmconstruction.nl</div></td>
+                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.75rem;color:var(--text-l);">NL ZZP · Ref #NL-0023</div></td>
                 <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
                 <td><span class="proj-tag">Vienna Fit-Out</span></td>
                 <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">8/8</span></td>
                 <td><span class="badge badge-go">✓ GO</span></td>
               </tr>
               <tr onclick="openDemoPanel('dobre')" data-worker="dobre" class="nogo-row">
-                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.75rem;color:var(--text-l);">s.dobre@tmconstruction.nl</div></td>
+                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.75rem;color:var(--text-l);">BE Employed · Ref #BE-0014</div></td>
                 <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
                 <td><span class="proj-tag">Rotterdam Civil</span></td>
                 <td><span style="color:var(--red);font-weight:700;font-size:0.85rem;">7/10</span></td>
                 <td><span class="badge badge-nogo">✕ NO-GO</span></td>
               </tr>
               <tr onclick="openDemoPanel('nicolescu')" data-worker="nicolescu">
-                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.75rem;color:var(--text-l);">t.nicolescu@tmconstruction.nl</div></td>
+                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.75rem;color:var(--text-l);">BE Employed · Ref #BE-0031</div></td>
                 <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
                 <td><span class="proj-tag">Brussels Site</span></td>
                 <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
@@ -1004,6 +1008,256 @@ footer{
             <div class="ddp-section-title">Document Checklist</div>
             <div class="ddp-docs" id="ddpDocs"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Assignments tab ───────────────────────────────── -->
+    <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-assignments">
+      <div class="demo-hint">📋 Project assignment Gantt — see who is on which site and when. Click a row for details.</div>
+      <div class="demo-dashboard">
+        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
+          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
+          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Assignments</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="stat-num-lg num-green">18</div><div><div class="stat-lbl">Active</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-amber">4</div><div><div class="stat-lbl">Ending Soon</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--navy)">5</div><div><div class="stat-lbl">Projects</div></div></div>
+          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · Jun 2026</span></div>
+        </div>
+        <div style="overflow-x:auto;border-top:1px solid var(--border);">
+          <table class="demo-table">
+            <thead><tr>
+              <th>Worker</th><th>Project</th><th>Start</th><th>End</th><th>Rate</th><th>Timeline</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.72rem;color:var(--text-l);">ZZP · NL</div></td>
+                <td><span class="proj-tag">Amsterdam DC</span></td>
+                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">29 Aug 2026</td>
+                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€65/hr</td>
+                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:85%;opacity:.85;"></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.72rem;color:var(--text-l);">Blue Card · RO</div></td>
+                <td><span class="proj-tag">Antwerp Slab</span></td>
+                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
+                <td style="font-size:0.8rem;color:var(--amber);font-weight:700;">30 Jun 2026 ⚠</td>
+                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€28/hr</td>
+                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--amber);width:55%;opacity:.85;"></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.72rem;color:var(--text-l);">ZZP · NL</div></td>
+                <td><span class="proj-tag">Vienna Fit-Out</span></td>
+                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">30 Nov 2026</td>
+                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€70/hr</td>
+                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:40%;opacity:.85;"></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.72rem;color:var(--text-l);">Employed · BE</div></td>
+                <td><span class="proj-tag">Rotterdam Civil</span></td>
+                <td style="font-size:0.8rem;color:var(--text-m);">10 Mar 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">25 Sep 2026</td>
+                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€25/hr</td>
+                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--blue);width:70%;opacity:.85;"></div></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.72rem;color:var(--text-l);">Employed · BE</div></td>
+                <td><span class="proj-tag">Brussels Site</span></td>
+                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
+                <td style="font-size:0.8rem;color:var(--amber);font-weight:700;">15 Jul 2026 ⚠</td>
+                <td style="font-size:0.82rem;font-weight:700;color:var(--navy);">€26/hr</td>
+                <td style="min-width:120px;"><div style="height:10px;border-radius:5px;background:var(--amber);width:45%;opacity:.85;"></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Accommodation tab ──────────────────────────────── -->
+    <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-accommodation">
+      <div class="demo-hint">🏠 Accommodation assignments — track which workers are in which property, weekly charges, and billing status.</div>
+      <div class="demo-dashboard">
+        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
+          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
+          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Accommodation</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="stat-num-lg num-green">12</div><div><div class="stat-lbl">Occupied</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--navy)">3</div><div><div class="stat-lbl">Properties</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-amber">5</div><div><div class="stat-lbl">Unbilled Weeks</div></div></div>
+          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · Jun 2026</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);border-top:1px solid var(--border);">
+          <div style="background:#fff;padding:1rem 1.1rem;">
+            <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-l);margin-bottom:0.75rem;">PROPERTIES</div>
+            <div style="margin-bottom:0.6rem;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
+              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Keizersgracht 214</div>
+              <div style="font-size:0.75rem;color:var(--text-l);">Amsterdam · 4 rooms · €180/wk each</div>
+              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">4 occupied</span></div>
+            </div>
+            <div style="margin-bottom:0.6rem;padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
+              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Meir 56 B</div>
+              <div style="font-size:0.75rem;color:var(--text-l);">Antwerp · 6 rooms · €155/wk each</div>
+              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">5 occupied</span><span style="background:#f1f5f9;color:var(--text-m);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">1 free</span></div>
+            </div>
+            <div style="padding:0.6rem 0.75rem;border:1px solid var(--border);border-radius:8px;">
+              <div style="font-weight:700;color:var(--navy);font-size:0.88rem;">Mariahilfer Str 88</div>
+              <div style="font-size:0.75rem;color:var(--text-l);">Vienna · 4 rooms · €190/wk each</div>
+              <div style="display:flex;gap:4px;margin-top:6px;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">3 occupied</span><span style="background:#f1f5f9;color:var(--text-m);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">1 free</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;padding:1rem 1.1rem;">
+            <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--text-l);margin-bottom:0.75rem;">CURRENT ASSIGNMENTS</div>
+            <table style="width:100%;border-collapse:collapse;font-size:0.8rem;">
+              <thead><tr style="background:#f8fafc;">
+                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Worker</th>
+                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Property</th>
+                <th style="text-align:left;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">From</th>
+                <th style="text-align:center;padding:5px 8px;font-size:0.7rem;color:var(--text-l);font-weight:700;">Billing</th>
+              </tr></thead>
+              <tbody>
+                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">M. Jansen</td><td style="padding:6px 8px;color:var(--text-m);">Keizersgracht 214</td><td style="padding:6px 8px;color:var(--text-m);">3 Mar</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Charged</span></td></tr>
+                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">A. Popescu</td><td style="padding:6px 8px;color:var(--text-m);">Meir 56 B</td><td style="padding:6px 8px;color:var(--text-m);">14 Apr</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--amber-bg);color:var(--amber);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Unbilled</span></td></tr>
+                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">K. de Vries</td><td style="padding:6px 8px;color:var(--text-m);">Mariahilfer Str 88</td><td style="padding:6px 8px;color:var(--text-m);">1 Jun</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--amber-bg);color:var(--amber);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Unbilled</span></td></tr>
+                <tr style="border-top:1px solid var(--border);"><td style="padding:6px 8px;font-weight:600;color:var(--navy);">S. Dobre</td><td style="padding:6px 8px;color:var(--text-m);">Keizersgracht 214</td><td style="padding:6px 8px;color:var(--text-m);">10 Mar</td><td style="padding:6px 8px;text-align:center;"><span style="background:var(--green-bg);color:var(--green);font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:4px;">Charged</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Vehicles tab ───────────────────────────────────── -->
+    <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-vehicles">
+      <div class="demo-hint">🚐 Vehicle assignments — track company vans, charge workers, and log fleet events.</div>
+      <div class="demo-dashboard">
+        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
+          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
+          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Vehicles</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="stat-num-lg num-green">8</div><div><div class="stat-lbl">In Use</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--text-m)">2</div><div><div class="stat-lbl">Available</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-amber">3</div><div><div class="stat-lbl">Unbilled Weeks</div></div></div>
+        </div>
+        <div style="overflow-x:auto;border-top:1px solid var(--border);">
+          <table class="demo-table">
+            <thead><tr>
+              <th>Vehicle</th><th>Worker</th><th>From</th><th>To</th><th>Weekly</th><th>Charge To</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">VW Crafter</div><div style="font-size:0.72rem;color:var(--text-l);">NL-234-TG</div></td>
+                <td style="font-weight:600;color:var(--text);">M. Jansen</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">29 Aug 2026</td>
+                <td style="font-weight:700;color:var(--navy);">€65</td>
+                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
+                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Ford Transit</div><div style="font-size:0.72rem;color:var(--text-l);">1-ABC-234</div></td>
+                <td style="font-weight:600;color:var(--text);">A. Popescu</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">30 Jun 2026</td>
+                <td style="font-weight:700;color:var(--navy);">€60</td>
+                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
+                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Mercedes Sprinter</div><div style="font-size:0.72rem;color:var(--text-l);">W-KP-1144</div></td>
+                <td style="font-weight:600;color:var(--text);">K. de Vries</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">30 Nov 2026</td>
+                <td style="font-weight:700;color:var(--navy);">€70</td>
+                <td style="font-size:0.78rem;"><span style="background:#f3f4f6;color:var(--text-m);padding:2px 7px;border-radius:4px;font-weight:600;">Company</span></td>
+                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">VW Transporter</div><div style="font-size:0.72rem;color:var(--text-l);">17-GHD-4</div></td>
+                <td style="font-weight:600;color:var(--text);">T. Nicolescu</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">15 Jul 2026</td>
+                <td style="font-weight:700;color:var(--navy);">€55</td>
+                <td style="font-size:0.78rem;"><span style="background:#f0f4ff;color:var(--blue-d);padding:2px 7px;border-radius:4px;font-weight:600;">Operative</span></td>
+                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tools tab ──────────────────────────────────────── -->
+    <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-tools">
+      <div class="demo-hint">🔧 Tool assignments — track which worker has which equipment, with optional weekly charge-back.</div>
+      <div class="demo-dashboard">
+        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
+          <div class="mockup-dot dot-r"></div><div class="mockup-dot dot-y"></div><div class="mockup-dot dot-g"></div>
+          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Resources · Tools</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="stat-num-lg num-green">14</div><div><div class="stat-lbl">Issued</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg" style="color:var(--text-m)">6</div><div><div class="stat-lbl">In Stock</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-amber">4</div><div><div class="stat-lbl">Charged Back</div></div></div>
+        </div>
+        <div style="overflow-x:auto;border-top:1px solid var(--border);">
+          <table class="demo-table">
+            <thead><tr>
+              <th>Tool / Equipment</th><th>Worker</th><th>Issued</th><th>Project</th><th>Weekly</th><th>Status</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Hilti TE 60 Drill</div><div style="font-size:0.72rem;color:var(--text-l);">SN: HLT-2024-0041</div></td>
+                <td style="font-weight:600;color:var(--text);">M. Jansen</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">3 Mar 2026</td>
+                <td><span class="proj-tag">Amsterdam DC</span></td>
+                <td style="font-weight:700;color:var(--navy);">€18</td>
+                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Dewalt Circular Saw</div><div style="font-size:0.72rem;color:var(--text-l);">SN: DWL-9912-B</div></td>
+                <td style="font-weight:600;color:var(--text);">K. de Vries</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">1 Jun 2026</td>
+                <td><span class="proj-tag">Vienna Fit-Out</span></td>
+                <td style="font-weight:700;color:var(--navy);">€12</td>
+                <td><span style="background:var(--amber-bg);color:var(--amber);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Unbilled</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Safety Harness Kit</div><div style="font-size:0.72rem;color:var(--text-l);">Lot: SAF-2025-12</div></td>
+                <td style="font-weight:600;color:var(--text);">A. Popescu</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">14 Apr 2026</td>
+                <td><span class="proj-tag">Antwerp Slab</span></td>
+                <td style="font-weight:700;color:var(--text-l);">—</td>
+                <td><span style="background:#f1f5f9;color:var(--text-m);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">No Charge</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Makita Angle Grinder</div><div style="font-size:0.72rem;color:var(--text-l);">SN: MKT-AG-8821</div></td>
+                <td style="font-weight:600;color:var(--text);">T. Nicolescu</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">20 May 2026</td>
+                <td><span class="proj-tag">Brussels Site</span></td>
+                <td style="font-weight:700;color:var(--navy);">€10</td>
+                <td><span style="background:var(--green-bg);color:var(--green);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">Charged</span></td>
+              </tr>
+              <tr>
+                <td><div style="font-weight:700;color:var(--navy);">Bosch Laser Level</div><div style="font-size:0.72rem;color:var(--text-l);">SN: BSH-LL-3345</div></td>
+                <td style="font-weight:600;color:var(--text);">S. Dobre</td>
+                <td style="font-size:0.8rem;color:var(--text-m);">10 Mar 2026</td>
+                <td><span class="proj-tag">Rotterdam Civil</span></td>
+                <td style="font-weight:700;color:var(--text-l);">—</td>
+                <td><span style="background:#f1f5f9;color:var(--text-m);font-size:0.72rem;font-weight:700;padding:3px 8px;border-radius:4px;">No Charge</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1107,7 +1361,7 @@ footer{
 ═══════════════════════════════════ -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-left">TMC Work-Force &middot; &copy; 2026 TMC Construction</div>
+    <div class="footer-left">Work-Force &middot; &copy; 2026 Work-Force</div>
     <div class="footer-links">
       <a href="login.html">Management Login</a>
       <a href="worker.html">Worker Portal</a>
@@ -1135,7 +1389,7 @@ footer{
           </div>
           <div class="form-group">
             <label class="form-label" for="demoCompany">Company name *</label>
-            <input class="form-input" type="text" id="demoCompany" name="company" required placeholder="TMC Construction">
+            <input class="form-input" type="text" id="demoCompany" name="company" required placeholder="Your company name">
           </div>
         </div>
         <div class="form-group">
