@@ -3,300 +3,1397 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>work-force.nl — Labour Compliance & Management</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<title>TMC Work-Force — Labour Compliance Platform</title>
+<meta name="description" content="Real-time document compliance tracking, project assignments, and resource management — purpose-built for construction and contract labour in NL, BE and AT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 :root{
-  --navy:#1a3082;--navy-d:#112268;
-  --text:#1a2340;--text-m:#4a5568;--text-l:#718096;
-  --border:#e2e8f0;--bg:#f8fafc;
-  --green:#059669;--amber:#d97706;
+  --navy:#1e3a5f;
+  --navy-d:#132642;
+  --navy-deeper:#0d1f36;
+  --blue:#3b82f6;
+  --blue-d:#2563eb;
+  --green:#16a34a;
+  --green-bg:#dcfce7;
+  --green-border:#bbf7d0;
+  --amber:#d97706;
+  --amber-bg:#fef3c7;
+  --amber-border:#fde68a;
+  --red:#dc2626;
+  --red-bg:#fee2e2;
+  --red-border:#fecaca;
+  --text:#1e293b;
+  --text-m:#64748b;
+  --text-l:#94a3b8;
+  --border:#e2e8f0;
+  --bg:#f8fafc;
+  --card:#ffffff;
 }
 html{scroll-behavior:smooth;}
-body{font-family:'Inter',-apple-system,sans-serif;font-size:15px;color:var(--text);background:#fff;}
+body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-font-smoothing:antialiased;line-height:1.6;}
 
-/* ── Nav ── */
-nav{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;padding:0 32px;}
-.nav-inner{max-width:1100px;margin:0 auto;height:60px;display:flex;align-items:center;justify-content:space-between;gap:20px;}
-.nav-brand{font-size:18px;font-weight:800;color:var(--navy);letter-spacing:-.02em;text-decoration:none;}
-.nav-links{display:flex;align-items:center;gap:8px;}
-.nav-link{color:var(--text-m);font-size:14px;font-weight:500;text-decoration:none;padding:7px 12px;border-radius:7px;transition:background .12s,color .12s;}
+/* ── NAVBAR ── */
+.navbar{
+  position:sticky;top:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;height:68px;
+  background:rgba(248,250,252,0.88);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid transparent;
+  transition:background 0.3s,border-color 0.3s,box-shadow 0.3s;
+}
+.navbar.scrolled{
+  background:rgba(255,255,255,0.97);
+  border-bottom-color:var(--border);
+  box-shadow:0 1px 16px rgba(0,0,0,0.07);
+}
+.navbar-left{display:flex;align-items:center;gap:2rem;}
+.navbar-logo{display:flex;align-items:center;gap:0.65rem;text-decoration:none;}
+.logo-mark{
+  width:36px;height:36px;
+  background:var(--navy);
+  border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.9rem;font-weight:900;color:#fff;letter-spacing:-0.04em;
+  flex-shrink:0;
+}
+.navbar-logo-text{display:flex;flex-direction:column;gap:1px;}
+.navbar-logo-main{font-size:0.95rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em;line-height:1;}
+.navbar-logo-sub{font-size:0.6rem;font-weight:600;color:var(--text-m);letter-spacing:0.06em;text-transform:uppercase;line-height:1;}
+.nav-links{display:flex;align-items:center;gap:0.25rem;}
+.nav-link{
+  font-size:0.875rem;font-weight:500;color:var(--text-m);
+  text-decoration:none;padding:0.45rem 0.85rem;border-radius:7px;
+  transition:background 0.15s,color 0.15s;
+}
 .nav-link:hover{background:#f1f5f9;color:var(--navy);}
-.nav-btn{background:var(--navy);color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:8px 18px;border-radius:8px;transition:background .12s;}
-.nav-btn:hover{background:var(--navy-d);}
+.navbar-right{display:flex;align-items:center;gap:0.6rem;}
+.btn{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  padding:0.5rem 1.1rem;border-radius:8px;
+  font-size:0.875rem;font-weight:600;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all 0.18s;text-decoration:none;border:none;
+  line-height:1;white-space:nowrap;
+}
+.btn-ghost-nav{
+  background:transparent;border:1.5px solid var(--border);color:var(--text);
+}
+.btn-ghost-nav:hover{border-color:var(--navy);color:var(--navy);background:rgba(30,58,95,0.04);}
+.btn-primary{background:var(--blue);color:#fff;border:1.5px solid var(--blue);}
+.btn-primary:hover{background:var(--blue-d);border-color:var(--blue-d);transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,0.35);}
+.btn-white{background:#fff;color:var(--navy);border:1.5px solid #fff;}
+.btn-white:hover{background:#f0f4ff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+.btn-navy-outline{background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;}
+.btn-navy-outline:hover{border-color:#fff;background:rgba(255,255,255,0.08);}
+.btn-lg{padding:0.8rem 1.75rem;font-size:1rem;border-radius:10px;}
+.btn-sm{padding:0.35rem 0.8rem;font-size:0.78rem;border-radius:6px;}
 
-/* ── Hero ── */
-.hero{background:linear-gradient(135deg,#0f1e5c 0%,#1a3082 55%,#1e40af 100%);padding:80px 32px 100px;text-align:center;position:relative;overflow:hidden;}
-.hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;}
-.hero-inner{max-width:760px;margin:0 auto;position:relative;}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:.04em;margin-bottom:24px;}
-.hero h1{font-size:clamp(32px,5vw,54px);font-weight:800;color:#fff;line-height:1.15;letter-spacing:-.02em;margin-bottom:20px;}
-.hero h1 span{color:#93c5fd;}
-.hero p{font-size:clamp(15px,2vw,18px);color:rgba(255,255,255,.75);max-width:580px;margin:0 auto 36px;line-height:1.65;}
-.hero-cta{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;}
-.cta-primary{background:#fff;color:var(--navy);font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:10px;transition:background .12s,transform .1s;box-shadow:0 4px 16px rgba(0,0,0,.2);}
-.cta-primary:hover{background:#f0f4ff;transform:translateY(-1px);}
-.cta-secondary{color:rgba(255,255,255,.8);font-size:14px;font-weight:500;text-decoration:none;padding:14px 20px;transition:color .12s;}
-.cta-secondary:hover{color:#fff;}
+/* ── ANIMATIONS ── */
+.fade-up{opacity:0;transform:translateY(24px);transition:opacity 0.6s ease,transform 0.6s ease;}
+.fade-up.visible{opacity:1;transform:translateY(0);}
+.fade-up-d1{transition-delay:0.1s;}
+.fade-up-d2{transition-delay:0.2s;}
+.fade-up-d3{transition-delay:0.3s;}
+.fade-up-d4{transition-delay:0.4s;}
+.fade-up-d5{transition-delay:0.5s;}
+.fade-up-d6{transition-delay:0.6s;}
 
-/* ── Section layout ── */
-section{padding:72px 32px;}
-.section-inner{max-width:1100px;margin:0 auto;}
-.section-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--navy);margin-bottom:12px;}
-.section-title{font-size:clamp(24px,3.5vw,36px);font-weight:800;color:var(--text);line-height:1.2;letter-spacing:-.02em;margin-bottom:16px;}
-.section-sub{font-size:16px;color:var(--text-m);line-height:1.7;max-width:560px;}
+/* ── HERO ── */
+.hero{
+  background:linear-gradient(150deg,#f0f6ff 0%,#f8fafc 45%,#eff6ff 100%);
+  padding:6rem 2rem 5rem;
+  position:relative;overflow:hidden;
+}
+.hero::before{
+  content:'';position:absolute;top:-100px;left:50%;transform:translateX(-50%);
+  width:1000px;height:700px;
+  background:radial-gradient(ellipse at center,rgba(59,130,246,0.07) 0%,transparent 68%);
+  pointer-events:none;
+}
+.hero-inner{
+  max-width:1180px;margin:0 auto;
+  display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;
+  position:relative;
+}
+.hero-left{}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.22);
+  color:var(--blue);padding:0.35rem 1rem;border-radius:100px;
+  font-size:0.78rem;font-weight:700;letter-spacing:0.03em;
+  margin-bottom:1.5rem;
+}
+.hero-badge-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:pulse-dot 2s ease-in-out infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.7);}}
+.hero h1{
+  font-size:clamp(2rem,4vw,3.1rem);font-weight:900;
+  color:var(--navy);letter-spacing:-0.035em;line-height:1.1;
+  margin-bottom:1.25rem;
+}
+.hero-lead{
+  font-size:1.05rem;color:var(--text-m);line-height:1.75;
+  margin-bottom:2rem;max-width:480px;
+}
+.hero-ctas{display:flex;gap:0.85rem;flex-wrap:wrap;margin-bottom:2.25rem;}
+.hero-proof{display:flex;flex-direction:column;gap:0.55rem;}
+.proof-item{
+  display:flex;align-items:center;gap:0.55rem;
+  font-size:0.83rem;font-weight:500;color:var(--text-m);
+}
+.proof-check{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--green-bg);border:1px solid var(--green-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.6rem;color:var(--green);flex-shrink:0;font-weight:700;
+}
 
-/* ── Features grid ── */
-.features-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:24px;margin-top:48px;}
-.feature-card{background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;transition:box-shadow .15s,border-color .15s;}
-.feature-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.07);border-color:#c7d2e0;}
-.feature-icon{font-size:28px;margin-bottom:14px;}
-.feature-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;}
-.feature-desc{font-size:14px;color:var(--text-m);line-height:1.65;}
+/* ── HERO DASHBOARD MOCKUP ── */
+.hero-right{position:relative;}
+.mockup-backdrop{
+  position:absolute;inset:-40px -30px;
+  background:radial-gradient(ellipse at 60% 40%,rgba(59,130,246,0.12) 0%,rgba(30,58,95,0.06) 50%,transparent 75%);
+  border-radius:32px;
+  pointer-events:none;
+}
+.mockup-card{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 2px 4px rgba(0,0,0,0.04),0 16px 48px rgba(30,58,95,0.14),0 0 0 1px var(--border);
+  overflow:hidden;
+  transform:rotate(-1.5deg);
+  position:relative;z-index:1;
+}
+.mockup-chrome{
+  background:#f1f5f9;border-bottom:1px solid var(--border);
+  padding:0.65rem 1rem;
+  display:flex;align-items:center;gap:0.5rem;
+}
+.mockup-dot{width:11px;height:11px;border-radius:50%;}
+.dot-r{background:#fc5c65;}.dot-y{background:#fed330;}.dot-g{background:#26de81;}
+.mockup-url{
+  flex:1;margin-left:0.5rem;background:#fff;
+  border:1px solid var(--border);border-radius:6px;
+  padding:0.25rem 0.65rem;font-size:0.71rem;color:var(--text-m);font-weight:500;
+}
+.mockup-sync{
+  font-size:0.68rem;font-weight:600;color:var(--green);
+  background:var(--green-bg);border:1px solid var(--green-border);
+  padding:0.2rem 0.55rem;border-radius:20px;
+}
+.mockup-tabs{
+  display:flex;border-bottom:1px solid var(--border);background:#fff;
+  padding:0 1rem;
+}
+.mockup-tab{
+  font-size:0.75rem;font-weight:600;color:var(--text-m);
+  padding:0.6rem 0.85rem;border-bottom:2px solid transparent;
+  cursor:pointer;transition:color 0.15s,border-color 0.15s;
+}
+.mockup-tab.active{color:var(--navy);border-bottom-color:var(--blue);}
+.mockup-stats{
+  display:flex;gap:0;border-bottom:1px solid var(--border);
+  background:var(--bg);
+}
+.mockup-stat{
+  flex:1;padding:0.65rem 1rem;
+  display:flex;align-items:center;gap:0.45rem;
+  border-right:1px solid var(--border);font-size:0.78rem;
+}
+.mockup-stat:last-child{border-right:none;}
+.stat-num-lg{font-size:1.1rem;font-weight:800;letter-spacing:-0.02em;}
+.stat-lbl{font-size:0.68rem;font-weight:500;color:var(--text-m);}
+.num-green{color:var(--green);}
+.num-amber{color:var(--amber);}
+.num-red{color:var(--red);}
 
-/* ── Portal cards ── */
-.portals{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;margin-top:48px;}
-.portal-card{border-radius:16px;padding:36px 32px;display:flex;flex-direction:column;gap:16px;}
-.portal-card.management{background:linear-gradient(135deg,#0f1e5c,#1a3082);color:#fff;}
-.portal-card.worker{background:linear-gradient(135deg,#065f46,#059669);color:#fff;}
-.portal-card-icon{font-size:32px;}
-.portal-card-title{font-size:20px;font-weight:800;letter-spacing:-.01em;}
-.portal-card-desc{font-size:14px;opacity:.8;line-height:1.6;flex:1;}
-.portal-card-link{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.18);color:#fff;font-size:14px;font-weight:600;text-decoration:none;padding:11px 20px;border-radius:9px;border:1px solid rgba(255,255,255,.25);transition:background .12s;align-self:flex-start;}
-.portal-card-link:hover{background:rgba(255,255,255,.28);}
+.mockup-table{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.mockup-table thead tr{background:#f8fafc;border-bottom:1px solid var(--border);}
+.mockup-table th{
+  padding:0.5rem 1rem;text-align:left;
+  font-size:0.65rem;font-weight:700;color:var(--text-l);
+  letter-spacing:0.07em;text-transform:uppercase;
+}
+.mockup-table td{
+  padding:0.65rem 1rem;border-bottom:1px solid #f1f5f9;
+  color:var(--text);font-weight:500;
+}
+.mockup-table tbody tr:last-child td{border-bottom:none;}
+.mockup-table tbody tr{cursor:pointer;transition:background 0.12s;}
+.mockup-table tbody tr:hover td{background:#f8fafc;}
+.mockup-table tbody tr.nogo-row td{background:#fff8f8;}
+.mockup-table tbody tr.nogo-row:hover td{background:#fff0f0;}
+.worker-name-cell{font-weight:600;color:var(--text);}
+.worker-sub{font-size:0.66rem;color:var(--text-l);font-weight:400;margin-top:1px;}
+.proj-tag{
+  background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;
+  padding:0.15rem 0.5rem;border-radius:5px;font-size:0.68rem;font-weight:600;
+}
+.badge{
+  display:inline-flex;align-items:center;gap:0.28rem;
+  padding:0.22rem 0.6rem;border-radius:6px;
+  font-size:0.68rem;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;
+}
+.badge-go{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.badge-warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-border);}
+.badge-nogo{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
 
-/* ── Stats ── */
-.stats{background:var(--navy);padding:64px 32px;}
-.stats-inner{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:40px;text-align:center;}
-.stat-num{font-size:clamp(32px,5vw,48px);font-weight:800;color:#fff;letter-spacing:-.02em;}
-.stat-label{font-size:13px;color:rgba(255,255,255,.6);margin-top:4px;font-weight:500;}
+.mockup-notification{
+  margin:0.75rem 1rem;
+  background:#fffbeb;border:1px solid #fde68a;border-radius:9px;
+  padding:0.6rem 0.85rem;
+  display:flex;align-items:center;gap:0.55rem;
+  font-size:0.73rem;color:#92400e;font-weight:500;
+}
+.notif-icon{font-size:0.85rem;}
 
-/* ── Benefits list ── */
-.benefits{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;margin-top:40px;}
-.benefit{display:flex;align-items:flex-start;gap:14px;}
-.benefit-check{width:24px;height:24px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;margin-top:1px;}
-.benefit-text{font-size:14px;color:var(--text-m);line-height:1.6;}
-.benefit-text strong{color:var(--text);display:block;font-size:15px;margin-bottom:2px;}
+/* ── WORKER DETAIL PANEL (in mockup) ── */
+.mockup-wrapper{position:relative;overflow:hidden;}
+.worker-detail-panel{
+  position:absolute;top:0;right:0;bottom:0;
+  width:55%;
+  background:#fff;
+  border-left:1px solid var(--border);
+  padding:1rem;
+  transform:translateX(100%);
+  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  z-index:10;
+  overflow-y:auto;
+}
+.worker-detail-panel.open{transform:translateX(0);}
+.panel-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:0.85rem;
+  padding-bottom:0.75rem;
+  border-bottom:1px solid var(--border);
+}
+.panel-worker-name{font-size:0.82rem;font-weight:700;color:var(--navy);margin-bottom:2px;}
+.panel-worker-proj{font-size:0.68rem;color:var(--text-m);}
+.panel-close{
+  background:none;border:none;cursor:pointer;
+  font-size:1rem;color:var(--text-l);line-height:1;padding:0.1rem;
+  transition:color 0.15s;
+}
+.panel-close:hover{color:var(--red);}
+.panel-docs-title{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-l);margin-bottom:0.55rem;}
+.panel-doc-list{display:flex;flex-direction:column;gap:0.4rem;}
+.panel-doc-item{
+  display:flex;align-items:center;gap:0.5rem;
+  padding:0.45rem 0.6rem;border-radius:7px;
+  background:#f8fafc;border:1px solid #f1f5f9;
+}
+.panel-doc-icon{font-size:0.8rem;flex-shrink:0;}
+.panel-doc-name{font-size:0.73rem;font-weight:600;color:var(--text);flex:1;}
+.panel-doc-status{font-size:0.65rem;color:var(--text-m);font-weight:400;}
+.doc-ok{color:var(--green);}
+.doc-warn{color:var(--amber);}
+.doc-miss{color:var(--red);}
 
-/* ── CTA band ── */
-.cta-band{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:64px 32px;text-align:center;}
-.cta-band h2{font-size:clamp(22px,3vw,32px);font-weight:800;color:var(--text);margin-bottom:12px;}
-.cta-band p{font-size:15px;color:var(--text-m);margin-bottom:28px;}
-.cta-band-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;}
-.band-btn-primary{background:var(--navy);color:#fff;font-size:15px;font-weight:700;text-decoration:none;padding:13px 28px;border-radius:9px;transition:background .12s;}
-.band-btn-primary:hover{background:var(--navy-d);}
-.band-btn-secondary{background:#fff;color:var(--navy);font-size:15px;font-weight:600;text-decoration:none;padding:13px 28px;border-radius:9px;border:1.5px solid var(--border);transition:border-color .12s;}
-.band-btn-secondary:hover{border-color:#94a3b8;}
+/* ── PROBLEM SECTION ── */
+.section{padding:5rem 2rem;}
+.section-inner{max-width:1180px;margin:0 auto;}
+.section-kicker{
+  font-size:0.72rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.09em;color:var(--blue);margin-bottom:0.75rem;
+}
+.section-title{
+  font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800;
+  color:var(--navy);letter-spacing:-0.025em;line-height:1.2;
+  margin-bottom:0.85rem;
+}
+.section-sub{font-size:1rem;color:var(--text-m);line-height:1.75;max-width:600px;}
 
-/* ── Footer ── */
-footer{background:#0f172a;padding:40px 32px;text-align:center;}
-.footer-inner{max-width:1100px;margin:0 auto;}
-.footer-brand{font-size:18px;font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:8px;}
-.footer-sub{font-size:13px;color:#64748b;margin-bottom:20px;}
-.footer-links{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;margin-bottom:24px;}
-.footer-links a{color:#64748b;font-size:13px;text-decoration:none;transition:color .12s;}
+.pain-section{background:var(--navy);}
+.pain-section .section-kicker{color:rgba(255,255,255,0.5);}
+.pain-section .section-title{color:#fff;}
+.pain-section .section-sub{color:rgba(255,255,255,0.6);}
+.pain-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;
+  margin-top:3rem;
+}
+.pain-card{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:14px;padding:1.5rem 1.4rem;
+  transition:background 0.2s,border-color 0.2s;
+}
+.pain-card:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);}
+.pain-emoji-wrap{
+  width:44px;height:44px;
+  background:rgba(255,255,255,0.1);border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.35rem;margin-bottom:1rem;
+}
+.pain-card-title{font-size:0.9rem;font-weight:700;color:#fff;margin-bottom:0.4rem;line-height:1.3;}
+.pain-card-desc{font-size:0.82rem;color:rgba(255,255,255,0.55);line-height:1.6;}
+
+/* ── HOW IT WORKS ── */
+.how-section{background:#fff;}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:2.5rem;margin-top:3rem;position:relative;}
+.steps::before{
+  content:'';position:absolute;top:28px;left:calc(16.67% + 16px);right:calc(16.67% + 16px);
+  height:1px;background:var(--border);
+}
+.step{}
+.step-num{
+  width:56px;height:56px;border-radius:16px;
+  background:var(--navy);color:#fff;
+  font-size:1.25rem;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:1.25rem;position:relative;z-index:1;
+  box-shadow:0 4px 16px rgba(30,58,95,0.25);
+}
+.step-title{font-size:1.05rem;font-weight:700;color:var(--navy);margin-bottom:0.6rem;}
+.step-desc{font-size:0.88rem;color:var(--text-m);line-height:1.7;}
+
+/* ── FEATURES GRID ── */
+.features-section{background:var(--bg);}
+.features-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;
+  margin-top:3rem;
+}
+.feature-card{
+  background:#fff;border:1px solid var(--border);border-radius:14px;
+  padding:1.5rem 1.4rem;
+  transition:box-shadow 0.18s,border-color 0.18s,transform 0.18s;
+}
+.feature-card:hover{
+  box-shadow:0 6px 28px rgba(0,0,0,0.08);
+  border-color:#c7d2e0;
+  transform:translateY(-2px);
+}
+.feature-icon{
+  width:44px;height:44px;background:#eff6ff;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.25rem;margin-bottom:1rem;
+}
+.feature-title{font-size:0.95rem;font-weight:700;color:var(--navy);margin-bottom:0.45rem;}
+.feature-desc{font-size:0.83rem;color:var(--text-m);line-height:1.65;}
+
+/* ── INTERACTIVE DEMO SECTION ── */
+.demo-section{
+  background:var(--navy);padding:5.5rem 2rem;
+}
+.demo-section .section-kicker{color:rgba(255,255,255,0.5);}
+.demo-section .section-title{color:#fff;}
+.demo-section .section-sub{color:rgba(255,255,255,0.6);}
+.demo-tabs{
+  display:flex;gap:0.5rem;margin:2rem 0 1.5rem;
+}
+.demo-tab-btn{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  padding:0.55rem 1.25rem;border-radius:8px;
+  font-size:0.875rem;font-weight:600;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all 0.18s;border:1.5px solid rgba(255,255,255,0.2);
+  background:transparent;color:rgba(255,255,255,0.65);
+}
+.demo-tab-btn.active{background:#fff;color:var(--navy);border-color:#fff;}
+.demo-tab-btn:not(.active):hover{border-color:rgba(255,255,255,0.5);color:#fff;background:rgba(255,255,255,0.07);}
+.demo-hint{
+  display:inline-flex;align-items:center;gap:0.45rem;
+  font-size:0.78rem;color:rgba(255,255,255,0.4);margin-bottom:1.5rem;
+}
+.demo-panel-wrapper{display:none;}
+.demo-panel-wrapper.active{display:block;}
+
+/* Large dashboard mockup */
+.demo-dashboard{
+  background:#fff;border-radius:16px;
+  box-shadow:0 4px 8px rgba(0,0,0,0.06),0 24px 72px rgba(0,0,0,0.2);
+  overflow:hidden;
+}
+.demo-dashboard .mockup-chrome{padding:0.75rem 1.25rem;}
+.demo-table-wrap{position:relative;overflow:hidden;}
+.demo-table{width:100%;border-collapse:collapse;font-size:0.875rem;}
+.demo-table thead tr{background:#f8fafc;border-bottom:1px solid var(--border);}
+.demo-table th{
+  padding:0.7rem 1.25rem;text-align:left;
+  font-size:0.72rem;font-weight:700;color:var(--text-l);
+  letter-spacing:0.07em;text-transform:uppercase;
+}
+.demo-table td{padding:0.85rem 1.25rem;border-bottom:1px solid #f1f5f9;color:var(--text);font-weight:500;}
+.demo-table tbody tr{cursor:pointer;transition:background 0.12s;}
+.demo-table tbody tr:hover td{background:#f8fafc;}
+.demo-table tbody tr.nogo-row td{background:#fff8f8;}
+.demo-table tbody tr.nogo-row:hover td{background:#fff0f0;}
+.demo-detail-panel{
+  position:absolute;top:0;right:0;bottom:0;width:340px;
+  background:#fff;border-left:1px solid var(--border);
+  padding:1.5rem;
+  transform:translateX(100%);
+  transition:transform 0.3s cubic-bezier(0.4,0,0.2,1);
+  z-index:10;box-shadow:-4px 0 20px rgba(0,0,0,0.08);
+}
+.demo-detail-panel.open{transform:translateX(0);}
+.ddp-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding-bottom:1rem;border-bottom:1px solid var(--border);margin-bottom:1rem;
+}
+.ddp-name{font-size:1rem;font-weight:800;color:var(--navy);margin-bottom:3px;}
+.ddp-proj{font-size:0.8rem;color:var(--text-m);}
+.ddp-close{
+  background:none;border:none;cursor:pointer;
+  font-size:1.2rem;color:var(--text-l);line-height:1;padding:2px;
+  transition:color 0.15s;
+}
+.ddp-close:hover{color:var(--red);}
+.ddp-section-title{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-l);margin-bottom:0.6rem;}
+.ddp-docs{display:flex;flex-direction:column;gap:0.5rem;}
+.ddp-doc{
+  display:flex;align-items:center;gap:0.65rem;
+  padding:0.6rem 0.8rem;border-radius:9px;
+  border:1px solid var(--border);background:var(--bg);
+}
+.ddp-doc-icon{font-size:0.9rem;flex-shrink:0;}
+.ddp-doc-info{flex:1;}
+.ddp-doc-name{font-size:0.82rem;font-weight:600;color:var(--text);}
+.ddp-doc-date{font-size:0.72rem;color:var(--text-m);margin-top:1px;}
+.ddp-doc-badge{}
+
+/* Phone mockup for worker portal */
+.phone-frame{
+  max-width:340px;margin:0 auto;
+  background:#1a1a2e;border-radius:36px;
+  padding:12px;
+  box-shadow:0 0 0 2px rgba(255,255,255,0.1),0 24px 72px rgba(0,0,0,0.5);
+}
+.phone-screen{
+  background:#fff;border-radius:26px;overflow:hidden;
+}
+.phone-header{
+  background:var(--navy);padding:1.25rem 1.25rem 1rem;
+  color:#fff;
+}
+.phone-h-title{font-size:0.85rem;font-weight:700;margin-bottom:0.25rem;}
+.phone-h-sub{font-size:0.75rem;color:rgba(255,255,255,0.65);}
+.phone-body{padding:1rem;}
+.phone-doc-item{
+  display:flex;align-items:center;gap:0.75rem;
+  padding:0.75rem 0;border-bottom:1px solid #f1f5f9;
+}
+.phone-doc-item:last-child{border-bottom:none;}
+.phone-doc-info{flex:1;}
+.phone-doc-name{font-size:0.82rem;font-weight:600;color:var(--text);}
+.phone-doc-sub{font-size:0.72rem;color:var(--text-m);margin-top:2px;}
+.upload-btn{
+  background:var(--blue);color:#fff;border:none;
+  padding:0.35rem 0.75rem;border-radius:6px;
+  font-size:0.72rem;font-weight:600;font-family:'Inter',sans-serif;
+  cursor:pointer;transition:all 0.18s;white-space:nowrap;
+}
+.upload-btn:hover{background:var(--blue-d);}
+.upload-btn.success{background:var(--green);}
+.phone-upload-area{
+  margin-top:0.85rem;
+  border:2px dashed var(--border);border-radius:10px;
+  padding:1rem;text-align:center;
+  font-size:0.78rem;color:var(--text-l);
+  cursor:pointer;transition:border-color 0.18s,background 0.18s;
+}
+.phone-upload-area:hover{border-color:var(--blue);background:#eff6ff;color:var(--blue);}
+
+/* ── STATUS CARDS ── */
+.status-section{background:#fff;}
+.status-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;}
+.status-card{border-radius:16px;padding:2rem 1.75rem;border:1.5px solid;}
+.status-card.go{background:var(--green-bg);border-color:var(--green-border);}
+.status-card.warn{background:var(--amber-bg);border-color:var(--amber-border);}
+.status-card.nogo{background:var(--red-bg);border-color:var(--red-border);}
+.status-card-badge{margin-bottom:1rem;}
+.status-card-title{font-size:1.05rem;font-weight:800;margin-bottom:0.5rem;}
+.status-card.go .status-card-title{color:var(--green);}
+.status-card.warn .status-card-title{color:var(--amber);}
+.status-card.nogo .status-card-title{color:var(--red);}
+.status-card-desc{font-size:0.87rem;line-height:1.65;}
+.status-card.go .status-card-desc{color:#14532d;}
+.status-card.warn .status-card-desc{color:#78350f;}
+.status-card.nogo .status-card-desc{color:#7f1d1d;}
+
+/* ── CTA SECTION ── */
+.cta-section{
+  background:linear-gradient(145deg,var(--navy-deeper) 0%,var(--navy) 60%,#1e4a7f 100%);
+  padding:6rem 2rem;text-align:center;
+  position:relative;overflow:hidden;
+}
+.cta-section::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% -20%,rgba(59,130,246,0.15) 0%,transparent 65%);
+  pointer-events:none;
+}
+.cta-section .section-title{color:#fff;margin:0 auto 1rem;max-width:560px;}
+.cta-section .section-sub{color:rgba(255,255,255,0.6);margin:0 auto 2.5rem;text-align:center;}
+.cta-buttons{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;}
+
+/* ── FOOTER ── */
+footer{
+  background:#0f172a;
+  padding:2.5rem 2rem;
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+.footer-inner{
+  max-width:1180px;margin:0 auto;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:1rem;
+}
+.footer-left{font-size:0.82rem;color:#64748b;}
+.footer-links{display:flex;gap:1.5rem;flex-wrap:wrap;}
+.footer-links a{font-size:0.82rem;color:#64748b;text-decoration:none;transition:color 0.15s;}
 .footer-links a:hover{color:#94a3b8;}
-.footer-copy{font-size:12px;color:#334155;}
 
-/* ── Responsive ── */
-@media(max-width:640px){
-  nav{padding:0 16px;}
-  .hero{padding:56px 20px 72px;}
-  section{padding:56px 20px;}
-  .stats{padding:48px 20px;}
-  .cta-band{padding:48px 20px;}
-  footer{padding:32px 20px;}
-  .nav-link{display:none;}
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(15,23,42,0.75);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:1.5rem;
+  opacity:0;pointer-events:none;transition:opacity 0.25s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-card{
+  background:#fff;border-radius:18px;
+  width:100%;max-width:480px;
+  padding:2.25rem;
+  box-shadow:0 24px 72px rgba(0,0,0,0.25);
+  transform:translateY(16px) scale(0.97);
+  transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),opacity 0.25s;
+  opacity:0;
+}
+.modal-overlay.open .modal-card{transform:translateY(0) scale(1);opacity:1;}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.5rem;}
+.modal-title{font-size:1.3rem;font-weight:800;color:var(--navy);letter-spacing:-0.02em;}
+.modal-close{
+  background:none;border:none;cursor:pointer;
+  font-size:1.3rem;color:var(--text-l);line-height:1;padding:2px;
+  transition:color 0.15s;
+}
+.modal-close:hover{color:var(--red);}
+.modal-sub{font-size:0.88rem;color:var(--text-m);margin-bottom:1.75rem;line-height:1.6;}
+.form-group{margin-bottom:1.1rem;}
+.form-label{display:block;font-size:0.8rem;font-weight:600;color:var(--text);margin-bottom:0.35rem;}
+.form-input,.form-select,.form-textarea{
+  width:100%;padding:0.65rem 0.85rem;
+  border:1.5px solid var(--border);border-radius:9px;
+  font-size:0.875rem;font-family:'Inter',sans-serif;color:var(--text);
+  background:#fff;outline:none;
+  transition:border-color 0.18s,box-shadow 0.18s;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  border-color:var(--blue);
+  box-shadow:0 0 0 3px rgba(59,130,246,0.12);
+}
+.form-textarea{resize:vertical;min-height:80px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;}
+.modal-submit{width:100%;padding:0.85rem;border-radius:10px;font-size:1rem;font-weight:700;margin-top:0.5rem;}
+.modal-success{text-align:center;padding:1rem 0;}
+.success-icon{font-size:3rem;margin-bottom:1rem;}
+.success-title{font-size:1.1rem;font-weight:800;color:var(--green);margin-bottom:0.5rem;}
+.success-text{font-size:0.88rem;color:var(--text-m);line-height:1.65;margin-bottom:1.5rem;}
+.success-back{color:var(--blue);font-size:0.85rem;font-weight:600;cursor:pointer;text-decoration:none;}
+.success-back:hover{text-decoration:underline;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .hero-inner{grid-template-columns:1fr;gap:3rem;}
+  .hero-right{display:none;}
+  .features-grid{grid-template-columns:repeat(2,1fr);}
+  .pain-grid{grid-template-columns:repeat(2,1fr);}
+  .steps{grid-template-columns:1fr;}
+  .steps::before{display:none;}
+  .status-cards{grid-template-columns:1fr;}
+}
+@media(max-width:768px){
+  .navbar{padding:0 1rem;}
+  .nav-links{display:none;}
+  .section{padding:3.5rem 1.25rem;}
+  .hero{padding:4rem 1.25rem 3rem;}
+  .features-grid{grid-template-columns:1fr;}
+  .pain-grid{grid-template-columns:1fr;}
+  .demo-section{padding:3.5rem 1.25rem;}
+  .cta-section{padding:3.5rem 1.25rem;}
+  footer{padding:2rem 1.25rem;}
+  .footer-inner{flex-direction:column;gap:0.75rem;text-align:center;}
+  .footer-links{justify-content:center;}
+  .form-grid{grid-template-columns:1fr;}
+  .demo-tabs{flex-wrap:wrap;}
+  .phone-frame{max-width:280px;}
+}
+@media(max-width:480px){
+  .navbar-logo-sub{display:none;}
+  .btn-lg{padding:0.7rem 1.25rem;font-size:0.9rem;}
 }
 </style>
 </head>
 <body>
 
-<!-- Nav -->
-<nav>
-  <div class="nav-inner">
-    <a class="nav-brand" href="index.html">work-force.nl</a>
+<!-- ═══════════════════════════════════
+     NAVBAR
+═══════════════════════════════════ -->
+<nav class="navbar" id="navbar">
+  <div class="navbar-left">
+    <a class="navbar-logo" href="index.html">
+      <div class="logo-mark">WF</div>
+      <div class="navbar-logo-text">
+        <span class="navbar-logo-main">TMC Work-Force</span>
+        <span class="navbar-logo-sub">Labour Compliance Platform</span>
+      </div>
+    </a>
     <div class="nav-links">
       <a class="nav-link" href="#features">Features</a>
-      <a class="nav-link" href="#portals">Portals</a>
+      <a class="nav-link" href="#how-it-works">How It Works</a>
       <a class="nav-link" href="worker.html">Worker Portal</a>
-      <a class="nav-btn" href="login.html">Management Sign In →</a>
+      <a class="nav-link" href="#contact">Contact</a>
     </div>
+  </div>
+  <div class="navbar-right">
+    <a class="btn btn-ghost-nav" href="login.html">Log in</a>
+    <button class="btn btn-primary" onclick="openDemoModal()">Request Demo</button>
   </div>
 </nav>
 
-<!-- Hero -->
-<div class="hero">
+<!-- ═══════════════════════════════════
+     HERO
+═══════════════════════════════════ -->
+<section class="hero" id="home">
   <div class="hero-inner">
-    <div class="hero-badge">🏗️ Labour Compliance & Management</div>
-    <h1>Keep your workforce<br><span>compliant and on track</span></h1>
-    <p>Real-time document compliance tracking, project assignments, and resource management — purpose-built for construction and contract labour.</p>
-    <div class="hero-cta">
-      <a class="cta-primary" href="login.html">Management Dashboard →</a>
-      <a class="cta-secondary" href="worker.html">Worker? View your documents →</a>
+    <!-- Left column -->
+    <div class="hero-left fade-up">
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        Live compliance platform
+      </div>
+      <h1>Every worker. Every document. Every deadline. Under control.</h1>
+      <p class="hero-lead">Stop chasing documents over WhatsApp. TMC Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers across NL, BE and AT.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Request Demo</button>
+        <a class="btn btn-ghost-nav btn-lg" href="#features">See how it works</a>
+      </div>
+      <div class="hero-proof">
+        <div class="proof-item"><div class="proof-check">✓</div>Built for NL, BE and AT compliance frameworks</div>
+        <div class="proof-item"><div class="proof-check">✓</div>ZZP and employed workers — one platform</div>
+        <div class="proof-item"><div class="proof-check">✓</div>Daily compliance alerts before deadlines hit</div>
+      </div>
+    </div>
+
+    <!-- Right column — interactive mini dashboard -->
+    <div class="hero-right fade-up fade-up-d2">
+      <div class="mockup-backdrop"></div>
+      <div class="mockup-card">
+        <!-- Browser chrome -->
+        <div class="mockup-chrome">
+          <div class="mockup-dot dot-r"></div>
+          <div class="mockup-dot dot-y"></div>
+          <div class="mockup-dot dot-g"></div>
+          <div class="mockup-url">work-force.nl/app.html</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <!-- Tabs -->
+        <div class="mockup-tabs">
+          <div class="mockup-tab active">Workers</div>
+          <div class="mockup-tab">Roster</div>
+          <div class="mockup-tab">Resources</div>
+          <div class="mockup-tab">Settings</div>
+        </div>
+        <!-- Stats row -->
+        <div class="mockup-stats">
+          <div class="mockup-stat">
+            <div class="stat-num-lg num-green">42</div>
+            <div><div class="stat-lbl">GO</div></div>
+          </div>
+          <div class="mockup-stat">
+            <div class="stat-num-lg num-amber">7</div>
+            <div><div class="stat-lbl">WARNING</div></div>
+          </div>
+          <div class="mockup-stat">
+            <div class="stat-num-lg num-red">3</div>
+            <div><div class="stat-lbl">NO-GO</div></div>
+          </div>
+        </div>
+        <!-- Worker table with slide-in panel -->
+        <div class="mockup-wrapper" id="heroMockupWrapper">
+          <table class="mockup-table">
+            <thead>
+              <tr>
+                <th>Worker</th>
+                <th>Project</th>
+                <th>Docs</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr onclick="openHeroPanel('jansen')" data-worker="jansen">
+                <td><div class="worker-name-cell">M. Jansen</div><div class="worker-sub">ZZP · NL</div></td>
+                <td><span class="proj-tag">Amsterdam DC</span></td>
+                <td style="color:var(--green);font-weight:700;">11/11</td>
+                <td><span class="badge badge-go">GO</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('popescu')" data-worker="popescu">
+                <td><div class="worker-name-cell">A. Popescu</div><div class="worker-sub">Employed · RO</div></td>
+                <td><span class="proj-tag">Antwerp Slab</span></td>
+                <td style="color:var(--amber);font-weight:700;">9/10</td>
+                <td><span class="badge badge-warn">WARNING</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('devries')" data-worker="devries">
+                <td><div class="worker-name-cell">K. de Vries</div><div class="worker-sub">ZZP · NL</div></td>
+                <td><span class="proj-tag">Vienna Fit-Out</span></td>
+                <td style="color:var(--green);font-weight:700;">8/8</td>
+                <td><span class="badge badge-go">GO</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('dobre')" data-worker="dobre" class="nogo-row">
+                <td><div class="worker-name-cell">S. Dobre</div><div class="worker-sub">Employed · RO</div></td>
+                <td><span class="proj-tag">Rotterdam Civil</span></td>
+                <td style="color:var(--red);font-weight:700;">7/10</td>
+                <td><span class="badge badge-nogo">NO-GO</span></td>
+              </tr>
+              <tr onclick="openHeroPanel('nicolescu')" data-worker="nicolescu">
+                <td><div class="worker-name-cell">T. Nicolescu</div><div class="worker-sub">Employed · RO</div></td>
+                <td><span class="proj-tag">Brussels Site</span></td>
+                <td style="color:var(--amber);font-weight:700;">9/10</td>
+                <td><span class="badge badge-warn">WARNING</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Notification -->
+          <div class="mockup-notification">
+            <span class="notif-icon">📧</span>
+            <span>Daily digest ready — 3 missing docs, 7 expiry warnings</span>
+          </div>
+          <!-- Slide-in detail panel -->
+          <div class="worker-detail-panel" id="heroPanel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-worker-name" id="heroPanelName">—</div>
+                <div class="panel-worker-proj" id="heroPanelProj">—</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <div id="heroPanelBadge"></div>
+                <button class="panel-close" onclick="closeHeroPanel()">×</button>
+              </div>
+            </div>
+            <div class="panel-docs-title">Document Checklist</div>
+            <div class="panel-doc-list" id="heroPanelDocs"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Features -->
-<section id="features" style="background:#fff;">
+<!-- ═══════════════════════════════════
+     PROBLEM SECTION
+═══════════════════════════════════ -->
+<section class="section pain-section" id="problems">
   <div class="section-inner">
-    <div class="section-label">Platform features</div>
-    <div class="section-title">Everything you need for labour compliance</div>
-    <div class="section-sub">One platform to manage worker documents, project assignments, accommodation, vehicles, and billing — all in one place.</div>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon">✅</div>
-        <div class="feature-title">GO / NO-GO Status</div>
-        <div class="feature-desc">Instant compliance status for every worker. Red, amber, and green indicators based on document completeness and expiry.</div>
+    <div class="section-kicker fade-up">Sound familiar?</div>
+    <div class="section-title fade-up fade-up-d1">Managing compliance without the right tool is painful.</div>
+    <div class="section-sub fade-up fade-up-d2">If any of these feel too familiar, TMC Work-Force was built exactly for you.</div>
+    <div class="pain-grid">
+      <div class="pain-card fade-up fade-up-d1">
+        <div class="pain-emoji-wrap">💬</div>
+        <div class="pain-card-title">Chasing workers for documents over WhatsApp</div>
+        <div class="pain-card-desc">Endless back-and-forth for passports, VCA certificates, and contracts — followed by weeks of nothing.</div>
       </div>
-      <div class="feature-card">
+      <div class="pain-card fade-up fade-up-d2">
+        <div class="pain-emoji-wrap">📊</div>
+        <div class="pain-card-title">Spreadsheets that are always out of date</div>
+        <div class="pain-card-desc">Shared Excel files with conflicting versions, missing columns, and no audit trail when something goes wrong.</div>
+      </div>
+      <div class="pain-card fade-up fade-up-d3">
+        <div class="pain-emoji-wrap">⚠️</div>
+        <div class="pain-card-title">Not knowing a VCA certificate expired last month</div>
+        <div class="pain-card-desc">Workers on site with lapsed documents you only discover during an inspection — not before.</div>
+      </div>
+      <div class="pain-card fade-up fade-up-d1">
+        <div class="pain-emoji-wrap">🔎</div>
+        <div class="pain-card-title">Scrambling before a client or labour inspection audit</div>
+        <div class="pain-card-desc">Hunting for files across email, WhatsApp, shared drives, and sticky notes the night before an audit.</div>
+      </div>
+      <div class="pain-card fade-up fade-up-d2">
+        <div class="pain-emoji-wrap">🧾</div>
+        <div class="pain-card-title">Different rules for ZZP, employed and subcontracted workers</div>
+        <div class="pain-card-desc">Each category needs different documents — and keeping track of who needs what is a full-time job on its own.</div>
+      </div>
+      <div class="pain-card fade-up fade-up-d3">
+        <div class="pain-emoji-wrap">🇪🇺</div>
+        <div class="pain-card-title">Workers in NL, BE and AT — each with different requirements</div>
+        <div class="pain-card-desc">Cross-border postings mean A1 forms, local registrations, and country-specific compliance sets — for every worker.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     HOW IT WORKS
+═══════════════════════════════════ -->
+<section class="section how-section" id="how-it-works">
+  <div class="section-inner">
+    <div class="section-kicker fade-up">Simple by design</div>
+    <div class="section-title fade-up fade-up-d1">Up and running in three steps.</div>
+    <div class="section-sub fade-up fade-up-d2">No lengthy implementation. No consultant required. Just a clear, purposeful setup that gets your team compliant fast.</div>
+    <div class="steps">
+      <div class="step fade-up fade-up-d1">
+        <div class="step-num">1</div>
+        <div class="step-title">Set up your document sets</div>
+        <div class="step-desc">Choose from built-in compliance sets for NL ZZP, NL Blue Card, Belgian employed, and Austrian workers — or create custom sets for any worker type. Each set defines exactly which documents are required, with names, categories, and expiry tracking.</div>
+      </div>
+      <div class="step fade-up fade-up-d2">
+        <div class="step-num">2</div>
+        <div class="step-title">Add your workers</div>
+        <div class="step-desc">Add workers with their type, nationality, and assigned document set. Workers immediately get a GO/WARNING/NO-GO score based on their document status. Invite them to the worker portal so they can upload documents directly from their phone.</div>
+      </div>
+      <div class="step fade-up fade-up-d3">
+        <div class="step-num">3</div>
+        <div class="step-title">Stay on top automatically</div>
+        <div class="step-desc">Every morning, a compliance digest lands in your inbox — listing expired documents, upcoming expirations, assignments ending soon, and uncharged billing weeks. The dashboard updates in real time as documents are submitted and approved.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
+     FEATURES GRID
+═══════════════════════════════════ -->
+<section class="section features-section" id="features">
+  <div class="section-inner">
+    <div class="section-kicker fade-up">Platform capabilities</div>
+    <div class="section-title fade-up fade-up-d1">Everything compliance teams actually need.</div>
+    <div class="section-sub fade-up fade-up-d2">One platform that replaces spreadsheets, WhatsApp chains, and missed deadlines — built specifically for construction labour management.</div>
+    <div class="features-grid">
+      <div class="feature-card fade-up fade-up-d1">
+        <div class="feature-icon">🚦</div>
+        <div class="feature-title">GO / WARNING / NO-GO Status</div>
+        <div class="feature-desc">Instant compliance scoring for every worker based on document completeness and expiry dates. Green means ready to work. Red means grounded. Configurable warning windows per document type.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-d2">
         <div class="feature-icon">📄</div>
         <div class="feature-title">Document Tracking</div>
-        <div class="feature-desc">Track all required documents per worker type — KvK, VOG, VCA, contracts, permits, and more. Expiry alerts built in.</div>
+        <div class="feature-desc">Track every required document per worker — passport, VCA, A1 form, BSN, KvK, VOG, health insurance and more. Upload files, set expiry dates, and review submissions from the approval queue.</div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">📅</div>
-        <div class="feature-title">Project Assignments</div>
-        <div class="feature-desc">Gantt-style assignment view across all projects. See who's on what, when assignments end, and manage multiple projects at once.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🏠</div>
-        <div class="feature-title">Accommodation & Vehicles</div>
-        <div class="feature-desc">Track property and vehicle assignments per worker. Billing tracker for weekly charges — accommodation and fleet vehicles.</div>
-      </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up fade-up-d3">
         <div class="feature-icon">📱</div>
         <div class="feature-title">Worker Self-Service Portal</div>
-        <div class="feature-desc">Workers submit documents directly from their phone — no app download required. Multi-language support (EN, NL, RO).</div>
+        <div class="feature-desc">Workers log in with their work email — no app download, no account creation. They see their document status, upload missing files, and check their assignment. Available in English, Dutch, and Romanian.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up fade-up-d1">
+        <div class="feature-icon">📅</div>
+        <div class="feature-title">Project Gantt & Assignments</div>
+        <div class="feature-desc">Gantt-style roster view across all projects and workers. Manage current, upcoming, and historical assignments with start/end dates, rates, and contract file storage. See who is where at any point in time.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-d2">
+        <div class="feature-icon">🏠</div>
+        <div class="feature-title">Accommodation & Vehicle Billing</div>
+        <div class="feature-desc">Track accommodation and vehicle assignments per worker. Weekly billing tracker flags uncharged periods automatically. Record invoices, charge references, and operative deductions — all in one place.</div>
+      </div>
+      <div class="feature-card fade-up fade-up-d3">
         <div class="feature-icon">📧</div>
-        <div class="feature-title">Daily Compliance Digest</div>
-        <div class="feature-desc">Automated daily email summary of expiring documents, ending assignments, and uncharged billing weeks. Never miss a deadline.</div>
+        <div class="feature-title">Daily Email Digest</div>
+        <div class="feature-desc">Every morning, a summary email covers expired or missing documents, expiry warnings within 60 days, assignments ending within 14 days, and uncharged billing weeks. Nothing slips through unnoticed.</div>
       </div>
-      <div class="feature-card">
+      <div class="feature-card fade-up fade-up-d1">
         <div class="feature-icon">🔐</div>
-        <div class="feature-title">Role-Based Access</div>
-        <div class="feature-desc">Admin, planner, compliance, and viewer roles. Each role sees exactly what they need — nothing more.</div>
+        <div class="feature-title">Role-Based Access Control</div>
+        <div class="feature-desc">Admin, planner, compliance officer, and viewer roles. Each role sees and can edit only what they need. MFA available for all accounts. New users require admin approval before gaining access.</div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">🌍</div>
-        <div class="feature-title">Multi-Nationality Support</div>
-        <div class="feature-desc">Document sets for NL ZZP, Blue Card, Belgian, and Austrian workers. Custom sets for any worker type.</div>
+      <div class="feature-card fade-up fade-up-d2">
+        <div class="feature-icon">📋</div>
+        <div class="feature-title">Document Sets & Templates</div>
+        <div class="feature-desc">Four built-in compliance sets covering NL ZZP, NL Blue Card, Belgian, and Austrian workers. Build custom sets for subcontractors or specialist workers. Attach downloadable form templates for each document type.</div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon">☁️</div>
-        <div class="feature-title">Cloud-Native & Secure</div>
-        <div class="feature-desc">Built on Supabase with row-level security, MFA support, and encrypted file storage. Your data stays yours.</div>
+      <div class="feature-card fade-up fade-up-d3">
+        <div class="feature-icon">🗂️</div>
+        <div class="feature-title">Archive & Audit Trail</div>
+        <div class="feature-desc">Every change is tracked. Deleted items go to a recoverable archive with full payload. Approval and rejection history is retained with timestamps. Pass any labour authority audit with confidence.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Stats -->
-<div class="stats">
-  <div class="stats-inner">
-    <div>
-      <div class="stat-num">100%</div>
-      <div class="stat-label">Audit trail for every document</div>
-    </div>
-    <div>
-      <div class="stat-num">4</div>
-      <div class="stat-label">Built-in worker compliance sets</div>
-    </div>
-    <div>
-      <div class="stat-num">3</div>
-      <div class="stat-label">Languages in the worker portal</div>
-    </div>
-    <div>
-      <div class="stat-num">Real-time</div>
-      <div class="stat-label">Sync across all devices</div>
-    </div>
-  </div>
-</div>
-
-<!-- Portals -->
-<section id="portals" style="background:var(--bg);">
+<!-- ═══════════════════════════════════
+     INTERACTIVE DEMO SECTION
+═══════════════════════════════════ -->
+<section class="section demo-section" id="demo">
   <div class="section-inner">
-    <div class="section-label">Two access points</div>
-    <div class="section-title">Built for managers and workers</div>
-    <div class="section-sub">The management dashboard gives compliance teams full control. The worker portal lets employees submit documents from their phone — no account required.</div>
-    <div class="portals">
-      <div class="portal-card management">
-        <div class="portal-card-icon">🖥️</div>
-        <div class="portal-card-title">Management Dashboard</div>
-        <div class="portal-card-desc">Full access to worker compliance, project assignments, resource management, billing tracker, and approval workflows. Built for admins, compliance officers, and planners.</div>
-        <a class="portal-card-link" href="login.html">Sign In to Dashboard →</a>
+    <div class="section-kicker fade-up">Live preview</div>
+    <div class="section-title fade-up fade-up-d1">See it in action.</div>
+    <div class="section-sub fade-up fade-up-d2">Click any worker row to see their document status in real time — exactly as it looks in the live platform.</div>
+
+    <div class="demo-tabs fade-up fade-up-d2">
+      <button class="demo-tab-btn active" onclick="switchDemoTab('dashboard', this)">🖥 Dashboard</button>
+      <button class="demo-tab-btn" onclick="switchDemoTab('portal', this)">📱 Worker Portal</button>
+    </div>
+
+    <!-- Dashboard tab -->
+    <div class="demo-panel-wrapper active fade-up fade-up-d3" id="demo-tab-dashboard">
+      <div class="demo-hint">👆 Click any worker row to view their document details</div>
+      <div class="demo-dashboard">
+        <div class="mockup-chrome" style="padding:0.75rem 1.25rem;">
+          <div class="mockup-dot dot-r"></div>
+          <div class="mockup-dot dot-y"></div>
+          <div class="mockup-dot dot-g"></div>
+          <div class="mockup-url" style="font-size:0.75rem;">work-force.nl/app.html — Workers</div>
+          <div class="mockup-sync">● Synced</div>
+        </div>
+        <div class="mockup-stats">
+          <div class="mockup-stat"><div class="stat-num-lg num-green">42</div><div><div class="stat-lbl">GO</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-amber">7</div><div><div class="stat-lbl">WARNING</div></div></div>
+          <div class="mockup-stat"><div class="stat-num-lg num-red">3</div><div><div class="stat-lbl">NO-GO</div></div></div>
+          <div class="mockup-stat" style="flex:2;justify-content:flex-end;"><span style="font-size:0.72rem;color:var(--text-l);">Week 23 · June 2026</span></div>
+        </div>
+        <div class="demo-table-wrap" id="demoTableWrap">
+          <table class="demo-table">
+            <thead>
+              <tr>
+                <th>Worker</th>
+                <th>Worker Type</th>
+                <th>Project</th>
+                <th>Documents</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr onclick="openDemoPanel('jansen')" data-worker="jansen">
+                <td><div style="font-weight:700;color:var(--navy);">M. Jansen</div><div style="font-size:0.75rem;color:var(--text-l);">michael.jansen@tmconstruction.nl</div></td>
+                <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
+                <td><span class="proj-tag">Amsterdam DC</span></td>
+                <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">11/11</span></td>
+                <td><span class="badge badge-go">✓ GO</span></td>
+              </tr>
+              <tr onclick="openDemoPanel('popescu')" data-worker="popescu">
+                <td><div style="font-weight:700;color:var(--navy);">A. Popescu</div><div style="font-size:0.75rem;color:var(--text-l);">a.popescu@tmconstruction.nl</div></td>
+                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
+                <td><span class="proj-tag">Antwerp Slab</span></td>
+                <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
+                <td><span class="badge badge-warn">⚠ WARNING</span></td>
+              </tr>
+              <tr onclick="openDemoPanel('devries')" data-worker="devries">
+                <td><div style="font-weight:700;color:var(--navy);">K. de Vries</div><div style="font-size:0.75rem;color:var(--text-l);">k.devries@tmconstruction.nl</div></td>
+                <td><span style="font-size:0.78rem;color:var(--text-m);">ZZP</span></td>
+                <td><span class="proj-tag">Vienna Fit-Out</span></td>
+                <td><span style="color:var(--green);font-weight:700;font-size:0.85rem;">8/8</span></td>
+                <td><span class="badge badge-go">✓ GO</span></td>
+              </tr>
+              <tr onclick="openDemoPanel('dobre')" data-worker="dobre" class="nogo-row">
+                <td><div style="font-weight:700;color:var(--navy);">S. Dobre</div><div style="font-size:0.75rem;color:var(--text-l);">s.dobre@tmconstruction.nl</div></td>
+                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
+                <td><span class="proj-tag">Rotterdam Civil</span></td>
+                <td><span style="color:var(--red);font-weight:700;font-size:0.85rem;">7/10</span></td>
+                <td><span class="badge badge-nogo">✕ NO-GO</span></td>
+              </tr>
+              <tr onclick="openDemoPanel('nicolescu')" data-worker="nicolescu">
+                <td><div style="font-weight:700;color:var(--navy);">T. Nicolescu</div><div style="font-size:0.75rem;color:var(--text-l);">t.nicolescu@tmconstruction.nl</div></td>
+                <td><span style="font-size:0.78rem;color:var(--text-m);">Employed</span></td>
+                <td><span class="proj-tag">Brussels Site</span></td>
+                <td><span style="color:var(--amber);font-weight:700;font-size:0.85rem;">9/10</span></td>
+                <td><span class="badge badge-warn">⚠ WARNING</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <!-- Large demo panel -->
+          <div class="demo-detail-panel" id="demoDetailPanel">
+            <div class="ddp-header">
+              <div>
+                <div class="ddp-name" id="ddpName">—</div>
+                <div class="ddp-proj" id="ddpProj">—</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <div id="ddpBadge"></div>
+                <button class="ddp-close" onclick="closeDemoPanel()">×</button>
+              </div>
+            </div>
+            <div class="ddp-section-title">Document Checklist</div>
+            <div class="ddp-docs" id="ddpDocs"></div>
+          </div>
+        </div>
       </div>
-      <div class="portal-card worker">
-        <div class="portal-card-icon">📱</div>
-        <div class="portal-card-title">Worker Portal</div>
-        <div class="portal-card-desc">Workers enter their work email to see their document status, submit files for review, and view project and accommodation assignments — in English, Dutch, or Romanian.</div>
-        <a class="portal-card-link" href="worker.html">Open Worker Portal →</a>
+    </div>
+
+    <!-- Worker portal tab -->
+    <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-portal">
+      <div class="demo-hint">👆 Click the "Upload" button next to A1 Form to see the worker experience</div>
+      <div style="display:flex;justify-content:center;">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-header">
+              <div class="phone-h-title">My Compliance Status</div>
+              <div class="phone-h-sub">Hi Andrei — 1 document needs attention</div>
+            </div>
+            <div class="phone-body">
+              <div class="phone-doc-item">
+                <div style="flex:1;">
+                  <div class="phone-doc-name">VCA Certificate</div>
+                  <div class="phone-doc-sub">Expires in 42 days</div>
+                </div>
+                <span class="badge badge-warn">WARNING</span>
+              </div>
+              <div class="phone-doc-item">
+                <div style="flex:1;">
+                  <div class="phone-doc-name">Passport</div>
+                  <div class="phone-doc-sub">Valid until 2029</div>
+                </div>
+                <span class="badge badge-go">GO</span>
+              </div>
+              <div class="phone-doc-item">
+                <div style="flex:1;">
+                  <div class="phone-doc-name">A1 Form</div>
+                  <div class="phone-doc-sub" id="a1FormStatus">Missing — upload required</div>
+                </div>
+                <span class="badge badge-nogo" id="a1FormBadge">NO-GO</span>
+                <button class="upload-btn" id="a1UploadBtn" onclick="handlePortalUpload()" style="margin-left:0.5rem;">Upload</button>
+              </div>
+              <div class="phone-doc-item">
+                <div style="flex:1;">
+                  <div class="phone-doc-name">Health Insurance</div>
+                  <div class="phone-doc-sub">Valid until 2026</div>
+                </div>
+                <span class="badge badge-go">GO</span>
+              </div>
+              <div class="phone-upload-area" id="phoneUploadArea" onclick="handlePortalUpload()">
+                + Upload document
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Benefits -->
-<section style="background:#fff;">
+<!-- ═══════════════════════════════════
+     STATUS EXPLANATION CARDS
+═══════════════════════════════════ -->
+<section class="section status-section" id="status">
   <div class="section-inner">
-    <div class="section-label">Why work-force.nl</div>
-    <div class="section-title">Designed for the way construction teams actually work</div>
-    <div class="benefits" style="margin-top:40px;">
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>No missing document surprises</strong>Automatic GO/NO-GO scoring tells you instantly who can start work and who needs follow-up.</div>
+    <div class="section-kicker fade-up">Compliance at a glance</div>
+    <div class="section-title fade-up fade-up-d1">Three statuses. Instantly clear.</div>
+    <div class="section-sub fade-up fade-up-d2">Every worker gets a live status score based on their document completeness and upcoming expirations. No ambiguity — just clear signals you can act on.</div>
+    <div class="status-cards">
+      <div class="status-card go fade-up fade-up-d1">
+        <div class="status-card-badge"><span class="badge badge-go" style="font-size:0.8rem;padding:0.35rem 0.85rem;">✓ GO</span></div>
+        <div class="status-card-title">GO — Ready to Work</div>
+        <div class="status-card-desc">All required documents are present, current, and not expiring within the warning window. This worker can be assigned to any project with full confidence. Compliance score: 100%.</div>
       </div>
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>Workers submit their own documents</strong>No more chasing paperwork — workers upload directly from their phone via a simple email-based portal.</div>
+      <div class="status-card warn fade-up fade-up-d2">
+        <div class="status-card-badge"><span class="badge badge-warn" style="font-size:0.8rem;padding:0.35rem 0.85rem;">⚠ WARNING</span></div>
+        <div class="status-card-title">WARNING — Action Required Soon</div>
+        <div class="status-card-desc">All documents are present but one or more are expiring within the configured warning window (default 60 days). Take action now to avoid this worker becoming a NO-GO before the deadline passes.</div>
       </div>
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>Expiry alerts before it's too late</strong>Configurable warning windows flag documents expiring soon, so you can act before a worker is non-compliant.</div>
-      </div>
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>All project assignments in one view</strong>Gantt-style project tracker shows current and upcoming assignments across your entire workforce.</div>
-      </div>
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>Billing that doesn't slip through the cracks</strong>Weekly accommodation and vehicle charge tracker highlights uncharged weeks automatically.</div>
-      </div>
-      <div class="benefit">
-        <div class="benefit-check">✓</div>
-        <div class="benefit-text"><strong>Multi-country, multi-language</strong>Support for Dutch, Belgian, and Austrian compliance frameworks. Worker portal in EN, NL, and RO.</div>
+      <div class="status-card nogo fade-up fade-up-d3">
+        <div class="status-card-badge"><span class="badge badge-nogo" style="font-size:0.8rem;padding:0.35rem 0.85rem;">✕ NO-GO</span></div>
+        <div class="status-card-title">NO-GO — Cannot Work</div>
+        <div class="status-card-desc">One or more required documents are missing or have expired. This worker should not be assigned to any site until their compliance is restored. A daily digest alert is sent until the issue is resolved.</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- CTA band -->
-<div class="cta-band">
-  <h2>Ready to get compliant?</h2>
-  <p>Sign in to the management dashboard or share the worker portal with your team.</p>
-  <div class="cta-band-actions">
-    <a class="band-btn-primary" href="login.html">Management Sign In →</a>
-    <a class="band-btn-secondary" href="worker.html">Worker Portal</a>
+<!-- ═══════════════════════════════════
+     CTA SECTION
+═══════════════════════════════════ -->
+<section class="cta-section" id="contact">
+  <div class="section-inner" style="position:relative;z-index:1;">
+    <div class="section-kicker" style="color:rgba(255,255,255,0.5);text-align:center;margin-bottom:0.75rem;">Get started</div>
+    <div class="section-title fade-up" style="text-align:center;">Built for your team. Priced for your scale.</div>
+    <div class="section-sub fade-up fade-up-d1" style="text-align:center;">We set up your account, import your workers, and configure your document sets together. Dedicated onboarding included — no extra charge.</div>
+    <div class="cta-buttons fade-up fade-up-d2">
+      <button class="btn btn-white btn-lg" onclick="openDemoModal()">Request Demo</button>
+      <a class="btn btn-navy-outline btn-lg" href="mailto:compliance@tmconstruction.nl">compliance@tmconstruction.nl</a>
+    </div>
   </div>
-</div>
+</section>
 
-<!-- Footer -->
+<!-- ═══════════════════════════════════
+     FOOTER
+═══════════════════════════════════ -->
 <footer>
   <div class="footer-inner">
-    <div class="footer-brand">work-force.nl</div>
-    <div class="footer-sub">Labour Compliance &amp; Management</div>
+    <div class="footer-left">TMC Work-Force &middot; &copy; 2026 TMC Construction</div>
     <div class="footer-links">
-      <a href="login.html">Management Sign In</a>
+      <a href="login.html">Management Login</a>
       <a href="worker.html">Worker Portal</a>
-      <a href="app.html">Dashboard</a>
+      <a href="mailto:compliance@tmconstruction.nl">Contact</a>
     </div>
-    <div class="footer-copy">© 2025 work-force.nl · TMC Construction</div>
   </div>
 </footer>
 
+<!-- ═══════════════════════════════════
+     DEMO REQUEST MODAL
+═══════════════════════════════════ -->
+<div class="modal-overlay" id="demoModal" onclick="handleModalOverlayClick(event)">
+  <div class="modal-card">
+    <div id="modalFormState">
+      <div class="modal-header">
+        <div class="modal-title">Request a Demo</div>
+        <button class="modal-close" onclick="closeDemoModal()">×</button>
+      </div>
+      <p class="modal-sub">Tell us about your team and we'll reach out within one business day.</p>
+      <form id="demoForm" onsubmit="submitDemoForm(event)">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label" for="demoName">Full name *</label>
+            <input class="form-input" type="text" id="demoName" name="name" required placeholder="Jan de Vries">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="demoCompany">Company name *</label>
+            <input class="form-input" type="text" id="demoCompany" name="company" required placeholder="TMC Construction">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="demoEmail">Email address *</label>
+          <input class="form-input" type="email" id="demoEmail" name="email" required placeholder="jan@company.nl">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="demoWorkers">Number of workers *</label>
+          <select class="form-select" id="demoWorkers" name="workers" required>
+            <option value="">Select range...</option>
+            <option value="1-25">1 – 25</option>
+            <option value="26-100">26 – 100</option>
+            <option value="101-500">101 – 500</option>
+            <option value="500+">500+</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="demoMessage">Message (optional)</label>
+          <textarea class="form-textarea" id="demoMessage" name="message" rows="3" placeholder="Tell us about your current setup and what you're trying to solve..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg modal-submit">Send Request</button>
+      </form>
+    </div>
+    <div id="modalSuccessState" style="display:none;">
+      <div class="modal-header" style="justify-content:flex-end;">
+        <button class="modal-close" onclick="closeDemoModal()">×</button>
+      </div>
+      <div class="modal-success">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Request sent!</div>
+        <div class="success-text">We'll be in touch within one business day to set up your demo. In the meantime, feel free to explore the worker portal or reach out directly at <a href="mailto:compliance@tmconstruction.nl" style="color:var(--blue);">compliance@tmconstruction.nl</a>.</div>
+        <a class="success-back" onclick="closeDemoModal()">← Back to site</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════ -->
+<script>
+// ── Navbar scroll effect ──
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 20);
+}, {passive:true});
+
+// ── Intersection Observer for fade-up ──
+const fadeEls = document.querySelectorAll('.fade-up');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, {threshold:0.12, rootMargin:'0px 0px -40px 0px'});
+fadeEls.forEach(el => observer.observe(el));
+
+// ── Worker data ──
+const workerData = {
+  jansen: {
+    name: 'M. Jansen',
+    project: 'Amsterdam DC · ZZP · NL',
+    badge: 'go',
+    docs: [
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2028'},
+      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Active'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until Mar 2027'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2026'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2026'},
+    ]
+  },
+  popescu: {
+    name: 'A. Popescu',
+    project: 'Antwerp Slab · Employed · RO',
+    badge: 'warn',
+    docs: [
+      {icon:'⚠',ok:'warn',name:'Passport',date:'Expires Sept 2025 — renew now'},
+      {icon:'⚠',ok:'warn',name:'VCA Diploma',date:'Expires Dec 2025'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2025'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2025'},
+    ]
+  },
+  devries: {
+    name: 'K. de Vries',
+    project: 'Vienna Fit-Out · ZZP · NL',
+    badge: 'go',
+    docs: [
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2030'},
+      {icon:'✓',ok:'ok',name:'KvK Registration',date:'Active'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2027'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2026'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid 2026'},
+    ]
+  },
+  dobre: {
+    name: 'S. Dobre',
+    project: 'Rotterdam Civil · Employed · RO',
+    badge: 'nogo',
+    docs: [
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2028'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid Nov 2025'},
+      {icon:'✗',ok:'miss',name:'A1 Form',date:'Missing — not uploaded'},
+      {icon:'✗',ok:'miss',name:'BSN Number',date:'Missing — not provided'},
+    ]
+  },
+  nicolescu: {
+    name: 'T. Nicolescu',
+    project: 'Brussels Site · Employed · RO',
+    badge: 'warn',
+    docs: [
+      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2027'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid 2026'},
+      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid 2025'},
+      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expires in 55 days'},
+    ]
+  }
+};
+
+function buildDocList(docs, containerEl, isSmall) {
+  const sz = isSmall ? '0.73rem' : '0.85rem';
+  containerEl.innerHTML = docs.map(d => {
+    const iconCol = d.ok==='ok' ? 'var(--green)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
+    const dateCol = d.ok==='ok' ? 'var(--text-m)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
+    if (isSmall) {
+      return `<div class="panel-doc-item">
+        <span class="panel-doc-icon" style="color:${iconCol}">${d.icon}</span>
+        <div style="flex:1;">
+          <div class="panel-doc-name">${d.name}</div>
+          <div class="panel-doc-status" style="color:${dateCol}">${d.date}</div>
+        </div>
+      </div>`;
+    } else {
+      return `<div class="ddp-doc">
+        <span class="ddp-doc-icon" style="color:${iconCol}">${d.icon}</span>
+        <div class="ddp-doc-info">
+          <div class="ddp-doc-name">${d.name}</div>
+          <div class="ddp-doc-date" style="color:${dateCol}">${d.date}</div>
+        </div>
+      </div>`;
+    }
+  }).join('');
+}
+
+function badgeHtml(type) {
+  if (type==='go') return '<span class="badge badge-go">✓ GO</span>';
+  if (type==='warn') return '<span class="badge badge-warn">⚠ WARNING</span>';
+  return '<span class="badge badge-nogo">✕ NO-GO</span>';
+}
+
+// ── Hero panel ──
+let heroCurrentWorker = null;
+function openHeroPanel(wid) {
+  const w = workerData[wid];
+  if (!w) return;
+  heroCurrentWorker = wid;
+  document.getElementById('heroPanelName').textContent = w.name;
+  document.getElementById('heroPanelProj').textContent = w.project;
+  document.getElementById('heroPanelBadge').innerHTML = badgeHtml(w.badge);
+  buildDocList(w.docs, document.getElementById('heroPanelDocs'), true);
+  document.getElementById('heroPanel').classList.add('open');
+}
+function closeHeroPanel() {
+  document.getElementById('heroPanel').classList.remove('open');
+  heroCurrentWorker = null;
+}
+
+// ── Demo tab switching ──
+function switchDemoTab(tab, btn) {
+  document.querySelectorAll('.demo-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.demo-panel-wrapper').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('demo-tab-'+tab).classList.add('active');
+}
+
+// ── Demo dashboard panel ──
+let demoCurrentWorker = null;
+function openDemoPanel(wid) {
+  const w = workerData[wid];
+  if (!w) return;
+  demoCurrentWorker = wid;
+  document.getElementById('ddpName').textContent = w.name;
+  document.getElementById('ddpProj').textContent = w.project;
+  document.getElementById('ddpBadge').innerHTML = badgeHtml(w.badge);
+  buildDocList(w.docs, document.getElementById('ddpDocs'), false);
+  document.getElementById('demoDetailPanel').classList.add('open');
+}
+function closeDemoPanel() {
+  document.getElementById('demoDetailPanel').classList.remove('open');
+  demoCurrentWorker = null;
+}
+
+// ── Worker portal upload simulation ──
+let uploaded = false;
+function handlePortalUpload() {
+  if (uploaded) return;
+  uploaded = true;
+  const btn = document.getElementById('a1UploadBtn');
+  const status = document.getElementById('a1FormStatus');
+  const badge = document.getElementById('a1FormBadge');
+  const area = document.getElementById('phoneUploadArea');
+  btn.textContent = 'File selected ✓';
+  btn.classList.add('success');
+  btn.disabled = true;
+  status.textContent = 'Uploaded — awaiting review';
+  status.style.color = 'var(--amber)';
+  badge.className = 'badge badge-warn';
+  badge.textContent = '⟳ PENDING';
+  area.textContent = '✓ A1 Form uploaded — under review';
+  area.style.background = '#f0fdf4';
+  area.style.borderColor = 'var(--green)';
+  area.style.color = 'var(--green)';
+}
+
+// ── Demo modal ──
+function openDemoModal() {
+  document.getElementById('demoModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('demoName').focus(), 300);
+}
+function closeDemoModal() {
+  document.getElementById('demoModal').classList.remove('open');
+  document.body.style.overflow = '';
+  // Reset after close animation
+  setTimeout(() => {
+    document.getElementById('modalFormState').style.display = '';
+    document.getElementById('modalSuccessState').style.display = 'none';
+    document.getElementById('demoForm').reset();
+  }, 350);
+}
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('demoModal')) closeDemoModal();
+}
+function submitDemoForm(e) {
+  e.preventDefault();
+  const name = document.getElementById('demoName').value.trim();
+  const company = document.getElementById('demoCompany').value.trim();
+  const email = document.getElementById('demoEmail').value.trim();
+  const workers = document.getElementById('demoWorkers').value;
+  const message = document.getElementById('demoMessage').value.trim();
+  const subject = encodeURIComponent(`Demo Request — ${company}`);
+  const body = encodeURIComponent(
+    `Demo Request\n\nName: ${name}\nCompany: ${company}\nEmail: ${email}\nWorkers: ${workers}\n\nMessage:\n${message || '(none)'}`
+  );
+  window.location.href = `mailto:dylan@tmconstruction.nl?subject=${subject}&body=${body}`;
+  document.getElementById('modalFormState').style.display = 'none';
+  document.getElementById('modalSuccessState').style.display = '';
+}
+
+// Escape key closes modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDemoModal();
+    closeHeroPanel();
+    closeDemoPanel();
+  }
+});
+</script>
 </body>
 </html>
