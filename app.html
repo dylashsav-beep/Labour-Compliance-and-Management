@@ -10527,10 +10527,14 @@ async function sbLoadAll(){
   // data. Without this, the per-table queries fall back to SITE_ORG_ID and
   // would surface TMC's records to an unassigned account.
   if(!currentOrgId){ console.warn('[WF] Load skipped — no organisation resolved for this session'); return; }
-  // If this browser last cached a different org's data, wipe it before loading
-  // so no stale cross-org rows can flash on screen.
-  if(window._wfLoadedOrg && window._wfLoadedOrg !== currentOrgId){ sbClearLocalCache(); }
-  window._wfLoadedOrg = currentOrgId;
+  // If this browser last cached a DIFFERENT org's data, wipe it before loading
+  // so no stale cross-org rows can render. The marker is stored outside the
+  // tmc_/btm_ namespace so it survives sbClearLocalCache and page reloads.
+  try{
+    const cacheOrg = localStorage.getItem('wf_cache_org');
+    if(cacheOrg && cacheOrg !== currentOrgId){ sbClearLocalCache(); }
+    localStorage.setItem('wf_cache_org', currentOrgId);
+  }catch(e){ console.warn('[WF] cache-org check failed:', e.message); }
   sbIsLoading=true;
   sbLoadStartTime=Date.now();
   sbSetStatus('Supabase: loading…', true);
