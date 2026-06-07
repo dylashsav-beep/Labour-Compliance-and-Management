@@ -187,9 +187,9 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `retire_worker_document_file_deletions.sql` | ✅ Run | Retired 57 stale worker_document_file deletion records (the eternal-replay loop) and reactivated their files. |
 | `add_permanent_delete_policies.sql` | ⏳ Pending | Adds DELETE RLS policies so the admin "Delete Permanently" button in Deleted Items can hard-delete. Required for that feature to work. |
 | `block_new_signups_pending_approval.sql` | ⏳ Pending | Changes handle_new_user() trigger to set role='no_access' + active=FALSE so new signups require admin approval before getting any access. Run once — safe to re-run. |
-| `add_multi_tenancy.sql` | ⏳ Pending — **Run this in prod before any new orgs join** | Phase 0: organisations table, org_id on all tables, org-scoped RLS, `current_org_id()` helper, TMC backfilled |
-| `add_org_id_indexes.sql` | ⏳ Pending — **Run immediately after add_multi_tenancy.sql** | Phase 0: CONCURRENTLY-safe org_id indexes on all hot tables. Without these, RLS does full table scans as orgs grow. |
-| `create_workspace_signup.sql` | ⏳ Pending | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger |
+| `add_multi_tenancy.sql` | ✅ Run | Phase 0: organisations table, org_id on all tables, org-scoped RLS, `current_org_id()` helper, TMC backfilled. **Idempotent** — every section drops its new policy names before CREATE (a mismatch between dropped/created names caused a 42710 collision on the first re-run; now fixed). |
+| `add_org_id_indexes.sql` | ✅ Run | Phase 0: org_id indexes on all hot tables. Uses **plain `CREATE INDEX`** (not CONCURRENTLY) so it runs in the SQL Editor's transaction block. Fine at current scale; use CONCURRENTLY outside a transaction if rebuilding on a large busy table later. |
+| `create_workspace_signup.sql` | ✅ Run | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger |
 
 ---
 
