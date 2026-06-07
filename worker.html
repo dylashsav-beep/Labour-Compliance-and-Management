@@ -836,7 +836,7 @@ async function submitWPDoc(docKey){
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
     const ext=file.name.split('.').pop();
-    filePath=`worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
+    filePath=`${resolvedOrgId}/worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
     try{
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
@@ -1061,7 +1061,7 @@ async function wpSubmitReturn(resourceType, assignmentId){
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
     const ext=file.name.split('.').pop();
-    filePath=`worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
+    filePath=`${resolvedOrgId}/worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
     try{
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;

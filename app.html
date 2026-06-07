@@ -4762,7 +4762,7 @@ async function saveProjectAssignment(){
     let out = f;
     if(f.dataUrl && sbClient && sbSession){
       try{
-        const path=`assignments/${assignmentId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
+        const path=`${currentOrgId||SITE_ORG_ID}/assignments/${assignmentId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
         await sbUploadDataUrl(path, f);
         out = {name:f.name, size:f.size, type:f.type, file_path:path, storagePath:path};
       }catch(e){ console.warn('[TMC] contract upload failed:', e.message); }
@@ -5859,7 +5859,7 @@ async function submitWPDoc(docKey){
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
     const ext=file.name.split('.').pop();
-    filePath=`worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
+    filePath=`${currentOrgId||SITE_ORG_ID}/worker-submissions/${wpWorkerId}/${docKey}/${Date.now()}.${ext}`;
     try{
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
@@ -6094,7 +6094,7 @@ async function wpSubmitReturn(resourceType, assignmentId){
   let filePath=null,fileName=null,fileSize=null,mimeType=null;
   if(file){
     const ext=file.name.split('.').pop();
-    filePath=`worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
+    filePath=`${currentOrgId||SITE_ORG_ID}/worker-submissions/${wpWorkerId}/returns/${resourceType}_${assignmentId}_${Date.now()}.${ext}`;
     try{
       const {error}=await sbClient.storage.from('tmc-documents').upload(filePath,file,{contentType:file.type||'application/octet-stream',upsert:false});
       if(error) throw error;
@@ -6412,7 +6412,7 @@ async function issueDocumentToWorker(wid,did){
   if(cancel)cancel.disabled=true;
   if(errEl)errEl.style.display='none';
   const ext=(file.name.split('.').pop()||'pdf').toLowerCase();
-  const filePath=`issued-docs/${wid}/${did}/${Date.now()}.${ext}`;
+  const filePath=`${currentOrgId||SITE_ORG_ID}/issued-docs/${wid}/${did}/${Date.now()}.${ext}`;
   let uploaded=false;
   try{
     const uploadResult=await Promise.race([
@@ -8182,7 +8182,7 @@ async function saveCompDoc(){
     existing.scope_id=scope_id; existing.scope_label=scope_label; existing.notes=notes;
     if(file){
       if(!sbClient||!sbSession){ alert('Cannot upload file: you are not signed in.'); return; }
-      const path=`compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+      const path=`${currentOrgId||SITE_ORG_ID}/compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
       const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
       if(error){ alert('File upload failed: '+error.message); return; }
       existing.file_name=file.name; existing.file_path=path; existing.file_size=file.size; existing.mime_type=file.type||'';
@@ -8207,7 +8207,7 @@ async function saveCompDoc(){
   };
   if(file){
     if(!sbClient||!sbSession){ alert('Cannot upload file: you are not signed in.'); return; }
-    const path=`compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+    const path=`${currentOrgId||SITE_ORG_ID}/compliance/${scope_type}/${scope_id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
     const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
     if(error){ alert('File upload failed: '+error.message); return; }
     newDoc.file_name=file.name; newDoc.file_path=path; newDoc.file_size=file.size; newDoc.mime_type=file.type||'';
@@ -9280,7 +9280,7 @@ async function saveToolAssignment(){
   async function uploadProofFile(file, assignmentId, kind){
     if(!file||!sbClient) return {path:null,name:null};
     const ext=file.name.split('.').pop();
-    const path=`tool-assignments/${toolId}/${assignmentId}/${kind}.${ext}`;
+    const path=`${currentOrgId||SITE_ORG_ID}/tool-assignments/${toolId}/${assignmentId}/${kind}.${ext}`;
     try{
       const {error}=await sbClient.storage.from('tmc-documents').upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
       if(error) throw error;
@@ -10084,7 +10084,7 @@ async function sbUploadEmbeddedFiles(){
     for(const did of Object.keys(fileStore[wid]||{})){
       for(const f of fileStore[wid][did]||[]){
         if(!f.file_path && f.dataUrl){
-          const path=`workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
+          const path=`${currentOrgId||SITE_ORG_ID}/workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
           await sbUploadDataUrl(path,f); f.file_path=path; f.storagePath=path; delete f.dataUrl;
         }
       }
@@ -10094,7 +10094,7 @@ async function sbUploadEmbeddedFiles(){
   for(const a of projectAssignments||[]){
     for(const f of a.contractFiles||[]){
       if(f && !f.file_path && f.dataUrl){
-        const path=`assignments/${a.id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
+        const path=`${currentOrgId||SITE_ORG_ID}/assignments/${a.id}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(f.name)}`;
         await sbUploadDataUrl(path,f); f.file_path=path; f.storagePath=path; delete f.dataUrl;
       }
     }
@@ -10698,7 +10698,7 @@ function sbInstallWrappers(){
     if(!fileStore[wid])fileStore[wid]={}; if(!fileStore[wid][did])fileStore[wid][did]=[];
     for(const file of Array.from(input.files||[])){
       if(sbClient&&sbSession){
-        const path=`workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+        const path=`${currentOrgId||SITE_ORG_ID}/workers/${wid}/${did}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
         const {error}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type||'application/octet-stream',upsert:true});
         if(error){alert('Upload failed: '+error.message);continue;}
         fileStore[wid][did].push({name:file.name,size:file.size,type:file.type,file_path:path,storagePath:path});
