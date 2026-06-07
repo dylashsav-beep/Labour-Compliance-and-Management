@@ -5,11 +5,11 @@
 //   DEMO_REQUEST_FROM       — sender address verified in Resend
 //                             Use "sales@work-force.nl" once the domain is verified;
 //                             fall back to "onboarding@resend.dev" until then.
-//   DEMO_REQUEST_TO         — internal recipient (e.g. dylan@tmconstruction.nl)
+//   DEMO_REQUEST_TO         — internal recipient (sales@work-force.nl)
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const FROM           = Deno.env.get('DEMO_REQUEST_FROM') || 'Work Force <onboarding@resend.dev>'
-const TO             = Deno.env.get('DEMO_REQUEST_TO')   || 'dylan@tmconstruction.nl'
+const TO             = Deno.env.get('DEMO_REQUEST_TO')   || 'sales@work-force.nl'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',

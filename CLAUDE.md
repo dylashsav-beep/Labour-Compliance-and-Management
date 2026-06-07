@@ -331,9 +331,9 @@ function demoDate(offsetDays){
 **Fixes applied**:
 - `showDemoBanner()` swaps `#headerLogoImg` src to WF SVG and sets `#headerAppTitle` to `'Work Force Compliance'`
 - `complianceReportText()` uses `${DEMO_MODE ? 'Work Force' : 'TMC'} Compliance Report`
-- `complianceReportRecipient()` falls back to `'hello@work-force.nl'` in demo mode
+- `complianceReportRecipient()` falls back to `'sales@work-force.nl'` in demo mode
 - CSV download filename prefixed with `wf_` vs `tmc_` conditionally
-- `loadDemoDefaults()` sets `settings.complianceReportEmail = 'hello@work-force.nl'`
+- `loadDemoDefaults()` sets `settings.complianceReportEmail = 'sales@work-force.nl'`
 - HTML input `value=""` cleared (was hardcoded `compliance@tmconstruction.nl`) — `renderComplianceReportSettings()` always populates it from `complianceReportRecipient()`
 
 **Rule**: Search for `tmconstruction`, `TMC`, `TM Construction` whenever adding any new text string. Every user-visible string that names the company must be conditional on `DEMO_MODE`.
@@ -435,7 +435,7 @@ Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the 
 **`loadDemoDefaults()` sets up**:
 - 4 workers (NL-041, DE-027, BE-089, NL-055) with relative-date docs via `demoDate()`
 - 3 projects, 2 properties, 2 vehicles
-- `settings.complianceReportEmail = 'hello@work-force.nl'`
+- `settings.complianceReportEmail = 'sales@work-force.nl'`
 - `fActive = 'all'` + button UI sync
 
 **`showDemoBanner()` does**:

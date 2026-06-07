@@ -3116,7 +3116,7 @@ function loadDemoDefaults(){
   workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
 
   settings.warningDays=60;
-  settings.complianceReportEmail='hello@work-force.nl';
+  settings.complianceReportEmail='sales@work-force.nl';
   saveDemoState();
 }
 
@@ -3186,7 +3186,7 @@ function showDemoBanner(){
   // Replace header sync area with demo pill + contact link
   const wrap=document.getElementById('headerSyncWrap');
   if(wrap && !wrap.querySelector('#demoPill')){
-    wrap.insertAdjacentHTML('afterbegin','<span id="demoPill" class="hsync-pill" style="background:rgba(251,191,36,.18);color:#fbbf24;">Demo</span><a href="mailto:hello@work-force.nl" id="demoContactBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 11px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">Contact us</a>');
+    wrap.insertAdjacentHTML('afterbegin','<span id="demoPill" class="hsync-pill" style="background:rgba(251,191,36,.18);color:#fbbf24;">Demo</span><a href="mailto:sales@work-force.nl" id="demoContactBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 11px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">Contact us</a>');
   }
   // Branding swap handled by CSS: body.demo-mode #demoLogoSvg / #demoAppTitle
 }
@@ -7274,7 +7274,7 @@ function setComplianceReportEmail(email){
   renderComplianceReportSettings();
   if(sbReady) sbScheduleSync();
 }
-function complianceReportRecipient(){ return (settings.complianceReportEmail||(DEMO_MODE?'hello@work-force.nl':'compliance@tmconstruction.nl')).trim(); }
+function complianceReportRecipient(){ return (settings.complianceReportEmail||(DEMO_MODE?'sales@work-force.nl':'compliance@tmconstruction.nl')).trim(); }
 function complianceIssueDocs(w, status){
   const ref=new Date();
   const targetStatus = status==='nogo' ? 'missing' : 'expiring';
