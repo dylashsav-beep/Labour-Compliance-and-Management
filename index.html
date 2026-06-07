@@ -83,12 +83,15 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 }
 .btn-ghost-nav:hover{border-color:var(--navy);color:var(--navy);background:rgba(30,58,95,0.04);}
 .btn-outline-nav{
-  background:transparent;border:1.5px solid var(--navy);color:var(--navy);
+  background:#16a34a;border:1.5px solid #16a34a;color:#fff;
+  box-shadow:0 2px 8px rgba(22,163,74,0.28);
 }
-.btn-outline-nav:hover{background:var(--navy);color:#fff;}
+.btn-outline-nav:hover{background:#15803d;border-color:#15803d;transform:translateY(-1px);box-shadow:0 4px 14px rgba(22,163,74,0.38);}
 .btn-primary{background:var(--blue);color:#fff;border:1.5px solid var(--blue);}
 .btn-primary:hover{background:var(--blue-d);border-color:var(--blue-d);transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,0.35);}
 .btn-white{background:#fff;color:var(--navy);border:1.5px solid #fff;}
+.btn-demo{background:#16a34a;color:#fff;border:1.5px solid #16a34a;box-shadow:0 4px 18px rgba(22,163,74,0.4);}
+.btn-demo:hover{background:#15803d;border-color:#15803d;transform:translateY(-2px);box-shadow:0 8px 24px rgba(22,163,74,0.5);}
 .btn-white:hover{background:#f0f4ff;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.15);}
 .btn-navy-outline{background:transparent;border:1.5px solid rgba(255,255,255,0.35);color:#fff;}
 .btn-navy-outline:hover{border-color:#fff;background:rgba(255,255,255,0.08);}
@@ -1096,7 +1099,7 @@ footer{
   <div class="navbar-right">
     <a class="btn btn-ghost-nav" href="worker.html">Worker Portal</a>
     <a class="btn btn-ghost-nav" href="app.html">Log in</a>
-    <a class="btn btn-outline-nav" href="app.html?demo=1">🎭 Live Demo</a>
+    <a class="btn btn-outline-nav" href="app.html?demo=1">Live Demo</a>
     <button class="btn btn-primary" onclick="openDemoModal()">Request Demo</button>
   </div>
 </nav>
@@ -1116,7 +1119,7 @@ footer{
       <p class="hero-lead">Stop chasing documents over WhatsApp. Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers anywhere. Customizable document sets work for any country, with pre-built sets for the Netherlands, Belgium, Germany, and Denmark.</p>
       <div class="hero-ctas">
         <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Request Demo</button>
-        <a class="btn btn-white btn-lg" href="app.html?demo=1">🎭 Try Live Demo</a>
+        <a class="btn btn-demo btn-lg" href="app.html?demo=1">Try the Live Demo</a>
         <a class="btn btn-ghost-nav btn-lg" href="#features">See how it works</a>
       </div>
       <div class="hero-proof">
