@@ -10471,9 +10471,9 @@ async function updateUserRole(userId, role){
   const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
   if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account role cannot be changed.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, role, null)){ await renderRolesPanel(); return; }
-  const {data:upd,error}=await sbClient.from('profiles').update({role,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID).select();
+  const {data:upd,error}=await sbClient.from('profiles').update({role,updated_at:new Date().toISOString()}).eq('id',userId).select();
   if(error){alert(error.message);return;}
-  if(!upd?.length){alert('Role was not saved — Supabase RLS blocked the update. Run migrations/fix_profiles_rls_circular.sql in Supabase SQL Editor.');return;}
+  if(!upd?.length){alert('Role was not saved — the profile row was not found or RLS blocked the update.');return;}
   if(userId === sbSession?.user?.id) await sbLoadProfile();
   await renderRolesPanel(); applyRoleUI();
 }
@@ -10482,16 +10482,16 @@ async function updateUserActive(userId, active){
   const {data:targetProfile}=await sbClient.from('profiles').select('email').eq('id',userId).maybeSingle();
   if(targetProfile?.email==='dylan@tmconstruction.nl'){alert('The owner account cannot be deactivated.');await renderRolesPanel();return;}
   if(await wouldRemoveLastAdmin(userId, null, active)){ await renderRolesPanel(); return; }
-  const {data:upd,error}=await sbClient.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID).select();
+  const {data:upd,error}=await sbClient.from('profiles').update({active,updated_at:new Date().toISOString()}).eq('id',userId).select();
   if(error){alert(error.message);return;}
-  if(!upd?.length){alert('Active status was not saved — Supabase RLS blocked the update. Run migrations/fix_profiles_rls_circular.sql in Supabase SQL Editor.');return;}
+  if(!upd?.length){alert('Active status was not saved — the profile row was not found or RLS blocked the update.');return;}
   if(userId === sbSession?.user?.id) await sbLoadProfile();
   await renderRolesPanel(); applyRoleUI();
 }
 
 async function quickApproveUser(userId){
   if(!requireAction('roles','approve user accounts')) return;
-  const {error}=await sbClient.from('profiles').update({role:'viewer',active:true,updated_at:new Date().toISOString()}).eq('id',userId).eq('org_id',currentOrgId||SITE_ORG_ID);
+  const {error}=await sbClient.from('profiles').update({role:'viewer',active:true,updated_at:new Date().toISOString()}).eq('id',userId);
   if(error){alert('Could not approve account: '+error.message);return;}
   await renderRolesPanel(); applyRoleUI();
 }
