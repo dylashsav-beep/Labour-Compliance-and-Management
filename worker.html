@@ -244,12 +244,15 @@ const SITE_ORG_ID   = '00000000-0000-0000-0001-000000000001';
 
 // Resolve org from ?org=<slug> URL param (falls back to SITE_ORG_ID for TMC)
 let resolvedOrgId = SITE_ORG_ID;
+let orgSlugProvided = false;   // was an ?org= slug present in the URL?
+let orgSlugResolved = false;   // did that slug match a real organisation?
 async function resolveOrg(){
   const slug = new URLSearchParams(location.search).get('org');
   if(!slug || !sbClient) return;
+  orgSlugProvided = true;
   try{
     const {data} = await sbClient.from('organisations').select('id').eq('slug',slug).maybeSingle();
-    if(data?.id) resolvedOrgId = data.id;
+    if(data?.id){ resolvedOrgId = data.id; orgSlugResolved = true; }
   }catch(e){ console.warn('[WP] org resolve failed:',e.message); }
 }
 const SET_NL_ZZP    = '00000000-0000-0000-0000-000000000001';
@@ -575,7 +578,19 @@ async function wpDirectLogin(){
     await resolveOrg();
     const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:resolvedOrgId});
     if(error) throw error;
-    if(!data){ loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true); return; }
+    if(!data){
+      // No match in the resolved org. If the URL carried an unknown slug, or no
+      // slug at all (defaulted to TMC), the worker may be on the wrong portal —
+      // point them at their company-specific link rather than a flat dead-end.
+      if(orgSlugProvided && !orgSlugResolved){
+        loginMsg('That company link wasn’t recognised. Please check the worker-portal link your employer gave you.',true);
+      }else if(!orgSlugProvided){
+        loginMsg('No worker profile found for this email. If your employer gave you a company-specific portal link, please use that link to sign in. Otherwise, ask them to add your email to your worker profile.',true);
+      }else{
+        loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);
+      }
+      return;
+    }
     wpWorkerEmail=email;
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);

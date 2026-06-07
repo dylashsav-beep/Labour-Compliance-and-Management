@@ -1464,6 +1464,22 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             </div>
           </div>
 
+          <!-- Worker Portal Link -->
+          <div class="settings-card" style="margin-bottom:16px;">
+            <div class="settings-card-title">Worker Portal Link</div>
+            <div class="settings-card-desc">Share this link with your workers. It opens the worker portal scoped to <strong>your organisation</strong> — they sign in with their email to upload documents and view assignments. Each organisation has its own unique link.</div>
+            <div id="orgPortalLinkWrap" style="display:none;gap:10px;align-items:center;margin-top:14px;flex-wrap:wrap;">
+              <div class="form-field" style="flex:1;min-width:240px;margin:0;">
+                <input class="form-input" id="orgPortalLinkInput" type="text" readonly onclick="this.select()" style="font-size:14px;background:var(--bg-subtle,#f8fafc);cursor:text;" value="">
+              </div>
+              <button class="btn btn-outline" id="orgPortalCopyBtn" onclick="copyWorkerPortalLink()" style="display:inline-flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span id="orgPortalCopyLabel">Copy</span>
+              </button>
+            </div>
+            <div id="orgPortalLinkNote" style="display:none;margin-top:10px;font-size:13px;color:var(--text-muted,#64748b);"></div>
+          </div>
+
           <!-- Brand colour -->
           <div class="settings-card" style="margin-bottom:16px;">
             <div class="settings-card-title">Brand Colour</div>
@@ -7058,6 +7074,50 @@ function applyOrgBranding(){
   if(picker) picker.value=currentOrg.primary_color||'#1a3082';
   _renderColorSwatches(currentOrg.primary_color||'#1a3082');
   _updateLogoPreview(currentOrg.logo_url||null);
+  _renderWorkerPortalLink();
+}
+
+// Build the org's unique worker-portal URL (work-force.nl/worker.html?org=<slug>)
+function workerPortalUrl(){
+  const slug=currentOrg&&currentOrg.slug;
+  if(!slug) return '';
+  return location.origin+'/worker.html?org='+encodeURIComponent(slug);
+}
+
+function _renderWorkerPortalLink(){
+  const input=document.getElementById('orgPortalLinkInput');
+  const wrap=document.getElementById('orgPortalLinkWrap');
+  const note=document.getElementById('orgPortalLinkNote');
+  if(!input) return;
+  const url=workerPortalUrl();
+  if(url){
+    input.value=url;
+    if(wrap) wrap.style.display='flex';
+    if(note) note.style.display='none';
+  }else{
+    // No slug on this org — link can't be generated. Workers fall back to the
+    // default portal, so surface why instead of showing a broken URL.
+    input.value='';
+    if(wrap) wrap.style.display='none';
+    if(note){
+      note.style.display='block';
+      note.textContent='This organisation has no workspace slug yet, so a unique worker-portal link cannot be generated. Contact support to set one.';
+    }
+  }
+}
+
+async function copyWorkerPortalLink(){
+  const url=workerPortalUrl();
+  if(!url) return;
+  const lbl=document.getElementById('orgPortalCopyLabel');
+  try{
+    await navigator.clipboard.writeText(url);
+  }catch(e){
+    // Fallback for browsers/contexts without clipboard API: select the input.
+    const input=document.getElementById('orgPortalLinkInput');
+    if(input){ input.focus(); input.select(); try{ document.execCommand('copy'); }catch(_){} }
+  }
+  if(lbl){ const prev=lbl.textContent; lbl.textContent='Copied!'; setTimeout(()=>{lbl.textContent=prev;},1600); }
 }
 
 function _renderColorSwatches(current){
