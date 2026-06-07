@@ -630,12 +630,51 @@ footer{
   .footer-inner{flex-direction:column;gap:0.75rem;text-align:center;}
   .footer-links{justify-content:center;}
   .form-grid{grid-template-columns:1fr;}
-  .demo-tabs{flex-wrap:wrap;}
+  .demo-tabs{flex-wrap:wrap;gap:0.35rem;}
   .phone-frame{max-width:280px;}
+  /* Demo: hide the week picker to save space in the dark nav bar */
+  .app-week-picker{display:none;}
+  /* Hero CTAs stack vertically on tablets */
+  .hero-ctas{flex-direction:column;align-items:flex-start;}
+  .hero-ctas .btn{width:100%;justify-content:center;max-width:340px;}
+}
+@media(max-width:640px){
+  /* Navbar: hide secondary nav buttons — keep only Request Demo */
+  .navbar-right .btn-ghost-nav{display:none;}
+  /* Demo dashboard: 4-col stats → 2×2 */
+  .demo-dashboard .stats-row{grid-template-columns:repeat(2,1fr);}
+  .demo-dashboard .stats-row .stat:nth-child(even){border-right:none;}
+  .demo-dashboard .stats-row .stat:nth-child(n+3){border-top:1px solid var(--border);}
+  /* App legend: hide on small screens to reduce clutter */
+  .app-legend{display:none;}
+  /* Demo tab buttons: tighter */
+  .demo-tab-btn{font-size:0.72rem;padding:0.35rem 0.65rem;}
+  .demo-hint{font-size:0.71rem;}
+  /* CTA section buttons: full-width stack */
+  .cta-buttons{flex-direction:column;align-items:center;}
+  .cta-buttons .btn{width:100%;max-width:320px;justify-content:center;}
 }
 @media(max-width:480px){
   .navbar-logo-sub{display:none;}
   .btn-lg{padding:0.7rem 1.25rem;font-size:0.9rem;}
+  /* Modal: tighter padding and margins on very small phones */
+  .modal-overlay{padding:0.75rem;}
+  .modal-card{padding:1.5rem 1.1rem;border-radius:14px;}
+  .modal-title{font-size:1.15rem;}
+  /* Hero: stack CTAs full width */
+  .hero-ctas .btn{max-width:100%;}
+  /* Demo section: keep table scrollable, ensure scroll hint is visible */
+  .demo-dashboard{font-size:0.8rem;}
+  .demo-dashboard th,.demo-dashboard td{padding:7px 8px;}
+  /* Section titles smaller */
+  .section-title{letter-spacing:-0.02em;}
+}
+@media(max-width:360px){
+  .navbar{padding:0 0.75rem;}
+  .navbar-logo-main{font-size:0.85rem;}
+  .section{padding:2.75rem 1rem;}
+  .hero{padding:3rem 1rem 2.5rem;}
+  .hero-lead{font-size:0.95rem;}
 }
 
 /* ── APP-FAITHFUL UI STYLES ── */
