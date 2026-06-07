@@ -908,6 +908,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 </style>
 </head>
 <body>
+<script>if(new URLSearchParams(location.search).has('demo'))document.body.classList.add('demo-mode');</script>
 <div id="sbLoginOverlay">
   <div class="sbLoginCard">
     <div class="sbLoginHead"><div id="sbLoginTitle">TMC Compliance</div><div id="sbLoginSub">Select how you'd like to sign in</div></div>
@@ -1555,7 +1556,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             <div id="complianceReportGrid" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
               <div class="form-field">
                 <label class="form-label">Report recipient</label>
-                <input class="form-input" id="complianceReportEmail" type="email" value="compliance@tmconstruction.nl" onchange="setComplianceReportEmail(this.value)"/>
+                <input class="form-input" id="complianceReportEmail" type="email" value="" onchange="setComplianceReportEmail(this.value)"/>
               </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-primary" onclick="openComplianceEmailReport()">Prepare Email</button>
@@ -3152,6 +3153,7 @@ function sbInitDemo(){
   if(uel) uel.innerHTML='<span style="font-size:12px;font-weight:500;color:#a8c8e8;padding:0 6px;">👤 Demo User (admin)</span>';
   // Reset all filters to show everything by default
   fActive = 'all'; fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = '';
+  document.querySelectorAll('[data-fa]').forEach(b=>b.classList.toggle('active', b.dataset.fa==='all'));
   // Render
   try{ renderProjFilters(); }catch(e){}
   try{ renderDocSetFilters(); }catch(e){}
@@ -7262,7 +7264,7 @@ function setComplianceReportEmail(email){
   renderComplianceReportSettings();
   if(sbReady) sbScheduleSync();
 }
-function complianceReportRecipient(){ return (settings.complianceReportEmail||'compliance@tmconstruction.nl').trim(); }
+function complianceReportRecipient(){ return (settings.complianceReportEmail||(DEMO_MODE?'hello@work-force.nl':'compliance@tmconstruction.nl')).trim(); }
 function complianceIssueDocs(w, status){
   const ref=new Date();
   const targetStatus = status==='nogo' ? 'missing' : 'expiring';
@@ -7335,7 +7337,7 @@ function downloadComplianceReportCsv(){
   const blob=new Blob([complianceReportCsv()],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
-  a.download=`tmc_compliance_warning_nogo_report_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download=`${DEMO_MODE?'wf':'tmc'}_compliance_warning_nogo_report_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
 }
