@@ -508,6 +508,43 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 }
 .phone-upload-area:hover{border-color:var(--blue);background:#eff6ff;color:var(--blue);}
 
+/* ── Worker Portal mockup ── */
+.wp-frame{max-width:460px;width:100%;margin:0 auto;background:#fff;border-radius:12px;box-shadow:0 4px 32px rgba(0,0,0,0.18);overflow:hidden;border:1px solid #dde3ec;}
+.wp-header{background:#112268;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.wp-h-title{font-size:14px;font-weight:700;color:#fff;}
+.wp-h-sub{font-size:11px;color:rgba(255,255,255,0.6);margin-top:1px;}
+.wp-header-right{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.wp-nogo-pill{background:#c53030;color:#fff;border:none;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;white-space:nowrap;}
+.wp-lang-btn{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:default;font-family:inherit;}
+.wp-signout-btn{background:#1e293b;border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:default;font-family:inherit;}
+.wp-tabs{display:flex;border-bottom:1px solid #e2e8f0;background:#fff;}
+.wp-tab{flex:1;padding:10px 4px;text-align:center;font-size:12px;font-weight:500;color:#64748b;cursor:default;border-bottom:2px solid transparent;}
+.wp-tab.active{font-weight:700;color:#1a2340;border-bottom-color:#1a2340;}
+.wp-filters{display:flex;gap:6px;padding:10px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;overflow-x:auto;}
+.wp-filter-pill{display:flex;flex-direction:column;align-items:center;padding:6px 12px;border-radius:8px;border:1.5px solid #dde3ec;background:#fff;cursor:default;white-space:nowrap;min-width:60px;}
+.wp-filter-pill.active{background:#fff0f0;border-color:#fecaca;}
+.wp-filter-label{font-size:11px;font-weight:600;color:#64748b;}
+.wp-filter-pill.active .wp-filter-label{color:#c53030;}
+.wp-filter-count{font-size:13px;font-weight:700;color:#1a2340;margin-top:1px;}
+.wp-filter-pill.active .wp-filter-count{color:#c53030;}
+.wp-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px;max-height:380px;overflow-y:auto;}
+.wp-category{font-size:10px;font-weight:700;letter-spacing:.08em;color:#94a3b8;padding:4px 0 2px;}
+.wp-card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:7px;}
+.wp-card-top{display:flex;align-items:center;gap:8px;}
+.wp-card-icon{font-size:20px;flex-shrink:0;}
+.wp-card-name-row{flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.wp-card-name{font-size:13px;font-weight:700;color:#1a2340;}
+.wp-req-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:#fff0f0;color:#c53030;border:1px solid #fecaca;}
+.wp-info-btn{margin-left:auto;width:22px;height:22px;border-radius:50%;border:1.5px solid #dde3ec;background:none;color:#94a3b8;font-size:11px;cursor:default;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wp-miss-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:12px;background:#fff0f0;color:#c53030;font-size:11px;font-weight:700;width:fit-content;}
+.wp-card-desc{font-size:11px;color:#64748b;font-style:italic;}
+.wp-form-box{background:#fffbeb;border:1.5px solid #fde68a;border-radius:7px;padding:9px 11px;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;}
+.wp-form-box-text{flex:1;}
+.wp-form-box-title{font-size:11px;font-weight:700;color:#92400e;}
+.wp-form-box-sub{font-size:10px;color:#78350f;margin-top:3px;line-height:1.4;}
+.wp-download-btn{background:#d97706;color:#fff;border:none;padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:default;white-space:nowrap;font-family:inherit;flex-shrink:0;align-self:center;}
+.wp-submit-btn{width:100%;padding:10px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:default;font-family:inherit;}
+
 /* ── STATUS CARDS ── */
 .status-section{background:#fff;}
 .status-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-top:3rem;}
@@ -1965,54 +2002,93 @@ footer{
 
     <!-- Worker portal tab -->
     <div class="demo-panel-wrapper fade-up fade-up-d3" id="demo-tab-portal">
-      <div class="demo-hint">👆 Click the "Upload" button next to A1 Form to see the worker experience</div>
+      <div class="demo-hint">Workers see their document status and submit updates directly from their phone or browser — no app install needed.</div>
       <div style="display:flex;justify-content:center;">
-        <div class="phone-frame">
-          <div class="phone-screen">
-            <div style="background:#0d1f36;padding:0.5rem 1rem;display:flex;align-items:center;justify-content:space-between;">
-              <div style="display:flex;align-items:center;gap:6px;">
-                <div style="width:22px;height:22px;border-radius:6px;background:#1e3a5f;display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:900;color:#fff;">WF</div>
-                <span style="font-size:0.72rem;font-weight:700;color:#fff;">Work-Force</span>
-              </div>
-              <span style="font-size:0.62rem;color:#22c55e;font-weight:700;">● Synced</span>
+        <div class="wp-frame">
+          <!-- Header -->
+          <div class="wp-header">
+            <div>
+              <div class="wp-h-title">Worker Portal</div>
+              <div class="wp-h-sub">Ivan Angelov Ivanov</div>
             </div>
-            <div class="phone-header" style="background:#132642;">
-              <div class="phone-h-title">My Compliance Status</div>
-              <div class="phone-h-sub">Hi Andrei — 1 document needs attention</div>
+            <div class="wp-header-right">
+              <span class="wp-nogo-pill">✕ No-Go</span>
+              <button class="wp-lang-btn">GB EN ▾</button>
+              <button class="wp-signout-btn">Sign out</button>
             </div>
-            <div class="phone-body">
-              <div class="phone-doc-item">
-                <div style="flex:1;">
-                  <div class="phone-doc-name">VCA Certificate</div>
-                  <div class="phone-doc-sub">Expires in 42 days</div>
+          </div>
+          <!-- Tabs -->
+          <div class="wp-tabs">
+            <div class="wp-tab active">Documents</div>
+            <div class="wp-tab">Projects</div>
+            <div class="wp-tab">Profile</div>
+            <div class="wp-tab">Resources</div>
+          </div>
+          <!-- Filter pills -->
+          <div class="wp-filters">
+            <div class="wp-filter-pill active"><span class="wp-filter-label">Missing</span><span class="wp-filter-count">11</span></div>
+            <div class="wp-filter-pill"><span class="wp-filter-label">Expiring</span><span class="wp-filter-count">0</span></div>
+            <div class="wp-filter-pill"><span class="wp-filter-label">Expired</span><span class="wp-filter-count">0</span></div>
+            <div class="wp-filter-pill"><span class="wp-filter-label">Valid</span><span class="wp-filter-count">0</span></div>
+            <div class="wp-filter-pill"><span class="wp-filter-label">Optional</span><span class="wp-filter-count">9</span></div>
+          </div>
+          <!-- Document cards -->
+          <div class="wp-body">
+            <div class="wp-category">REGISTRATION</div>
+            <!-- KvK Registration -->
+            <div class="wp-card">
+              <div class="wp-card-top">
+                <span class="wp-card-icon">🏢</span>
+                <div class="wp-card-name-row">
+                  <span class="wp-card-name">KvK Registration</span>
+                  <span class="wp-req-badge">Required</span>
                 </div>
-                <span class="badge badge-warn">WARNING</span>
+                <button class="wp-info-btn">ℹ</button>
               </div>
-              <div class="phone-doc-item">
-                <div style="flex:1;">
-                  <div class="phone-doc-name">Passport</div>
-                  <div class="phone-doc-sub">Valid until 2029</div>
+              <span class="wp-miss-badge">Missing</span>
+              <div class="wp-card-desc">Chamber of Commerce registration</div>
+              <div class="wp-form-box">
+                <div class="wp-form-box-text">
+                  <div class="wp-form-box-title">📎 Official form required</div>
+                  <div class="wp-form-box-sub">Download, complete and submit this template — do not use your own format.</div>
                 </div>
-                <span class="badge badge-go">GO</span>
+                <button class="wp-download-btn">💾 Download</button>
               </div>
-              <div class="phone-doc-item">
-                <div style="flex:1;">
-                  <div class="phone-doc-name">A1 Form</div>
-                  <div class="phone-doc-sub" id="a1FormStatus">Missing — upload required</div>
+              <button class="wp-submit-btn">Submit update</button>
+            </div>
+            <!-- Verklaring ID -->
+            <div class="wp-card">
+              <div class="wp-card-top">
+                <span class="wp-card-icon">🪪</span>
+                <div class="wp-card-name-row">
+                  <span class="wp-card-name">Verklaring ID</span>
+                  <span class="wp-req-badge">Required</span>
                 </div>
-                <span class="badge badge-nogo" id="a1FormBadge">NO-GO</span>
-                <button class="upload-btn" id="a1UploadBtn" onclick="handlePortalUpload()" style="margin-left:0.5rem;">Upload</button>
+                <button class="wp-info-btn">ℹ</button>
               </div>
-              <div class="phone-doc-item">
-                <div style="flex:1;">
-                  <div class="phone-doc-name">Health Insurance</div>
-                  <div class="phone-doc-sub">Valid until 2026</div>
+              <span class="wp-miss-badge">Missing</span>
+              <div class="wp-card-desc">A valid, filled in and signed document "Verklaring ID"</div>
+              <div class="wp-form-box">
+                <div class="wp-form-box-text">
+                  <div class="wp-form-box-title">📎 Official form required</div>
+                  <div class="wp-form-box-sub">Download, complete and submit this template — do not use your own format.</div>
                 </div>
-                <span class="badge badge-go">GO</span>
+                <button class="wp-download-btn">💾 Download</button>
               </div>
-              <div class="phone-upload-area" id="phoneUploadArea" onclick="handlePortalUpload()">
-                + Upload document
+              <button class="wp-submit-btn">Submit update</button>
+            </div>
+            <!-- VAT Number -->
+            <div class="wp-card">
+              <div class="wp-card-top">
+                <span class="wp-card-icon">🧾</span>
+                <div class="wp-card-name-row">
+                  <span class="wp-card-name">VAT Number</span>
+                  <span class="wp-req-badge">Required</span>
+                </div>
               </div>
+              <span class="wp-miss-badge">Missing</span>
+              <div class="wp-card-desc">VAT identification number registered</div>
+              <button class="wp-submit-btn">Submit update</button>
             </div>
           </div>
         </div>
