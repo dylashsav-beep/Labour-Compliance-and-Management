@@ -10527,6 +10527,10 @@ async function sbLoadAll(){
   // data. Without this, the per-table queries fall back to SITE_ORG_ID and
   // would surface TMC's records to an unassigned account.
   if(!currentOrgId){ console.warn('[WF] Load skipped — no organisation resolved for this session'); return; }
+  // If this browser last cached a different org's data, wipe it before loading
+  // so no stale cross-org rows can flash on screen.
+  if(window._wfLoadedOrg && window._wfLoadedOrg !== currentOrgId){ sbClearLocalCache(); }
+  window._wfLoadedOrg = currentOrgId;
   sbIsLoading=true;
   sbLoadStartTime=Date.now();
   sbSetStatus('Supabase: loading…', true);
@@ -10801,12 +10805,31 @@ async function sbUpdatePassword(){
     sbMsg('Could not update password: ' + (e.message || e), true);
   }
 }
+// Wipe all locally-cached app data. The localStorage caches (tmc_*/btm_*) are
+// global to the browser, not scoped per org or per user, so they must be
+// cleared whenever the session ends or has no workspace — otherwise one org's
+// cached projects/resources could render under a different account on the same
+// browser. Supabase auth tokens use the 'sb-' prefix and are left untouched.
+function sbClearLocalCache(){
+  try{
+    Object.keys(localStorage).forEach(k=>{
+      if(k.indexOf('tmc_')===0 || k.indexOf('btm_')===0) localStorage.removeItem(k);
+    });
+  }catch(e){ console.warn('[WF] cache clear failed:', e.message); }
+  // Reset in-memory state so nothing stale is rendered before/without a load
+  workers=[]; projectStore=[]; projectAssignments=[]; properties=[]; vehicles=[];
+  accomHistory={}; vehHistory={}; accomCharges=[]; vehCharges=[]; resourceEvents=[];
+  deletedItems=[]; complianceDocs=[]; roster={}; docReqOverrides={};
+  try{ fileStore && Object.keys(fileStore).forEach(k=>delete fileStore[k]); }catch(e){}
+}
+
 async function sbLogout(){
   wpWorkerId=null; wpWorkerObj=null; wpSubmissions=[]; wpWorkerEmail=null; wpAccomAssignments=[]; wpVehAssignments=[]; wpToolAssignments=[]; wpProperties=[]; wpVehicles=[]; wpTools=[]; wpReturnRequests=[]; wpIssuedDocs=[];
   document.body.classList.remove('wp-mode');
   document.getElementById('workerPortal').style.display='none';
   document.querySelectorAll('.wrap').forEach(el=>el.style.removeProperty('display'));
   document.querySelector('.sticky-chrome')?.style?.removeProperty('display');
+  sbClearLocalCache();
   if(sbClient) await sbClient.auth.signOut(); location.reload();
 }
 async function sbAfterAuth(){
@@ -10839,6 +10862,8 @@ async function sbAfterAuth(){
   // org's data, independent of role/active state.
   if(!currentOrgId && user.email !== 'dylan@tmconstruction.nl'){
     sbReady=false;
+    sbClearLocalCache();      // wipe any other org's cached data from this browser
+    try{ renderTable(); renderRoster && renderRoster(); }catch(e){}
     document.getElementById('sbLoginOverlay')?.classList.remove('open');
     sbLockScreen(false);
     sbSetStatus('Supabase: no workspace', false);
