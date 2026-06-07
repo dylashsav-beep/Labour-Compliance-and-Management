@@ -7042,12 +7042,12 @@ function applyOrgBranding(){
   if(!currentOrg) return;
   // Header app title: "{Org Name} Compliance"
   const titleEl=document.getElementById('headerAppTitle');
-  if(titleEl) titleEl.textContent=(currentOrg.name||'TMC')+' Compliance';
+  if(titleEl) titleEl.textContent=(currentOrg.name||'Work Force')+' Compliance';
   // Worker portal title: "{Org Name} Worker Portal"
   const wpTitle=document.getElementById('wpHeaderTitle');
-  if(wpTitle) wpTitle.textContent=(currentOrg.name||'Worker Portal')+' Worker Portal';
+  if(wpTitle) wpTitle.textContent=(currentOrg.name||'Work Force')+' Worker Portal';
   // Browser tab title
-  document.title=(currentOrg.name||'TMC Compliance')+' — Compliance';
+  document.title=(currentOrg.name||'Work Force Compliance')+' — Compliance';
   // Primary colour
   if(currentOrg.primary_color) _applyOrgColor(currentOrg.primary_color,false);
   // Header logo
@@ -7181,8 +7181,10 @@ function _hexShift(hex,amt){
 }
 
 function _orgDefaultLogo(){
-  // Captured immediately after header renders (before any JS can change img.src)
-  return window._orgDefaultLogoSrc||'';
+  // TMC org uses the logo baked into the HTML at page load
+  if(currentOrgId === SITE_ORG_ID) return window._orgDefaultLogoSrc||'';
+  // All other orgs with no custom logo get the generic Work Force mark
+  return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40"%3E%3Crect width="40" height="40" rx="9" fill="%231a3082"/%3E%3Ctext x="20" y="27" font-family="Inter,Arial,sans-serif" font-size="16" font-weight="800" fill="white" text-anchor="middle"%3EWF%3C/text%3E%3Ctext x="50" y="18" font-family="Inter,Arial,sans-serif" font-size="13" font-weight="700" fill="%231a3082"%3EWork Force%3C/text%3E%3Ctext x="50" y="33" font-family="Inter,Arial,sans-serif" font-size="8.5" font-weight="500" fill="%237a8ba8" letter-spacing="1.2"%3ECOMPLIANCE%3C/text%3E%3C/svg%3E';
 }
 
 function updateWarnDesc(){
