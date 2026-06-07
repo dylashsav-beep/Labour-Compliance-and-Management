@@ -972,7 +972,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 
 <!-- Demo mode banner — shown only when ?demo=1 -->
 <div id="demoBanner">
-  <span>🎭 <strong>Demo Mode</strong> — Explore the full app. No sign-in needed. Changes are saved to your browser only.</span>
+  <span><strong>Demo Mode</strong> — Explore the full app. No sign-in needed. Changes are saved to your browser only.</span>
   <span style="flex:1;min-width:12px;"></span>
   <button onclick="resetDemoData()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;">Reset Demo</button>
   <a href="app.html" style="background:#fff;color:#92400e;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Sign In →</a>
@@ -3147,7 +3147,7 @@ function sbInitDemo(){
   if(typeof sbLockScreen==='function') sbLockScreen(false);
   // Load data
   const saved=sessionStorage.getItem(DEMO_SS_KEY);
-  if(saved){ try{ restoreDemoState(JSON.parse(saved)); }catch(e){ console.warn('[Demo] restore failed:',e); loadDemoDefaults(); } }
+  if(saved){ try{ restoreDemoState(JSON.parse(saved)); if(!workers.length) loadDemoDefaults(); }catch(e){ console.warn('[Demo] restore failed:',e); loadDemoDefaults(); } }
   else { loadDemoDefaults(); }
   // Update user display
   const uel=document.getElementById('sbUser');
@@ -3172,7 +3172,7 @@ function showDemoBanner(){
   // Replace header sync area with demo pill + contact link
   const wrap=document.getElementById('headerSyncWrap');
   if(wrap && !wrap.querySelector('#demoPill')){
-    wrap.insertAdjacentHTML('afterbegin','<span id="demoPill" class="hsync-pill" style="background:rgba(251,191,36,.18);color:#fbbf24;">🎭 Demo</span><a href="mailto:hello@work-force.nl" id="demoContactBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 11px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">Contact us</a>');
+    wrap.insertAdjacentHTML('afterbegin','<span id="demoPill" class="hsync-pill" style="background:rgba(251,191,36,.18);color:#fbbf24;">Demo</span><a href="mailto:hello@work-force.nl" id="demoContactBtn" style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 11px;border-radius:5px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">Contact us</a>');
   }
   // Swap header branding for demo
   const logoImg=document.getElementById('headerLogoImg');
