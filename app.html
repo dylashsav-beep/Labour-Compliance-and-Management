@@ -3112,7 +3112,7 @@ function loadDemoDefaults(){
   accomCharges=[]; vehCharges=[]; resourceEvents=[]; deletedItems=[]; complianceDocs=[];
 
   // fileStore
-  fileStore={};
+  Object.keys(fileStore).forEach(k=>delete fileStore[k]);
   workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
 
   settings.warningDays=60;
@@ -3137,7 +3137,7 @@ function restoreDemoState(s){
   try{ if(s.tools) tools=s.tools; if(s.toolHistory) toolHistory=s.toolHistory; if(s.toolCharges) toolCharges=s.toolCharges; }catch(e){}
   try{ issuedDocuments=[]; }catch(e){} try{ roster={}; }catch(e){} try{ complianceDocs=s.complianceDocs||[]; }catch(e){}
   if(s.settings) settings.warningDays=s.settings.warningDays||60;
-  fileStore={};
+  Object.keys(fileStore).forEach(k=>delete fileStore[k]);
   workers.forEach(w=>{ fileStore[w.id]={}; tmplForWorker(w).forEach(d=>{ fileStore[w.id][d.id]=[]; }); });
   if(s.fileStore){ Object.keys(s.fileStore).forEach(wid=>{ if(!fileStore[wid])fileStore[wid]={}; Object.keys(s.fileStore[wid]||{}).forEach(did=>{ fileStore[wid][did]=s.fileStore[wid][did]||[]; }); }); }
 }
@@ -3154,8 +3154,13 @@ function sbInitDemo(){
   if(typeof sbLockScreen==='function') sbLockScreen(false);
   // Load data
   const saved=sessionStorage.getItem(DEMO_SS_KEY);
-  if(saved){ try{ restoreDemoState(JSON.parse(saved)); if(!workers.length) loadDemoDefaults(); }catch(e){ console.warn('[Demo] restore failed:',e); loadDemoDefaults(); } }
-  else { loadDemoDefaults(); }
+  try{
+    if(saved){ restoreDemoState(JSON.parse(saved)); if(!workers.length) loadDemoDefaults(); }
+    else { loadDemoDefaults(); }
+  }catch(e){
+    console.warn('[Demo] data load failed, loading defaults:',e);
+    try{ loadDemoDefaults(); }catch(e2){ console.error('[Demo] defaults failed:',e2); }
+  }
   // Update user display
   const uel=document.getElementById('sbUser');
   if(uel) uel.innerHTML='<span style="font-size:12px;font-weight:500;color:#a8c8e8;padding:0 6px;">👤 Demo User (admin)</span>';
