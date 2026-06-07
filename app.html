@@ -7062,7 +7062,7 @@ function applyOrgBranding(){
   const headerImg=document.getElementById('headerLogoImg');
   if(headerImg){
     const target=currentOrg.logo_url||_orgDefaultLogo();
-    if(target&&headerImg.src!==target){
+    if(target){
       headerImg.src=target;
       headerImg.onerror=()=>{headerImg.src=_orgDefaultLogo();headerImg.onerror=null;};
     }
@@ -7170,18 +7170,24 @@ async function uploadOrgLogo(input){
   if(!file.type.startsWith('image/')){alert('Please select an image file (PNG, JPG, SVG, etc.).');input.value='';return;}
   if(file.size>2*1024*1024){alert('Logo must be under 2 MB.');input.value='';return;}
   const ext=file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,'')||'png';
-  const path=`org-logos/${currentOrgId||SITE_ORG_ID}/logo.${ext}`;
+  // Timestamp in the path on every upload so the URL always changes — guarantees
+  // the browser fetches the new image even if the same file type is re-uploaded.
+  const path=`org-logos/${currentOrgId||SITE_ORG_ID}/logo_${Date.now()}.${ext}`;
   const lbl=document.getElementById('orgLogoUploadLabel');
   if(lbl)lbl.textContent='Uploading…';
-  const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{upsert:true,contentType:file.type});
+  const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(path,file,{contentType:file.type});
   if(upErr){
-    alert('Upload failed: '+upErr.message+'\n\nIf this is your first logo upload, run migrations/add_org_logo_storage.sql in Supabase SQL Editor.');
+    alert('Upload failed: '+upErr.message+'\n\nMake sure migrations/add_org_logo_storage.sql has been run in Supabase SQL Editor.');
     if(lbl)lbl.textContent='Upload logo';
     input.value='';
     return;
   }
   const {data:{publicUrl}}=sbClient.storage.from(SB_BUCKET).getPublicUrl(path);
   await _persistOrgFields({logo_url:publicUrl});
+  // Force the header and preview to refresh even if applyOrgBranding sees the
+  // src as unchanged (it won't be — new URL — but be explicit for safety).
+  const headerImg=document.getElementById('headerLogoImg');
+  if(headerImg&&publicUrl){ headerImg.src=''; headerImg.src=publicUrl; }
   if(lbl)lbl.textContent='Upload logo';
   input.value='';
 }

@@ -222,6 +222,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_worker_agency.sql` | ✅ Run | agency_name column on workers |
 | `add_accom_weekly_charge.sql` | ✅ Run | weekly_charge_amount on accommodation_assignments |
 | `add_resource_events.sql` | ⏳ Pending | resource_events table for property/vehicle event log |
+| `add_org_logo_storage.sql` | ⏳ Pending — **run to enable logo uploads** | Storage RLS policies for `org-logos/` folder: public read (so `<img>` works without auth) + org-scoped authenticated INSERT (each org can only upload into their own subfolder). Drop the old same-path upsert approach — logos now use timestamped filenames so every upload is always a fresh INSERT. |
 | `rename_aansp_insurance.sql` | ✅ Run | Renamed insurance doc in document_set_items |
 | `schedule_daily_digest.sql` | ⏳ Pending | pg_cron schedule for daily email digest (replace placeholders first) |
 | `worker_portal_anon_rpc.sql` | ⛔ DO NOT RUN | Superseded — single-param get_worker_portal leaks workers across orgs. File now has ⛔ header. |
