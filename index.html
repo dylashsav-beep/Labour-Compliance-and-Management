@@ -82,6 +82,10 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
   background:transparent;border:1.5px solid var(--border);color:var(--text);
 }
 .btn-ghost-nav:hover{border-color:var(--navy);color:var(--navy);background:rgba(30,58,95,0.04);}
+.btn-outline-nav{
+  background:transparent;border:1.5px solid var(--navy);color:var(--navy);
+}
+.btn-outline-nav:hover{background:var(--navy);color:#fff;}
 .btn-primary{background:var(--blue);color:#fff;border:1.5px solid var(--blue);}
 .btn-primary:hover{background:var(--blue-d);border-color:var(--blue-d);transform:translateY(-1px);box-shadow:0 4px 14px rgba(59,130,246,0.35);}
 .btn-white{background:#fff;color:var(--navy);border:1.5px solid #fff;}
@@ -677,7 +681,7 @@ footer{
 }
 @media(max-width:640px){
   /* Navbar: hide secondary nav buttons — keep only Request Demo */
-  .navbar-right .btn-ghost-nav{display:none;}
+  .navbar-right .btn-ghost-nav,.navbar-right .btn-outline-nav{display:none;}
   /* Demo dashboard: 4-col stats → 2×2 */
   .demo-dashboard .stats-row{grid-template-columns:repeat(2,1fr);}
   .demo-dashboard .stats-row .stat:nth-child(even){border-right:none;}
@@ -1086,13 +1090,13 @@ footer{
     <div class="nav-links">
       <a class="nav-link" href="#features">Features</a>
       <a class="nav-link" href="#how-it-works">How It Works</a>
-      <a class="nav-link" href="worker.html">Worker Portal</a>
       <a class="nav-link" href="#contact">Contact</a>
     </div>
   </div>
   <div class="navbar-right">
     <a class="btn btn-ghost-nav" href="worker.html">Worker Portal</a>
     <a class="btn btn-ghost-nav" href="app.html">Log in</a>
+    <a class="btn btn-outline-nav" href="app.html?demo=1">🎭 Live Demo</a>
     <button class="btn btn-primary" onclick="openDemoModal()">Request Demo</button>
   </div>
 </nav>

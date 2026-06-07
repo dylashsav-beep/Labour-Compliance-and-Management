@@ -3152,19 +3152,18 @@ function sbInitDemo(){
   // Update user display
   const uel=document.getElementById('sbUser');
   if(uel) uel.innerHTML='<span style="font-size:12px;font-weight:500;color:#a8c8e8;padding:0 6px;">👤 Demo User (admin)</span>';
-  // Reset all filters to show everything by default
-  fActive = 'all'; fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = '';
-  document.querySelectorAll('[data-fa]').forEach(b=>b.classList.toggle('active', b.dataset.fa==='all'));
-  // Render
+  // Render supporting UI
   try{ renderProjFilters(); }catch(e){}
   try{ renderDocSetFilters(); }catch(e){}
   try{ if(typeof renderMissingDocFilter==='function')renderMissingDocFilter(); }catch(e){}
   try{ renderWeekLabel(); }catch(e){}
-  try{ renderTable(); }catch(e){}
   try{ if(typeof renderDeletedItems==='function')renderDeletedItems(); }catch(e){}
   try{ applyRoleUI(); }catch(e){}
   showDemoBanner();
   if(typeof sbSetStatus==='function') sbSetStatus('Demo mode — data saved locally',true);
+  // Guarantee workers render after all sync init — setFA sets fActive, syncs button UI, calls renderTable
+  fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = '';
+  setTimeout(()=>{ try{ setFA('all'); }catch(e){ console.warn('[Demo] renderTable failed:',e); } }, 0);
 }
 
 function showDemoBanner(){
