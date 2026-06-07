@@ -1,3 +1,14 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED AND UNSAFE FOR MULTI-TENANT USE
+-- =============================================================================
+-- This file creates get_worker_portal(p_email text) with NO org_id parameter.
+-- Executing it would replace the current org-scoped 2-param function with a
+-- single-param version that leaks workers across all organisations to any anon
+-- caller who knows the worker's email.
+--
+-- The current (correct) version is in fix_worker_portal_rpc_issued_docs.sql.
+-- =============================================================================
+
 -- Update get_worker_portal to also return resource assignments
 -- Run in: Supabase → Database → SQL Editor
 -- Prerequisites: worker_resource_return_requests.sql must be run first

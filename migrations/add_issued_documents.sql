@@ -1,3 +1,12 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED; CREATES WIDE-OPEN POLICIES
+-- =============================================================================
+-- This file creates issued_documents with USING(true) RLS policies — any
+-- authenticated user from any org can read and write any issued document.
+-- The correct org-scoped policies are applied by fix_rls_rebuild_all_policies.sql.
+-- Running this file would reintroduce cross-org read/write on issued documents.
+-- =============================================================================
+
 -- Issued documents: personalised contracts/forms issued to specific workers
 -- Run ONCE in: Supabase → Database → SQL Editor
 

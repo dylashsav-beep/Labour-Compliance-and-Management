@@ -1,3 +1,19 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED; CREATES POLICIES THAT CAUSE CROSS-ORG DATA LEAKS
+-- =============================================================================
+-- This file creates `workers_staff` and `workers_own` policies on the workers
+-- table. These are the EXACT legacy policies (auth_only, workers_staff,
+-- workers_own) that caused the catastrophic cross-org data leak documented in
+-- CLAUDE.md Lesson #13. Running this file would re-introduce those policies.
+--
+-- It also creates worker_document_submissions WITHOUT an org_id column and with
+-- non-org-scoped RLS policies.
+--
+-- The correct state is applied by:
+--   - fix_rls_rebuild_all_policies.sql  (workers RLS, submissions RLS)
+--   - add_multi_tenancy.sql             (org_id column on all tables)
+-- =============================================================================
+
 -- Worker self-service portal setup
 -- Run in Supabase → Database → SQL Editor
 -- NOTE: This supersedes add_worker_email.sql — no need to run that separately.

@@ -1,3 +1,16 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED AND UNSAFE FOR MULTI-TENANT USE
+-- =============================================================================
+-- This file creates get_worker_portal(p_email text) with NO org_id parameter.
+-- A SECURITY DEFINER function with no org scope matches workers across ALL orgs
+-- — any anon caller who knows a worker's email can retrieve that worker's data
+-- regardless of which organisation they belong to.
+--
+-- The current (correct) version is in fix_worker_portal_rpc_issued_docs.sql.
+-- That version has p_org_id and scopes the worker lookup to a specific org.
+-- Running THIS file would REPLACE the correct function with a leaking one.
+-- =============================================================================
+
 -- Worker portal: secure RPC functions for no-verification email login
 -- Run in Supabase → Database → SQL Editor
 

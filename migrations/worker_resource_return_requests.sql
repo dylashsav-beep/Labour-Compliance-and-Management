@@ -1,3 +1,13 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED; CREATES WIDE-OPEN POLICIES
+-- =============================================================================
+-- This file creates worker_resource_return_requests with USING(true) policies —
+-- meaning every authenticated user from every org can read every return request.
+-- The correct org-scoped policies (via worker_id join to workers.org_id) are
+-- applied by fix_rls_rebuild_all_policies.sql.
+-- Running this file would reintroduce wide-open return request access.
+-- =============================================================================
+
 -- Return request table: workers submit proof of return for resources
 -- Run in: Supabase → Database → SQL Editor
 

@@ -1,4 +1,17 @@
 -- =============================================================================
+-- ⛔ DO NOT RUN — CONTAINS SUPERSEDED SINGLE-ORG DEFINITIONS
+-- =============================================================================
+-- This combined file includes get_worker_portal(p_email text) — the single-param
+-- version that leaks workers across all orgs — and creates tables/policies that
+-- pre-date multi-tenancy. Running any section of this file may:
+--   1. Replace the org-scoped get_worker_portal with a leaking single-param version
+--   2. Create or overwrite RLS policies without org_id scoping
+--
+-- Individual tables/columns from this file may already be applied. If you need a
+-- specific section, extract it and manually verify it is org-scoped before running.
+-- =============================================================================
+
+-- =============================================================================
 -- TMC Labour Compliance — Combined migration (safe to re-run)
 -- Run in: Supabase → Database → SQL Editor
 -- All statements use IF NOT EXISTS / CREATE OR REPLACE / ADD COLUMN IF NOT EXISTS

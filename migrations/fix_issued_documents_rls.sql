@@ -1,3 +1,15 @@
+-- =============================================================================
+-- ⛔ DO NOT RUN — SUPERSEDED; CREATES WIDE-OPEN POLICIES
+-- =============================================================================
+-- This file creates RLS policies on issued_documents with USING(true) — meaning
+-- every authenticated user from every org can read and write every row. It also
+-- recreates storage policies that were dropped by fix_storage_org_isolation.sql.
+-- Running this file would UNDO the storage org-isolation fix.
+--
+-- issued_documents is covered by fix_rls_rebuild_all_policies.sql (org-scoped).
+-- fix_storage_org_isolation.sql handles the storage policies correctly.
+-- =============================================================================
+
 -- Fix: enable RLS on the issued_documents table that was created without it.
 -- Safe to run even if RLS is already enabled — all statements are idempotent.
 -- Run in: Supabase → Database → SQL Editor
