@@ -269,3 +269,161 @@ If login or saving ever starts feeling slow as you grow, that is the signal to r
 - Supabase Auth with MFA available
 - Custom domain: work-force.nl (GitHub Pages + GoDaddy DNS)
 - Approvals tab: pending doc submissions + return requests, approved/rejected history with pagination and search, auto-delete rejected, worker portal pending badge
+
+---
+
+## Lessons Learnt & Bug Fixes Log
+
+### 1. Demo Mode — Filter Button UI Not Updating
+**Symptom**: Workers tab appeared blank in demo mode until the user manually clicked "All".  
+**Root cause**: `sbInitDemo()` set `fActive = 'all'` directly, which filtered the data correctly, but the `[data-fa]` button elements were not re-classed — the "Active" button still showed as selected in the UI.  
+**Fix**: After setting `fActive`, always also update the button visual state:
+```js
+fActive = 'all';
+document.querySelectorAll('[data-fa]').forEach(b => b.classList.toggle('active', b.dataset.fa === 'all'));
+```
+**Rule**: Never set `fActive` directly without also syncing the button UI. Use `setFA('all')` where possible, or pair with the `forEach` call above.
+
+---
+
+### 2. Demo Mode — Flash of "Sign In" / "Offline" / "Error" Before Banner Loads
+**Symptom**: The header briefly showed the "Sign In" button and "Offline"/"Error" sync pill before the demo banner appeared.  
+**Root cause**: `app.html` is ~400KB. The browser does incremental renders during HTML parsing. The `demo-mode` CSS class (which hides those elements) was only added inside `showDemoBanner()`, which runs at the bottom of the file — so the browser could render an intermediate state without the class.  
+**Fix**: Add an inline `<script>` immediately after `<body>` opens:
+```html
+<script>if(new URLSearchParams(location.search).has('demo'))document.body.classList.add('demo-mode');</script>
+```
+This runs synchronously at parse time, before the browser renders any content.
+
+---
+
+### 3. Demo Mode — Sticky Chrome Layout Break After Early Class Injection
+**Symptom**: After fix #2, the main content area slid behind the sticky header in demo mode.  
+**Root cause**: `body.demo-mode .sticky-chrome{top:38px;}` applied immediately (because of the early class), but `#demoBanner` was still `display:none` at that point (zero height). The sticky chrome was offset 38px downward with no banner filling the gap — content bled through during incremental render.  
+**Fix**: Add a CSS rule so the banner auto-shows whenever `demo-mode` is active:
+```css
+body.demo-mode #demoBanner { display: flex; }
+```
+The banner and the sticky-chrome offset are now always in sync from the very first paint. `showDemoBanner()` still sets `b.style.display='flex'` as a redundant no-op (harmless).  
+**Rule**: When pairing a sticky element offset (`top:Npx`) with a sibling element that provides that `N`px of height, both must be guaranteed visible at the same time. Use CSS class coupling, not JS timing.
+
+---
+
+### 4. Demo Mode — Relative Dates for Fake Workers
+**Symptom concern**: Hardcoded expiry dates on demo workers would become stale, breaking GO/WARNING/NO-GO status over time.  
+**Fix**: Use `demoDate(offsetDays)` helper everywhere in `loadDemoDefaults()`:
+```js
+function demoDate(offsetDays){
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+```
+- `demoDate(730)` = valid for ~2 years from today
+- `demoDate(14)` = expiring soon (WARNING)
+- `demoDate(-30)` = already expired (NO-GO)
+**Rule**: Never hardcode year-specific dates in demo data. Always use relative offsets from `new Date()`.
+
+---
+
+### 5. Demo Mode — Branding: TMC References Must Be Conditional
+**Symptom**: Demo mode showed "TMC Compliance", TM Construction logo, and `compliance@tmconstruction.nl` in the compliance report.  
+**Fixes applied**:
+- `showDemoBanner()` swaps `#headerLogoImg` src to WF SVG and sets `#headerAppTitle` to `'Work Force Compliance'`
+- `complianceReportText()` uses `${DEMO_MODE ? 'Work Force' : 'TMC'} Compliance Report`
+- `complianceReportRecipient()` falls back to `'hello@work-force.nl'` in demo mode
+- CSV download filename prefixed with `wf_` vs `tmc_` conditionally
+- `loadDemoDefaults()` sets `settings.complianceReportEmail = 'hello@work-force.nl'`
+- HTML input `value=""` cleared (was hardcoded `compliance@tmconstruction.nl`) — `renderComplianceReportSettings()` always populates it from `complianceReportRecipient()`
+
+**Rule**: Search for `tmconstruction`, `TMC`, `TM Construction` whenever adding any new text string. Every user-visible string that names the company must be conditional on `DEMO_MODE`.
+
+---
+
+### 6. Supabase Profiles RLS — Circular Policy Dependency
+**Symptom**: Admin could not approve/change roles for new users. Alert: "Role was not saved — Supabase RLS blocked the update."  
+**Root cause**: The RLS policies on `profiles` checked "is current user admin?" by querying `profiles` — but querying `profiles` requires the SELECT policy to pass, which runs the same query → circular → Supabase resolves to NULL → update silently blocked.  
+**Fix**: Run `migrations/fix_profiles_rls_circular.sql` in Supabase SQL Editor. It creates:
+```sql
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN LANGUAGE sql STABLE SECURITY DEFINER ...
+```
+A `SECURITY DEFINER` function bypasses RLS entirely when reading `profiles` to check admin status. All three policies (`profiles_select`, `profiles_insert`, `profiles_update`) are rebuilt to use `public.is_admin()` instead of the circular subquery.  
+**Rule**: Never write RLS policies on `profiles` that reference `profiles` inline. Always use a `SECURITY DEFINER` helper function.
+
+---
+
+### 7. Profile Approval Silently Fails — `org_id = NULL` on New Signups
+**Symptom**: Even after running `fix_profiles_rls_circular.sql`, the role approval still showed "Role was not saved." Zero rows returned by the update.  
+**Root cause**: The `handle_new_user()` trigger that creates a profile on signup did not include `org_id`. So new pending profiles had `org_id = NULL`. The update query filtered `.eq('org_id', currentOrgId || SITE_ORG_ID)` — in SQL, `NULL = '...'` is always false — so 0 rows matched even though RLS was now fixed.  
+**Fix**:
+1. In `app.html`, removed `.eq('org_id', ...)` from all three profile update calls (`updateUserRole`, `updateUserActive`, `quickApproveUser`). The `id` column is the Supabase auth UUID — unique — filtering by it alone is sufficient.
+2. Created `migrations/backfill_profiles_org_id.sql` to SET `org_id` on all existing NULL profiles and update the trigger to include `org_id` for future signups.
+
+**Rule**: When filtering a `UPDATE ... WHERE id = X` query, **do not add secondary column filters** (like `org_id`) unless you have verified that every row being updated definitely has that column set. A filter that doesn't match silently returns 0 rows and is indistinguishable from an RLS block. Never conflate "0 rows returned" with "RLS blocked" — always diagnose the filter chain first.
+
+---
+
+### 8. index.html — Hero Section Real Worker Names Leak
+**Symptom**: The hero mockup in the marketing page showed real production worker names (Adrian Mitrea, Alexandru Ciolos, Alexandru Leon, Gheorghe Pinau) and real project codes.  
+**Fix**: Replace all demo data in the hero section with entirely fictional names: J. van den Berg, M. Schmidt, P. Kowalski, D. Ionescu. `workerData` JS object keys renamed from `mitrea/ciolos/leon/pinau` to `berg/schmidt/kowalski/ionescu`. All `<tr>` HTML elements updated to match.  
+**Rule**: **Never copy real worker names, project names, or reference numbers into demo/marketing pages.** The `workerData` object in `index.html` is the single source of truth for hero panel data — always use the generic keys and fictional names defined there.
+
+---
+
+### 9. index.html — CSS Variable Scoping for Real App Classes in Marketing Page
+**Symptom**: When embedding real app CSS class names (`status-badge`, `go-dot`, etc.) in the marketing hero mockup, colours were wrong because `index.html` uses different CSS variable values than `app.html`.  
+**Root cause**: `index.html` defines `--navy: #1e3a5f`, `--red: #dc2626` etc., while `app.html` uses `--navy: #1a3082`, `--red: #c53030`.  
+**Fix**: Wrap the real-app mockup HTML in a container with scoped variable overrides:
+```css
+.demo-dashboard { --navy: #1a3082; --red: #c53030; /* etc. */ }
+```
+All descendant elements then inherit the correct values.  
+**Rule**: Never assume CSS variables have the same values across files. Always scope overrides to a wrapper class when mixing design systems.
+
+---
+
+### 10. Sticky Banner + Sticky Chrome — Two-Sticky Stack Requires Height Coupling
+**Pattern** (for future reference): The demo banner and main nav are both `position:sticky`. They form a stacked pair:
+```css
+#demoBanner { position:sticky; top:0; min-height:38px; }
+.sticky-chrome { position:sticky; top:0; }
+body.demo-mode .sticky-chrome { top:38px; } /* offset = banner height */
+body.demo-mode #demoBanner { display:flex; }  /* always visible when offset active */
+```
+The offset value (38px) must exactly match the banner's `min-height`. If the banner height changes, update both values together.  
+**Rule**: Keep sticky stack offsets and their matching element heights in sync. Document the coupling explicitly in CSS comments when the values are co-dependent.
+
+---
+
+### 11. `handle_new_user()` Trigger — Always Include `org_id`
+**Finding**: The Supabase `handle_new_user()` trigger that fires on every new auth signup creates a row in `profiles`. Any column that has a NOT NULL constraint or is used in app-layer filters **must** be set in this trigger — it cannot be left to the app to fill in afterwards (the user may never log in; the row already exists).  
+**Current trigger sets**: `id, email, full_name, role='no_access', active=FALSE, org_id=SITE_ORG_ID`  
+**Rule**: When adding new NOT NULL columns to `profiles`, also update `handle_new_user()` to include them and write a migration. Check `migrations/backfill_profiles_org_id.sql` as the template.
+
+---
+
+## Demo Mode — Full Architecture Reference
+
+| Constant / Key | Value | Purpose |
+|---|---|---|
+| `DEMO_MODE` | `new URLSearchParams(location.search).has('demo')` | True when `?demo=1` in URL |
+| `DEMO_SS_KEY` | `'wf_demo_v1'` | sessionStorage key for persisting demo state |
+| `SETTINGS_KEY` | `'tmc_settings_v1'` | localStorage key for settings |
+
+**Boot path** (demo): `sbBoot()` → `sbInitDemo()` → `loadDemoDefaults()` or `restoreDemoState()` → `showDemoBanner()` → renders  
+**Save path** (demo): `sbPersistAll()` → `saveDemoState()` → sessionStorage (no Supabase calls)  
+**Load path** (demo): All Supabase calls are guarded by `if(DEMO_MODE) return;`
+
+**`loadDemoDefaults()` sets up**:
+- 4 workers (NL-041, DE-027, BE-089, NL-055) with relative-date docs via `demoDate()`
+- 3 projects, 2 properties, 2 vehicles
+- `settings.complianceReportEmail = 'hello@work-force.nl'`
+- `fActive = 'all'` + button UI sync
+
+**`showDemoBanner()` does**:
+- `document.body.classList.add('demo-mode')` (also done early via inline script)
+- Makes `#demoBanner` visible (CSS now handles this, JS call is redundant but harmless)
+- Injects `🎭 Demo` pill + `Contact us` link into `#headerSyncWrap`
+- Swaps `#headerLogoImg` src to WF SVG
+- Sets `#headerAppTitle` text to `'Work Force Compliance'`
