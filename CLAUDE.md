@@ -229,6 +229,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `worker_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing anon workers to upload to worker-submissions/ |
 | `add_doc_set_item_info_fields.sql` | ⏳ Pending | Adds info_text and info_url columns to document_set_items |
 | `add_reject_delete_days_to_settings.sql` | ⏳ Pending | reject_delete_days column on settings table (Approvals auto-delete) |
+| `add_digest_sections_to_settings.sql` | ⏳ Pending — **run before implementing digest settings UI** | Adds `digest_sections JSONB` column to settings table. Stores per-org digest preferences: which sections enabled + look-ahead days per category. Backfills all existing orgs with defaults (all sections on). |
 | `add_doc_set_item_template.sql` | ⏳ Pending | template_file_name + template_file_path on document_set_items (worker-downloadable form templates) |
 | `worker_template_storage_policy.sql` | ⏳ Pending | Storage RLS policy allowing all sessions to read from doc-templates/ path |
 | `add_worker_types_to_settings.sql` | ⏳ Pending | worker_types JSONB column on settings table for custom worker type definitions |
