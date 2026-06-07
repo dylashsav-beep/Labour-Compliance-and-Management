@@ -51,7 +51,7 @@
 > | `daily-digest` edge function: service-role, no `org_id` filter, hardcoded TMC recipients | **CRITICAL** | ✅ **Fixed in code** — rewritten to loop per-org, filter every query by `org_id`, email each org's own compliance/owner address. **Must redeploy the edge function**; still do NOT schedule until redeployed. |
 > | Storage: `issued-docs/` + `doc-templates/` remain **public read** (anon worker portal downloads them via signed URL; anon can't be org-scoped in RLS) | Warning (residual) | ⏳ Open — close via a SECURITY DEFINER edge function that verifies the worker owns the path before returning a signed URL, then make these two policies authenticated/org-scoped. Lower sensitivity (company-issued forms / blank templates), not worker PII. |
 > | Stale single-param `get_worker_portal` + old `handle_new_user` in superseded migration files (re-runnable footguns; not org-scoped) | High (latent) | ⏳ Annotate "DO NOT RUN" headers |
-> | `submit_worker_document` RPC inserts submissions with `org_id = NULL` (orphaned, hidden from staff) | Warning | ⏳ Derive `org_id` from worker row |
+> | `submit_worker_document` RPC inserts submissions with `org_id = NULL` (orphaned, hidden from staff Approvals) | Warning | ✅ **Fixed** — `fix_worker_submission_org_id.sql` derives `org_id` from the worker row + backfills existing NULL-org submissions. |
 > | `get_worker_portal` `p_org_id DEFAULT NULL` = "match any org" (direct anon API only; all app clients now pass a concrete org) | Warning | ⏳ Harden RPC to reject NULL |
 > | ~20 `org_id: currentOrgId \|\| SITE_ORG_ID` write fallbacks in app.html | Warning | Safe via the load/sync/boot gates; convert to `if(!currentOrgId) return` opportunistically |
 
