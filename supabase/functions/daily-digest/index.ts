@@ -8,7 +8,10 @@ const SUPABASE_KEY    = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 // therefore MANDATORY that every query is filtered by org_id and the whole
 // run loops per organisation. Never query a tenant table here without
 // .eq('org_id', org.id) — doing so leaks one org's data into another's email.
-const FROM            = 'Work Force Compliance <onboarding@resend.dev>'
+
+// Set DIGEST_FROM in Supabase → Settings → Edge Functions → Secrets once your
+// domain is verified in Resend. Until then the sandbox fallback is used.
+const FROM = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
 const DEFAULT_WARNING_DAYS = 60   // fallback when an org has no warning_days set
 const ASSIGN_WARN     = 14        // days before assignment end to flag
 
