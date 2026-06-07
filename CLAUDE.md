@@ -6,6 +6,56 @@
 
 ---
 
+> ## 🔒 IMPORTANT — MULTI-TENANT DATA ISOLATION IS A HARD INVARIANT
+>
+> This app is **pooled multi-tenant**: every organisation's data lives in the
+> same Supabase tables, separated only by an `org_id` column and RLS. A single
+> mistake here exposes one customer's worker PII (passports, VOGs, BSNs) to
+> another. A cross-org leak is the most severe class of bug in this system.
+> **Every change must preserve these invariants. Never weaken one for convenience.**
+>
+> **Database (the primary guard — never rely on the app alone):**
+> 1. **Every tenant table has `org_id` AND RLS enabled AND only org-scoped policies.** A table with an `org_id` column but `relrowsecurity = false`, or with any extra `USING (true)` / role-wide policy, is a leak. RLS policies are **permissive and OR together** — one wide policy defeats all others.
+> 2. **When adding a table:** add `org_id uuid` (FK organisations), `ENABLE ROW LEVEL SECURITY`, and exactly two policies — `FOR SELECT … USING (org_id = current_org_id())` and `FOR ALL … USING (org_id = current_org_id()) WITH CHECK (org_id = current_org_id())`. Then update `sbCanWriteTable`, `sbLoadAll`, and the `org_id:oid` stamp in `sbPersistAll`.
+> 3. **Never drop RLS policies by a guessed name list.** Enumerate `pg_policies` and drop them all, then recreate (see `fix_rls_rebuild_all_policies.sql`). Legacy/Supabase-template names are unpredictable and survive name-based drops.
+> 4. **`SECURITY DEFINER` functions BYPASS RLS.** Any such function that touches tenant tables must scope org **manually** and derive `org_id` from a trusted source (the matched row or `auth.uid()`), never blindly from a caller-supplied parameter. Add `SET search_path = public`. Worker-portal RPCs must require a concrete `p_org_id` (reject NULL — NULL = "match any org" is a cross-org hole for direct anon API callers).
+> 5. **Service-role code (edge functions) bypasses RLS entirely** — it MUST filter every query by `org_id` and loop per-org. Never select a tenant table service-side without an `org_id` filter.
+>
+> **Application (`app.html`):**
+> 6. **Never resolve a logged-in user's org to `SITE_ORG_ID` as a fallback.** Only the explicit owner-email override may use `SITE_ORG_ID`. An unassigned user resolves to `currentOrgId = null` and is gated out of all load/sync (`sbLoadProfile`, `sbLoadAll`, `sbPersistAll`, `sbBoot`).
+> 7. **Never seed default/demo data into a new org** (no fake projects/workers). Seeds get persisted into whatever org is active.
+> 8. **localStorage caches (`tmc_*`/`btm_*`) are global to the browser, not per-org.** They must be wiped on logout, on the no-workspace gate, and on org switch (`sbClearLocalCache`, `wf_cache_org` marker).
+> 9. Prefer `if(!currentOrgId) return;` over `org_id: currentOrgId || SITE_ORG_ID` in any NEW write helper — the `|| SITE_ORG_ID` pattern is brittle and only safe today because of the three gates.
+>
+> **Supabase Storage:**
+> 10. **The `tmc-documents` bucket is shared across all orgs.** Document file paths must be namespaced by `org_id` (e.g. `${org_id}/workers/${wid}/…`) and storage RLS must check `(storage.foldername(name))[1] = current_org_id()::text`. Paths keyed only by worker-id are NOT org-isolated. *(See "Open isolation gaps" below — this is being remediated.)*
+>
+> **After ANY tenancy-related change, re-run this audit and confirm a fresh org sees zero rows:**
+> ```sql
+> -- (a) any tenant table with RLS OFF?  -> must return zero rows
+> SELECT t.table_name FROM information_schema.columns c
+> JOIN information_schema.tables t ON t.table_schema=c.table_schema AND t.table_name=c.table_name
+> JOIN pg_class pc ON pc.relname=t.table_name
+> JOIN pg_namespace n ON n.oid=pc.relnamespace AND n.nspname='public'
+> WHERE c.table_schema='public' AND c.column_name='org_id'
+>   AND t.table_type='BASE TABLE' AND pc.relrowsecurity=false;
+> -- (b) any policy with a wide-open qual?  -> inspect every row
+> SELECT tablename, policyname, cmd, roles::text, qual FROM pg_policies
+> WHERE schemaname='public' ORDER BY tablename, policyname;
+> ```
+>
+> ### Open isolation gaps (from the 2026-06 full audit — fix before scaling tenants)
+> | Gap | Severity | Status |
+> |---|---|---|
+> | Storage bucket `tmc-documents` not org-scoped (blanket `authenticated` read of whole bucket; paths keyed by worker-id) | **CRITICAL** | ⏳ Open — needs org-prefixed paths + org-scoped storage RLS |
+> | `daily-digest` edge function: service-role, no `org_id` filter, hardcoded TMC recipients — would email all orgs' data to TMC | **CRITICAL** | ⏳ Open — NOT scheduled yet (`schedule_daily_digest.sql` pending); must be rewritten per-org before enabling |
+> | Stale single-param `get_worker_portal` + old `handle_new_user` in superseded migration files (re-runnable footguns; not org-scoped) | High (latent) | ⏳ Annotate "DO NOT RUN" |
+> | `submit_worker_document` RPC inserts submissions with `org_id = NULL` (orphaned, hidden from staff) | Warning | ⏳ Derive `org_id` from worker row |
+> | `get_worker_portal` `p_org_id DEFAULT NULL` = "match any org" (direct anon API only) | Warning | App clients now always pass org; harden RPC to reject NULL |
+> | ~20 `org_id: currentOrgId \|\| SITE_ORG_ID` write fallbacks in app.html | Warning | Safe via gates; convert to `if(!currentOrgId) return` opportunistically |
+
+---
+
 ## Site Structure — Four HTML Files
 
 | File | Purpose | Notes |
