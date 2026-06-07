@@ -980,7 +980,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   <span><strong>Demo Mode</strong> — Explore the full app. No sign-in needed. Changes are saved to your browser only.</span>
   <span style="flex:1;min-width:12px;"></span>
   <button onclick="resetDemoData()" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:3px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:inherit;font-weight:600;">Reset Demo</button>
-  <a href="app.html" style="background:#fff;color:#92400e;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Sign In →</a>
+  <a href="index.html" style="background:#16a34a;border:1px solid #16a34a;color:#fff;padding:3px 12px;border-radius:4px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap;">Request Trial</a>
 </div>
 <div class="sticky-chrome">
 <header>
@@ -2659,6 +2659,7 @@ function sbShowLoginPrompt(show, msg){
   el.classList.toggle('open', !!show);
 }
 function sbRefreshAuthButtons(){
+  if(DEMO_MODE) return;
   const hasSession = !!sbSession;
   const canUseApp = !!sbSession && !!sbUserActive && sbUserRole !== 'no_access';
   // Legacy bar buttons (bar is hidden via CSS; kept for compat)
@@ -3167,9 +3168,11 @@ function sbInitDemo(){
   try{ applyRoleUI(); }catch(e){}
   showDemoBanner();
   if(typeof sbSetStatus==='function') sbSetStatus('Demo mode — data saved locally',true);
-  // Guarantee workers render after all sync init — setFA sets fActive, syncs button UI, calls renderTable
-  fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = '';
-  setTimeout(()=>{ try{ setFA('all'); }catch(e){ console.warn('[Demo] renderTable failed:',e); } }, 0);
+  // Render workers: reset all filters then call setFA synchronously + safety-net re-render
+  fStatus = new Set(); fDocSet = new Set(); fProj = new Set(); fSearch = ''; fMissingDoc = '';
+  try{ setFA('all'); }catch(e){ console.warn('[Demo] setFA failed:',e); }
+  // Safety net: if workers still not showing after 300ms (e.g. due to async render timing), re-render
+  setTimeout(()=>{ if(typeof setFA==='function'){ try{ setFA('all'); }catch(e){} } }, 300);
 }
 
 function showDemoBanner(){
