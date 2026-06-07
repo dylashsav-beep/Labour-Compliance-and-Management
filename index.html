@@ -1021,85 +1021,106 @@ footer{
           <div class="mockup-url">work-force.nl/app.html</div>
           <div class="mockup-sync">● Synced</div>
         </div>
-        <!-- Tabs -->
-        <div class="mockup-tabs">
-          <div class="mockup-tab active">Workers</div>
-          <div class="mockup-tab">Roster</div>
-          <div class="mockup-tab">Resources</div>
-          <div class="mockup-tab">Settings</div>
-        </div>
-        <!-- Stats row -->
-        <div class="mockup-stats">
-          <div class="mockup-stat">
-            <div class="stat-num-lg num-red">61</div>
-            <div><div class="stat-lbl">NO-GO</div></div>
-          </div>
-          <div class="mockup-stat">
-            <div class="stat-num-lg num-amber">0</div>
-            <div><div class="stat-lbl">WARNING</div></div>
-          </div>
-          <div class="mockup-stat">
-            <div class="stat-num-lg num-green">1</div>
-            <div><div class="stat-lbl">GO</div></div>
+        <!-- Real-app nav tabs -->
+        <div class="app-nav-bar" style="border-radius:0;">
+          <div class="app-nav-tabs">
+            <div class="app-nav-tab active">Workers</div>
+            <div class="app-nav-tab">Assignments</div>
+            <div class="app-nav-tab">Resources</div>
+            <div class="app-nav-tab">Settings</div>
           </div>
         </div>
-        <!-- Worker table with slide-in panel -->
-        <div class="mockup-wrapper" id="heroMockupWrapper">
-          <table class="mockup-table">
-            <thead>
-              <tr>
-                <th>Worker</th>
-                <th>Project</th>
-                <th>Score</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr onclick="openHeroPanel('mitrea')" data-worker="mitrea" class="nogo-row">
-                <td><div class="worker-name-cell">Adrian Mitrea</div><div class="worker-sub">ZZP · EU</div></td>
-                <td><span class="proj-tag">00012 - AMS RNG</span></td>
-                <td style="color:var(--red);font-weight:700;">45%</td>
-                <td><span class="badge badge-nogo">NO-GO</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('ciolos')" data-worker="ciolos" class="nogo-row">
-                <td><div class="worker-name-cell">Alexandru Ciolos</div><div class="worker-sub">ZZP · EU</div></td>
-                <td><span class="proj-tag">00002 - Schiphol</span></td>
-                <td style="color:var(--amber);font-weight:700;">55%</td>
-                <td><span class="badge badge-nogo">NO-GO</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('leon')" data-worker="leon" class="nogo-row">
-                <td><div class="worker-name-cell">Alexandru Leon</div><div class="worker-sub">Employed · NL</div></td>
-                <td><span class="proj-tag">Rotterdam TMCP</span></td>
-                <td style="color:var(--amber);font-weight:700;">50%</td>
-                <td><span class="badge badge-nogo">NO-GO</span></td>
-              </tr>
-              <tr onclick="openHeroPanel('pinau')" data-worker="pinau">
-                <td><div class="worker-name-cell">Gheorghe Pinau</div><div class="worker-sub">ZZP · EU</div></td>
-                <td><span class="proj-tag">00008 - Schagen</span></td>
-                <td style="color:var(--green);font-weight:700;">100%</td>
-                <td><span class="badge badge-go">GO</span></td>
-              </tr>
-            </tbody>
-          </table>
-          <!-- Notification -->
-          <div class="mockup-notification">
-            <span class="notif-icon">📧</span>
-            <span>Daily digest ready — 61 workers with missing required docs</span>
+        <!-- Real-app scoped content -->
+        <div class="demo-dashboard" style="border:none;border-radius:0;box-shadow:none;">
+          <!-- 4-stat row with colored left borders -->
+          <div class="stats-row">
+            <div class="stat s-red"><div class="stat-label">No-Go</div><div class="stat-value">2</div></div>
+            <div class="stat s-amber"><div class="stat-label">Warning</div><div class="stat-value">1</div></div>
+            <div class="stat s-green"><div class="stat-label">Go</div><div class="stat-value">4</div></div>
+            <div class="stat s-blue"><div class="stat-label">Active</div><div class="stat-value">7</div></div>
           </div>
-          <!-- Slide-in detail panel -->
-          <div class="worker-detail-panel" id="heroPanel">
-            <div class="panel-header">
-              <div>
-                <div class="panel-worker-name" id="heroPanelName">—</div>
-                <div class="panel-worker-proj" id="heroPanelProj">—</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:0.5rem;">
-                <div id="heroPanelBadge"></div>
-                <button class="panel-close" onclick="closeHeroPanel()">×</button>
-              </div>
+          <!-- Worker table with slide-in panel -->
+          <div class="mockup-wrapper" id="heroMockupWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th style="min-width:130px;">Worker</th>
+                  <th>Type</th>
+                  <th>Assignment</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr onclick="openHeroPanel('berg')" data-worker="berg" style="cursor:pointer;background:#fff5f5;">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#64748b;">JB</div>
+                      <div><div class="worker-name">J. van den Berg</div><div class="worker-id">NL-041 · NL</div></div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Amsterdam North DC</span></td>
+                  <td><span class="score-num" style="color:#c53030;">45%</span></td>
+                  <td><span class="status-badge nogo"><span class="go-dot nogo"></span>No-Go</span></td>
+                </tr>
+                <tr onclick="openHeroPanel('schmidt')" data-worker="schmidt" style="cursor:pointer;background:#fff5f5;">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#0d9488;">MS</div>
+                      <div><div class="worker-name">M. Schmidt</div><div class="worker-id">DE-027 · DE</div></div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Brussels Infra Site</span></td>
+                  <td><span class="score-num" style="color:#c53030;">63%</span></td>
+                  <td><span class="status-badge nogo"><span class="go-dot nogo"></span>No-Go</span></td>
+                </tr>
+                <tr onclick="openHeroPanel('kowalski')" data-worker="kowalski" style="cursor:pointer;">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#7c3aed;">PK</div>
+                      <div><div class="worker-name">P. Kowalski</div><div class="worker-id">BE-089 · BE</div></div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge blue">Employed</span></td>
+                  <td><span class="assign-tag">Amsterdam North DC</span></td>
+                  <td><span class="score-num" style="color:#b45309;">75%</span></td>
+                  <td><span class="status-badge warning"><span class="go-dot warning"></span>Warning</span></td>
+                </tr>
+                <tr onclick="openHeroPanel('ionescu')" data-worker="ionescu" style="cursor:pointer;">
+                  <td>
+                    <div class="worker-cell">
+                      <div class="avatar" style="background:#d97706;">DI</div>
+                      <div><div class="worker-name">D. Ionescu</div><div class="worker-id">NL-055 · RO</div></div>
+                    </div>
+                  </td>
+                  <td><span class="type-badge zzp">ZZP</span></td>
+                  <td><span class="assign-tag">Rotterdam Civil Works</span></td>
+                  <td><span class="score-num" style="color:#276749;">100%</span></td>
+                  <td><span class="status-badge go"><span class="go-dot go"></span>Go</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <!-- Notification -->
+            <div style="padding:9px 12px;background:#fffbeb;border-top:1px solid #fde68a;display:flex;align-items:center;gap:8px;font-size:11px;color:#92400e;font-weight:500;">
+              <span>📧</span><span>Daily digest ready — 2 workers with missing required docs</span>
             </div>
-            <div class="panel-docs-title">Document Checklist</div>
-            <div class="panel-doc-list" id="heroPanelDocs"></div>
+            <!-- Slide-in detail panel -->
+            <div class="worker-detail-panel" id="heroPanel">
+              <div class="panel-header">
+                <div>
+                  <div class="panel-worker-name" id="heroPanelName">—</div>
+                  <div class="panel-worker-proj" id="heroPanelProj">—</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                  <div id="heroPanelBadge"></div>
+                  <button class="panel-close" onclick="closeHeroPanel()">×</button>
+                </div>
+              </div>
+              <div class="panel-docs-title">Document Checklist</div>
+              <div class="panel-doc-list" id="heroPanelDocs"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -2046,21 +2067,21 @@ const observer = new IntersectionObserver((entries) => {
 fadeEls.forEach(el => observer.observe(el));
 
 // ── Worker data ──
-// ── Hero panel worker data (kept for hero section) ──
+// ── Hero panel worker data ──
 const workerData = {
-  mitrea: {
+  berg: {
     name: 'J. van den Berg',
     project: 'Amsterdam North DC · ZZP · Ref NL-041',
     badge: 'nogo',
     docs: [
       {icon:'✗',ok:'miss',name:'VCA Certificate',date:'Required — not uploaded'},
       {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
-      {icon:'⚠',ok:'warn',name:'KvK Extract',date:'Expiring in 12 days'},
+      {icon:'⚠',ok:'warn',name:'KvK Extract',date:'Expiring in 14 days'},
       {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2029'},
       {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2027'},
     ]
   },
-  ciolos: {
+  schmidt: {
     name: 'M. Schmidt',
     project: 'Brussels Infra Site · ZZP · Ref DE-027',
     badge: 'nogo',
@@ -2068,30 +2089,32 @@ const workerData = {
       {icon:'✗',ok:'miss',name:'Passport',date:'Required — not uploaded'},
       {icon:'✗',ok:'miss',name:'VOG Certificate',date:'Required — not uploaded'},
       {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2027'},
       {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2027'},
     ]
   },
-  leon: {
+  kowalski: {
     name: 'P. Kowalski',
-    project: 'Antwerp Slab Works · Employed · Ref BE-089',
+    project: 'Amsterdam North DC · Employed · Ref BE-089',
     badge: 'warn',
     docs: [
-      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expires 12 Jul 2026'},
+      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expiring in 19 days'},
       {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2030'},
       {icon:'✓',ok:'ok',name:'Employment Contract',date:'Valid'},
       {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
+      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2028'},
     ]
   },
-  pinau: {
+  ionescu: {
     name: 'D. Ionescu',
-    project: 'Rotterdam Civil · ZZP · Ref NL-055',
+    project: 'Rotterdam Civil Works · ZZP · Ref NL-055',
     badge: 'go',
     docs: [
       {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2028'},
       {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2031'},
       {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2026'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2027'},
+      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2028'},
+      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2028'},
     ]
   }
 };
