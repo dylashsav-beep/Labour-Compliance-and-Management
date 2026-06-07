@@ -44,15 +44,16 @@
 > WHERE schemaname='public' ORDER BY tablename, policyname;
 > ```
 >
-> ### Open isolation gaps (from the 2026-06 full audit — fix before scaling tenants)
+> ### Open isolation gaps (from the 2026-06 full audit)
 > | Gap | Severity | Status |
 > |---|---|---|
-> | Storage bucket `tmc-documents` not org-scoped (blanket `authenticated` read of whole bucket; paths keyed by worker-id) | **CRITICAL** | ⏳ Open — needs org-prefixed paths + org-scoped storage RLS |
-> | `daily-digest` edge function: service-role, no `org_id` filter, hardcoded TMC recipients — would email all orgs' data to TMC | **CRITICAL** | ⏳ Open — NOT scheduled yet (`schedule_daily_digest.sql` pending); must be rewritten per-org before enabling |
-> | Stale single-param `get_worker_portal` + old `handle_new_user` in superseded migration files (re-runnable footguns; not org-scoped) | High (latent) | ⏳ Annotate "DO NOT RUN" |
+> | Storage bucket `tmc-documents` not org-scoped (whole-bucket `authenticated` read/write/delete; paths keyed by worker-id) | **CRITICAL** | ✅ **Fixed** — upload paths org-prefixed (`${org_id}/…`) in app.html + worker.html; `fix_storage_org_isolation.sql` drops the bucket-wide policies and adds org-scoped ones with a TMC grandfather. Worker PII (`workers/`, `worker-submissions/`, `compliance/`, `assignments/`, `tool-assignments/`) is now org-isolated. |
+> | `daily-digest` edge function: service-role, no `org_id` filter, hardcoded TMC recipients | **CRITICAL** | ✅ **Fixed in code** — rewritten to loop per-org, filter every query by `org_id`, email each org's own compliance/owner address. **Must redeploy the edge function**; still do NOT schedule until redeployed. |
+> | Storage: `issued-docs/` + `doc-templates/` remain **public read** (anon worker portal downloads them via signed URL; anon can't be org-scoped in RLS) | Warning (residual) | ⏳ Open — close via a SECURITY DEFINER edge function that verifies the worker owns the path before returning a signed URL, then make these two policies authenticated/org-scoped. Lower sensitivity (company-issued forms / blank templates), not worker PII. |
+> | Stale single-param `get_worker_portal` + old `handle_new_user` in superseded migration files (re-runnable footguns; not org-scoped) | High (latent) | ⏳ Annotate "DO NOT RUN" headers |
 > | `submit_worker_document` RPC inserts submissions with `org_id = NULL` (orphaned, hidden from staff) | Warning | ⏳ Derive `org_id` from worker row |
-> | `get_worker_portal` `p_org_id DEFAULT NULL` = "match any org" (direct anon API only) | Warning | App clients now always pass org; harden RPC to reject NULL |
-> | ~20 `org_id: currentOrgId \|\| SITE_ORG_ID` write fallbacks in app.html | Warning | Safe via gates; convert to `if(!currentOrgId) return` opportunistically |
+> | `get_worker_portal` `p_org_id DEFAULT NULL` = "match any org" (direct anon API only; all app clients now pass a concrete org) | Warning | ⏳ Harden RPC to reject NULL |
+> | ~20 `org_id: currentOrgId \|\| SITE_ORG_ID` write fallbacks in app.html | Warning | Safe via the load/sync/boot gates; convert to `if(!currentOrgId) return` opportunistically |
 
 ---
 
@@ -241,6 +242,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_org_id_indexes.sql` | ✅ Run | Phase 0: org_id indexes on all hot tables. Uses **plain `CREATE INDEX`** (not CONCURRENTLY) so it runs in the SQL Editor's transaction block. Fine at current scale; use CONCURRENTLY outside a transaction if rebuilding on a large busy table later. |
 | `create_workspace_signup.sql` | ✅ Run | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger. `handle_new_user()` sets `SET search_path = public` and inserts into `public.profiles` (the trigger fires in the auth schema; without this it failed with "relation profiles does not exist", 42P01). `create_workspace()` guards `already_in_org`. |
 | `fix_rls_rebuild_all_policies.sql` | ✅ Run | **CRITICAL security fix.** Drops EVERY policy on each app table dynamically (via `pg_policies`) and recreates only org-scoped ones. The original single-tenant app had a `USING(true)` read-all policy named `auth_only` (plus `workers_own`, `workers_staff`) whose names did not match `add_multi_tenancy.sql`'s fixed drop list, so they survived and ORed over the org policy — exposing every org's workers to any authenticated user. Always drop ALL policies dynamically, never by a guessed name list. |
+| `fix_storage_org_isolation.sql` | ⏳ Pending — **run before onboarding any org that uploads documents** | **CRITICAL.** Org-isolates the `tmc-documents` Storage bucket. Drops the whole-bucket `authenticated` read/write/delete policies (a cross-org worker-PII leak) and the public/auth issued-docs management policies; adds org-scoped policies keyed on `(storage.foldername(name))[1] = current_org_id()::text` with a TMC grandfather for existing non-prefixed files. Pairs with the org-prefixed upload paths already in app.html/worker.html. Leaves `diary_photos_*` (other project) untouched. |
 
 ---
 
