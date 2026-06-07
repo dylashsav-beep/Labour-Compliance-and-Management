@@ -303,7 +303,7 @@ function hide(id){ document.getElementById(id).style.display='none'; }
 
 function msg(id, text, type){
   const el=document.getElementById(id);
-  el.textContent=text;
+  el.innerHTML=text;   // messages are static, developer-controlled strings (some contain links)
   el.className='msg '+type;
   el.style.display='block';
 }
@@ -461,6 +461,7 @@ async function doCreateWorkspace(){
     if(m.includes('slug_taken'))       msg('workspaceMsg','That URL was just taken. Please choose another.','error');
     else if(m.includes('invalid_slug'))msg('workspaceMsg','Invalid URL format. Use only letters, numbers, and hyphens.','error');
     else if(m.includes('reserved_slug'))msg('workspaceMsg','That URL is reserved. Please choose another.','error');
+    else if(m.includes('already_in_org'))msg('workspaceMsg','This account already belongs to a workspace. <a href="login.html" style="text-decoration:underline;">Sign in instead →</a>','error');
     else                                msg('workspaceMsg', e.message||'Could not create workspace. Try again.','error');
     setBtn('btnWorkspace','Create Workspace',false);
   }

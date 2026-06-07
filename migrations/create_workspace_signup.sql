@@ -49,11 +49,20 @@ DECLARE
   v_uid      uuid  := auth.uid();
   v_email    text;
   v_org_id   uuid;
+  v_cur_org  uuid;
   v_trial_end timestamptz := now() + interval '30 days';
 BEGIN
   -- Must be authenticated
   IF v_uid IS NULL THEN
     RAISE EXCEPTION 'not_authenticated';
+  END IF;
+
+  -- Guard: refuse if the caller already belongs to an org. Without this an
+  -- existing user (e.g. a TMC admin who reused their email at signup) would
+  -- have their profile reassigned to the new org and be pulled out of theirs.
+  SELECT org_id INTO v_cur_org FROM profiles WHERE id = v_uid;
+  IF v_cur_org IS NOT NULL THEN
+    RAISE EXCEPTION 'already_in_org';
   END IF;
 
   -- Validate slug: lowercase letters, numbers, hyphens only, 3-40 chars
