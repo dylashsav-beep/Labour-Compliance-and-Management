@@ -194,6 +194,7 @@ END $$;
 DO $$ BEGIN
   PERFORM _drop_policy_if_exists('organisations', 'org members can read their org');
   PERFORM _drop_policy_if_exists('organisations', 'anon can read orgs');
+  PERFORM _drop_policy_if_exists('organisations', 'anon can read orgs by slug');
   PERFORM _drop_policy_if_exists('organisations', 'org admins can update their org');
 END $$;
 CREATE POLICY "org members can read their org"   ON organisations FOR SELECT TO authenticated USING (id = current_org_id());
@@ -207,6 +208,9 @@ DO $$ BEGIN
   PERFORM _drop_policy_if_exists('profiles', 'auth users can write profiles');
   PERFORM _drop_policy_if_exists('profiles', 'Users can view their own profile');
   PERFORM _drop_policy_if_exists('profiles', 'Users can update their own profile');
+  PERFORM _drop_policy_if_exists('profiles', 'own profile full access');
+  PERFORM _drop_policy_if_exists('profiles', 'org members read all profiles');
+  PERFORM _drop_policy_if_exists('profiles', 'org admin manage profiles');
 END $$;
 -- Users can always read/update their own profile; org members can read all profiles in their org
 CREATE POLICY "own profile full access"          ON profiles FOR ALL       TO authenticated USING (id = auth.uid()) WITH CHECK (id = auth.uid());
@@ -240,6 +244,9 @@ BEGIN
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', 'auth users can write '||t, t);
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', 'authenticated read '||t, t);
     EXECUTE format('DROP POLICY IF EXISTS %I ON %I', 'authenticated write '||t, t);
+    -- Drop the new org-scoped names too, so this migration is safely re-runnable
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', 'org read '||t, t);
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', 'org write '||t, t);
     -- Create org-scoped policies
     EXECUTE format(
       'CREATE POLICY %I ON %I FOR SELECT TO authenticated USING (org_id = current_org_id())',
@@ -260,6 +267,9 @@ DO $$ BEGIN
   PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'auth users can read return requests');
   PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'auth users can write return requests');
   PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'anon can insert return requests');
+  PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'org read return requests');
+  PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'org write return requests');
+  PERFORM _drop_policy_if_exists('worker_resource_return_requests', 'anon insert return requests');
   EXECUTE 'CREATE POLICY "org read return requests" ON worker_resource_return_requests FOR SELECT TO authenticated USING (org_id = current_org_id())';
   EXECUTE 'CREATE POLICY "org write return requests" ON worker_resource_return_requests FOR ALL TO authenticated USING (org_id = current_org_id()) WITH CHECK (org_id = current_org_id())';
   EXECUTE 'CREATE POLICY "anon insert return requests" ON worker_resource_return_requests FOR INSERT TO anon WITH CHECK (true)';
@@ -271,6 +281,9 @@ DO $$ BEGIN
     EXECUTE 'DROP POLICY IF EXISTS "auth users can read worker_document_submissions" ON worker_document_submissions';
     EXECUTE 'DROP POLICY IF EXISTS "auth users can write worker_document_submissions" ON worker_document_submissions';
     EXECUTE 'DROP POLICY IF EXISTS "anon can insert worker_document_submissions" ON worker_document_submissions';
+    EXECUTE 'DROP POLICY IF EXISTS "org read submissions" ON worker_document_submissions';
+    EXECUTE 'DROP POLICY IF EXISTS "org write submissions" ON worker_document_submissions';
+    EXECUTE 'DROP POLICY IF EXISTS "anon insert submissions" ON worker_document_submissions';
     EXECUTE 'CREATE POLICY "org read submissions" ON worker_document_submissions FOR SELECT TO authenticated USING (org_id = current_org_id())';
     EXECUTE 'CREATE POLICY "org write submissions" ON worker_document_submissions FOR ALL TO authenticated USING (org_id = current_org_id()) WITH CHECK (org_id = current_org_id())';
     EXECUTE 'CREATE POLICY "anon insert submissions" ON worker_document_submissions FOR INSERT TO anon WITH CHECK (true)';
@@ -282,6 +295,8 @@ DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'roster_week_allocations') THEN
     EXECUTE 'DROP POLICY IF EXISTS "auth users can read roster_week_allocations" ON roster_week_allocations';
     EXECUTE 'DROP POLICY IF EXISTS "auth users can write roster_week_allocations" ON roster_week_allocations';
+    EXECUTE 'DROP POLICY IF EXISTS "org read roster" ON roster_week_allocations';
+    EXECUTE 'DROP POLICY IF EXISTS "org write roster" ON roster_week_allocations';
     EXECUTE 'CREATE POLICY "org read roster" ON roster_week_allocations FOR SELECT TO authenticated USING (org_id = current_org_id())';
     EXECUTE 'CREATE POLICY "org write roster" ON roster_week_allocations FOR ALL TO authenticated USING (org_id = current_org_id()) WITH CHECK (org_id = current_org_id())';
   END IF;
