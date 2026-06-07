@@ -5592,7 +5592,7 @@ async function sbWorkerDirectLogin(){
   sbMsg('Signing in…');
   try{
     const c=sbInitClient();
-    const {data:portalData,error}=await c.rpc('get_worker_portal',{p_email:email,p_org_id:SITE_ORG_ID});
+    const {data:portalData,error}=await c.rpc('get_worker_portal',{p_email:email,p_org_id:currentOrgId||SITE_ORG_ID});
     if(error) throw error;
     if(!portalData){
       sbMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);

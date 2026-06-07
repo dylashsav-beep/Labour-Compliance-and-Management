@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create your Work Force workspace</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1a3082;--navy-d:#112268;
+  --text:#1a2340;--text-m:#4a5568;--text-l:#7a8ba8;
+  --border:#dde3ec;--bg:#f5f7fa;
+  --red:#c53030;--green:#276749;--amber:#92400e;
+}
+body{
+  background:var(--bg);
+  font-family:'Inter',-apple-system,sans-serif;
+  font-size:14px;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+.header{
+  background:var(--navy);
+  padding:0 32px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.header-brand{
+  color:#fff;font-size:17px;font-weight:700;
+  letter-spacing:-.02em;text-decoration:none;
+}
+.header-link{
+  color:rgba(255,255,255,.75);font-size:13px;text-decoration:none;
+}
+.header-link:hover{color:#fff;}
+
+.page{
+  flex:1;display:flex;align-items:flex-start;justify-content:center;
+  padding:48px 16px;
+}
+
+/* ── Card ── */
+.card{
+  background:#fff;
+  border-radius:14px;
+  box-shadow:0 4px 24px rgba(0,0,0,.08);
+  width:100%;max-width:480px;
+  padding:40px 36px;
+}
+.card-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.card-logo-text{font-size:18px;font-weight:700;color:var(--navy);letter-spacing:-.02em;}
+.card-logo-sub{font-size:12px;color:var(--text-l);margin-top:1px;}
+
+.step-label{
+  font-size:11px;font-weight:600;color:var(--navy);
+  letter-spacing:.06em;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.card-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.card-sub{font-size:13px;color:var(--text-m);margin-bottom:28px;line-height:1.55;}
+
+/* ── Steps progress ── */
+.steps{
+  display:flex;gap:6px;margin-bottom:28px;
+}
+.step-dot{
+  height:4px;border-radius:2px;flex:1;
+  background:var(--border);transition:background .2s;
+}
+.step-dot.active{background:var(--navy);}
+.step-dot.done{background:#93c5fd;}
+
+/* ── Form ── */
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px;}
+.field input{
+  width:100%;padding:11px 14px;
+  border:1.5px solid var(--border);border-radius:8px;
+  font-size:14px;font-family:inherit;color:var(--text);
+  transition:border-color .15s;outline:none;
+}
+.field input:focus{border-color:var(--navy);}
+.field input.input-error{border-color:var(--red);}
+.field input.input-ok{border-color:#38a169;}
+.field-hint{font-size:11px;color:var(--text-l);margin-top:5px;line-height:1.5;}
+.field-hint.hint-error{color:var(--red);}
+.field-hint.hint-ok{color:#276749;}
+
+.slug-prefix{
+  font-size:13px;color:var(--text-l);margin-bottom:4px;
+}
+.slug-preview{
+  font-weight:600;color:var(--navy);
+}
+
+.btn-primary{
+  width:100%;padding:13px;
+  background:var(--navy);color:#fff;
+  border:none;border-radius:8px;
+  font-size:14px;font-weight:600;font-family:inherit;
+  cursor:pointer;transition:background .15s;
+}
+.btn-primary:hover{background:var(--navy-d);}
+.btn-primary:disabled{background:#93a5c8;cursor:not-allowed;}
+
+.btn-secondary{
+  width:100%;padding:11px;
+  background:transparent;color:var(--text-m);
+  border:1.5px solid var(--border);border-radius:8px;
+  font-size:13px;font-weight:500;font-family:inherit;
+  cursor:pointer;transition:all .15s;margin-top:10px;
+}
+.btn-secondary:hover{border-color:var(--navy);color:var(--navy);}
+
+.msg{
+  font-size:13px;padding:10px 14px;border-radius:7px;
+  margin-top:16px;display:none;line-height:1.5;
+}
+.msg.error{background:#fff5f5;color:var(--red);border:1px solid #fed7d7;}
+.msg.success{background:#f0fff4;color:var(--green);border:1px solid #c6f6d5;}
+.msg.warn{background:#fffbeb;color:var(--amber);border:1px solid #fde68a;}
+
+.divider{
+  display:flex;align-items:center;gap:10px;
+  margin:22px 0;color:var(--text-l);font-size:12px;
+}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.sign-in-link{
+  font-size:13px;text-align:center;color:var(--text-m);margin-top:18px;
+}
+.sign-in-link a{color:var(--navy);font-weight:600;text-decoration:none;}
+.sign-in-link a:hover{text-decoration:underline;}
+
+/* ── Success card ── */
+.success-icon{
+  width:64px;height:64px;margin:0 auto 20px;
+  background:#f0fff4;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;
+}
+.success-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px;text-align:center;}
+.success-sub{font-size:13px;color:var(--text-m);text-align:center;line-height:1.6;margin-bottom:24px;}
+.workspace-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  background:#eff6ff;border:1px solid #bfdbfe;
+  border-radius:6px;padding:4px 10px;
+  font-size:12px;font-weight:600;color:var(--navy);
+  margin:0 auto 24px;display:flex;width:fit-content;
+}
+
+footer{
+  text-align:center;padding:20px;
+  font-size:12px;color:var(--text-l);
+}
+footer a{color:var(--text-l);text-decoration:none;}
+footer a:hover{color:var(--text);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="header-brand" href="index.html">work-force.nl</a>
+  <a class="header-link" href="login.html">Sign In →</a>
+</div>
+
+<div class="page">
+  <div class="card">
+    <div class="card-logo">
+      <div style="font-size:0;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="42" height="42" viewBox="0 0 42 42">
+          <rect width="42" height="42" rx="10" fill="#1a3082"/>
+          <text x="21" y="27" font-family="Inter,Arial,sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle" letter-spacing="-0.5">WF</text>
+        </svg>
+      </div>
+      <div>
+        <div class="card-logo-text">Work Force</div>
+        <div class="card-logo-sub">Labour Compliance &amp; Management</div>
+      </div>
+    </div>
+
+    <!-- Step 1: Account details -->
+    <div id="viewAccount">
+      <div class="steps">
+        <div class="step-dot active" id="dot1"></div>
+        <div class="step-dot" id="dot2"></div>
+        <div class="step-dot" id="dot3"></div>
+      </div>
+      <div class="step-label">Step 1 of 3</div>
+      <div class="card-title">Create your account</div>
+      <div class="card-sub">Start your 30-day free trial. No credit card required.</div>
+
+      <div class="field">
+        <label for="signupName">Full name</label>
+        <input type="text" id="signupName" placeholder="Jan de Vries" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label for="signupEmail">Work email</label>
+        <input type="email" id="signupEmail" placeholder="jan@yourcompany.com" autocomplete="email"/>
+      </div>
+      <div class="field">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="At least 8 characters" autocomplete="new-password"/>
+        <div class="field-hint">At least 8 characters</div>
+      </div>
+
+      <button class="btn-primary" id="btnAccount" onclick="doCreateAccount()">Continue</button>
+      <div class="msg" id="accountMsg"></div>
+
+      <div class="sign-in-link">Already have an account? <a href="login.html">Sign in</a></div>
+    </div>
+
+    <!-- Step 2: Workspace details -->
+    <div id="viewWorkspace" style="display:none;">
+      <div class="steps">
+        <div class="step-dot done" id="dot1b"></div>
+        <div class="step-dot active" id="dot2b"></div>
+        <div class="step-dot" id="dot3b"></div>
+      </div>
+      <div class="step-label">Step 2 of 3</div>
+      <div class="card-title">Set up your workspace</div>
+      <div class="card-sub">Your workspace is your organisation's private space for workers, documents, and projects.</div>
+
+      <div class="field">
+        <label for="orgName">Organisation name</label>
+        <input type="text" id="orgName" placeholder="Acme Construction BV" oninput="onOrgNameChange()" autocomplete="organization"/>
+      </div>
+      <div class="field">
+        <label for="orgSlug">Workspace URL</label>
+        <div class="slug-prefix">work-force.nl/<span class="slug-preview" id="slugPreview">your-company</span></div>
+        <input type="text" id="orgSlug" placeholder="your-company" oninput="onSlugChange()" autocomplete="off" spellcheck="false"/>
+        <div class="field-hint" id="slugHint">Lowercase letters, numbers, and hyphens. 3–40 characters.</div>
+      </div>
+
+      <button class="btn-primary" id="btnWorkspace" onclick="doCreateWorkspace()">Create Workspace</button>
+      <div class="msg" id="workspaceMsg"></div>
+    </div>
+
+    <!-- Step 3: Done -->
+    <div id="viewDone" style="display:none;">
+      <div class="steps">
+        <div class="step-dot done"></div>
+        <div class="step-dot done"></div>
+        <div class="step-dot active"></div>
+      </div>
+      <div style="text-align:center;padding:16px 0 8px;">
+        <div class="success-icon">&#10003;</div>
+        <div class="success-title">Workspace created!</div>
+        <div class="success-sub">Your 30-day free trial has started. You're the admin — invite your team once you're inside.</div>
+        <div class="workspace-chip" id="workspaceChip">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" stroke="#1a3082" stroke-width="1.8"/><path d="M3 7l9 6 9-6" stroke="#1a3082" stroke-width="1.8"/></svg>
+          <span id="workspaceChipText">work-force.nl/your-company</span>
+        </div>
+        <button class="btn-primary" onclick="goToApp()">Go to my dashboard →</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <a href="index.html">← Back to work-force.nl</a>
+  &nbsp;·&nbsp;
+  <a href="mailto:sales@work-force.nl">Contact sales</a>
+</footer>
+
+<script>
+const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
+
+(function(){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  s.onload=init;
+  document.head.appendChild(s);
+})();
+
+let sb;
+let slugCheckTimer = null;
+let slugValid = false;
+let createdSlug = '';
+
+function init(){
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  // If already signed in + has org, go straight to app
+  sb.auth.getSession().then(async ({data:{session}})=>{
+    if(!session) return;
+    const {data:profile} = await sb.from('profiles').select('org_id,role').eq('id',session.user.id).single();
+    if(profile?.org_id) window.location.href='app.html';
+    else if(profile) showWorkspaceView(); // signed in but no org yet
+  });
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+function show(id){ document.getElementById(id).style.display=''; }
+function hide(id){ document.getElementById(id).style.display='none'; }
+
+function msg(id, text, type){
+  const el=document.getElementById(id);
+  el.textContent=text;
+  el.className='msg '+type;
+  el.style.display='block';
+}
+function clearMsg(id){ document.getElementById(id).style.display='none'; }
+
+function setBtn(id, text, disabled){
+  const b=document.getElementById(id);
+  b.textContent=text;
+  b.disabled=disabled;
+}
+
+// ─── Step 1: Create account ─────────────────────────────────────────────────
+
+async function doCreateAccount(){
+  if(!sb) return;
+  const name     = document.getElementById('signupName').value.trim();
+  const email    = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value;
+
+  if(!name)     { msg('accountMsg','Please enter your name.','error'); return; }
+  if(!email)    { msg('accountMsg','Please enter your email.','error'); return; }
+  if(password.length < 8){ msg('accountMsg','Password must be at least 8 characters.','error'); return; }
+
+  clearMsg('accountMsg');
+  setBtn('btnAccount','Creating account…',true);
+
+  try {
+    const {data,error} = await sb.auth.signUp({
+      email, password,
+      options:{ data:{ full_name: name } }
+    });
+    if(error) throw error;
+
+    // Some Supabase instances require email confirmation — detect that
+    if(data?.user && !data.session){
+      msg('accountMsg','Check your email for a confirmation link, then come back here to continue.','warn');
+      setBtn('btnAccount','Continue',false);
+      return;
+    }
+
+    showWorkspaceView();
+  } catch(e){
+    const m = e.message||'';
+    if(m.toLowerCase().includes('already registered')){
+      msg('accountMsg','An account with that email already exists. <a href="login.html">Sign in instead</a>.','error');
+    } else {
+      msg('accountMsg', m||'Could not create account. Try again.','error');
+    }
+    setBtn('btnAccount','Continue',false);
+  }
+}
+
+function showWorkspaceView(){
+  hide('viewAccount');
+  show('viewWorkspace');
+  document.getElementById('orgName').focus();
+}
+
+// ─── Step 2: Workspace slug ──────────────────────────────────────────────────
+
+function slugify(str){
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g,'')
+    .trim()
+    .replace(/[\s_]+/g,'-')
+    .replace(/-+/g,'-')
+    .slice(0,40);
+}
+
+function onOrgNameChange(){
+  const name = document.getElementById('orgName').value;
+  const slug = slugify(name);
+  document.getElementById('orgSlug').value = slug;
+  document.getElementById('slugPreview').textContent = slug || 'your-company';
+  triggerSlugCheck(slug);
+}
+
+function onSlugChange(){
+  const raw = document.getElementById('orgSlug').value;
+  const slug = slugify(raw);
+  if(slug !== raw){
+    document.getElementById('orgSlug').value = slug;
+  }
+  document.getElementById('slugPreview').textContent = slug || 'your-company';
+  triggerSlugCheck(slug);
+}
+
+function triggerSlugCheck(slug){
+  slugValid = false;
+  clearTimeout(slugCheckTimer);
+  const hint = document.getElementById('slugHint');
+  const input = document.getElementById('orgSlug');
+  if(!slug || slug.length < 3){
+    hint.textContent = 'Lowercase letters, numbers, and hyphens. 3–40 characters.';
+    hint.className = 'field-hint';
+    input.className = '';
+    return;
+  }
+  hint.textContent = 'Checking…';
+  hint.className = 'field-hint';
+  slugCheckTimer = setTimeout(()=>checkSlug(slug), 400);
+}
+
+async function checkSlug(slug){
+  if(!sb) return;
+  try {
+    const {data,error} = await sb.rpc('check_slug_available', {p_slug: slug});
+    const hint  = document.getElementById('slugHint');
+    const input = document.getElementById('orgSlug');
+    if(error || data === null){
+      hint.textContent = 'Could not check availability.';
+      hint.className = 'field-hint';
+      return;
+    }
+    if(data){
+      hint.textContent = 'Available!';
+      hint.className = 'field-hint hint-ok';
+      input.className = 'input-ok';
+      slugValid = true;
+    } else {
+      hint.textContent = 'That URL is already taken. Try another.';
+      hint.className = 'field-hint hint-error';
+      input.className = 'input-error';
+      slugValid = false;
+    }
+  } catch(e){
+    console.error(e);
+  }
+}
+
+async function doCreateWorkspace(){
+  if(!sb) return;
+  const orgName = document.getElementById('orgName').value.trim();
+  const slug    = document.getElementById('orgSlug').value.trim();
+
+  if(!orgName){ msg('workspaceMsg','Please enter your organisation name.','error'); return; }
+  if(!slug || slug.length < 3){ msg('workspaceMsg','Please enter a workspace URL (min 3 characters).','error'); return; }
+  if(!slugValid){ msg('workspaceMsg','Please choose an available workspace URL.','error'); return; }
+
+  clearMsg('workspaceMsg');
+  setBtn('btnWorkspace','Creating workspace…',true);
+
+  try {
+    const {data, error} = await sb.rpc('create_workspace', {
+      p_slug: slug,
+      p_org_name: orgName
+    });
+    if(error) throw error;
+
+    createdSlug = slug;
+    showDoneView(orgName, slug);
+  } catch(e){
+    const m = (e.message||'').toLowerCase();
+    if(m.includes('slug_taken'))       msg('workspaceMsg','That URL was just taken. Please choose another.','error');
+    else if(m.includes('invalid_slug'))msg('workspaceMsg','Invalid URL format. Use only letters, numbers, and hyphens.','error');
+    else if(m.includes('reserved_slug'))msg('workspaceMsg','That URL is reserved. Please choose another.','error');
+    else                                msg('workspaceMsg', e.message||'Could not create workspace. Try again.','error');
+    setBtn('btnWorkspace','Create Workspace',false);
+  }
+}
+
+// ─── Step 3: Done ────────────────────────────────────────────────────────────
+
+function showDoneView(orgName, slug){
+  hide('viewWorkspace');
+  show('viewDone');
+  document.getElementById('workspaceChipText').textContent = 'work-force.nl/' + slug;
+}
+
+function goToApp(){
+  window.location.href = 'app.html';
+}
+</script>
+</body>
+</html>

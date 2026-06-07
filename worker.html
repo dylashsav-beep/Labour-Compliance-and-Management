@@ -241,6 +241,17 @@ const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
 const SB_BUCKET     = 'tmc-documents';
 const SITE_ORG_ID   = '00000000-0000-0000-0001-000000000001';
+
+// Resolve org from ?org=<slug> URL param (falls back to SITE_ORG_ID for TMC)
+let resolvedOrgId = SITE_ORG_ID;
+async function resolveOrg(){
+  const slug = new URLSearchParams(location.search).get('org');
+  if(!slug || !sbClient) return;
+  try{
+    const {data} = await sbClient.from('organisations').select('id').eq('slug',slug).maybeSingle();
+    if(data?.id) resolvedOrgId = data.id;
+  }catch(e){ console.warn('[WP] org resolve failed:',e.message); }
+}
 const SET_NL_ZZP    = '00000000-0000-0000-0000-000000000001';
 const SET_NL_BLUE   = '00000000-0000-0000-0000-000000000002';
 
@@ -561,7 +572,8 @@ async function wpDirectLogin(){
   const btn=document.getElementById('wpLoginBtn');
   btn.disabled=true; btn.textContent='Signing in…';
   try{
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:SITE_ORG_ID});
+    await resolveOrg();
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:resolvedOrgId});
     if(error) throw error;
     if(!data){ loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true); return; }
     wpWorkerEmail=email;
@@ -620,7 +632,7 @@ function wpLoadPortalData(data){
 async function wpLoadSubmissions(){
   if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   try{
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:SITE_ORG_ID});
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId});
     if(error) throw error;
     wpSubmissions=(data?.submissions)||[];
     wpReturnRequests=(data?.return_requests)||[];
@@ -1067,7 +1079,7 @@ async function wpSubmitReturn(resourceType, assignmentId){
     if(error) throw error;
     alert(t('returnSubmitted'));
     try{
-      const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:SITE_ORG_ID});
+      const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId});
       if(!e2&&data) wpLoadPortalData(data);
     }catch(e){ console.warn('[WP] wpSubmitReturn reload:',e.message); }
     renderWPResources();

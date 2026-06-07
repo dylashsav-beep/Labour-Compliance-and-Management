@@ -11,8 +11,9 @@
 | File | Purpose | Notes |
 |---|---|---|
 | `index.html` | **Marketing landing page** — work-force.nl root URL | Links to `login.html` and `worker.html`; no auth |
-| `login.html` | **Management sign-in page** | Email/password + magic link; redirects to `app.html` on success |
-| `worker.html` | **Worker portal** — standalone, email-entry login | Calls `get_worker_portal` RPC (anon); no Supabase Auth session |
+| `login.html` | **Management sign-in page** | Email/password + magic link; "Create workspace →" link to signup.html; redirects to `app.html` on success |
+| `signup.html` | **Self-serve workspace creation** | 3-step flow: account → workspace slug → done; calls `create_workspace()` RPC; 30-day trial auto-starts |
+| `worker.html` | **Worker portal** — standalone, email-entry login | Calls `get_worker_portal` RPC (anon); org resolved from `?org=<slug>` param; falls back to TMC SITE_ORG_ID |
 | `app.html` | **Management app** — compliance dashboard | All HTML/CSS/JS (~400KB); requires auth; formerly `index.html` |
 
 When making changes:
@@ -141,8 +142,9 @@ let resGanttProjectFilter = 'all'
 | `resource_events` | `resource_type ('property'|'vehicle'), resource_id, event_date, event_type, description, created_by, active` |
 | `compliance_documents` | Company-wide compliance docs (not worker-specific) |
 | `deleted_items` | Soft-delete archive with full payload |
-| `profiles` | `id (= auth.uid()), role, active` |
-| `settings` | App-wide settings (warning days etc) |
+| `organisations` | `id, name, slug, logo_url, primary_color, owner_email, plan, trial_ends, stripe_customer_id, stripe_subscription_id, max_workers, warning_days, compliance_email` |
+| `profiles` | `id (= auth.uid()), role, active, org_id` |
+| `settings` | App-wide settings per org; `id = org_id` |
 
 ---
 
@@ -185,6 +187,9 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `retire_worker_document_file_deletions.sql` | ✅ Run | Retired 57 stale worker_document_file deletion records (the eternal-replay loop) and reactivated their files. |
 | `add_permanent_delete_policies.sql` | ⏳ Pending | Adds DELETE RLS policies so the admin "Delete Permanently" button in Deleted Items can hard-delete. Required for that feature to work. |
 | `block_new_signups_pending_approval.sql` | ⏳ Pending | Changes handle_new_user() trigger to set role='no_access' + active=FALSE so new signups require admin approval before getting any access. Run once — safe to re-run. |
+| `add_multi_tenancy.sql` | ⏳ Pending — **Run this in prod before any new orgs join** | Phase 0: organisations table, org_id on all tables, org-scoped RLS, `current_org_id()` helper, TMC backfilled |
+| `add_org_id_indexes.sql` | ⏳ Pending — **Run immediately after add_multi_tenancy.sql** | Phase 0: CONCURRENTLY-safe org_id indexes on all hot tables. Without these, RLS does full table scans as orgs grow. |
+| `create_workspace_signup.sql` | ⏳ Pending | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger |
 
 ---
 
