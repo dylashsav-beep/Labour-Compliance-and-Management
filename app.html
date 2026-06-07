@@ -3370,16 +3370,8 @@ function loadProjects(){
     const raw = localStorage.getItem(PROJ_KEY);
     if(raw) projectStore = JSON.parse(raw);
   } catch(e) { projectStore = []; }
-  if(!projectStore.length){
-    // seed defaults
-    const defaults = [
-      'Schiphol Expansion','Amstel Plaza','Rotterdam Harbour',
-      'IJburg Phase 3','Zuidas Tower','Den Haag Metro',
-      'Utrecht Central','Eindhoven Smart Hub'
-    ];
-    projectStore = defaults.map((name)=>({id:crypto.randomUUID(),name,desc:'',active:true}));
-    saveProjects();
-  }
+  // No default seed — a new/empty org must start with zero projects. Seeding
+  // fake projects here would persist them into the org via sbPersistAll.
 }
 function saveProjects(){
   try{ localStorage.setItem(PROJ_KEY, JSON.stringify(projectStore)); } catch(e){}
@@ -10624,7 +10616,8 @@ async function sbLoadAll(){
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
       workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{},org_id:w.org_id}));
-      if(!workers.length) sbLastWorkerLoadProblem = 'Supabase returned 0 rows from the workers table. This is not a browser-cache issue; add workers to Supabase or check you are connected to the correct project.';
+      // An empty result is normal (new/empty org) — not an error. Genuine read
+      // failures are handled by the workerData === null branch above.
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)
       (workerData||[]).forEach(row=>{ if(row.doc_req && typeof row.doc_req==='object'){ docReqOverrides[row.id]={...(docReqOverrides[row.id]||{}),...row.doc_req}; } });
       saveDocReq();
