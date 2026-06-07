@@ -189,7 +189,8 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `block_new_signups_pending_approval.sql` | ⏳ Pending | Changes handle_new_user() trigger to set role='no_access' + active=FALSE so new signups require admin approval before getting any access. Run once — safe to re-run. |
 | `add_multi_tenancy.sql` | ✅ Run | Phase 0: organisations table, org_id on all tables, org-scoped RLS, `current_org_id()` helper, TMC backfilled. **Idempotent** — every section drops its new policy names before CREATE (a mismatch between dropped/created names caused a 42710 collision on the first re-run; now fixed). |
 | `add_org_id_indexes.sql` | ✅ Run | Phase 0: org_id indexes on all hot tables. Uses **plain `CREATE INDEX`** (not CONCURRENTLY) so it runs in the SQL Editor's transaction block. Fine at current scale; use CONCURRENTLY outside a transaction if rebuilding on a large busy table later. |
-| `create_workspace_signup.sql` | ✅ Run | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger |
+| `create_workspace_signup.sql` | ✅ Run | Phase 1: `create_workspace()`, `join_workspace()`, `check_slug_available()` RPCs; plan/billing columns on organisations; updated `handle_new_user()` trigger. `handle_new_user()` sets `SET search_path = public` and inserts into `public.profiles` (the trigger fires in the auth schema; without this it failed with "relation profiles does not exist", 42P01). `create_workspace()` guards `already_in_org`. |
+| `fix_rls_rebuild_all_policies.sql` | ✅ Run | **CRITICAL security fix.** Drops EVERY policy on each app table dynamically (via `pg_policies`) and recreates only org-scoped ones. The original single-tenant app had a `USING(true)` read-all policy named `auth_only` (plus `workers_own`, `workers_staff`) whose names did not match `add_multi_tenancy.sql`'s fixed drop list, so they survived and ORed over the org policy — exposing every org's workers to any authenticated user. Always drop ALL policies dynamically, never by a guessed name list. |
 
 ---
 
@@ -422,6 +423,27 @@ Object.keys(fileStore).forEach(k=>delete fileStore[k]);
 Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the demo data-load in `sbInitDemo()` in try/catch so any future throw can't prevent the render.  
 **Diagnostic lesson**: When a table shows empty but the data "appears after a manual UI toggle", the data IS in memory — the bug is a render that never fired, almost always because an **uncaught throw aborted the init function before its render call**. Trace what runs *between* the data assignment and the render, and check every statement there — especially assignments to `const`-declared state objects (`fileStore`, and any other `const` global).  
 **Rule**: Core mutable state objects that get "reset" (`fileStore`, etc.) must be declared `let`, OR every reset must clear-in-place (`Object.keys(x).forEach(k=>delete x[k])` / `arr.length=0`) — never `x={}`/`x=[]`. And **always wrap optional/demo data-load calls in try/catch** so a throw can't abort the surrounding init and skip the render.
+
+---
+
+### 13. Multi-Tenancy — Cross-Org Data Leak From Surviving Permissive RLS Policies
+**Symptom**: A brand-new self-serve org (correct, separate `org_id`) logged in and saw **all of TMC's 63 real workers**. `is_tmc_org` on its profile was `false`, yet workers leaked.
+**Root cause (two compounding bugs)**:
+1. **Surviving legacy policy.** PostgreSQL RLS policies are **permissive and OR together**. The original single-tenant app had a policy `auth_only` on `workers` with `USING (true)` (plus `workers_own`, `workers_staff`). `add_multi_tenancy.sql` dropped old policies by a **hardcoded list of names** that did not include `auth_only`, so it survived. `true OR (org_id = current_org_id())` → every row visible to every authenticated user. The org-scoped policy was correct but irrelevant.
+2. **`ENABLE ROW LEVEL SECURITY` was originally only run on `organisations`** — every other table had policies but RLS switched off, so policies were inert until that was fixed.
+**Also found & fixed in the same incident (app.html, single-tenant bootstrap logic that is lethal in multi-tenant)**:
+- `currentOrgId = sbProfile?.org_id || SITE_ORG_ID` dropped every org-less user (all new signups) into TMC. → resolve to `null`, never `SITE_ORG_ID`, except the owner email.
+- "First admin" auto-promote: RLS hides other orgs' admins from an unassigned user, so the global admin check returned empty, the code thought they were the first admin, and self-created their profile as `admin/active/org_id=TMC`. → removed entirely.
+- `sbPersistAll`/`sbLoadAll` `oid = currentOrgId || SITE_ORG_ID` would read/write TMC for a null-org user. → hard-gate both: abort when `currentOrgId` is null.
+- localStorage caches (`tmc_*`/`btm_*`) are **global to the browser, not per-org** — one org's cached projects/resources rendered under another account. → `sbClearLocalCache()` on logout, on the no-workspace gate, and when `wf_cache_org` marker differs from the resolved org.
+**Fix migration**: `fix_rls_rebuild_all_policies.sql` — enumerates `pg_policies` and **drops every policy** on each app table, then recreates exactly one org-scoped SELECT + one org-scoped ALL policy. Ends with a verification SELECT.
+**Diagnostic that nailed it**: `SELECT tablename, policyname, cmd, roles, qual FROM pg_policies WHERE schemaname='public'` — any `qual = 'true'` (or a qual lacking `org_id = current_org_id()`) on a data table is a leak. Also check for org_id tables with RLS off: `pg_class.relrowsecurity = false`.
+**Rules**:
+- **Never drop RLS policies by a guessed name list.** Enumerate `pg_policies` and drop them all, then recreate. Legacy/Supabase-template policy names are unpredictable.
+- **RLS has two switches**: the policy AND `ENABLE ROW LEVEL SECURITY`. Both are required; verify `relrowsecurity = true`.
+- **Policies are OR-combined** — one `USING(true)` defeats every other policy on the table. There must be exactly the intended policies and nothing else.
+- **Never fall back to `SITE_ORG_ID`** for a logged-in user whose profile has no `org_id`. Resolve to null and gate off all reads/writes. `SITE_ORG_ID` is only valid for the explicit owner-email override.
+- **After any tenancy change, re-run the `pg_policies` audit and the RLS-off audit**, and smoke-test a fresh org sees zero rows.
 
 ---
 
