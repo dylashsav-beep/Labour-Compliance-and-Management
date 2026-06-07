@@ -287,13 +287,20 @@ let createdSlug = '';
 
 function init(){
   sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-  // If already signed in + has org, go straight to app
-  sb.auth.getSession().then(async ({data:{session}})=>{
+
+  async function handleSession(session){
     if(!session) return;
     const {data:profile} = await sb.from('profiles').select('org_id,role').eq('id',session.user.id).single();
     if(profile?.org_id) window.location.href='app.html';
-    else if(profile) showWorkspaceView(); // signed in but no org yet
-  });
+    else if(profile) showWorkspaceView();
+  }
+
+  // Check for an existing session on page load
+  sb.auth.getSession().then(({data:{session}})=> handleSession(session));
+
+  // Also listen for auth state changes — this fires when the user clicks the
+  // confirmation link and lands back on this page with a token in the URL hash.
+  sb.auth.onAuthStateChange((_event, session)=> handleSession(session));
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -333,14 +340,18 @@ async function doCreateAccount(){
   try {
     const {data,error} = await sb.auth.signUp({
       email, password,
-      options:{ data:{ full_name: name } }
+      options:{
+        data:{ full_name: name },
+        emailRedirectTo: window.location.origin + '/signup.html'
+      }
     });
     if(error) throw error;
 
-    // Some Supabase instances require email confirmation — detect that
+    // Email confirmation required — Supabase will redirect back to signup.html
+    // after the user clicks the link, and onAuthStateChange will auto-advance.
     if(data?.user && !data.session){
-      msg('accountMsg','Check your email for a confirmation link, then come back here to continue.','warn');
-      setBtn('btnAccount','Continue',false);
+      msg('accountMsg','Check your email for a confirmation link. Once confirmed you\'ll be brought straight back here to set up your workspace.','warn');
+      setBtn('btnAccount','Waiting for confirmation…', true);
       return;
     }
 
