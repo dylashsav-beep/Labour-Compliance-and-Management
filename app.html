@@ -4071,9 +4071,9 @@ function filtered(){
 
 
 function sbWorkerEmptyMessage(){
-  const problem = sbLastWorkerLoadProblem ? `<div style="font-size:12px;color:var(--red);margin-top:8px;">Supabase worker load issue: ${esc(sbLastWorkerLoadProblem)}</div>` : '';
-  const projectRef = SUPABASE_URL.includes('fpedwofpvjviooclyosq') ? 'fpedwofpvjviooclyosq' : SUPABASE_URL.replace(/^https:\/\//,'').split('.')[0];
-  return `<div class="no-results-icon">👷</div><div style="font-weight:700;color:var(--navy);margin-bottom:6px;">No workers found in Supabase</div><div style="font-size:12px;color:var(--text-l);max-width:760px;margin:0 auto;line-height:1.45;">Workers are not recovered from browser memory or demo data. The dashboard only shows rows returned by the connected Supabase <strong>workers</strong> table. Connected project: <strong>${esc(projectRef)}</strong>.</div>${problem}`;
+  const problem = sbLastWorkerLoadProblem ? `<div style="font-size:12px;color:var(--red);margin-top:8px;">${esc(sbLastWorkerLoadProblem)}</div>` : '';
+  const addHint = !DEMO_MODE && sbReady ? `<div style="font-size:12px;color:var(--text-l);margin-top:4px;">Use the <strong>Add Worker</strong> button to get started.</div>` : '';
+  return `<div class="no-results-icon">👷</div><div style="font-weight:700;color:var(--navy);margin-bottom:6px;">No workers added yet</div><div style="font-size:12px;color:var(--text-l);max-width:480px;margin:0 auto;line-height:1.45;">Workers you add will appear here with their compliance status, documents and assignments.</div>${addHint}${problem}`;
 }
 async function sbRecoverLocalWorkersToSupabase(){
   if(!requireAction('workers','recover local workers to Supabase')) return;
