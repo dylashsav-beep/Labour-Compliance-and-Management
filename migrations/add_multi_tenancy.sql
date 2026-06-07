@@ -181,7 +181,43 @@ END $$;
 -- ---------------------------------------------------------------------------
 -- 6. UPDATE ROW LEVEL SECURITY POLICIES
 --    Drop old permissive policies, replace with org-scoped ones.
+--    IMPORTANT: Policies have no effect until ENABLE ROW LEVEL SECURITY
+--    is set on the table — do both together here.
 -- ---------------------------------------------------------------------------
+
+-- Enable RLS on every data table (organisations was done above at creation)
+ALTER TABLE workers                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE worker_documents          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE worker_document_files     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_sets             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document_set_items        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_assignments       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE project_assignment_files  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE properties                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicles                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accommodation_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicle_assignments       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accommodation_charges     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vehicle_charges           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE compliance_documents      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deleted_items             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings                  ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='resource_events') THEN
+    EXECUTE 'ALTER TABLE resource_events ENABLE ROW LEVEL SECURITY'; END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_document_submissions') THEN
+    EXECUTE 'ALTER TABLE worker_document_submissions ENABLE ROW LEVEL SECURITY'; END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_resource_return_requests') THEN
+    EXECUTE 'ALTER TABLE worker_resource_return_requests ENABLE ROW LEVEL SECURITY'; END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tools') THEN
+    EXECUTE 'ALTER TABLE tools ENABLE ROW LEVEL SECURITY'; END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tool_assignments') THEN
+    EXECUTE 'ALTER TABLE tool_assignments ENABLE ROW LEVEL SECURITY'; END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tool_charges') THEN
+    EXECUTE 'ALTER TABLE tool_charges ENABLE ROW LEVEL SECURITY'; END IF;
+END $$;
 
 -- Helper: drop a policy if it exists (avoids errors if already removed)
 CREATE OR REPLACE FUNCTION _drop_policy_if_exists(p_table text, p_policy text)
