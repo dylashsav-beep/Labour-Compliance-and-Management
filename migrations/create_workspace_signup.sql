@@ -181,9 +181,14 @@ GRANT EXECUTE ON FUNCTION check_slug_available(text) TO anon, authenticated;
 -- ---------------------------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
-  INSERT INTO profiles (id, email, full_name, role, active, org_id)
+  -- search_path must be set explicitly: this trigger fires in the auth schema
+  -- context and without SET search_path = public the INSERT fails with
+  -- "relation profiles does not exist" (SQLSTATE 42P01).
+  INSERT INTO public.profiles (id, email, full_name, role, active, org_id)
   VALUES (
     NEW.id,
     NEW.email,
