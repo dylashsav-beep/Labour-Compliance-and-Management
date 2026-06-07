@@ -954,6 +954,82 @@ footer{
 .demo-dashboard .gantt-bar.gb-expired{background:#9aa5b8;color:#fff;}
 .demo-dashboard .gantt-bar.gb-future{background:var(--sky);color:#fff;}
 .demo-dashboard .assign-tag{font-size:12px;font-weight:500;color:var(--text);}
+/* ── HERO MODAL OVERLAY ── */
+.hero-modal-overlay{
+  display:none;position:absolute;inset:0;z-index:50;
+  background:rgba(15,23,42,0.58);
+  backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  align-items:center;justify-content:center;padding:24px;
+}
+.hero-modal-overlay.open{display:flex;}
+.hero-modal-card{
+  background:#fff;border-radius:12px;
+  width:100%;max-width:640px;
+  max-height:calc(100% - 48px);
+  overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,0.32);
+  animation:hmIn .2s ease;
+}
+@keyframes hmIn{from{transform:translateY(14px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.hm-header{
+  background:#112268;padding:16px 20px;
+  border-radius:12px 12px 0 0;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+}
+.hm-header-left{flex:1;min-width:0;}
+.hm-name{font-size:16px;font-weight:700;color:#fff;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.18);margin-bottom:5px;}
+.hm-meta{font-size:12px;color:rgba(255,255,255,0.65);}
+.hm-header-btns{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.hm-btn-edit{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:default;font-family:inherit;}
+.hm-btn-close{background:none;border:none;color:rgba(255,255,255,0.65);font-size:20px;cursor:pointer;line-height:1;padding:2px 4px;transition:color .15s;font-family:inherit;}
+.hm-btn-close:hover{color:#fff;}
+.hm-body{padding:18px;display:flex;flex-direction:column;gap:14px;}
+.hm-banner{border-radius:8px;padding:12px 16px;border:1.5px solid;}
+.hm-banner.nogo{background:#fff5f5;border-color:#fed7d7;}
+.hm-banner.warning{background:#fffbeb;border-color:#fde68a;}
+.hm-banner.go{background:#f0fff4;border-color:#c6f6d5;}
+.hm-banner-title{font-size:13px;font-weight:700;margin-bottom:3px;}
+.hm-banner.nogo .hm-banner-title{color:#c53030;}
+.hm-banner.warning .hm-banner-title{color:#b45309;}
+.hm-banner.go .hm-banner-title{color:#276749;}
+.hm-banner-detail{font-size:12px;color:#64748b;line-height:1.5;}
+.hm-progress-card{border:1px solid #dde3ec;border-radius:8px;padding:14px 16px;}
+.hm-progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.hm-progress-label{font-size:13px;color:#4a5568;}
+.hm-progress-pct{font-size:16px;font-weight:700;}
+.hm-progress-track{height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;}
+.hm-progress-fill{height:100%;border-radius:4px;transition:width .4s ease;}
+.hm-docs-list{display:flex;flex-direction:column;gap:6px;}
+.hm-doc-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;border:1px solid #dde3ec;border-left:3px solid #dde3ec;}
+.hm-doc-row.ok{border-left-color:#276749;}
+.hm-doc-row.warn{border-left-color:#b45309;}
+.hm-doc-row.miss{border-left-color:#c53030;}
+.hm-doc-icon{font-size:13px;flex-shrink:0;width:16px;text-align:center;}
+.hm-doc-info{flex:1;min-width:0;}
+.hm-doc-name{font-size:12px;font-weight:600;color:#1a2340;}
+.hm-doc-date{font-size:11px;margin-top:1px;}
+.hm-doc-row.ok .hm-doc-date{color:#276749;}
+.hm-doc-row.warn .hm-doc-date{color:#b45309;}
+.hm-doc-row.miss .hm-doc-date{color:#c53030;}
+.hm-doc-req{font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;flex-shrink:0;white-space:nowrap;}
+.hm-doc-req.req{background:#fff0f0;color:#c53030;border:1px solid #fecaca;}
+.hm-doc-req.opt{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;}
+.hm-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.hm-card{border:1px solid #dde3ec;border-radius:8px;padding:12px;}
+.hm-card-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#7a8ba8;margin-bottom:6px;}
+.hm-card-val{font-size:13px;font-weight:700;color:#1a2340;}
+.hm-card-sub{font-size:11px;color:#64748b;margin-top:3px;}
+.hm-card-tag{display:inline-block;margin-top:5px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;}
+.hm-card-tag.active{background:#f0fff4;color:#276749;border:1px solid #c6f6d5;}
+.hm-card-tag.none{color:#94a3b8;font-weight:400;font-size:12px;}
+@media(max-width:640px){
+  .hm-cards{grid-template-columns:1fr 1fr;}
+  .hero-modal-overlay{padding:12px;}
+  .hm-body{padding:14px;gap:12px;}
+}
+@media(max-width:400px){
+  .hm-cards{grid-template-columns:1fr;}
+}
 </style>
 </head>
 <body>
@@ -1106,23 +1182,38 @@ footer{
             <div style="padding:9px 12px;background:#fffbeb;border-top:1px solid #fde68a;display:flex;align-items:center;gap:8px;font-size:11px;color:#92400e;font-weight:500;">
               <span>📧</span><span>Daily digest ready — 2 workers with missing required docs</span>
             </div>
-            <!-- Slide-in detail panel -->
-            <div class="worker-detail-panel" id="heroPanel">
-              <div class="panel-header">
-                <div>
-                  <div class="panel-worker-name" id="heroPanelName">—</div>
-                  <div class="panel-worker-proj" id="heroPanelProj">—</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:0.5rem;">
-                  <div id="heroPanelBadge"></div>
-                  <button class="panel-close" onclick="closeHeroPanel()">×</button>
-                </div>
-              </div>
-              <div class="panel-docs-title">Document Checklist</div>
-              <div class="panel-doc-list" id="heroPanelDocs"></div>
-            </div>
+            <!-- hero modal is rendered as overlay on the hero section -->
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+  <!-- Hero worker modal overlay — positioned absolute within the hero section -->
+  <div class="hero-modal-overlay" id="heroModalOverlay" onclick="if(event.target===this)closeHeroPanel()">
+    <div class="hero-modal-card">
+      <div class="hm-header">
+        <div class="hm-header-left">
+          <div class="hm-name" id="hmName">—</div>
+          <div class="hm-meta" id="hmMeta">—</div>
+        </div>
+        <div class="hm-header-btns">
+          <button class="hm-btn-edit">Edit</button>
+          <button class="hm-btn-close" onclick="closeHeroPanel()">×</button>
+        </div>
+      </div>
+      <div class="hm-body">
+        <div id="hmBanner"></div>
+        <div class="hm-progress-card">
+          <div class="hm-progress-top">
+            <span class="hm-progress-label">Documents on file (required)</span>
+            <span class="hm-progress-pct" id="hmPct">—</span>
+          </div>
+          <div class="hm-progress-track">
+            <div class="hm-progress-fill" id="hmProgressFill" style="width:0%;background:#c53030;"></div>
+          </div>
+        </div>
+        <div class="hm-docs-list" id="hmDocs"></div>
+        <div class="hm-cards" id="hmCards"></div>
       </div>
     </div>
   </div>
@@ -2066,103 +2157,142 @@ const observer = new IntersectionObserver((entries) => {
 }, {threshold:0.12, rootMargin:'0px 0px -40px 0px'});
 fadeEls.forEach(el => observer.observe(el));
 
-// ── Worker data ──
 // ── Hero panel worker data ──
 const workerData = {
   berg: {
-    name: 'J. van den Berg',
-    project: 'Amsterdam North DC · ZZP · Ref NL-041',
-    badge: 'nogo',
+    name: 'J. van den Berg', meta: 'NL-041 · ZZP · NL · Active',
+    badge: 'nogo', score: 45,
+    missing: ['VCA Certificate', 'A1 Form'],
     docs: [
-      {icon:'✗',ok:'miss',name:'VCA Certificate',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
-      {icon:'⚠',ok:'warn',name:'KvK Extract',date:'Expiring in 14 days'},
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2029'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2027'},
-    ]
+      {ok:'miss',req:true, name:'VCA Certificate',      date:'Required — not uploaded'},
+      {ok:'miss',req:true, name:'A1 Form',              date:'Required — not uploaded'},
+      {ok:'warn',req:true, name:'KvK Extract',          date:'Expiring in 14 days'},
+      {ok:'ok',  req:true, name:'Passport',             date:'Valid until 2029'},
+      {ok:'ok',  req:false,name:'Health Insurance',     date:'Valid until 2027'},
+    ],
+    assignment:'Amsterdam North DC', rate:'€425 / day', dates:'2026-04-14 → 2026-08-31',
+    accom:'City View Apartments', vehicle:'VW Crafter'
   },
   schmidt: {
-    name: 'M. Schmidt',
-    project: 'Brussels Infra Site · ZZP · Ref DE-027',
-    badge: 'nogo',
+    name: 'M. Schmidt', meta: 'DE-027 · ZZP · DE · Active',
+    badge: 'nogo', score: 63,
+    missing: ['Passport', 'VOG Certificate', 'A1 Form'],
     docs: [
-      {icon:'✗',ok:'miss',name:'Passport',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'VOG Certificate',date:'Required — not uploaded'},
-      {icon:'✗',ok:'miss',name:'A1 Form',date:'Required — not uploaded'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2027'},
-    ]
+      {ok:'miss',req:true, name:'Passport',             date:'Required — not uploaded'},
+      {ok:'miss',req:true, name:'VOG Certificate',      date:'Required — not uploaded'},
+      {ok:'miss',req:true, name:'A1 Form',              date:'Required — not uploaded'},
+      {ok:'ok',  req:true, name:'VCA Certificate',      date:'Valid until 2027'},
+      {ok:'ok',  req:false,name:'KvK Extract',          date:'Valid until 2027'},
+    ],
+    assignment:'Brussels Infra Site', rate:'€390 / day', dates:'2026-05-01 → 2026-07-25',
+    accom:'Park Lodge East', vehicle:'Ford Transit'
   },
   kowalski: {
-    name: 'P. Kowalski',
-    project: 'Amsterdam North DC · Employed · Ref BE-089',
-    badge: 'warn',
+    name: 'P. Kowalski', meta: 'BE-089 · Employed · BE · Active',
+    badge: 'warn', score: 75,
+    missing: [],
     docs: [
-      {icon:'⚠',ok:'warn',name:'Health Insurance',date:'Expiring in 19 days'},
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2030'},
-      {icon:'✓',ok:'ok',name:'Employment Contract',date:'Valid'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2028'},
-    ]
+      {ok:'warn',req:true, name:'Health Insurance',     date:'Expiring in 19 days'},
+      {ok:'ok',  req:true, name:'Passport',             date:'Valid until 2030'},
+      {ok:'ok',  req:true, name:'Employment Contract',  date:'Valid'},
+      {ok:'ok',  req:true, name:'A1 Form',              date:'Valid until 2027'},
+      {ok:'ok',  req:true, name:'VCA Certificate',      date:'Valid until 2028'},
+    ],
+    assignment:'Amsterdam North DC', rate:'€2,800 / week', dates:'2026-03-10 → 2026-09-30',
+    accom:null, vehicle:null
   },
   ionescu: {
-    name: 'D. Ionescu',
-    project: 'Rotterdam Civil Works · ZZP · Ref NL-055',
-    badge: 'go',
+    name: 'D. Ionescu', meta: 'NL-055 · ZZP · RO · Active',
+    badge: 'go', score: 100,
+    missing: [],
     docs: [
-      {icon:'✓',ok:'ok',name:'VCA Certificate',date:'Valid until 2028'},
-      {icon:'✓',ok:'ok',name:'Passport',date:'Valid until 2031'},
-      {icon:'✓',ok:'ok',name:'A1 Form',date:'Valid until 2027'},
-      {icon:'✓',ok:'ok',name:'KvK Extract',date:'Valid until 2028'},
-      {icon:'✓',ok:'ok',name:'Health Insurance',date:'Valid until 2028'},
-    ]
+      {ok:'ok',  req:true, name:'VCA Certificate',      date:'Valid until 2028'},
+      {ok:'ok',  req:true, name:'Passport',             date:'Valid until 2031'},
+      {ok:'ok',  req:true, name:'A1 Form',              date:'Valid until 2027'},
+      {ok:'ok',  req:false,name:'KvK Extract',          date:'Valid until 2028'},
+      {ok:'ok',  req:true, name:'Health Insurance',     date:'Valid until 2028'},
+    ],
+    assignment:'Rotterdam Civil Works', rate:'€410 / day', dates:'2026-01-06 → 2026-12-19',
+    accom:null, vehicle:null
   }
 };
 
-function buildDocList(docs, containerEl, isSmall) {
-  containerEl.innerHTML = docs.map(d => {
-    const iconCol = d.ok==='ok' ? 'var(--green)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
-    const dateCol = d.ok==='ok' ? 'var(--text-m)' : d.ok==='warn' ? 'var(--amber)' : 'var(--red)';
-    if (isSmall) {
-      return `<div class="panel-doc-item">
-        <span class="panel-doc-icon" style="color:${iconCol}">${d.icon}</span>
-        <div style="flex:1;">
-          <div class="panel-doc-name">${d.name}</div>
-          <div class="panel-doc-status" style="color:${dateCol}">${d.date}</div>
-        </div>
-      </div>`;
-    } else {
-      return `<div class="ddp-doc">
-        <span class="ddp-doc-icon" style="color:${iconCol}">${d.icon}</span>
-        <div class="ddp-doc-info">
-          <div class="ddp-doc-name">${d.name}</div>
-          <div class="ddp-doc-date" style="color:${dateCol}">${d.date}</div>
-        </div>
-      </div>`;
-    }
-  }).join('');
-}
-
-function badgeHtml(type) {
-  if (type==='go') return '<span class="badge badge-go">✓ GO</span>';
-  if (type==='warn') return '<span class="badge badge-warn">⚠ WARNING</span>';
-  return '<span class="badge badge-nogo">✕ NO-GO</span>';
-}
-
-// ── Hero panel ──
+// ── Hero modal ──
 let heroCurrentWorker = null;
+
 function openHeroPanel(wid) {
   const w = workerData[wid];
   if (!w) return;
   heroCurrentWorker = wid;
-  document.getElementById('heroPanelName').textContent = w.name;
-  document.getElementById('heroPanelProj').textContent = w.project;
-  document.getElementById('heroPanelBadge').innerHTML = badgeHtml(w.badge);
-  buildDocList(w.docs, document.getElementById('heroPanelDocs'), true);
-  document.getElementById('heroPanel').classList.add('open');
+
+  // Header
+  document.getElementById('hmName').textContent = w.name;
+  document.getElementById('hmMeta').textContent = w.meta;
+
+  // Status banner
+  const bannerEl = document.getElementById('hmBanner');
+  const pctColor = w.score === 100 ? '#276749' : w.score >= 70 ? '#b45309' : '#c53030';
+  if (w.badge === 'go') {
+    bannerEl.innerHTML = `<div class="hm-banner go"><div class="hm-banner-title">✓ GO — All required documents are on file.</div></div>`;
+  } else if (w.badge === 'warn') {
+    bannerEl.innerHTML = `<div class="hm-banner warning"><div class="hm-banner-title">⚠ WARNING — One or more documents are expiring soon.</div><div class="hm-banner-detail">Action needed before expiry date.</div></div>`;
+  } else {
+    const missStr = w.missing.length ? w.missing.join(', ') : 'Required documents missing';
+    bannerEl.innerHTML = `<div class="hm-banner nogo"><div class="hm-banner-title">✕ NO-GO — One or more required documents are missing or expired.</div><div class="hm-banner-detail">Missing: ${missStr}</div></div>`;
+  }
+
+  // Progress bar
+  document.getElementById('hmPct').textContent = w.score + '%';
+  document.getElementById('hmPct').style.color = pctColor;
+  const fill = document.getElementById('hmProgressFill');
+  fill.style.width = w.score + '%';
+  fill.style.background = pctColor;
+
+  // Document list
+  document.getElementById('hmDocs').innerHTML = w.docs.map(d => {
+    const rowCls = d.ok === 'ok' ? 'ok' : d.ok === 'warn' ? 'warn' : 'miss';
+    const icon = d.ok === 'ok' ? '✓' : d.ok === 'warn' ? '⚠' : '✗';
+    const reqBadge = `<span class="hm-doc-req ${d.req ? 'req' : 'opt'}">${d.req ? 'Required' : 'Optional'}</span>`;
+    return `<div class="hm-doc-row ${rowCls}">
+      <span class="hm-doc-icon">${icon}</span>
+      <div class="hm-doc-info">
+        <div class="hm-doc-name">${d.name}</div>
+        <div class="hm-doc-date">${d.date}</div>
+      </div>
+      ${reqBadge}
+    </div>`;
+  }).join('');
+
+  // Assignment cards
+  document.getElementById('hmCards').innerHTML = `
+    <div class="hm-card">
+      <div class="hm-card-lbl">📋 Project Assignment</div>
+      <div class="hm-card-val">${w.assignment}</div>
+      <div class="hm-card-sub">${w.rate}</div>
+      <div class="hm-card-sub">${w.dates}</div>
+      <span class="hm-card-tag active">✓ Active</span>
+    </div>
+    <div class="hm-card">
+      <div class="hm-card-lbl">🏠 Accommodation</div>
+      ${w.accom
+        ? `<div class="hm-card-val">${w.accom}</div><span class="hm-card-tag active">✓ Assigned</span>`
+        : `<span class="hm-card-tag none">Not assigned</span>`}
+    </div>
+    <div class="hm-card">
+      <div class="hm-card-lbl">🚐 Vehicle</div>
+      ${w.vehicle
+        ? `<div class="hm-card-val">${w.vehicle}</div><span class="hm-card-tag active">✓ Assigned</span>`
+        : `<span class="hm-card-tag none">Not assigned</span>`}
+    </div>`;
+
+  // Show overlay
+  document.getElementById('heroModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
 }
+
 function closeHeroPanel() {
-  document.getElementById('heroPanel').classList.remove('open');
+  document.getElementById('heroModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
   heroCurrentWorker = null;
 }
 
