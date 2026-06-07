@@ -403,6 +403,23 @@ The offset value (38px) must exactly match the banner's `min-height`. If the ban
 
 ---
 
+### 12. Demo Mode — Workers Never Auto-Rendered (`const fileStore` Reassignment Threw)
+**Symptom**: On the live demo's first load, the workers table showed the empty state ("No workers added yet") even though demo workers were defined. They only appeared after manually toggling a filter button (All/Active). Multiple render-timing fixes (sync `setFA`, `setTimeout` safety nets, filter-button UI sync) did **not** help.  
+**Root cause**: `fileStore` is declared `const fileStore={}`. But `loadDemoDefaults()` and `restoreDemoState()` both did `fileStore={};` (reassignment). **Assigning to a `const` throws `TypeError: Assignment to constant variable`.** That throw happened *after* `workers = [...]` was populated but *before* `sbInitDemo()` reached its `setFA('all')` render call — so `workers` existed in memory (hence a manual filter toggle would render them) but the table never auto-rendered on load. The throw silently aborted `sbInitDemo()` because the `loadDemoDefaults()` call wasn't wrapped in try/catch.  
+**Why it was hard to spot**: The visible demo chrome (banner, WF logo, Request Trial button) is all CSS-driven via the early `body.demo-mode` class — it renders regardless of whether the demo JS throws. So "the demo looks like it loaded" proved nothing about whether `sbInitDemo()` completed.  
+**Fix**:
+```js
+// WRONG — throws because fileStore is const
+fileStore={};
+// RIGHT — clear the const object in place
+Object.keys(fileStore).forEach(k=>delete fileStore[k]);
+```
+Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the demo data-load in `sbInitDemo()` in try/catch so any future throw can't prevent the render.  
+**Diagnostic lesson**: When a table shows empty but the data "appears after a manual UI toggle", the data IS in memory — the bug is a render that never fired, almost always because an **uncaught throw aborted the init function before its render call**. Trace what runs *between* the data assignment and the render, and check every statement there — especially assignments to `const`-declared state objects (`fileStore`, and any other `const` global).  
+**Rule**: Core mutable state objects that get "reset" (`fileStore`, etc.) must be declared `let`, OR every reset must clear-in-place (`Object.keys(x).forEach(k=>delete x[k])` / `arr.length=0`) — never `x={}`/`x=[]`. And **always wrap optional/demo data-load calls in try/catch** so a throw can't abort the surrounding init and skip the render.
+
+---
+
 ## Demo Mode — Full Architecture Reference
 
 | Constant / Key | Value | Purpose |
