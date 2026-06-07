@@ -10213,6 +10213,10 @@ async function sbPersistAll(force=false){
   if(DEMO_MODE){ saveDemoState(); return; }
   if(!sbReady||!sbSession||!sbClient||sbIsLoading) return;
   if(!force && !sbHasLoadedRemote) return;
+  // Org gate: refuse to write anything if this session has no resolved org.
+  // Without this, oid falls back to SITE_ORG_ID and an unassigned user's sync
+  // would overwrite TMC's data. (The owner email legitimately resolves to TMC.)
+  if(!currentOrgId){ console.warn('[WF] Sync blocked — no organisation resolved for this session'); sbSetStatus('Supabase: no workspace — sync disabled', false); return; }
   sbSyncInFlight=true;
   sbSuppressRealtimeUntil = Date.now() + 2500;
   sbSetStatus('Supabase: syncing…', true);
@@ -10345,40 +10349,50 @@ async function sbLoadProfile(){
   }
 
   if(!data) {
-    // No profile row — check if any active admin exists before deciding role
-    let isFirstAdmin = true;
-    try {
-      const {data: adminCheck} = await sbClient.from('profiles').select('id').eq('role','admin').eq('active',true).limit(1).maybeSingle();
-      isFirstAdmin = !adminCheck;
-    } catch(e) { console.warn('[TMC] Admin existence check failed:', e); }
-    const defaultRole = isFirstAdmin ? 'admin' : 'no_access';
+    // No profile row yet (the handle_new_user DB trigger normally creates one
+    // with org_id=NULL, role='no_access', active=false). This is a safety
+    // fallback only. It must NEVER auto-promote to admin and NEVER assign an
+    // org — org membership is granted exclusively by create_workspace(),
+    // join_workspace(), or an explicit admin action. The old "first admin"
+    // bootstrap was removed: in a multi-tenant app RLS hides other orgs'
+    // admins from an unassigned user, so that check always reported "first
+    // admin" and self-provisioned them into the TMC org. Critical leak.
     let created = null;
     try {
       const {data: upserted, error: upsertErr} = await sbClient.from('profiles').upsert({
         id: sbSession.user.id,
         email: sbSession.user.email,
         full_name: sbSession.user.user_metadata?.full_name || sbSession.user.email?.split('@')[0] || '',
-        role: defaultRole,
-        active: isFirstAdmin,
-        org_id: currentOrgId || SITE_ORG_ID,
+        role: 'no_access',
+        active: false,
+        org_id: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }, {onConflict:'id'}).select().maybeSingle();
       if(!upsertErr) created = upserted;
-      else console.warn('[TMC] Profile auto-create failed:', upsertErr);
-    } catch(e) { console.warn('[TMC] Profile auto-create threw:', e); }
-    sbProfile = created || {id:sbSession.user.id, email:sbSession.user.email, role:defaultRole, active:true};
-    if(isFirstAdmin) console.info('[TMC] No existing admin found — auto-promoted this account to admin.');
+      else console.warn('[WF] Profile auto-create failed:', upsertErr);
+    } catch(e) { console.warn('[WF] Profile auto-create threw:', e); }
+    sbProfile = created || {id:sbSession.user.id, email:sbSession.user.email, role:'no_access', active:false, org_id:null};
   } else {
     sbProfile = data;
   }
   _finalise();
-  // Resolve org for this session
-  currentOrgId = sbProfile?.org_id || SITE_ORG_ID;
+  // Resolve org for this session. NEVER fall back to SITE_ORG_ID for a user
+  // whose profile has no org_id — that would drop new/unassigned users into
+  // the TMC org and expose its data. The owner email is the only exception.
+  if(sbProfile?.org_id){
+    currentOrgId = sbProfile.org_id;
+  } else if(sbSession?.user?.email === OWNER_EMAIL){
+    currentOrgId = SITE_ORG_ID;
+  } else {
+    currentOrgId = null; // no workspace yet — data load + sync are gated off below
+  }
   try {
-    const {data:org} = await sbClient.from('organisations').select('*').eq('id', currentOrgId).maybeSingle();
-    if(org){ currentOrg = org; applyOrgBranding(); }
-  } catch(e){ console.warn('[TMC] Could not load org settings:', e.message); }
+    if(currentOrgId){
+      const {data:org} = await sbClient.from('organisations').select('*').eq('id', currentOrgId).maybeSingle();
+      if(org){ currentOrg = org; applyOrgBranding(); }
+    }
+  } catch(e){ console.warn('[WF] Could not load org settings:', e.message); }
   return sbProfile;
 }
 function applyRoleUI(){
@@ -10509,6 +10523,10 @@ async function quickApproveUser(userId){
 
 async function sbLoadAll(){
   if(!sbClient||!sbSession) return;
+  // Org gate: an authenticated user with no resolved org must not load any
+  // data. Without this, the per-table queries fall back to SITE_ORG_ID and
+  // would surface TMC's records to an unassigned account.
+  if(!currentOrgId){ console.warn('[WF] Load skipped — no organisation resolved for this session'); return; }
   sbIsLoading=true;
   sbLoadStartTime=Date.now();
   sbSetStatus('Supabase: loading…', true);
@@ -10815,6 +10833,19 @@ async function sbAfterAuth(){
   // Owner safety net — works even if profiles table is missing
   if(user.email === 'dylan@tmconstruction.nl'){ sbUserRole = 'admin'; sbUserActive = true; }
   document.getElementById('sbUser').innerHTML=`Logged in as ${esc(user.email)} <span class="role-chip">${esc(sbRoleLabel())}</span><span class="role-chip" title="Profile active status">${sbUserActive?'Active':'Inactive'}</span>`;
+  // Workspace gate: a signed-in user with no resolved org has not created or
+  // joined a workspace yet. Block all data access and point them to signup.
+  // This is the hard guarantee that an unassigned account can never see another
+  // org's data, independent of role/active state.
+  if(!currentOrgId && user.email !== 'dylan@tmconstruction.nl'){
+    sbReady=false;
+    document.getElementById('sbLoginOverlay')?.classList.remove('open');
+    sbLockScreen(false);
+    sbSetStatus('Supabase: no workspace', false);
+    sbShowLoginPrompt(true, `<strong>No workspace linked to this account.</strong> You are signed in as <em>${esc(user.email)}</em> but haven't created or joined a workspace yet. <a class="btn btn-save" style="margin-left:8px;padding:3px 10px;font-size:12px;text-decoration:none;" href="signup.html">Create a workspace</a> <button class="btn btn-cancel" style="margin-left:6px;padding:3px 10px;font-size:12px;" onclick="sbLogout()">Sign out</button>`);
+    applyRoleUI();
+    return;
+  }
   if(!sbUserActive || sbUserRole === 'no_access'){
     sbReady=false;
     document.getElementById('sbLoginOverlay')?.classList.remove('open');
