@@ -5215,7 +5215,7 @@ function rebuildModal(id){
               <option value="expired"  ${st==='expired'?'selected':''}>Expired</option>
               <option value="missing"  ${st==='missing'?'selected':''}>Missing</option>
             </select>
-            ${(()=>{ const fc=(fileStore[id]?.[d.id]||[]).filter(f=>!f.superseded).length; return fc>0?`<button class="attach-btn" onclick="toggleExp('${id}','${d.id}')" style="background:#dcfce7;color:#166534;border-color:#86efac;font-weight:600;">📎 ${fc} file${fc!==1?'s':''}</button>`:`<button class="attach-btn" onclick="toggleExp('${id}','${d.id}')">Dates / Files</button>`; })()}
+            ${(()=>{ const fc=(fileStore[id]?.[d.id]||[]).filter(f=>!f.superseded).length; const dot=fc>0?`<span style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:5px;vertical-align:middle;flex-shrink:0;" title="${fc} file${fc!==1?'s':''} attached"></span>`:''; return `<button class="attach-btn" onclick="toggleExp('${id}','${d.id}')">${dot}Dates / Files</button>`; })()}
           </div>
         </div>
         <div class="doc-expand${isOpen?' open':''}" id="dexp_${key}">
