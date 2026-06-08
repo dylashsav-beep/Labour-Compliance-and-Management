@@ -188,7 +188,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
   if (!recipients.length) return { org: orgName, sent: false, reason: 'no recipient configured' }
 
   // Merge org section prefs with defaults (org overrides defaults per key).
-  const { data: orgSettings } = await sb.from('settings').select('digest_sections, notify_workers_enabled').eq('id', orgId).maybeSingle()
+  const { data: orgSettings } = await sb.from('settings').select('digest_sections, notify_workers_enabled, notify_worker_types').eq('id', orgId).maybeSingle()
   const stored: Record<string, any> = orgSettings?.digest_sections || {}
   const sec = (key: string) => {
     const def = SECTION_DEFAULTS[key]
@@ -208,7 +208,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
 
   // ── 1. Workers + documents ────────────────────────────────────────────────
   const [{ data: workers }, { data: wdocs }, { data: docItems }] = await Promise.all([
-    sb.from('workers').select('id, full_name, email, document_set_id').eq('org_id', orgId).eq('active', true),
+    sb.from('workers').select('id, full_name, email, document_set_id, worker_type').eq('org_id', orgId).eq('active', true),
     sb.from('worker_documents').select('worker_id, doc_key, status, expiry_date').eq('org_id', orgId).eq('active', true),
     sb.from('document_set_items').select('id, name, required, document_set_id').eq('org_id', orgId).eq('active', true),
   ])
@@ -464,7 +464,14 @@ async function digestForOrg(sb: any, org: any, today: Date) {
   if (orgSettings?.notify_workers_enabled) {
     const in7Str       = addDays(today, 7)
     const sevenDaysAgo = new Date(+today - 7 * 86400000).toISOString()
-    const workersWithEmail = (workers||[]).filter((w: any) => w.email)
+    // Empty array = all types included; populated = only those type IDs
+    const allowedTypes: string[] | null =
+      Array.isArray(orgSettings.notify_worker_types) && orgSettings.notify_worker_types.length > 0
+        ? orgSettings.notify_worker_types
+        : null
+    const workersWithEmail = (workers||[]).filter((w: any) =>
+      w.email && (allowedTypes === null || allowedTypes.includes(w.worker_type))
+    )
 
     if (workersWithEmail.length) {
       const { data: recentLogs } = await sb.from('worker_notification_log')
