@@ -5215,7 +5215,7 @@ function rebuildModal(id){
               <option value="expired"  ${st==='expired'?'selected':''}>Expired</option>
               <option value="missing"  ${st==='missing'?'selected':''}>Missing</option>
             </select>
-            <button class="attach-btn" onclick="toggleExp('${id}','${d.id}')">Dates / Files</button>
+            ${(()=>{ const fc=(fileStore[id]?.[d.id]||[]).filter(f=>!f.superseded).length; return fc>0?`<button class="attach-btn" onclick="toggleExp('${id}','${d.id}')" style="background:#dcfce7;color:#166534;border-color:#86efac;font-weight:600;">📎 ${fc} file${fc!==1?'s':''}</button>`:`<button class="attach-btn" onclick="toggleExp('${id}','${d.id}')">Dates / Files</button>`; })()}
           </div>
         </div>
         <div class="doc-expand${isOpen?' open':''}" id="dexp_${key}">
