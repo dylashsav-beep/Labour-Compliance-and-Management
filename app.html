@@ -3701,19 +3701,41 @@ function setFA(v,el){
 }
 function setFWT(v){
   fWorkerType = (v==='all') ? '' : (v||'');
-  document.querySelectorAll('[data-fwt]').forEach(b=>b.classList.toggle('active', b.dataset.fwt===(fWorkerType||'all')));
+  renderWorkerTypeFilter();
   renderTable();
 }
 function renderWorkerTypeFilter(){
   const wrap=document.getElementById('workerTypeFilterWrap');
   if(!wrap) return;
   const types=settings.workerTypes||[];
-  if(types.length<2){ wrap.style.display='none'; return; }
-  wrap.style.display='';
-  wrap.innerHTML=`<div class="filter-sep"></div><span class="filter-label">Type:</span><div style="display:flex;gap:4px;">`
-    +`<button class="fbtn${fWorkerType===''?' active':''}" data-fwt="all" onclick="setFWT('all')">All</button>`
-    +types.map(t=>`<button class="fbtn${fWorkerType===t.id?' active':''}" data-fwt="${esc(t.id)}" onclick="setFWT('${esc(t.id)}')">${esc(t.label)}</button>`).join('')
-    +`</div>`;
+  if(types.length<2){ wrap.innerHTML=''; return; }
+  const activeLabel=fWorkerType?(types.find(t=>t.id===fWorkerType)?.label||fWorkerType):'All Types';
+  const options=[{id:'',label:'All Types'},...types].map(t=>{
+    const sel=fWorkerType===t.id;
+    const v=t.id?`'${t.id}'`:"'all'";
+    return `<label class="pf-option${sel?' checked':''}" onclick="setFWT(${v});closeWTFPanel();event.preventDefault()"><input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFWT(${v});closeWTFPanel()">${esc(t.label)}</label>`;
+  }).join('');
+  wrap.innerHTML=`<div class="filter-sep"></div><div class="pf-wrap" id="wtfWrap"><button class="fbtn pf-trigger${fWorkerType?' active':''}" id="wtfTrigger" onclick="toggleWTFPanel(event)"><span>${esc(activeLabel)}</span><span class="pf-caret">▼</span></button><div class="pf-panel" id="wtfPanel"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options">${options}</div></div></div>`;
+}
+function toggleWTFPanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('wtfPanel');
+  const trigger=document.getElementById('wtfTrigger');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
+}
+function closeWTFPanel(){
+  const panel=document.getElementById('wtfPanel');
+  const trigger=document.getElementById('wtfTrigger');
+  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(trigger) trigger.classList.remove('open');
 }
 
 function toggleInactiveWorkersTable(){
@@ -3778,6 +3800,8 @@ function closePFPanel(){
 document.addEventListener('click', function(e){
   const wrap = document.getElementById('pfWrap');
   if(wrap && !wrap.contains(e.target)) closePFPanel();
+  const wtfWrap = document.getElementById('wtfWrap');
+  if(wtfWrap && !wtfWrap.contains(e.target)) closeWTFPanel();
 });
 
 function setFP(v){
