@@ -1583,6 +1583,18 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             <div id="digestSectionsGrid" style="display:grid;gap:8px;"></div>
           </div>
 
+          <!-- Worker Email Reminders -->
+          <div class="settings-card" id="workerNotifyCard">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Worker Email Reminders</div>
+              <div class="settings-card-desc">Automatically email workers when their compliance documents are missing or expiring. Workers receive their first reminder 7 days before expiry, then a weekly repeat until resolved. Each email includes their active contracts and a direct link to their worker portal. Requires workers to have an email address on file.</div>
+            </div>
+            <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text);">
+              <input type="checkbox" id="notifyWorkersToggle" style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;" onchange="setNotifyWorkersEnabled(this.checked)"/>
+              Enable automatic worker reminders
+            </label>
+          </div>
+
           <!-- Compliance Email Report -->
           <div class="settings-card" id="complianceReportCard">
             <div class="settings-card-header">
@@ -3010,7 +3022,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
 // ── DEMO MODE (no-auth, sessionStorage persistence) ──────────────────
@@ -4214,6 +4226,7 @@ function renderTable(){
       <td style="white-space:nowrap;" title="${goTips[st]}"><span class="status-badge ${st}" style="font-size:10px;padding:2px 7px;white-space:nowrap;"><span class="go-dot ${st}"></span>${goLabels[st]}</span></td>
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td style="white-space:nowrap;">
+        ${w.email?`<button class="detail-btn" style="background:var(--bg);margin-right:4px;" onclick="sendWorkerReminder('${w.id}',event)" title="Send compliance reminder to ${esc(w.email)}">✉</button>`:''}
         <button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button>
       </td>
     </tr>`;
@@ -7240,6 +7253,36 @@ function applyOrgBranding(){
   _renderColorSwatches(currentOrg.primary_color||'#1a3082');
   _updateLogoPreview(currentOrg.logo_url||null);
   _renderWorkerPortalLink();
+}
+
+// ── Worker email reminders ────────────────────────────────────────────────────
+function setNotifyWorkersEnabled(v){
+  settings.notifyWorkersEnabled=!!v;
+  sbScheduleSync();
+}
+function renderWorkerNotifySettings(){
+  const el=document.getElementById('notifyWorkersToggle');
+  if(el) el.checked=!!settings.notifyWorkersEnabled;
+}
+async function sendWorkerReminder(wid,e){
+  if(e){e.stopPropagation();}
+  const w=workers.find(x=>x.id===wid);
+  if(!w?.email){alert('This worker has no email address on file.');return;}
+  if(!confirm(`Send a compliance reminder to ${w.name}?\n\nEmail: ${w.email}\n\nThis will send their current document status, missing docs, and active contracts.`))return;
+  try{
+    const {data:{session}}=await sbClient.auth.getSession();
+    if(!session?.access_token){alert('Session expired — please refresh.');return;}
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/send-worker-reminder',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({worker_id:wid})
+    });
+    const result=await resp.json();
+    if(!resp.ok) throw new Error(result.error||'Email send failed');
+    _showSaveToast('Reminder sent to '+w.email);
+  }catch(err){
+    alert('Failed to send reminder: '+err.message);
+  }
 }
 
 // Build the org's unique worker-portal URL (work-force.nl/worker.html?org=<slug>)
@@ -10460,7 +10503,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),notify_workers_enabled:settings.notifyWorkersEnabled||false,digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   // allow_issue is intentionally excluded here — it is written directly by sbRemoteUpsertDocSetItem
@@ -10856,7 +10899,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.notify_workers_enabled!=null) settings.notifyWorkersEnabled=!!settingsData.notify_workers_enabled; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); renderWorkerNotifySettings(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
