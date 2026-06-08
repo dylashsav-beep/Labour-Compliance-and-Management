@@ -346,7 +346,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
   // ── 6. Uncharged weeks (accommodation + vehicles) ─────────────────────────
   const unchargedAccomRows: string[] = []
   const unchargedVehRows:   string[] = []
-  const billingHdr = colHdr(['Worker','Resource','Week','Status'])
+  const billingHdr = colHdr(['Worker','Resource','Week','Rate/wk','Status'])
 
   if (sec('uncharged_accommodation').enabled || sec('uncharged_vehicles').enabled) {
     const [
@@ -354,9 +354,9 @@ async function digestForOrg(sb: any, org: any, today: Date) {
       { data: vehAssign },   { data: vehCharges },
       { data: properties },  { data: vehicles }
     ] = await Promise.all([
-      sb.from('accommodation_assignments').select('id, worker_id, property_id, start_date, end_date').eq('org_id', orgId).eq('active', true).eq('charge_to_operative', true),
+      sb.from('accommodation_assignments').select('id, worker_id, property_id, start_date, end_date, weekly_charge_amount').eq('org_id', orgId).eq('active', true).eq('charge_to_operative', true),
       sb.from('accommodation_charges').select('assignment_id, week_key').eq('org_id', orgId).eq('active', true).eq('charged', true),
-      sb.from('vehicle_assignments').select('id, worker_id, vehicle_id, start_date, end_date').eq('org_id', orgId).eq('active', true).eq('charge_to_operative', true),
+      sb.from('vehicle_assignments').select('id, worker_id, vehicle_id, start_date, end_date, weekly_charge_amount').eq('org_id', orgId).eq('active', true).eq('charge_to_operative', true),
       sb.from('vehicle_charges').select('assignment_id, week_key').eq('org_id', orgId).eq('active', true).eq('charged', true),
       sb.from('properties').select('id, name').eq('org_id', orgId).eq('active', true),
       sb.from('vehicles').select('id, description').eq('org_id', orgId).eq('active', true),
@@ -371,6 +371,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
       for (const a of (assignments||[])) {
         const start = weekMonday(new Date(a.start_date))
         const end   = a.end_date ? new Date(a.end_date) : today
+        const rateCell = a.weekly_charge_amount ? `€${Number(a.weekly_charge_amount).toFixed(2)}/wk` : '—'
         let cur = new Date(start)
         while (cur < today && cur <= end) {
           const wk = isoWeekKey(cur)
@@ -379,6 +380,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
               esc(workerMap[a.worker_id]?.name || 'Unknown'),
               esc(resourceMap[a.property_id || a.vehicle_id] || 'Unknown'),
               `<span style="color:#b45309;font-weight:600;">${wk}</span>`,
+              rateCell,
               'Not charged'
             ))
           }
