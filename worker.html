@@ -244,6 +244,8 @@ const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
 const SB_BUCKET     = 'tmc-documents';
 const SITE_ORG_ID   = '00000000-0000-0000-0001-000000000001';
+const WP_SESSION_KEY = 'wf_wp_session_v1';  // localStorage key for persistent worker session
+const WP_SESSION_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days in ms
 
 // Resolve org from ?org=<slug> URL param (falls back to SITE_ORG_ID for TMC)
 let resolvedOrgId = SITE_ORG_ID;
@@ -267,7 +269,7 @@ let sbClient = null;
 (function(){
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); };
+  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); wpTryAutoLogin(); };
   document.head.appendChild(s);
 })();
 
@@ -654,6 +656,7 @@ async function wpDirectLogin(){
       return;
     }
     wpWorkerEmail=email;
+    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email, orgId:resolvedOrgId, expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
   }catch(e){
@@ -664,12 +667,31 @@ async function wpDirectLogin(){
 }
 
 function wpSignOut(){
+  try{ localStorage.removeItem(WP_SESSION_KEY); }catch(_){}
   wpWorkerId=null; wpWorkerObj=null; wpWorkerEmail=null;
   wpSubmissions=[]; wpIssuedDocs=[];
   document.getElementById('workerPortal').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('wpEmailInput').value='';
   document.getElementById('wpEmailInput').focus();
+}
+
+async function wpTryAutoLogin(){
+  try{
+    const raw=localStorage.getItem(WP_SESSION_KEY);
+    if(!raw) return;
+    const sess=JSON.parse(raw);
+    if(!sess?.email||!sess?.orgId||!sess?.expires) return;
+    if(Date.now()>sess.expires){ localStorage.removeItem(WP_SESSION_KEY); return; }
+    resolvedOrgId=sess.orgId;
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:sess.email,p_org_id:sess.orgId});
+    if(error||!data?.worker){ localStorage.removeItem(WP_SESSION_KEY); return; }
+    // Refresh TTL on each successful auto-login
+    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:sess.email,orgId:sess.orgId,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
+    wpWorkerEmail=sess.email;
+    wpLoadPortalData(data);
+    await initWorkerPortal(data.worker.id);
+  }catch(e){ console.warn('[WP] auto-login failed:',e.message); localStorage.removeItem(WP_SESSION_KEY); }
 }
 
 // ── Data loading ───────────────────────────────────────────────────────────
