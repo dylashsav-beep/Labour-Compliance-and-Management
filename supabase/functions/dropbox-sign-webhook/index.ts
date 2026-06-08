@@ -32,10 +32,13 @@ Deno.serve(async (req) => {
 
     if (!payloadStr) return ACK
 
-    // Verify HMAC signature to reject spoofed callbacks
+    // Require HMAC signature — reject any call that lacks it or has a bad one.
+    // An attacker posting directly to this endpoint has no API key so cannot
+    // produce a valid signature. Skipping this check would let anyone forge
+    // a 'signed' event and write arbitrary files into any org's storage path.
     const headerSig = req.headers.get('X-HelloSign-Signature') || ''
-    if (headerSig && !(await verifySignature(payloadStr, headerSig))) {
-      console.warn('[dropbox-sign-webhook] Signature verification failed — ignoring event')
+    if (!headerSig || !(await verifySignature(payloadStr, headerSig))) {
+      console.warn('[dropbox-sign-webhook] Missing or invalid signature — rejecting event')
       return ACK
     }
 

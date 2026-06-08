@@ -10682,7 +10682,12 @@ async function sbPersistAll(force=false){
   }
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
-  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',signature_status:a.signatureStatus||'none',signature_request_id:a.signatureRequestId||null,active:true,org_id:oid}));
+  // NOTE: signature_status + signature_request_id are intentionally excluded here.
+  // They are written only by the send-for-signature and dropbox-sign-webhook edge
+  // functions. Including them in the regular sync would cause sbPersistAll to
+  // overwrite a webhook-updated 'signed' status back to 'pending' if the
+  // in-memory state hasn't been refreshed yet (race condition).
+  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
   await sbUpsertRows('project_assignments',paRows);
   const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}); }); });
   await sbUpsertRows('project_assignment_files',paf);
@@ -10700,7 +10705,8 @@ async function sbPersistAll(force=false){
     await sbUpsertRows('tool_assignments',ta);
     await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
-  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,signature_request_id:d.signatureRequestId||null,signed_file_path:d.signedFilePath||null,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
+  // NOTE: signature_request_id + signed_file_path excluded — written only by edge functions.
+  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:!!it.restored,org_id:oid})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
