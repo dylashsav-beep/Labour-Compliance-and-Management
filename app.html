@@ -4715,10 +4715,10 @@ function renderPAList(){
       <td style="font-size:12px;">${a.startDate||'—'}</td>
       <td style="font-size:12px;">${a.endDate||'Ongoing'}</td>
       <td>${a.rate?`<span class="rate-tag">€${parseFloat(a.rate).toFixed(2)} ${rateLabel[a.rateType]||''}</span>`:'<span style="color:var(--text-l);font-size:11px;">—</span>'}</td>
-      <td>${!noContract
+      <td style="white-space:nowrap;">${!noContract
         ?`<span class="contract-pill" onclick="openEditPA('${a.id}')" title="View files">📎 ${fileCount} file${fileCount!==1?'s':''}</span>`
         :`<span class="contract-pill missing" title="${dim?'Completed assignment has no contract on file — this needs attention':'Contract missing'}">⚠ ${dim?'No contract — flag':'Missing'}</span>`
-      }</td>
+      }${a.signatureStatus==='pending'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;">⏳ Awaiting sig</span>`:a.signatureStatus==='signed'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#dcfce7;color:#166534;border:1px solid #86efac;">✅ Signed</span>`:a.signatureStatus==='declined'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">❌ Declined</span>`:''}</td>
       <td><span style="font-size:11px;font-weight:600;color:${stColors[st]||'var(--text-m)'};">● ${stLabels[st]||st}</span></td>
       <td><button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openEditPA('${a.id}')">Edit</button></td>
     </tr>`;
@@ -4740,11 +4740,25 @@ function renderPAFileList(){
   const a = editingPAId ? projectAssignments.find(x=>x.id===editingPAId) : null;
   const existing = (a?.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
   const isProtected = !!editingPAId && hasContractFile(a);
+  const sigStatus = a?.signatureStatus || 'none';
+  // Signature status badge shown above the file list
   let html = '';
+  if (sigStatus === 'pending') {
+    html += `<div style="display:flex;align-items:center;gap:6px;background:#fef9c3;border:1px solid #fde047;border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#854d0e;">⏳ <strong>Awaiting signature</strong> — sent to worker for signing</div>`;
+  } else if (sigStatus === 'signed') {
+    html += `<div style="display:flex;align-items:center;gap:6px;background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#166534;">✅ <strong>Signed</strong> — signed copy is attached below</div>`;
+  } else if (sigStatus === 'declined') {
+    html += `<div style="display:flex;align-items:center;gap:6px;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:12px;color:#991b1b;">❌ <strong>Declined</strong> — worker declined to sign. You can send again.</div>`;
+  }
   existing.forEach(f=>{
     const key = f.dbId||f.file_path||f.name;
+    const isPdf = (f.name||'').toLowerCase().endsWith('.pdf') || (f.type||'').includes('pdf');
+    const canSign = isPdf && a?.wid && (sigStatus === 'none' || sigStatus === 'declined');
+    const safeFilePath = (f.file_path||f.storagePath||'').replace(/'/g,"\\'");
+    const safeName = esc(f.name).replace(/'/g,'&#39;');
     html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;margin-bottom:4px;">
       <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(f.name)}<span style="color:var(--text-l);font-size:10px;margin-left:5px;">${fsz(f.size)}</span></span>
+      ${canSign ? `<button type="button" style="background:none;border:none;font-size:11px;color:#7c3aed;cursor:pointer;flex-shrink:0;font-weight:600;" onclick="sendForSignature('assignment','${a.id}','${safeFilePath}','${safeName}','${a.wid}')">✍ Sign</button>` : ''}
       <button type="button" style="background:none;border:none;font-size:11px;color:#4f46e5;cursor:pointer;flex-shrink:0;" onclick="paViewFile('${key}','${esc(f.name)}')">View</button>
       <button type="button" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="paRemoveExistingFile('${key}')">Remove</button>
     </div>`;
@@ -5228,7 +5242,7 @@ function rebuildModal(id){
           </div>
           <div class="doc-controls">
             ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
-            ${(()=>{if(!d.allowIssue)return'';const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&x.status==='pending_signature');return ai?`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">📤 Issued</span><button onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;padding:0 2px;text-decoration:underline;">Revoke</button>`:sbCanWriteTable('worker_documents')?`<button class="attach-btn" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:''})()}
+            ${(()=>{if(!d.allowIssue)return'';const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&(x.status==='pending_signature'||x.status==='signed'));if(ai){const revoke=`<button onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;padding:0 2px;text-decoration:underline;">Revoke</button>`;if(ai.status==='signed'){return`<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">✅ eSigned</span>${ai.signedFilePath?`<button onclick="sbSignedDownload('${ai.signedFilePath}','Signed Document')" title="Download signed copy" style="background:none;border:none;font-size:11px;color:#4f46e5;cursor:pointer;padding:0 2px;text-decoration:underline;">Download</button>`:''}${revoke}`;}if(ai.signatureRequestId){return`<span style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#854d0e;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">⏳ Awaiting e-sig</span>${revoke}`;}return`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">📤 Issued</span><button onclick="sendForSignature('issued_doc','${ai.id}','${ai.filePath.replace(/'/g,"\\'")}','${(ai.fileName||'Document').replace(/'/g,"\\'")}','${id}')" style="background:none;border:none;font-size:11px;color:#7c3aed;font-weight:600;cursor:pointer;padding:0 2px;">✍ Sign</button>${revoke}`;}return sbCanWriteTable('worker_documents')?`<button class="attach-btn" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:''})()}
             <select class="status-select ${st}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
               <option value="ok"       ${st==='ok'?'selected':''}>Valid</option>
               <option value="expiring" ${st==='expiring'?'selected':''}>Expiring</option>
@@ -7310,6 +7324,44 @@ function renderWorkerNotifySettings(){
     ${esc(t.label)}
   </label>`).join('');
 }
+// ── E-signature (Dropbox Sign) ────────────────────────────────────────────────
+async function sendForSignature(type, referenceId, filePath, fileName, workerId){
+  const w=workers.find(x=>x.id===workerId);
+  if(!w?.email){alert('This worker has no email address on file.');return;}
+  const confirmed=await _showConfirm(
+    'Send for e-signature?',
+    `<div style="margin-bottom:10px;">A signing request will be emailed to:</div>
+     <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--navy);font-weight:600;margin-bottom:10px;">${w.email}</div>
+     <div style="color:var(--text-light);font-size:12px;">The worker will receive a secure link to review and sign the document electronically via Dropbox Sign. The signed copy will be stored alongside the original.</div>`,
+    'Send for Signature'
+  );
+  if(!confirmed) return;
+  try{
+    const {data:{session}}=await sbClient.auth.getSession();
+    if(!session?.access_token){alert('Session expired — please refresh.');return;}
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/send-for-signature',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({type,reference_id:referenceId,file_path:filePath,file_name:fileName,worker_id:workerId})
+    });
+    const result=await resp.json();
+    if(!resp.ok) throw new Error(result.error||'Failed to send for signature');
+    // Update in-memory immediately so UI reflects pending state
+    if(type==='assignment'){
+      const a=projectAssignments.find(x=>x.id===referenceId);
+      if(a){a.signatureStatus='pending';a.signatureRequestId=result.signature_request_id;}
+      renderPAFileList();
+    } else {
+      const d=issuedDocuments.find(x=>x.id===referenceId);
+      if(d){d.signatureRequestId=result.signature_request_id;}
+      if(curW) rebuildModal(curW);
+    }
+    _showSaveToast('Signing request sent to '+w.email);
+  }catch(err){
+    alert('Failed to send for signature: '+err.message);
+  }
+}
+
 let _confirmResolve = (_) => {};
 function _showConfirm(title, bodyHtml, okLabel='Send'){
   return new Promise(resolve=>{
@@ -10630,7 +10682,7 @@ async function sbPersistAll(force=false){
   }
   const rosterRows=[]; Object.keys(roster||{}).forEach(wk=>Object.keys(roster[wk]||{}).forEach(wid=>(roster[wk][wid]||[]).forEach((projectName,i)=>rosterRows.push({id:`${wk}__${wid}__${i}`,week_key:wk,worker_id:wid,project_name:projectName,active:true,org_id:oid}))));
   await sbUpsertRows('roster_week_allocations',rosterRows);
-  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
+  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',signature_status:a.signatureStatus||'none',signature_request_id:a.signatureRequestId||null,active:true,org_id:oid}));
   await sbUpsertRows('project_assignments',paRows);
   const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}); }); });
   await sbUpsertRows('project_assignment_files',paf);
@@ -10648,7 +10700,7 @@ async function sbPersistAll(force=false){
     await sbUpsertRows('tool_assignments',ta);
     await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
-  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
+  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,signature_request_id:d.signatureRequestId||null,signed_file_path:d.signedFilePath||null,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:!!it.restored,org_id:oid})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -10982,7 +11034,7 @@ async function sbLoadAll(){
     (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
     const paFiles={}; (pafData||[]).forEach(f=>{ if(!paFiles[f.project_assignment_id]) paFiles[f.project_assignment_id]=[]; paFiles[f.project_assignment_id].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,dbId:f.id}); });
-    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',contractFiles:paFiles[a.id]||[]}));
+    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',signatureStatus:a.signature_status||'none',signatureRequestId:a.signature_request_id||null,contractFiles:paFiles[a.id]||[]}));
     properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
     accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });
@@ -10994,7 +11046,7 @@ async function sbLoadAll(){
     tools=(toolData||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||'',notes:t.notes||''}));
     toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null,issueFilePath:a.issue_file_path||null,issueFileName:a.issue_file_name||null,returnFilePath:a.return_file_path||null,returnFileName:a.return_file_name||null}); });
     toolCharges=(toolChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
-    issuedDocuments=(issuedDocsData||[]).map(d=>({id:d.id,workerId:d.worker_id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
+    issuedDocuments=(issuedDocsData||[]).map(d=>({id:d.id,workerId:d.worker_id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature',signatureRequestId:d.signature_request_id||null,signedFilePath:d.signed_file_path||null}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};
