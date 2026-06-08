@@ -1976,6 +1976,22 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   </div>
 </div>
 
+<!-- GENERIC CONFIRM MODAL -->
+<div class="overlay" id="confirmOverlay" style="z-index:600;">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header" style="border-bottom:1px solid var(--border);padding:18px 20px 14px;">
+      <div id="confirmTitle" style="font-size:15px;font-weight:700;color:var(--navy);"></div>
+    </div>
+    <div style="padding:18px 20px 8px;">
+      <div id="confirmBody" style="font-size:13px;color:var(--text-m);line-height:1.55;"></div>
+    </div>
+    <div style="padding:14px 20px 18px;display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-cancel" style="font-size:13px;padding:8px 18px;" onclick="_confirmResolve(false)">Cancel</button>
+      <button class="btn" id="confirmOkBtn" style="font-size:13px;padding:8px 18px;background:var(--navy);color:#fff;" onclick="_confirmResolve(true)">OK</button>
+    </div>
+  </div>
+</div>
+
 <!-- ASSIGN WORKER TO PROPERTY MODAL -->
 <div class="overlay" id="assignWorkerToAccomOverlay">
   <div class="modal" style="max-width:480px;">
@@ -7264,11 +7280,34 @@ function renderWorkerNotifySettings(){
   const el=document.getElementById('notifyWorkersToggle');
   if(el) el.checked=!!settings.notifyWorkersEnabled;
 }
+let _confirmResolve = (_) => {};
+function _showConfirm(title, bodyHtml, okLabel='Send'){
+  return new Promise(resolve=>{
+    _confirmResolve = (v)=>{
+      document.getElementById('confirmOverlay').style.display='none';
+      resolve(v);
+    };
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').innerHTML = bodyHtml;
+    document.getElementById('confirmOkBtn').textContent = okLabel;
+    const ov = document.getElementById('confirmOverlay');
+    ov.style.display='flex';
+    ov.onclick = (e)=>{ if(e.target===ov) _confirmResolve(false); };
+  });
+}
+
 async function sendWorkerReminder(wid,e){
   if(e){e.stopPropagation();}
   const w=workers.find(x=>x.id===wid);
   if(!w?.email){alert('This worker has no email address on file.');return;}
-  if(!confirm(`Send a compliance reminder to ${w.name}?\n\nEmail: ${w.email}\n\nThis will send their current document status, missing docs, and active contracts.`))return;
+  const confirmed = await _showConfirm(
+    `Send reminder to ${w.name}?`,
+    `<div style="margin-bottom:10px;">A compliance reminder will be sent to:</div>
+     <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--navy);font-weight:600;margin-bottom:10px;">${w.email}</div>
+     <div style="color:var(--text-light);font-size:12px;">Includes current document status, missing docs, and active contracts.</div>`,
+    'Send Reminder'
+  );
+  if(!confirmed) return;
   try{
     const {data:{session}}=await sbClient.auth.getSession();
     if(!session?.access_token){alert('Session expired — please refresh.');return;}
