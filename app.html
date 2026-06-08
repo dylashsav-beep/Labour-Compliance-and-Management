@@ -7245,8 +7245,9 @@ function applyOrgBranding(){
 // Build the org's unique worker-portal URL (work-force.nl/worker.html?org=<slug>)
 function workerPortalUrl(){
   const slug=currentOrg&&currentOrg.slug;
-  if(!slug) return '';
-  return location.origin+'/worker.html?org='+encodeURIComponent(slug);
+  if(slug) return location.origin+'/worker.html?org='+encodeURIComponent(slug);
+  // No slug (TMC default org) — bare worker.html resolves to the default org
+  return location.origin+'/worker.html';
 }
 
 function _renderWorkerPortalLink(){
