@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
 
     // Fetch worker — verify it belongs to caller's org (cross-org guard)
     const { data: worker } = await sb.from('workers')
-      .select('id, full_name, email, org_id')
+      .select('id, full_name, email, org_id, document_set_id')
       .eq('id', workerId)
       .eq('org_id', callerOrgId)
       .eq('active', true)
@@ -199,9 +199,12 @@ Deno.serve(async (req) => {
     // Load org info (name + slug for portal link)
     const { data: org } = await sb.from('organisations').select('id, name, slug').eq('id', callerOrgId).maybeSingle()
 
-    // Load document set items for name lookups
-    const { data: docItems } = await sb.from('document_set_items')
+    // Load document set items scoped to this worker's assigned set only.
+    // Fetching all sets would show docs from other sets (e.g. ZZP docs for a Blue Card worker).
+    const docItemsQuery = sb.from('document_set_items')
       .select('id, name, required').eq('org_id', callerOrgId).eq('active', true)
+    if (worker.document_set_id) docItemsQuery.eq('document_set_id', worker.document_set_id)
+    const { data: docItems } = await docItemsQuery
     const docItemMap: Record<string, any> = Object.fromEntries(
       (docItems||[]).map((d: any) => [d.id.includes('__') ? d.id.split('__').slice(1).join('__') : d.id, d])
     )

@@ -208,19 +208,27 @@ async function digestForOrg(sb: any, org: any, today: Date) {
 
   // ── 1. Workers + documents ────────────────────────────────────────────────
   const [{ data: workers }, { data: wdocs }, { data: docItems }] = await Promise.all([
-    sb.from('workers').select('id, full_name, email').eq('org_id', orgId).eq('active', true),
+    sb.from('workers').select('id, full_name, email, document_set_id').eq('org_id', orgId).eq('active', true),
     sb.from('worker_documents').select('worker_id, doc_key, status, expiry_date').eq('org_id', orgId).eq('active', true),
-    sb.from('document_set_items').select('id, name, required').eq('org_id', orgId).eq('active', true),
+    sb.from('document_set_items').select('id, name, required, document_set_id').eq('org_id', orgId).eq('active', true),
   ])
 
-  const workerMap = Object.fromEntries((workers||[]).map((w:any)=>[w.id, w.full_name]))
+  // workerMap stores name + assigned document set id for per-worker doc lookups.
+  const workerMap = Object.fromEntries((workers||[]).map((w:any)=>[w.id, { name: w.full_name, setId: w.document_set_id }]))
 
-  // doc_key in worker_documents is the short key (e.g. "aansp"),
-  // but document_set_items.id is "${setId}__${docKey}".
-  // Build map keyed by the short part after __ so lookups match.
-  const docItemMap = Object.fromEntries(
-    (docItems||[]).map((d:any) => [d.id.includes('__') ? d.id.split('__').slice(1).join('__') : d.id, d])
-  )
+  // Build a per-set docItemMap so each worker's docs are checked against their
+  // own set only. A global map would match ZZP docs for Blue Card workers etc.
+  // Key structure: docItemsBySet[setId][shortDocKey] = docItem
+  const docItemsBySet: Record<string, Record<string, any>> = {}
+  for (const d of (docItems||[])) {
+    const setId = d.document_set_id
+    const shortKey = d.id.includes('__') ? d.id.split('__').slice(1).join('__') : d.id
+    if (!docItemsBySet[setId]) docItemsBySet[setId] = {}
+    docItemsBySet[setId][shortKey] = d
+  }
+  // Helper: get the doc item map for a given worker id
+  const workerDocItemMap = (wid: string): Record<string, any> =>
+    docItemsBySet[workerMap[wid]?.setId] || {}
 
   const expiredRows: string[]  = []
   const expiringRows: string[] = []
@@ -228,9 +236,9 @@ async function digestForOrg(sb: any, org: any, today: Date) {
 
   if (sec('expired_docs').enabled || sec('expiring_docs').enabled) {
     for (const d of (wdocs||[])) {
-      const item = docItemMap[d.doc_key]
+      const item = workerDocItemMap(d.worker_id)[d.doc_key]
       if (!item?.required) continue
-      const wName = esc(workerMap[d.worker_id] || 'Unknown worker')
+      const wName = esc(workerMap[d.worker_id]?.name || 'Unknown worker')
       const dName = esc(item.name)
       if (!d.expiry_date || d.status === 'missing') {
         if (sec('expired_docs').enabled)
@@ -262,7 +270,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
     const projMap = Object.fromEntries((projects||[]).map((p:any)=>[p.id, p.name]))
     for (const a of (endingRaw||[])) {
       assignEndingRows.push(row(
-        esc(workerMap[a.worker_id] || 'Unknown'),
+        esc(workerMap[a.worker_id]?.name || 'Unknown'),
         esc(projMap[a.project_id]  || 'Unknown project'),
         `<span style="color:#b45309;font-weight:600;">Ends in ${daysUntil(a.end_date, today)}d</span>`,
         fmt(a.end_date)
@@ -286,7 +294,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
     for (const a of (allAssign||[])) {
       if (!assignmentsWithFiles.has(a.id)) {
         missingContractRows.push(row(
-          esc(workerMap[a.worker_id] || 'Unknown'),
+          esc(workerMap[a.worker_id]?.name || 'Unknown'),
           esc(projMap[a.project_id]  || 'Unknown project'),
           fmt(a.start_date),
           '<span style="color:#c53030;font-weight:600;">No contract</span>'
@@ -307,7 +315,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
     const assignedIds = new Set((currentAssign||[]).map((a:any)=>a.worker_id))
     for (const w of (workers||[])) {
       if (!assignedIds.has(w.id)) {
-        unassignedRows.push(row(esc(w.full_name), '', '', '<span style="color:#64748b;">No active assignment</span>'))
+        unassignedRows.push(row(esc(w.full_name||''), '', '', '<span style="color:#64748b;">No active assignment</span>'))
       }
     }
   }
@@ -327,7 +335,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
     const propMap = Object.fromEntries((properties||[]).map((p:any)=>[p.id, p.name]))
     for (const a of (accomEnding||[])) {
       accomEndingRows.push(row(
-        esc(workerMap[a.worker_id] || 'Unknown'),
+        esc(workerMap[a.worker_id]?.name || 'Unknown'),
         esc(propMap[a.property_id] || 'Unknown property'),
         `<span style="color:#b45309;font-weight:600;">Ends in ${daysUntil(a.end_date, today)}d</span>`,
         fmt(a.end_date)
@@ -368,7 +376,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
           const wk = isoWeekKey(cur)
           if (!charged.has(`${a.id}__${wk}`)) {
             out.push(row(
-              esc(workerMap[a.worker_id] || 'Unknown'),
+              esc(workerMap[a.worker_id]?.name || 'Unknown'),
               esc(resourceMap[a.property_id || a.vehicle_id] || 'Unknown'),
               `<span style="color:#b45309;font-weight:600;">${wk}</span>`,
               'Not charged'
@@ -468,7 +476,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
         if (recentlyNotified.has(worker.id)) continue
 
         const workerDocs = (wdocs||[]).filter((d: any) => d.worker_id === worker.id)
-        const { missing, expired, expiring } = classifyDocs(workerDocs, docItemMap, todayStr, in7Str, today)
+        const { missing, expired, expiring } = classifyDocs(workerDocs, workerDocItemMap(worker.id), todayStr, in7Str, today)
         if (!missing.length && !expired.length && !expiring.length) continue
 
         const { data: workerAssigns } = await sb.from('project_assignments')
