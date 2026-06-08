@@ -1124,6 +1124,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <button class="fbtn active" data-fa="active"   onclick="setFA('active',this)">● Active</button>
         <button class="fbtn"        data-fa="inactive" onclick="setFA('inactive',this)">○ Inactive</button>
       </div>
+      <div id="workerTypeFilterWrap" style="display:contents;"></div>
       <div class="filter-sep"></div>
       <span class="filter-label">Compliance:</span>
       <div style="display:flex;gap:4px;">
@@ -3611,6 +3612,7 @@ let fDocSet= new Set();  // empty = all doc sets (stored as docSetId)
 let fStatus= new Set();  // empty = all compliance statuses
 let fProj  = new Set();  // empty = all projects
 let fActive = 'active';   // worker active filter: active | inactive | all
+let fWorkerType = '';     // worker type filter: '' = all, else type id (e.g. 'zzp')
 let fMissingDoc = '';     // doc_key to filter by missing/expired (empty = all)
 let fSearch='', sortKey='', sortDir=1;
 let expandedDoc=null;
@@ -3696,6 +3698,22 @@ function setFA(v,el){
   fActive = v || 'active';
   document.querySelectorAll('[data-fa]').forEach(b=>b.classList.toggle('active', b.dataset.fa===fActive));
   renderTable();
+}
+function setFWT(v){
+  fWorkerType = (v==='all') ? '' : (v||'');
+  document.querySelectorAll('[data-fwt]').forEach(b=>b.classList.toggle('active', b.dataset.fwt===(fWorkerType||'all')));
+  renderTable();
+}
+function renderWorkerTypeFilter(){
+  const wrap=document.getElementById('workerTypeFilterWrap');
+  if(!wrap) return;
+  const types=settings.workerTypes||[];
+  if(types.length<2){ wrap.style.display='none'; return; }
+  wrap.style.display='';
+  wrap.innerHTML=`<div class="filter-sep"></div><span class="filter-label">Type:</span><div style="display:flex;gap:4px;">`
+    +`<button class="fbtn${fWorkerType===''?' active':''}" data-fwt="all" onclick="setFWT('all')">All</button>`
+    +types.map(t=>`<button class="fbtn${fWorkerType===t.id?' active':''}" data-fwt="${esc(t.id)}" onclick="setFWT('${esc(t.id)}')">${esc(t.label)}</button>`).join('')
+    +`</div>`;
 }
 
 function toggleInactiveWorkersTable(){
@@ -4080,6 +4098,7 @@ function filtered(){
       return s <= wkSun && e >= wkMon;
     }));
   }
+  if(fWorkerType) l=l.filter(w=>(w.type||'zzp')===fWorkerType);
   if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
   if(fMissingDoc){l=l.filter(w=>_workerMissingNamedDoc(w,fMissingDoc,refDate));}
   if(sortKey){l.sort((a,b)=>{
@@ -7409,7 +7428,7 @@ function saveWorkerTypeRename(id){
   if(!newLabel){ alert('Label cannot be empty.'); return; }
   t.label=newLabel;
   saveSettings(); sbScheduleSync();
-  renderWorkerTypesSettings();
+  renderWorkerTypesSettings(); renderWorkerTypeFilter();
   renderTable(); renderStats();
 }
 function addWorkerType(){
@@ -7422,7 +7441,7 @@ function addWorkerType(){
   settings.workerTypes=[...(settings.workerTypes||[]),{id,label}];
   input.value='';
   saveSettings(); sbScheduleSync();
-  renderWorkerTypesSettings();
+  renderWorkerTypesSettings(); renderWorkerTypeFilter();
 }
 function removeWorkerType(id){
   const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
@@ -7430,8 +7449,9 @@ function removeWorkerType(id){
   const inUse=workers.some(w=>w.type===id);
   if(inUse&&!confirm(`"${t.label}" is currently assigned to one or more workers. Those workers will show their type as "${id}" until updated. Remove anyway?`)) return;
   settings.workerTypes=(settings.workerTypes||[]).filter(t=>t.id!==id);
+  if(fWorkerType===id){ fWorkerType=''; }
   saveSettings(); sbScheduleSync();
-  renderWorkerTypesSettings();
+  renderWorkerTypesSettings(); renderWorkerTypeFilter();
 }
 function applyWarningDays(days){
   const parsed=parseInt(days,10);
@@ -10811,7 +10831,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
