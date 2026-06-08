@@ -6,6 +6,14 @@ const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FROM     = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
 const SITE_URL = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
 
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
+}
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...CORS } })
+}
+
 // NOTE: Uses service-role key (bypasses RLS). Org ownership is verified
 // manually: caller JWT → profiles.org_id → worker.org_id must match.
 
@@ -152,30 +160,30 @@ function buildWorkerEmailHtml(
 Deno.serve(async (req) => {
   // CORS pre-flight
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization, content-type' } })
+    return new Response(null, { headers: CORS })
   }
 
   try {
     // Verify caller JWT
     const authHeader = req.headers.get('Authorization') || ''
     const jwt = authHeader.replace(/^Bearer\s+/i, '').trim()
-    if (!jwt) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    if (!jwt) return json({ error: 'Unauthorized' }, 401)
 
     const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
     // Verify JWT via Supabase Auth
     const { data: { user }, error: authErr } = await sb.auth.getUser(jwt)
-    if (authErr || !user?.id) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+    if (authErr || !user?.id) return json({ error: 'Unauthorized' }, 401)
 
     // Derive caller's org from their profile — NEVER trust a caller-supplied org_id
     const { data: profile } = await sb.from('profiles').select('org_id, role').eq('id', user.id).maybeSingle()
-    if (!profile?.org_id) return new Response(JSON.stringify({ error: 'No organisation' }), { status: 403, headers: { 'Content-Type': 'application/json' } })
+    if (!profile?.org_id) return json({ error: 'No organisation' }, 403)
     const callerOrgId = profile.org_id
 
     // Parse request body
     const body = await req.json().catch(() => ({}))
     const workerId = body?.worker_id
-    if (!workerId) return new Response(JSON.stringify({ error: 'worker_id required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    if (!workerId) return json({ error: 'worker_id required' }, 400)
 
     // Fetch worker — verify it belongs to caller's org (cross-org guard)
     const { data: worker } = await sb.from('workers')
@@ -185,8 +193,8 @@ Deno.serve(async (req) => {
       .eq('active', true)
       .maybeSingle()
 
-    if (!worker) return new Response(JSON.stringify({ error: 'Worker not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
-    if (!worker.email) return new Response(JSON.stringify({ error: 'Worker has no email address on file' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    if (!worker) return json({ error: 'Worker not found' }, 404)
+    if (!worker.email) return json({ error: 'Worker has no email address on file' }, 400)
 
     // Load org info (name + slug for portal link)
     const { data: org } = await sb.from('organisations').select('id, name, slug').eq('id', callerOrgId).maybeSingle()
@@ -261,7 +269,7 @@ Deno.serve(async (req) => {
     if (!sendRes.ok) {
       const errBody = await sendRes.text()
       console.error('[send-worker-reminder] Resend error:', sendRes.status, errBody)
-      return new Response(JSON.stringify({ error: `Email send failed: ${sendRes.status}` }), { status: 502, headers: { 'Content-Type': 'application/json' } })
+      return json({ error: `Email send failed: ${sendRes.status}` }, 502)
     }
 
     // Log the manual send
@@ -272,13 +280,9 @@ Deno.serve(async (req) => {
       doc_keys: [...missing, ...expired.map(d => d.name), ...expiring.map(d => d.name)],
     })
 
-    return new Response(JSON.stringify({ sent: true, to: worker.email, issues: totalIssues }), {
-      headers: { 'Content-Type': 'application/json' }
-    })
+    return json({ sent: true, to: worker.email, issues: totalIssues })
   } catch (err: any) {
     console.error('[send-worker-reminder]', err)
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500, headers: { 'Content-Type': 'application/json' }
-    })
+    return json({ error: err.message }, 500)
   }
 })
