@@ -6442,15 +6442,13 @@ function renderAdminPendingSubmissions(){
         <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${esc(docItem.name)}</div>
         <div style="font-size:11px;color:var(--text-l);margin-top:2px;">Submitted ${dateStr}${issuedDocuments.some(x=>x.workerId===s.worker_id&&x.docKey===s.doc_key&&x.status==='pending_signature')?` <span style="display:inline-block;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;margin-left:4px;">↩ Return of issued doc</span>`:''}</div>
         <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;flex-wrap:wrap;gap:12px;">
-          ${s.expiry_date?`<span>Expiry: <strong>${s.expiry_date}</strong></span>`:''}
-          ${s.issue_date?`<span>Issue: <strong>${s.issue_date}</strong></span>`:''}
           ${s.file_name?`<span>File: <strong>${esc(s.file_name)}</strong> <button class="btn" style="font-size:10px;padding:1px 6px;" onclick="sbSignedDownload('${s.file_path}','${esc(s.file_name)}')">View</button></span>`:''}
           ${s.notes?`<span>Notes: ${esc(s.notes)}</span>`:''}
         </div>
-        ${(!s.expiry_date||!s.issue_date)?`<div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-          ${!s.expiry_date?`<label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Expiry date <input type="date" id="approveExpiry_${s.id}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>`:''}
-          ${!s.issue_date?`<label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Issue date <input type="date" id="approveIssue_${s.id}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>`:''}
-        </div>`:''}
+        <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Expiry date <input type="date" id="approveExpiry_${s.id}" value="${s.expiry_date||''}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>
+          <label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Issue date <input type="date" id="approveIssue_${s.id}" value="${s.issue_date||''}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>
+        </div>
         <div style="margin-top:8px;display:flex;gap:6px;align-items:center;">
           <input type="text" class="form-input" id="previewNotes_${s.id}" placeholder="Review notes (optional)" style="width:220px;font-size:11px;"/>
         </div>
@@ -6465,16 +6463,14 @@ function renderAdminPendingSubmissions(){
 async function approveSubmission(subId){
   const sub=wpSubmissions.find(s=>s.id===subId); if(!sub) return;
   const reviewNotes=(document.getElementById(`previewNotes_${subId}`)?.value||'').trim();
-  const overrideExpiry=(document.getElementById(`approveExpiry_${subId}`)?.value||'').trim()||null;
-  const overrideIssue=(document.getElementById(`approveIssue_${subId}`)?.value||'').trim()||null;
+  const expiryDate=(document.getElementById(`approveExpiry_${subId}`)?.value||'').trim()||null;
+  const issueDate=(document.getElementById(`approveIssue_${subId}`)?.value||'').trim()||null;
   const w=workers.find(x=>x.id===sub.worker_id);
   try{
     // Update the worker_document record
     if(w && sbCanWriteTable('worker_documents')){
       const docId=`${sub.worker_id}__${sub.doc_key}`;
       const updates={worker_id:sub.worker_id,doc_key:sub.doc_key,status:'ok',active:true,updated_at:new Date().toISOString()};
-      const expiryDate=sub.expiry_date||overrideExpiry;
-      const issueDate=sub.issue_date||overrideIssue;
       if(expiryDate) updates.expiry_date=expiryDate;
       if(issueDate) updates.issue_date=issueDate;
       const {error}=await sbClient.from('worker_documents').upsert({id:docId,...updates,org_id:currentOrgId||SITE_ORG_ID});
