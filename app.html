@@ -1570,6 +1570,15 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             <div style="margin-top:8px;font-size:12px;color:var(--text-l);" id="rejectDeleteDesc"></div>
           </div>
 
+          <!-- Daily Digest -->
+          <div class="settings-card" id="digestSettingsCard">
+            <div class="settings-card-header">
+              <div class="settings-card-title">Daily Digest Email</div>
+              <div class="settings-card-desc">Configure which sections appear in the daily digest email. Toggle sections on/off and set the look-ahead window for time-based checks.</div>
+            </div>
+            <div id="digestSectionsGrid" style="display:grid;gap:8px;"></div>
+          </div>
+
           <!-- Compliance Email Report -->
           <div class="settings-card" id="complianceReportCard">
             <div class="settings-card-header">
@@ -2997,7 +3006,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}] };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
 // ── DEMO MODE (no-auth, sessionStorage persistence) ──────────────────
@@ -6290,6 +6299,49 @@ function _updateRejectDeleteDesc(){
   el.textContent=d>0?`Rejected approvals older than ${d} day${d!==1?'s':''} will be removed automatically when the Approvals tab is opened.`:'Rejected approvals will never be automatically deleted.';
 }
 
+// ── Daily Digest settings ──
+const DIGEST_SECTION_META = {
+  expired_docs:            { label: 'Expired Documents',         hasDays: false },
+  expiring_docs:           { label: 'Expiring Documents',        hasDays: true,  daysLabel: 'days ahead' },
+  missing_contracts:       { label: 'Missing Contracts',         hasDays: false },
+  assignments_ending:      { label: 'Assignments Ending Soon',   hasDays: true,  daysLabel: 'days ahead' },
+  workers_unassigned:      { label: 'Workers Without Assignment', hasDays: false },
+  accommodation_ending:    { label: 'Accommodation Ending Soon', hasDays: true,  daysLabel: 'days ahead' },
+  uncharged_accommodation: { label: 'Uncharged Accommodation',   hasDays: false },
+  uncharged_vehicles:      { label: 'Uncharged Vehicles',        hasDays: false },
+};
+function renderDigestSettings(){
+  const grid=document.getElementById('digestSectionsGrid');
+  if(!grid)return;
+  const rows=Object.entries(DIGEST_SECTION_META).map(([key,meta])=>{
+    const sec=settings.digestSections[key]||{enabled:true};
+    const checked=sec.enabled!==false?'checked':'';
+    const daysHtml=meta.hasDays?`<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-m);margin-left:12px;"><input type="number" min="1" max="365" value="${sec.days||14}" style="width:60px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;" onchange="setDigestSectionDays('${key}',this.value)"/> ${meta.daysLabel}</label>`:'';
+    return `<div style="display:flex;align-items:center;padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;gap:10px;">
+      <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer;font-size:14px;font-weight:500;">
+        <input type="checkbox" ${checked} style="width:16px;height:16px;accent-color:var(--navy);cursor:pointer;" onchange="toggleDigestSection('${key}',this.checked)"/>
+        ${meta.label}
+      </label>
+      ${daysHtml}
+    </div>`;
+  }).join('');
+  grid.innerHTML=rows;
+}
+function toggleDigestSection(key,val){
+  if(!settings.digestSections[key]) settings.digestSections[key]={};
+  settings.digestSections[key].enabled=!!val;
+  saveSettings();
+  if(sbReady)sbScheduleSync();
+}
+function setDigestSectionDays(key,val){
+  const parsed=parseInt(val,10);
+  if(isNaN(parsed)||parsed<1)return;
+  if(!settings.digestSections[key]) settings.digestSections[key]={};
+  settings.digestSections[key].days=Math.min(parsed,365);
+  saveSettings();
+  if(sbReady)sbScheduleSync();
+}
+
 // ── Admin: pending submissions review ──
 async function loadAdminPendingSubmissions(){
   if(!sbClient||!sbSession) return;
@@ -7006,6 +7058,7 @@ function renderSettings(){
     if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
     _updateRejectDeleteDesc();
     renderComplianceReportSettings();
+    renderDigestSettings();
   }
   if(active==='org') renderWorkerTypesSettings();
   if(active==='docsets') renderDocSets();
@@ -7035,6 +7088,7 @@ function switchSettingsSection(name){
     if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
     _updateRejectDeleteDesc();
     renderComplianceReportSettings();
+    renderDigestSettings();
   }
   if(name==='org') renderWorkerTypesSettings();
   if(name==='docsets') renderDocSets();
@@ -10293,7 +10347,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   // allow_issue is intentionally excluded here — it is written directly by sbRemoteUpsertDocSetItem
@@ -10689,7 +10743,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; updateWarnDesc(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
