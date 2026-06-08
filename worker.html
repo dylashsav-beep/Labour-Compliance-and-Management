@@ -90,6 +90,9 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
 .wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
 .wp-pending-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-top:8px;}
+.wp-rejected-notice{background:#fef2f2;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-top:8px;}
+.wp-rejected-notice-label{font-size:11px;font-weight:700;color:#b91c1c;margin-bottom:3px;}
+.wp-rejected-notice-text{font-size:12px;color:#7f1d1d;line-height:1.45;}
 .wp-submit-form{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-top:14px;display:flex;flex-direction:column;gap:12px;}
 .wp-submit-form label{font-size:12px;font-weight:600;color:#475569;display:block;margin-bottom:4px;}
 .wp-submit-form input,.wp-submit-form .form-input{width:100%;max-width:100%;box-sizing:border-box;min-height:46px;font-size:15px;-webkit-appearance:none;appearance:none;}
@@ -369,7 +372,7 @@ const wpI18n = {
     tabDocs:'Documents',tabProjects:'Projects',tabProfile:'Profile',tabResources:'Resources',
     missing:'Missing',expiring:'Expiring',expired:'Expired',valid:'Valid',optional:'Optional',
     stValid:'Valid',stExpiring:'Expiring soon',stExpired:'Expired',stNotSubmitted:'Not submitted',stMissing:'Missing',
-    required:'Required',reqOptional:'Optional',awaitingReview:'⏳ Awaiting admin review',
+    required:'Required',reqOptional:'Optional',awaitingReview:'⏳ Awaiting admin review',submissionRejected:'❌ Submission rejected',reviewerNote:'Reviewer note:',
     expires:'Expires',expiredOn:'Expired',
     officialFormRequired:'📎 Official form required',
     templateSub:'Download, complete and submit this template — do not use your own format.',
@@ -431,7 +434,7 @@ const wpI18n = {
     tabDocs:'Documenten',tabProjects:'Projecten',tabProfile:'Profiel',tabResources:'Middelen',
     missing:'Ontbrekend',expiring:'Verloopt',expired:'Verlopen',valid:'Geldig',optional:'Optioneel',
     stValid:'Geldig',stExpiring:'Verloopt binnenkort',stExpired:'Verlopen',stNotSubmitted:'Niet ingediend',stMissing:'Ontbrekend',
-    required:'Verplicht',reqOptional:'Optioneel',awaitingReview:'⏳ Wacht op beoordeling',
+    required:'Verplicht',reqOptional:'Optioneel',awaitingReview:'⏳ Wacht op beoordeling',submissionRejected:'❌ Inzending afgewezen',reviewerNote:'Opmerking beoordelaar:',
     expires:'Verloopt',expiredOn:'Verlopen',
     officialFormRequired:'📎 Officieel formulier vereist',
     templateSub:'Download, vul in en dien dit sjabloon in — gebruik geen eigen formaat.',
@@ -490,7 +493,7 @@ const wpI18n = {
     tabDocs:'Documente',tabProjects:'Proiecte',tabProfile:'Profil',tabResources:'Resurse',
     missing:'Lipsă',expiring:'Expiră',expired:'Expirat',valid:'Valide',optional:'Opționale',
     stValid:'Valid',stExpiring:'Expiră curând',stExpired:'Expirat',stNotSubmitted:'Neîncărcat',stMissing:'Lipsă',
-    required:'Obligatoriu',reqOptional:'Opțional',awaitingReview:'⏳ În așteptarea verificării',
+    required:'Obligatoriu',reqOptional:'Opțional',awaitingReview:'⏳ În așteptarea verificării',submissionRejected:'❌ Trimitere respinsă',reviewerNote:'Notă verificator:',
     expires:'Expiră',expiredOn:'Expirat',
     officialFormRequired:'📎 Formular oficial obligatoriu',
     templateSub:'Descarcă, completează și trimite acest model — nu folosi propriul format.',
@@ -740,6 +743,8 @@ async function renderWPDocs(){
   const today=new Date();
   const tmpl=tmplForWorker(w);
   const pendingMap=Object.fromEntries(wpSubmissions.filter(s=>s.worker_id===wpWorkerId&&s.status==='pending').map(s=>[s.doc_key,s]));
+  const rejectedMap={};
+  wpSubmissions.filter(s=>s.worker_id===wpWorkerId&&s.status==='rejected'&&s.review_notes).sort((a,b)=>new Date(b.reviewed_at||b.submitted_at)-new Date(a.reviewed_at||a.submitted_at)).forEach(s=>{if(!rejectedMap[s.doc_key])rejectedMap[s.doc_key]=s;});
 
   const filterCounts={missing:0,expiring:0,expired:0,ok:0,optional:0};
   tmpl.forEach(d=>{
@@ -791,6 +796,7 @@ async function renderWPDocs(){
             ${expiryStr?`<span class="wp-expiry-tag">${st==='expiring'?t('expires'):t('expiredOn')}: ${expiryStr}</span>`:''}
           </div>
           ${hasPending?`<div class="wp-pending-badge">${t('awaitingReview')}</div>`:''}
+          ${(!hasPending&&rejectedMap[d.id])?`<div class="wp-rejected-notice"><div class="wp-rejected-notice-label">${t('submissionRejected')}</div><div class="wp-rejected-notice-text">${t('reviewerNote')} ${esc(rejectedMap[d.id].review_notes)}</div></div>`:''}
           ${d.tip?`<div class="wp-doc-tip">${esc(d.tip)}</div>`:''}
           ${infoPanel}
           ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="wpDownloadFile('${_p}','${_n}')">${t('download')}</button></div>`;})():''}

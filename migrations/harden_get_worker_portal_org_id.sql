@@ -64,7 +64,13 @@ BEGIN
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_document_submissions') THEN
     SELECT COALESCE(json_agg(s ORDER BY s.submitted_at DESC), '[]'::json) INTO v_submissions
-    FROM worker_document_submissions s WHERE s.worker_id = v_worker.id AND s.active = true AND s.status = 'pending';
+    FROM worker_document_submissions s
+    WHERE s.worker_id = v_worker.id
+      AND s.active = true
+      AND (
+        s.status = 'pending'
+        OR (s.status = 'rejected' AND s.review_notes IS NOT NULL)
+      );
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='issued_documents') THEN
     SELECT COALESCE(json_agg(id_doc ORDER BY id_doc.issued_at DESC), '[]'::json) INTO v_issued_docs
