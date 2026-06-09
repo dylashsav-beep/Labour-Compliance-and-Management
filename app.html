@@ -4835,6 +4835,13 @@ function paRemoveExistingFile(key){
     sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
     sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
   }
+  // Fire-and-forget signature reset in DB so Realtime-triggered sbLoadAll reads the correct value.
+  // Without this, sbLoadAll re-reads signature_status:'signed' from DB and overwrites the in-memory reset.
+  if(willResetSig&&editingPAId&&sbClient&&sbSession){
+    sbClient.from('project_assignments')
+      .update({signature_status:'none',signature_request_id:null})
+      .eq('id',editingPAId).catch(()=>{});
+  }
   renderPAFileList();
 }
 function paRemoveNewFile(idx){
@@ -4951,11 +4958,12 @@ async function saveProjectAssignment(){
     }
   }
   // If a file removal cleared the signature status in memory, persist that reset to DB now.
-  // signature_status is excluded from sbPersistAll, so we must update it explicitly here.
+  // Awaited (not fire-and-forget) so the DB is updated before the modal closes and before
+  // any Realtime-triggered sbLoadAll can re-read the stale 'signed' value.
   if(paRemovedFileIds.length>0 && editingPAId && sbClient && sbSession){
     const aSig=projectAssignments.find(x=>x.id===editingPAId);
     if(aSig && aSig.signatureStatus==='none'){
-      sbClient.from('project_assignments')
+      await sbClient.from('project_assignments')
         .update({signature_status:'none',signature_request_id:null})
         .eq('id',editingPAId).catch(()=>{});
     }
