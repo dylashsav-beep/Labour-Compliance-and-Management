@@ -4,6 +4,15 @@
 > Real users and real data. Every change must be tested mentally before committing.
 > Never break existing functionality. When in doubt, ask before implementing.
 
+> **📋 SELF-IMPROVING REFERENCE — MANDATORY**
+> This file is the single source of truth for how this codebase works. When a bug is
+> found, a constraint is discovered, or a pattern proves brittle, **document it here
+> immediately** in the "Lessons Learnt & Bug Fixes Log" section at the bottom. Then
+> promote the rule into the relevant checklist or critical-rules section above so it
+> prevents the same class of mistake in future features — not just in the specific
+> case that surfaced it. The log entry records what happened; the promoted rule
+> prevents recurrence. Both are required.
+
 ---
 
 > ## 🔒 IMPORTANT — MULTI-TENANT DATA ISOLATION IS A HARD INVARIANT
@@ -90,6 +99,8 @@ When making changes:
 3. **Role-gated uploads**: only `admin` and `compliance` can upload/delete documents. All roles can download/view.
 4. **`sbPersistAll` must never throw** — any new table upsert must be wrapped in `try/catch` so a missing table or permission error cannot crash the sync and break unrelated features (e.g. document uploads).
 5. **New Supabase tables** always require a SQL migration in `migrations/` AND an update to `sbCanWriteTable` (add to both `complianceTables` and `plannerTables` arrays) AND to the `Promise.all` destructure in `sbLoadAll`.
+6. **Before writing a new value to an existing column**, check for CHECK constraints: `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = '<table>'::regclass AND contype = 'c';` — if a constraint would block the new value, add a migration to drop or widen it as part of the feature.
+7. **Fields owned by edge functions** (`signature_status`, `signature_request_id`, etc.) must never appear in `sbPersistAll` writes. Load them read-only in `sbLoadAll`, display in UI, but never write back — the edge function is the sole writer.
 
 ---
 
@@ -256,10 +267,76 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 
 - **Function**: `supabase/functions/daily-digest/index.ts`
 - **Schedule**: Daily 07:00 UTC via pg_cron (after running `schedule_daily_digest.sql`)
-- **Recipients**: `dylan@tmconstruction.nl`, `compliance@tmconstruction.nl`
+- **Recipients**: Per-org from `settings.digest_emails`; falls back to `compliance_email` + `owner_email`
 - **From**: `onboarding@resend.dev` (sandbox) — change `FROM` constant when own domain verified
 - **Covers**: Expired/missing docs, expiring docs (60d window), assignments ending (14d), uncharged billing weeks
 - **No email sent** if nothing to report
+
+---
+
+## Edge Function Development Checklist
+
+Every new or modified edge function **must** satisfy all of the following before it is committed. These rules exist because gaps here have caused real production bugs.
+
+### 1. CORS — required on ALL responses, not just OPTIONS
+Browser-called functions must return CORS headers on every response path. Missing CORS on error responses causes "Failed to fetch" in the browser even when the function ran successfully.
+
+```typescript
+const CORS = {
+  'Access-Control-Allow-Origin':  '*',
+  'Access-Control-Allow-Headers': 'authorization, content-type',
+}
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...CORS },
+  })
+}
+// At the top of Deno.serve:
+if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
+```
+
+### 2. JWT verification — always derive org from profiles, never from caller
+```typescript
+const jwt = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim()
+if (!jwt) return json({ error: 'Unauthorized' }, 401)
+const { data: { user }, error: authErr } = await sb.auth.getUser(jwt)
+if (authErr || !user?.id) return json({ error: 'Unauthorized' }, 401)
+const { data: profile } = await sb.from('profiles').select('org_id, role').eq('id', user.id).maybeSingle()
+if (!profile?.org_id) return json({ error: 'No organisation' }, 403)
+const orgId = profile.org_id  // NEVER trust a caller-supplied org_id
+```
+
+### 3. Service-role functions — filter every query by org_id
+Functions using `SUPABASE_SERVICE_ROLE_KEY` bypass RLS entirely. Every `from(table)` call must include `.eq('org_id', orgId)` or loop per-org. A single missing filter is a cross-org data leak.
+
+### 4. Webhook functions — always verify the signature
+For inbound webhooks (e.g. Dropbox Sign, Stripe), HMAC or secret verification must be **required**, not optional. A missing header should reject the request — not skip verification:
+```typescript
+// WRONG — skips verification when header absent
+if (headerSig && !(await verify(payload, headerSig))) return reject()
+// CORRECT — rejects when header absent OR invalid
+if (!headerSig || !(await verify(payload, headerSig))) return reject()
+```
+
+### 5. sbPersistAll — never include fields owned by edge functions
+Fields that edge functions write (e.g. `signature_status`, `signature_request_id`) must **not** appear in `sbPersistAll`. If they do, the app's next sync will overwrite the webhook-updated value (e.g. resetting `'signed'` back to `'none'`). These fields are read into in-memory state on `sbLoadAll` but written only by the edge function.
+
+### 6. Document/data scoping — always scope to the worker's actual set
+When fetching document set items for a specific worker (reminders, portal, etc.), always filter by `document_set_id` from the worker row. Never fetch all items for all sets and let the worker see unrelated requirements.
+
+### 7. Storage paths — always org-prefixed
+Any file written by an edge function to `tmc-documents` must use `${org_id}/...` as the path prefix. Paths keyed only by worker-id or reference-id are NOT org-isolated (see multi-tenancy rules above).
+
+### 8. New edge function checklist summary
+- [ ] CORS headers on ALL responses (OPTIONS + every json() call)
+- [ ] JWT verified; org derived from `profiles`, not caller params
+- [ ] Every DB query filtered by `org_id`
+- [ ] Webhook HMAC required (not optional)
+- [ ] No sbPersistAll-owned fields written by the function appear in sbPersistAll
+- [ ] Storage paths are `${org_id}/...` prefixed
+- [ ] Migration added to `migrations/` if new columns introduced
+- [ ] Migration table in CLAUDE.md updated
 
 ---
 
@@ -502,6 +579,46 @@ Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the 
 - **Policies are OR-combined** — one `USING(true)` defeats every other policy on the table. There must be exactly the intended policies and nothing else.
 - **Never fall back to `SITE_ORG_ID`** for a logged-in user whose profile has no `org_id`. Resolve to null and gate off all reads/writes. `SITE_ORG_ID` is only valid for the explicit owner-email override.
 - **After any tenancy change, re-run the `pg_policies` audit and the RLS-off audit**, and smoke-test a fresh org sees zero rows.
+
+---
+
+### 14. Edge Functions — CORS Missing on Non-OPTIONS Responses
+**Symptom**: User saw "Failed to send reminder: Failed to fetch" in the browser. The email was actually sent successfully — the function ran to completion — but the browser rejected the response because it lacked CORS headers.  
+**Root cause**: The `send-worker-reminder` edge function returned CORS headers on the OPTIONS preflight but not on the actual POST response. The browser enforced the same-origin policy and threw a network error, making it look like the function failed even though it succeeded.  
+**Fix**: Every `Response` or `json()` call in a browser-callable edge function must include the CORS headers — not just the OPTIONS handler. Use a shared `json()` helper that always injects `CORS` headers (see Edge Function Development Checklist above).  
+**Rule**: Browser-callable edge functions must return CORS headers on **every** response, including errors, timeouts, and early-return paths. A missing CORS header on an error path means the caller sees "Failed to fetch" instead of the real error message, making debugging harder.
+
+---
+
+### 15. Edge Functions — Document Set Items Not Scoped to Worker's Set
+**Symptom**: A worker on the Blue Card (NL – Blue Card) document set received a reminder email listing ZZP (NL – ZZP) documents as missing.  
+**Root cause**: The `send-worker-reminder` function fetched all document set items without filtering by the worker's `document_set_id`. Because the built-in sets have overlapping doc keys, the wrong set's items were returned.  
+**Fix**: Always scope the document set items query to `document_set_id = worker.document_set_id`. Never fetch all items and rely on client-side filtering when the worker's set is known at query time.  
+**Rule**: Any function that fetches document requirements for a specific worker must filter `document_set_items` by the worker's `document_set_id`. Unscoped fetches silently return the wrong documents for workers on non-default sets.
+
+---
+
+### 16. Webhook Verification — Optional HMAC Check Is a Security Hole
+**Symptom**: The Dropbox Sign webhook handler used `if (headerSig && !(await verify(...)))` — meaning requests with no `X-HelloSign-Signature` header would skip verification entirely and be processed as valid.  
+**Root cause**: The condition was written as "if a header is present, check it" instead of "the header must be present and valid." An attacker posting directly to the webhook URL (with no API key and therefore no valid signature) would have no signature header, so the `&&` short-circuit would let them through.  
+**Fix**: Change to `if (!headerSig || !(await verify(...)))` — missing header is treated the same as an invalid signature: rejected.  
+**Rule**: Webhook signature checks must be `required`. The pattern is always `if (!sig || !valid) reject` — never `if (sig && !valid) reject`. Absence of the signature header is not a pass condition.
+
+---
+
+### 17. sbPersistAll Race Condition — Fields Owned by Edge Functions
+**Symptom**: After a contract was signed (Dropbox Sign webhook set `signature_status = 'signed'`), the next app save would reset it back to `'none'` or `'pending'`, losing the signed status.  
+**Root cause**: `signature_status` and `signature_request_id` were included in the `sbPersistAll` upsert for `project_assignments`. On every sync, the in-memory value (which the app set when sending, and never updated after the webhook fired) would overwrite the webhook's update.  
+**Fix**: Remove `signature_status` and `signature_request_id` from the `sbPersistAll` upsert. These fields are loaded into memory in `sbLoadAll` (so the UI can display them) but are **written only by edge functions**. The app never writes them back.  
+**Rule**: Any column that an edge function owns (writes to) must not appear in `sbPersistAll`. Load it read-only in `sbLoadAll`, display it in the UI, but treat it as immutable from the app's perspective. Document these columns in the Edge Function checklist above.
+
+---
+
+### 18. Database CHECK Constraints — Must Be Audited When Extending a Column's Domain
+**Symptom**: Saving a worker with a custom worker type (created in Settings → Worker Types) failed with: "new row for relation 'workers' violates check constraint 'workers_worker_type_check'".  
+**Root cause**: The `workers.worker_type` column had a `CHECK` constraint that only allowed the original hardcoded values (e.g. `'zzp'`, `'blue'`). When custom types were implemented in the Settings UI, no one checked whether an existing DB constraint would block them.  
+**Fix**: `migrations/drop_worker_type_check_constraint.sql` — `ALTER TABLE workers DROP CONSTRAINT IF EXISTS workers_worker_type_check`.  
+**Rule**: **Before implementing any feature that writes a new value to an existing column, check `pg_constraint` for CHECK constraints on that column.** If the constraint would block valid new values, add a migration to drop or widen it as part of the feature, not as a follow-up fix. The pattern to check: `SELECT conname, pg_get_constraintdef(oid) FROM pg_constraint WHERE conrelid = 'workers'::regclass AND contype = 'c';`
 
 ---
 
