@@ -4799,6 +4799,13 @@ async function paRemoveExistingFile(key){
   if(!ok) return;
   paRemovedFileIds.push(key);
   paNewFiles=[];
+  // Immediately persist the file removal to DB (don't wait for Save)
+  if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
+    await sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
+    await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
+  }
+  // Remove from in-memory contractFiles so it doesn't reappear on modal reopen
+  if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path)!==key);
   if(willResetSig&&a&&sbClient){
     try{
       await sbClient.from('project_assignments')
