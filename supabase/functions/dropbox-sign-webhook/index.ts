@@ -27,11 +27,19 @@ async function verifySignature(payloadStr: string, headerSig: string): Promise<b
 Deno.serve(async (req) => {
   try {
     const rawBody = await req.text()
-    const params  = new URLSearchParams(rawBody)
-    // Dropbox Sign sends real events as form-encoded POST with field name 'json'
-    const payloadStr = params.get('json')
+    const contentType = req.headers.get('content-type') || ''
+    console.log('[dropbox-sign-webhook] content-type:', contentType)
+    console.log('[dropbox-sign-webhook] body preview:', rawBody.substring(0, 300))
 
-    if (!payloadStr) return ACK
+    // Dropbox Sign sends events as form-encoded POST; field name is 'json'.
+    // Also try 'payload' as fallback in case the format varies by event type.
+    const params  = new URLSearchParams(rawBody)
+    const payloadStr = params.get('json') || params.get('payload')
+
+    if (!payloadStr) {
+      console.warn('[dropbox-sign-webhook] No payload found in body — ACK and skip')
+      return ACK
+    }
 
     // Require HMAC signature — reject any call that lacks it or has a bad one.
     // An attacker posting directly to this endpoint has no API key so cannot
