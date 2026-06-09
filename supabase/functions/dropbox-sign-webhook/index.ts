@@ -26,15 +26,21 @@ async function verifySignature(payloadStr: string, headerSig: string): Promise<b
 
 Deno.serve(async (req) => {
   try {
-    const rawBody = await req.text()
     const contentType = req.headers.get('content-type') || ''
     console.log('[dropbox-sign-webhook] content-type:', contentType)
-    console.log('[dropbox-sign-webhook] body preview:', rawBody.substring(0, 300))
 
-    // Dropbox Sign sends events as form-encoded POST; field name is 'json'.
-    // Also try 'payload' as fallback in case the format varies by event type.
-    const params  = new URLSearchParams(rawBody)
-    const payloadStr = params.get('json') || params.get('payload')
+    // Dropbox Sign sends multipart/form-data with the JSON payload in a field
+    // called 'json'. URLSearchParams cannot parse multipart — use formData().
+    let payloadStr: string | null = null
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData()
+      payloadStr = formData.get('json') as string | null
+    } else {
+      // Fallback for url-encoded format (e.g. test pings)
+      const rawBody = await req.text()
+      const params = new URLSearchParams(rawBody)
+      payloadStr = params.get('json') || params.get('payload')
+    }
 
     if (!payloadStr) {
       console.warn('[dropbox-sign-webhook] No payload found in body — ACK and skip')
