@@ -121,7 +121,9 @@ Deno.serve(async (req) => {
       const timestamp = Date.now()
 
       if (type === 'assignment') {
-        // Store signed PDF replacing the original contract
+        // Park the signed PDF and route to Approvals for admin review before it
+        // replaces the original contract. The app's approveESignedContract handler
+        // does the file swap (deactivate originals + insert signed file) on approval.
         const signedPath = `${org_id}/assignments/${reference_id}/signed_contract_${timestamp}.pdf`
         const { error: uploadErr } = await sb.storage
           .from('tmc-documents')
@@ -132,26 +134,8 @@ Deno.serve(async (req) => {
           return ACK
         }
 
-        // Soft-deactivate the original unsigned files (preserves audit trail)
-        await sb.from('project_assignment_files')
-          .update({ active: false })
-          .eq('project_assignment_id', reference_id)
-          .eq('org_id', org_id)
-
-        // Insert signed version as the sole active file
-        await sb.from('project_assignment_files').insert({
-          id:                    crypto.randomUUID(),
-          project_assignment_id: reference_id,
-          file_name:             `Signed Contract ${new Date().toLocaleDateString('en-GB')}.pdf`,
-          file_path:             signedPath,
-          mime_type:             'application/pdf',
-          size_bytes:            pdfBytes.byteLength,
-          active:                true,
-          org_id,
-        })
-
         await sb.from('project_assignments')
-          .update({ signature_status: 'signed' })
+          .update({ signature_status: 'pending_review', signed_file_path: signedPath, signed_at: new Date().toISOString() })
           .eq('id', reference_id).eq('org_id', org_id)
 
       } else {

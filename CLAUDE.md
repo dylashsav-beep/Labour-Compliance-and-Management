@@ -260,6 +260,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `fix_storage_org_isolation.sql` | ✅ Run | **CRITICAL.** Org-isolates the `tmc-documents` Storage bucket. Drops the whole-bucket `authenticated` read/write/delete policies (a cross-org worker-PII leak) and the public/auth issued-docs management policies; adds org-scoped policies keyed on `(storage.foldername(name))[1] = current_org_id()::text` with a TMC grandfather for existing non-prefixed files. |
 | `fix_worker_submission_org_id.sql` | ✅ Run | Recreates submit_worker_document to derive org_id from worker row; backfills existing NULL-org submissions. |
 | `harden_get_worker_portal_org_id.sql` | ⏳ Pending — **run to close the NULL p_org_id anon API hole** | Adds `RAISE EXCEPTION 'p_org_id is required'` guard to get_worker_portal + adds `SET search_path = public`. Prevents direct anon API callers from omitting p_org_id to match workers across all orgs. |
+| `add_assignment_signed_review.sql` | ⏳ Pending — **run to route signed assignment contracts through Approvals** | Adds `signed_file_path` + `signed_at` to `project_assignments`. The dropbox-sign-webhook now parks a signed contract as `signature_status='pending_review'` (instead of auto-applying); admin approves in the Approvals "E-Signed Contracts" card, which attaches the signed PDF to the assignment. **Must also redeploy the `dropbox-sign-webhook` edge function.** |
 
 ---
 
@@ -771,6 +772,19 @@ Without this context, local fixes introduce side effects that only manifest seco
 ### 27. Diagnostic Error Surface — `showDiagError(context, err)` (gated to `DIAG_EMAIL`)
 **Added**: A global error surface so production issues can be diagnosed without devtools. `window` `error` + `unhandledrejection` listeners and any `catch` block call `showDiagError(context, err)`, which logs to console for everyone and, **only for `dylan@tmconstruction.nl`** (`DIAG_EMAIL` / `isDiagUser()`), renders a dismissable red banner (bottom of screen) with the message/stack and a Copy button.
 **Rule**: When adding a new `catch` in a critical write path, also call `showDiagError('<context>', e)` so the diagnostic account sees it. Keep it gated to `DIAG_EMAIL` — never show raw stacks to all users. To diagnose a new class of bug, ask the user to reproduce on that account and send the banner text.
+
+---
+
+### 28. sbPersistAll Resurrected Superseded Signed Contract Files (Webhook as External Writer)
+**Symptom**: After multiple e-sign rounds on the same assignment, a freshly returned signed PDF was replaced by an **older** signed/original file.
+**Root cause**: The dropbox-sign-webhook (an external writer) deactivates the original `project_assignment_files` and inserts the new signed PDF. But the app's in-memory `a.contractFiles` still held the **stale** older file. `sbPersistAll` re-upserts every in-memory contract file with `active:true` — resurrecting the superseded row (same class as Lesson 23, but the external writer is the webhook, not a fire-and-forget in the app).
+**Fix**: `sbPersistAll` skips writing `project_assignment_files` for assignments whose `signatureStatus` is `'pending'`, `'pending_review'`, or `'signed'`. Those files are owned solely by the webhook + immediate-upload/`_persistPAImmediate` (which persist at upload time). Mirrors Rule 7 (edge-function-owned fields excluded from sbPersistAll), extended to **file rows**, not just columns.
+**Rule**: When an edge function owns the lifecycle of rows in a table that `sbPersistAll` also writes (active/inactive toggling), `sbPersistAll` must **exclude those rows by a status guard** — otherwise the "write everything back as active:true" model resurrects whatever the webhook deactivated. Guard on the owning status field (`signatureStatus` here).
+
+### 29. E-Sign Has Two Flows — Only Issued Docs Auto-Route to Approvals
+**Finding**: `sendForSignature(type, …)` sends two types. `type='issued_doc'` → webhook sets `issued_documents.status='pending_review'` → Approvals "E-Signed Documents" card → approve files into `worker_documents`. `type='assignment'` previously **auto-applied** the signed PDF onto the assignment, bypassing Approvals.
+**Change (2026-06)**: Assignment contracts now also route through Approvals. Webhook parks the signed PDF as `project_assignments.signature_status='pending_review'` + `signed_file_path`/`signed_at` (migration `add_assignment_signed_review.sql`). New Approvals "E-Signed Contracts" card (`renderESignContracts`/`approveESignedContract`/`rejectESignedContract`) — approve deactivates originals, inserts the signed PDF as the active file, sets status `'signed'`; reject deletes the signed PDF and resets to `'none'`. The two flows stay separate because approval targets differ: issued docs file into a worker's doc set (`worker_documents`); assignment contracts attach to `project_assignments`.
+**Rule**: `signature_status` valid values are now `'none'|'pending'|'pending_review'|'signed'|'declined'` (no DB CHECK constraint, so all are accepted). `signed_file_path`/`signed_at` on `project_assignments` are **edge-function/approval-owned** — excluded from `sbPersistAll` (only in `paRows`? no — they must NOT be in paRows). Loaded read-only in `sbLoadAll`.
 
 ---
 
