@@ -4798,6 +4798,7 @@ async function paRemoveExistingFile(key){
   const ok=await _showConfirm('Remove document',confirmMsg,'Remove');
   if(!ok) return;
   paRemovedFileIds.push(key);
+  paNewFiles=[];
   if(willResetSig&&a&&sbClient){
     try{
       await sbClient.from('project_assignments')
