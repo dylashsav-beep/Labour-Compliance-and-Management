@@ -28,7 +28,8 @@ Deno.serve(async (req) => {
   try {
     const rawBody = await req.text()
     const params  = new URLSearchParams(rawBody)
-    const payloadStr = params.get('payload')
+    // Dropbox Sign sends real events as form-encoded POST with field name 'json'
+    const payloadStr = params.get('json')
 
     if (!payloadStr) return ACK
 
