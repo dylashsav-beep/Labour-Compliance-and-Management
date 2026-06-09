@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
       const timestamp = Date.now()
 
       if (type === 'assignment') {
-        // Store signed PDF in org-scoped path alongside the original
+        // Store signed PDF replacing the original contract
         const signedPath = `${org_id}/assignments/${reference_id}/signed_contract_${timestamp}.pdf`
         const { error: uploadErr } = await sb.storage
           .from('tmc-documents')
@@ -103,7 +103,13 @@ Deno.serve(async (req) => {
           return ACK
         }
 
-        // Insert as a new file entry so it sits alongside the original contract
+        // Soft-deactivate the original unsigned files (preserves audit trail)
+        await sb.from('project_assignment_files')
+          .update({ active: false })
+          .eq('project_assignment_id', reference_id)
+          .eq('org_id', org_id)
+
+        // Insert signed version as the sole active file
         await sb.from('project_assignment_files').insert({
           id:                    crypto.randomUUID(),
           project_assignment_id: reference_id,
