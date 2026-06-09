@@ -263,6 +263,66 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 
 ---
 
+## Dropbox Sign Integration Reference
+
+### How it works
+1. **Sending**: `supabase/functions/send-for-signature/index.ts` calls the Dropbox Sign REST API (`https://api.hellosign.com/v3/signature_request/send`). Uses `DROPBOX_SIGN_API_KEY` env var. Stores `signature_request_id` in `project_assignments` or `issued_documents`.
+2. **Receiving**: `supabase/functions/dropbox-sign-webhook/index.ts` — receives events from Dropbox Sign. `verify_jwt = false` in `config.toml` (Dropbox Sign sends no auth header).
+
+### Webhook verification — HMAC-SHA256
+```typescript
+// CORRECT — HMAC-SHA256(key=api_key, message=event_time+event_type)
+const cryptoKey = await crypto.subtle.importKey(
+  'raw', new TextEncoder().encode(apiKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+)
+const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(eventTime + eventType))
+// compare hex of sigBuf against payload.event.event_hash
+```
+**NOT** `SHA256(event_time + event_type + api_key)` — that's a plain digest, not an HMAC.
+
+### Webhook payload parsing
+Dropbox Sign sends real events as `multipart/form-data` with the JSON in a field named `json`:
+```typescript
+if (contentType.includes('multipart/form-data')) {
+  const formData = await req.formData()
+  payloadStr = formData.get('json') as string | null
+} else {
+  // url-encoded fallback for test pings
+  const params = new URLSearchParams(await req.text())
+  payloadStr = params.get('json') || params.get('payload')
+}
+```
+
+### Event types to handle
+| Event | When it fires | Action |
+|---|---|---|
+| `callback_test` | Manual test ping from dashboard | ACK only (no `signature_request` body) |
+| `signature_request_signed` | Each individual signer signs | **Do NOT download PDF here** — files API returns 409 |
+| `signature_request_all_signed` | All signers done, final PDF ready | Download PDF, upload to storage, update status |
+| `signature_request_declined` | A signer declines | Update `signature_status = 'declined'` |
+| `signature_request_canceled` | Request cancelled | Clear `signature_request_id` |
+
+### ACK response
+Dropbox Sign requires this exact response body or it will retry:
+```typescript
+new Response('Hello API Event Received', { status: 200, headers: { 'Content-Type': 'text/plain' } })
+```
+Always ACK even on errors — a non-200 causes Dropbox Sign to retry, which can cause duplicate processing.
+
+### Metadata
+When sending, embed routing metadata in the signature request:
+```json
+{ "type": "assignment", "reference_id": "<pa_id>", "org_id": "<org_id>", "worker_id": "<wid>" }
+```
+The webhook reads this to know which table/row to update.
+
+### DB columns
+- `project_assignments.signature_status` — `'none'|'pending'|'signed'|'declined'`
+- `project_assignments.signature_request_id` — Dropbox Sign request ID
+- These are **owned by the edge function** — never write them in `sbPersistAll`
+
+---
+
 ## Email / Edge Function
 
 - **Function**: `supabase/functions/daily-digest/index.ts`
