@@ -4788,32 +4788,22 @@ function paViewFile(key, name){
   if(f.file_path||f.storagePath){ sbSignedDownload(f.file_path||f.storagePath, f.name); return; }
   if(f.dataUrl){ const doDownload=()=>{const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();}; openFileViewer(f.dataUrl,f.name,doDownload); }
 }
-async function paRemoveExistingFile(key){
+function paRemoveExistingFile(key){
   const a=editingPAId?projectAssignments.find(x=>x.id===editingPAId):null;
   const sigStatus=a?.signatureStatus||'none';
   const willResetSig=sigStatus==='signed'||sigStatus==='pending';
   const msg=willResetSig
-    ?'Remove this file?\n\nThis will also clear the signature status so a new document can be uploaded and re-sent for signing.'
+    ?'Remove this file? This will also clear the signature status so a new document can be uploaded and re-sent for signing.'
     :'Remove this document from the assignment?';
   if(!window.confirm(msg)) return;
   paRemovedFileIds.push(key);
   paNewFiles=[];
-  // Fire-and-forget DB writes — no await so nothing can block the re-render
+  // Reset signature banner in memory immediately so UI is clean — DB reset happens on Save
+  if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; }
+  // Fire-and-forget DB deactivation so file doesn't reappear after page refresh
   if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
     sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
     sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
-  }
-  // Update in-memory contractFiles so file doesn't reappear on modal reopen
-  if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path)!==key);
-  // Reset signature status immediately if file carried a signature
-  if(willResetSig&&a&&sbClient){
-    try{
-      await sbClient.from('project_assignments')
-        .update({signature_status:'none',signature_request_id:null})
-        .eq('id',editingPAId);
-      const idx=projectAssignments.findIndex(x=>x.id===editingPAId);
-      if(idx>=0) projectAssignments[idx]={...projectAssignments[idx],signatureStatus:'none',signatureRequestId:null};
-    }catch(e){ console.warn('[TMC] paRemoveExistingFile: sig reset failed:',e.message); }
   }
   renderPAFileList();
 }
@@ -4927,6 +4917,16 @@ async function saveProjectAssignment(){
       // key is dbId (e.g. "uuid__contract") or file_path — try both
       await sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
       await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
+    }
+  }
+  // If a file removal cleared the signature status in memory, persist that reset to DB now.
+  // signature_status is excluded from sbPersistAll, so we must update it explicitly here.
+  if(paRemovedFileIds.length>0 && editingPAId && sbClient && sbSession){
+    const aSig=projectAssignments.find(x=>x.id===editingPAId);
+    if(aSig && aSig.signatureStatus==='none'){
+      sbClient.from('project_assignments')
+        .update({signature_status:'none',signature_request_id:null})
+        .eq('id',editingPAId).catch(()=>{});
     }
   }
 
