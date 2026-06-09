@@ -4798,9 +4798,12 @@ function paRemoveExistingFile(key){
   if(!window.confirm(msg)) return;
   paRemovedFileIds.push(key);
   paNewFiles=[];
-  // Reset signature banner in memory immediately so UI is clean — DB reset happens on Save
+  // Mutate contractFiles so the debounced sbPersistAll sync cannot revive this file.
+  // paWasProtected (captured at modal-open) preserves the isProtected flag in saveProjectAssignment.
+  if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path||f.name)!==key);
+  // Reset signature banner in memory immediately
   if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; }
-  // Fire-and-forget DB deactivation so file doesn't reappear after page refresh
+  // Fire-and-forget DB deactivation so the file is gone even if the user doesn't click Save
   if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
     sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
     sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
@@ -4834,9 +4837,10 @@ let editingPAId = null;
 let paContractData = null; // legacy compat — use paNewFiles below
 let paNewFiles = [];       // files queued for upload during this modal session
 let paRemovedFileIds = []; // dbIds of existing files to archive on save
+let paWasProtected = false; // captured at modal-open time; used by saveProjectAssignment so contractFiles mutation doesn't break isProtected check
 
 function openAddProjectAssignment(presetWid, presetProjId){
-  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = [];
+  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = false;
   document.getElementById('paModalTitle').textContent = 'New Worker Assignment';
   document.getElementById('paModalSub').textContent   = 'Assign a worker to a project with a contract and rate';
   document.getElementById('paDeleteBtn').style.display = 'none';
@@ -4859,7 +4863,7 @@ function openAddProjectAssignment(presetWid, presetProjId){
 
 function openEditPA(id){
   const a = projectAssignments.find(x=>x.id===id); if(!a) return;
-  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = [];
+  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = hasContractFile(a);
   document.getElementById('paModalTitle').textContent = 'Edit Worker Assignment';
   document.getElementById('paModalSub').textContent   = '';
   document.getElementById('paDeleteBtn').style.display = 'inline-flex';
@@ -4951,8 +4955,8 @@ async function saveProjectAssignment(){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx > -1){
       const a = projectAssignments[idx];
-      const isProtected = hasContractFile(a);
-      // Keep existing files minus removed ones, then add new uploads
+      const isProtected = paWasProtected; // use open-time snapshot — contractFiles may have been mutated by removal
+      // Keep existing files minus removed ones (contractFiles already mutated, but filter is a safe no-op), then add new uploads
       const remaining = (a.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
       const allFiles = [...remaining, ...uploadedNew];
       if(isProtected){
