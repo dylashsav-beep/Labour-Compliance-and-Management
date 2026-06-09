@@ -4819,8 +4819,8 @@ function paRemoveExistingFile(key){
   // Mutate contractFiles so the debounced sbPersistAll sync cannot revive this file.
   // paWasProtected (captured at modal-open) preserves the isProtected flag in saveProjectAssignment.
   if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path||f.name)!==key);
-  // Reset signature banner in memory immediately
-  if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; }
+  // Reset signature banner in memory immediately; set flag for Save to use
+  if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; paResetSignature=true; }
   // Archive to deleted history so it can be viewed in Deleted Items / Restore History
   if(removedFile){
     const workerName=workerNameById(a?.wid||'');
@@ -4836,11 +4836,11 @@ function paRemoveExistingFile(key){
     sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
   }
   // Fire-and-forget signature reset in DB so Realtime-triggered sbLoadAll reads the correct value.
-  // Without this, sbLoadAll re-reads signature_status:'signed' from DB and overwrites the in-memory reset.
   if(willResetSig&&editingPAId&&sbClient&&sbSession){
     sbClient.from('project_assignments')
       .update({signature_status:'none',signature_request_id:null})
-      .eq('id',editingPAId).catch(()=>{});
+      .eq('id',editingPAId)
+      .then(({error})=>{ if(error) console.warn('[TMC] paRemoveExistingFile: sig reset failed:', error.message); });
   }
   renderPAFileList();
 }
@@ -4871,10 +4871,11 @@ let editingPAId = null;
 let paContractData = null; // legacy compat — use paNewFiles below
 let paNewFiles = [];       // files queued for upload during this modal session
 let paRemovedFileIds = []; // dbIds of existing files to archive on save
-let paWasProtected = false; // captured at modal-open time; used by saveProjectAssignment so contractFiles mutation doesn't break isProtected check
+let paWasProtected = false;    // captured at modal-open time; used by saveProjectAssignment so contractFiles mutation doesn't break isProtected check
+let paResetSignature = false;  // true when any removal in this session required a signature_status reset; survives Realtime reloads overwriting in-memory signatureStatus
 
 function openAddProjectAssignment(presetWid, presetProjId){
-  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = false;
+  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = false; paResetSignature = false;
   document.getElementById('paModalTitle').textContent = 'New Worker Assignment';
   document.getElementById('paModalSub').textContent   = 'Assign a worker to a project with a contract and rate';
   document.getElementById('paDeleteBtn').style.display = 'none';
@@ -4897,7 +4898,7 @@ function openAddProjectAssignment(presetWid, presetProjId){
 
 function openEditPA(id){
   const a = projectAssignments.find(x=>x.id===id); if(!a) return;
-  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = hasContractFile(a);
+  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = hasContractFile(a); paResetSignature = false;
   document.getElementById('paModalTitle').textContent = 'Edit Worker Assignment';
   document.getElementById('paModalSub').textContent   = '';
   document.getElementById('paDeleteBtn').style.display = 'inline-flex';
@@ -4957,16 +4958,15 @@ async function saveProjectAssignment(){
       await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
     }
   }
-  // If a file removal cleared the signature status in memory, persist that reset to DB now.
-  // Awaited (not fire-and-forget) so the DB is updated before the modal closes and before
-  // any Realtime-triggered sbLoadAll can re-read the stale 'signed' value.
-  if(paRemovedFileIds.length>0 && editingPAId && sbClient && sbSession){
-    const aSig=projectAssignments.find(x=>x.id===editingPAId);
-    if(aSig && aSig.signatureStatus==='none'){
-      await sbClient.from('project_assignments')
-        .update({signature_status:'none',signature_request_id:null})
-        .eq('id',editingPAId).catch(()=>{});
-    }
+  // If any file removal in this session required a signature reset, persist it to DB now.
+  // Uses paResetSignature (set at removal time) rather than checking in-memory signatureStatus,
+  // because a Realtime reload between Remove and Save can overwrite the in-memory value back to
+  // 'signed', which would cause the aSig.signatureStatus==='none' check to silently skip this write.
+  if(paResetSignature && editingPAId && sbClient && sbSession){
+    const {error:sigErr}=await sbClient.from('project_assignments')
+      .update({signature_status:'none',signature_request_id:null})
+      .eq('id',editingPAId);
+    if(sigErr) console.warn('[TMC] saveProjectAssignment: sig reset failed:', sigErr.message);
   }
 
   // Write the assignment + its contract-file rows to Supabase immediately so the just-uploaded
