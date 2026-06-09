@@ -2645,6 +2645,42 @@ let sbSuppressRealtimeUntil = 0;
 const sbWorkerActiveDirty = {}; // wid -> timestamp; prevents stale browsers overwriting fresh active/inactive changes
 let sbLocalWorkerRecoverySnapshot = []; // only used to help recover older local-only workers if Supabase has zero workers
 let sbRemoteWorkerCount = null;
+
+// ─── Diagnostic error surface (visible only for the diagnostic account) ────────
+// Surfaces uncaught errors + rejected promises as a dismissable on-screen banner so
+// production issues can be diagnosed without devtools. Gated to DIAG_EMAIL; every other
+// user only gets a console.error (no UI change). Call showDiagError(context, err) from
+// any catch block to report a handled error too.
+const DIAG_EMAIL = 'dylan@tmconstruction.nl';
+function isDiagUser(){ try{ return (sbSession?.user?.email||'').trim().toLowerCase()===DIAG_EMAIL; }catch(e){ return false; } }
+function _diagEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showDiagError(context, err){
+  try{
+    const detail = (err && (err.stack || err.message || err.error_description || err.details)) || (typeof err==='object' ? JSON.stringify(err) : String(err));
+    console.error('[TMC DIAG]', context, err);
+    if(!isDiagUser() || !document.body) return;
+    let box = document.getElementById('tmcDiagBox');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'tmcDiagBox';
+      box.style.cssText = 'position:fixed;left:10px;right:10px;bottom:10px;z-index:2147483647;background:#7f1d1d;color:#fff;border:2px solid #fca5a5;border-radius:8px;padding:10px 12px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;box-shadow:0 10px 35px rgba(0,0,0,.45);max-height:42vh;overflow:auto;';
+      document.body.appendChild(box);
+    }
+    const t = new Date().toLocaleTimeString('en-GB');
+    box.innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">`
+      + `<strong style="color:#fecaca;">⚠ ${_diagEsc(context)} · ${t}</strong>`
+      + `<span style="flex-shrink:0;">`
+      + `<button onclick="(function(){var m=document.getElementById('tmcDiagMsg');if(m&&navigator.clipboard)navigator.clipboard.writeText(m.textContent);})()" style="background:#fff;color:#7f1d1d;border:none;border-radius:4px;padding:3px 9px;cursor:pointer;font-weight:700;margin-right:6px;">Copy</button>`
+      + `<button onclick="var b=document.getElementById('tmcDiagBox');if(b)b.remove();" style="background:transparent;color:#fff;border:1px solid #fff;border-radius:4px;padding:3px 9px;cursor:pointer;">Dismiss</button>`
+      + `</span></div>`
+      + `<div id="tmcDiagMsg" style="white-space:pre-wrap;word-break:break-word;">${_diagEsc(detail)}</div>`;
+  }catch(e){ /* the diagnostic reporter must never throw */ }
+}
+if(typeof window!=='undefined' && !window._tmcDiagHooked){
+  window._tmcDiagHooked = true;
+  window.addEventListener('error', e=>{ showDiagError('Uncaught error', (e&&(e.error||e.message))||e); });
+  window.addEventListener('unhandledrejection', e=>{ showDiagError('Unhandled promise rejection', (e&&e.reason)||e); });
+}
 let sbLastWorkerLoadProblem = '';
 let sbLastWorkerLoadAt = null;
 let issuedDocuments = [];
@@ -4952,6 +4988,7 @@ function handlePAContractUpload(input){
 }
 
 async function saveProjectAssignment(){
+ try{
   const assignmentId = editingPAId || crypto.randomUUID();
 
   // Upload any newly queued files to Storage
@@ -4968,23 +5005,26 @@ async function saveProjectAssignment(){
     uploadedNew.push(out);
   }
 
-  // Archive removed files in DB
+  // Archive removed files in DB — BEST-EFFORT. A failure here must never block the core
+  // save + modal close (removal was already persisted at remove time by paPersistFileRemoval).
   for(const key of paRemovedFileIds){
     if(sbClient && sbSession && sbCanWriteTable('project_assignment_files')){
-      // key is dbId (e.g. "uuid__contract") or file_path — try both
-      await sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
-      await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
+      try{
+        // key is dbId (e.g. "uuid__contract") or file_path — try both
+        await sbClient.from('project_assignment_files').update({active:false}).eq('id',key);
+        await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key);
+      }catch(e){ console.warn('[TMC] saveProjectAssignment: archive removed file failed:', e?.message); showDiagError('save: archive removed file', e); }
     }
   }
-  // If any file removal in this session required a signature reset, persist it to DB now.
-  // Uses paResetSignature (set at removal time) rather than checking in-memory signatureStatus,
-  // because a Realtime reload between Remove and Save can overwrite the in-memory value back to
-  // 'signed', which would cause the aSig.signatureStatus==='none' check to silently skip this write.
+  // Signature reset — BEST-EFFORT. Uses paResetSignature (set at removal time) rather than the
+  // in-memory signatureStatus, because a Realtime reload between Remove and Save can overwrite it.
   if(paResetSignature && editingPAId && sbClient && sbSession){
-    const {error:sigErr}=await sbClient.from('project_assignments')
-      .update({signature_status:'none',signature_request_id:null})
-      .eq('id',editingPAId);
-    if(sigErr) console.warn('[TMC] saveProjectAssignment: sig reset failed:', sigErr.message);
+    try{
+      const {error:sigErr}=await sbClient.from('project_assignments')
+        .update({signature_status:'none',signature_request_id:null})
+        .eq('id',editingPAId);
+      if(sigErr) console.warn('[TMC] saveProjectAssignment: sig reset failed:', sigErr.message);
+    }catch(e){ console.warn('[TMC] saveProjectAssignment: sig reset threw:', e?.message); showDiagError('save: sig reset', e); }
   }
 
   // Write the assignment + its contract-file rows to Supabase immediately so the just-uploaded
@@ -5038,6 +5078,13 @@ async function saveProjectAssignment(){
   }
   await _persistPAImmediate(assignmentId);
   savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW);
+ }catch(err){
+  // Surface the error instead of silently aborting (sbWrap fires the sync but won't await this
+  // async fn, so an uncaught throw here just leaves the modal open with no feedback).
+  console.error('[TMC] saveProjectAssignment failed:', err);
+  showDiagError('saveProjectAssignment', err);
+  alert('Could not save the assignment:\n\n'+(err?.message||err)+'\n\nYour change may not be saved. Please try again, or refresh the page if it persists.');
+ }
 }
 
 function deleteProjectAssignment(){

@@ -759,6 +759,19 @@ const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().enc
 - `sbQueueRemoteReload` (~line 10563) — what triggers a reload and the 650ms debounce
 Without this context, local fixes introduce side effects that only manifest seconds later via the Realtime loop or the next sync. This is the primary reason incremental fixes in this codebase require more iterations than expected.
 
+### 26. `sbWrap` + `async` Functions = Silent Unhandled Rejections (Modal Stuck Open)
+**Symptom**: After removing a file, clicking Save "activated a sync but the modal didn't close." After a hard refresh (which clears `paRemovedFileIds`/`paResetSignature`), Save worked again.
+**Root cause**: `sbWrap(name)` wraps every action function like this: `const out=old.apply(this,args); sbScheduleSync(); applyRoleUI(); return out;`. It **calls `sbScheduleSync()` immediately and never `await`s `out`**. When the wrapped function is `async` (e.g. `saveProjectAssignment`) and it **throws before reaching `closeM()`**, the throw becomes a rejected promise that `sbWrap` ignores — a **silent unhandled rejection**. The sync fires (visible) but the modal never closes and there is zero error feedback. The throw only happened when `paRemovedFileIds` was non-empty (an awaited `project_assignment_files`/`project_assignments` write in the removed-files path rejected), which is why a refresh "fixed" it — the removed-files path was skipped entirely.
+**Fix** (three parts):
+1. Wrap the **entire body** of any async action function that ends in `closeM()` in `try/catch`; on error, surface it (`showDiagError` + `alert`) instead of letting it become an unhandled rejection. The modal then closes only on success (desired) and shows a clear error on failure.
+2. Make every **auxiliary** DB write in a save (archiving removed files, signature resets) **best-effort** with its own `try/catch`, so a failure there can never abort the core save + modal close. Removal already persisted those at remove-time via `paPersistFileRemoval`; the save-time writes are just a backstop.
+3. Never rely on `.catch(()=>{})` chained on a Supabase builder inside an `await` for control flow — use `try/catch` around the `await` instead.
+**Rule**: Any `async` function registered in the `sbWrap` list (see `planningFns`/the `forEach(sbWrap)` array) MUST wrap its body in `try/catch`. `sbWrap` cannot catch async throws for you — it fires the sync and discards the promise. An uncaught throw = silent failure + stuck modal.
+
+### 27. Diagnostic Error Surface — `showDiagError(context, err)` (gated to `DIAG_EMAIL`)
+**Added**: A global error surface so production issues can be diagnosed without devtools. `window` `error` + `unhandledrejection` listeners and any `catch` block call `showDiagError(context, err)`, which logs to console for everyone and, **only for `dylan@tmconstruction.nl`** (`DIAG_EMAIL` / `isDiagUser()`), renders a dismissable red banner (bottom of screen) with the message/stack and a Copy button.
+**Rule**: When adding a new `catch` in a critical write path, also call `showDiagError('<context>', e)` so the diagnostic account sees it. Keep it gated to `DIAG_EMAIL` — never show raw stacks to all users. To diagnose a new class of bug, ask the user to reproduce on that account and send the banner text.
+
 ---
 
 ## Demo Mode — Full Architecture Reference
