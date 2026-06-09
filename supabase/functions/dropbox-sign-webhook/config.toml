@@ -1,0 +1,5 @@
+# Dropbox Sign sends webhook callbacks with no Authorization header.
+# JWT verification is disabled here — the function enforces its own security
+# via required HMAC-SHA256 signature on every request (X-HelloSign-Signature).
+[functions.dropbox-sign-webhook]
+verify_jwt = false
