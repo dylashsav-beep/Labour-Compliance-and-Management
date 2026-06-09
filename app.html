@@ -7710,8 +7710,9 @@ function renderDocSetCard(s){
       <span class="docset-chevron${isOpen?' open':''}">▶</span>
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span class="docset-title">📋 ${esc(s.name)}</span>
+          <span class="docset-title" id="dsn_${s.id}">📋 ${esc(s.name)}</span>
           ${countryBadge}${builtInBadge}
+          ${canEdit?`<button onclick="event.stopPropagation();startRenameDocSet('${s.id}')" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;padding:0 3px;" title="Rename set">✏️</button>`:''}
         </div>
         ${s.description?`<div class="docset-meta">${esc(s.description)}</div>`:''}
       </div>
@@ -7874,6 +7875,33 @@ function renderDocSetCard(s){
 
   html+=`</div></div>`;
   return html;
+}
+
+function startRenameDocSet(id){
+  const s=docSets.find(x=>x.id===id);
+  if(!s) return;
+  const span=document.getElementById(`dsn_${id}`);
+  if(!span) return;
+  const prev=s.name;
+  span.innerHTML=`📋 <input id="dsnInput_${id}" value="${esc(prev)}" style="font-size:14px;font-weight:700;color:var(--navy);border:1px solid var(--border);border-radius:4px;padding:2px 7px;width:260px;max-width:60vw;" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault();commitRenameDocSet('${id}');}if(event.key==='Escape'){cancelRenameDocSet('${id}','${esc(prev).replace(/'/g,"\\'")}');}"/><button onclick="event.stopPropagation();commitRenameDocSet('${id}')" style="background:var(--navy);color:#fff;border:none;border-radius:4px;padding:2px 9px;font-size:12px;font-weight:600;cursor:pointer;margin-left:5px;">Save</button><button onclick="event.stopPropagation();cancelRenameDocSet('${id}','${esc(prev).replace(/'/g,"\\'")}');" style="background:none;border:none;font-size:12px;color:var(--text-l);cursor:pointer;margin-left:3px;">Cancel</button>`;
+  const inp=document.getElementById(`dsnInput_${id}`);
+  if(inp){inp.focus();inp.select();}
+}
+function commitRenameDocSet(id){
+  const inp=document.getElementById(`dsnInput_${id}`);
+  const name=(inp?.value||'').trim();
+  if(!name){alert('Name cannot be empty.');return;}
+  const s=docSets.find(x=>x.id===id);
+  if(!s) return;
+  s.name=name;
+  sbScheduleSync();
+  renderDocSets();
+}
+function cancelRenameDocSet(id, prev){
+  const s=docSets.find(x=>x.id===id);
+  if(s) s.name=prev;
+  const span=document.getElementById(`dsn_${id}`);
+  if(span) span.innerHTML=`📋 ${esc(prev)}`;
 }
 
 function toggleDocSetPanel(id){
