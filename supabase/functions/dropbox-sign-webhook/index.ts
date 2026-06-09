@@ -102,7 +102,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Signed ─────────────────────────────────────────────────────────────
-    if (eventType === 'signature_request_signed') {
+    // signature_request_all_signed fires when every signer is done and the
+    // finalised PDF is available. signature_request_signed fires per-signer
+    // and the files API returns 409 until all have signed — don't use it.
+    if (eventType === 'signature_request_all_signed') {
       // Download the completed signed PDF from Dropbox Sign
       const fileRes = await fetch(
         `https://api.hellosign.com/v3/signature_request/files/${sigRequestId}?file_type=pdf`,
