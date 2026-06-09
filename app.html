@@ -1526,7 +1526,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <!-- Worker Types -->
           <div class="settings-card" style="margin-top:16px;">
             <div class="settings-card-title">Worker Types</div>
-            <div class="settings-card-desc">Define the types used when registering workers. All types can be renamed or removed.</div>
+            <div class="settings-card-desc">Define the types used when registering workers. All types can be renamed or removed. Set a recommended document set per type — it will auto-fill when adding a new worker.</div>
             <div id="workerTypesSettingsList" style="margin-top:14px;display:flex;flex-direction:column;gap:6px;"></div>
             <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
               <input class="form-input" id="newWorkerTypeInput" placeholder="e.g. Subcontractor" style="flex:1;font-size:13px;padding:6px 10px;" onkeydown="if(event.key==='Enter')addWorkerType()"/>
@@ -2396,6 +2396,9 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <div class="form-field full"><label class="form-label">Document Set</label>
           <select class="form-select" id="fDocSet"></select>
           <div style="font-size:11px;color:var(--text-l);margin-top:4px;">Determines which compliance documents are required for this worker.</div>
+          <div id="fDocSetHint" style="display:none;font-size:11px;color:var(--navy);margin-top:5px;padding:5px 8px;background:#eef2ff;border-radius:4px;">
+            Worker type suggests: <strong id="fDocSetHintName"></strong> &mdash; <a href="#" style="color:var(--navy);font-weight:600;text-decoration:underline;" onclick="event.preventDefault();applyDocSetSuggestion()">Switch to this</a>
+          </div>
         </div>
         <div class="form-field full"><label class="form-label">Notes</label><textarea class="form-input" id="fNotes" rows="2" placeholder="Any additional notes…" style="resize:vertical;"></textarea></div>
       </div>
@@ -3254,7 +3257,7 @@ function resetDemoData(){
 function loadSettings(){
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; if(Array.isArray(s.workerTypes)&&s.workerTypes.length) settings.workerTypes=s.workerTypes.map(t=>({id:t.id,label:t.label})); }
+    if(raw){ const s=JSON.parse(raw); settings.warningDays=s.warningDays??60; settings.complianceReportEmail=s.complianceReportEmail||s.compliance_report_email||'compliance@tmconstruction.nl'; settings.rejectDeleteDays=s.rejectDeleteDays??30; if(Array.isArray(s.workerTypes)&&s.workerTypes.length) settings.workerTypes=s.workerTypes.map(t=>({id:t.id,label:t.label,docSetId:t.docSetId||null})); }
   } catch(e){}
   try {
     const raw = localStorage.getItem(DOC_SETS_KEY);
@@ -6805,11 +6808,14 @@ function openAdd(){
   document.getElementById('addModalSubtitle').textContent = 'Register a new worker and assign a compliance document set';
   document.getElementById('addModalSaveBtn').textContent = 'Save Worker';
   const sel = _populateWorkerModal();
-  sel.value = SET_NL_ZZP;
   ['fName','fRef','fAgency','fEmail','fPhone','fNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   populateWorkerTypeDropdown('fType','zzp');
   document.getElementById('fNat').value = 'NL';
-  document.getElementById('fType').onchange = ()=>{ const v=document.getElementById('fType').value; if(v==='zzp') sel.value=SET_NL_ZZP; else if(v==='blue') sel.value=SET_NL_BLUE; };
+  document.getElementById('fDocSetHint').style.display='none';
+  // Auto-fill doc set from worker type recommendation, fall back to NL-ZZP
+  const defaultType=(settings.workerTypes||[]).find(t=>t.id==='zzp');
+  sel.value = defaultType?.docSetId || SET_NL_ZZP;
+  document.getElementById('fType').onchange = ()=>{ _applyWorkerTypeDocSetHint(document.getElementById('fType').value); };
   document.getElementById('addOverlay').classList.add('open');
 }
 function openEditWorker(wid){
@@ -6828,7 +6834,8 @@ function openEditWorker(wid){
   populateWorkerTypeDropdown('fType', w.type||'zzp');
   document.getElementById('fNat').value = w.nat || 'NL';
   sel.value = w.docSetId || SET_NL_ZZP;
-  document.getElementById('fType').onchange = ()=>{ const v=document.getElementById('fType').value; if(v==='zzp') sel.value=SET_NL_ZZP; else if(v==='blue') sel.value=SET_NL_BLUE; };
+  document.getElementById('fDocSetHint').style.display='none';
+  document.getElementById('fType').onchange = ()=>{ _applyWorkerTypeDocSetHint(document.getElementById('fType').value); };
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('fName').focus(), 50);
 }
@@ -7580,10 +7587,14 @@ function renderWorkerTypesSettings(){
   const el=document.getElementById('workerTypesSettingsList');
   if(!el) return;
   const types=settings.workerTypes||[];
+  const dsOptions='<option value="">No recommendation</option>'+docSets.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
   el.innerHTML=types.map(t=>`
-    <div id="wtrow_${t.id}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;">
-      <span id="wtlabel_${t.id}" style="flex:1;font-size:13px;font-weight:500;color:var(--text);">${esc(t.label)}</span>
-      <input id="wtedit_${t.id}" class="form-input" style="flex:1;font-size:13px;padding:4px 8px;display:none;" value="${esc(t.label)}" onkeydown="if(event.key==='Enter')saveWorkerTypeRename('${t.id}');if(event.key==='Escape')cancelWorkerTypeRename('${t.id}')"/>
+    <div id="wtrow_${t.id}" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;flex-wrap:wrap;">
+      <span id="wtlabel_${t.id}" style="flex:1;min-width:100px;font-size:13px;font-weight:500;color:var(--text);">${esc(t.label)}</span>
+      <input id="wtedit_${t.id}" class="form-input" style="flex:1;min-width:100px;font-size:13px;padding:4px 8px;display:none;" value="${esc(t.label)}" onkeydown="if(event.key==='Enter')saveWorkerTypeRename('${t.id}');if(event.key==='Escape')cancelWorkerTypeRename('${t.id}')"/>
+      <select class="form-select" style="font-size:12px;padding:3px 8px;min-width:170px;" title="Recommended document set for this worker type" onchange="setWorkerTypeDocSet('${t.id}',this.value)">
+        ${dsOptions.replace(`value="${t.docSetId||''}"`,`value="${t.docSetId||''}" selected`)}
+      </select>
       <button id="wtrenamebtn_${t.id}" class="btn btn-cancel" style="padding:2px 10px;font-size:12px;" onclick="startWorkerTypeRename('${t.id}')">Rename</button>
       <button id="wtsavebtn_${t.id}" class="btn btn-primary" style="padding:2px 10px;font-size:12px;display:none;" onclick="saveWorkerTypeRename('${t.id}')">Save</button>
       <button class="btn btn-danger" style="padding:2px 10px;font-size:12px;" onclick="removeWorkerType('${t.id}')">Remove</button>
@@ -7625,6 +7636,37 @@ function addWorkerType(){
   saveSettings(); sbScheduleSync();
   renderWorkerTypesSettings(); renderWorkerTypeFilter();
 }
+function setWorkerTypeDocSet(id, docSetId){
+  const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
+  t.docSetId = docSetId || null;
+  saveSettings(); sbScheduleSync();
+}
+
+let _pendingDocSetSuggestion = null;
+function _applyWorkerTypeDocSetHint(typeId){
+  const t=(settings.workerTypes||[]).find(t=>t.id===typeId);
+  const hint=document.getElementById('fDocSetHint');
+  const hintName=document.getElementById('fDocSetHintName');
+  const sel=document.getElementById('fDocSet');
+  if(!hint||!sel) return;
+  if(!t||!t.docSetId){ hint.style.display='none'; _pendingDocSetSuggestion=null; return; }
+  const ds=docSets.find(s=>s.id===t.docSetId);
+  if(!ds){ hint.style.display='none'; _pendingDocSetSuggestion=null; return; }
+  _pendingDocSetSuggestion=t.docSetId;
+  if(!sel.value){
+    sel.value=t.docSetId; hint.style.display='none';
+  } else if(sel.value!==t.docSetId){
+    hintName.textContent=ds.name; hint.style.display='block';
+  } else {
+    hint.style.display='none';
+  }
+}
+function applyDocSetSuggestion(){
+  const sel=document.getElementById('fDocSet');
+  if(sel&&_pendingDocSetSuggestion) sel.value=_pendingDocSetSuggestion;
+  document.getElementById('fDocSetHint').style.display='none';
+}
+
 function removeWorkerType(id){
   const t=(settings.workerTypes||[]).find(t=>t.id===id); if(!t) return;
   if((settings.workerTypes||[]).length<=1){ alert('You must have at least one worker type.'); return; }
@@ -10587,7 +10629,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),notify_workers_enabled:settings.notifyWorkersEnabled||false,notify_worker_types:settings.notifyWorkerTypes||[],digest_emails:settings.digestEmails||[],digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label,docSetId:t.docSetId||null})),notify_workers_enabled:settings.notifyWorkersEnabled||false,notify_worker_types:settings.notifyWorkerTypes||[],digest_emails:settings.digestEmails||[],digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   // allow_issue is intentionally excluded here — it is written directly by sbRemoteUpsertDocSetItem
@@ -10989,7 +11031,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.notify_workers_enabled!=null) settings.notifyWorkersEnabled=!!settingsData.notify_workers_enabled; if(Array.isArray(settingsData.notify_worker_types)) settings.notifyWorkerTypes=settingsData.notify_worker_types; if(Array.isArray(settingsData.digest_emails)) settings.digestEmails=settingsData.digest_emails; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); renderWorkerNotifySettings(); renderDigestEmailSettings(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label,docSetId:t.docSetId||null})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.notify_workers_enabled!=null) settings.notifyWorkersEnabled=!!settingsData.notify_workers_enabled; if(Array.isArray(settingsData.notify_worker_types)) settings.notifyWorkerTypes=settingsData.notify_worker_types; if(Array.isArray(settingsData.digest_emails)) settings.digestEmails=settingsData.digest_emails; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); renderWorkerNotifySettings(); renderDigestEmailSettings(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);
