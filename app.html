@@ -7070,7 +7070,7 @@ function renderESignContracts(){
         <div style="font-size:12px;color:var(--text-m);margin-top:6px;">
           <button class="btn" style="font-size:10px;padding:1px 8px;" onclick="sbSignedDownload('${safePath}','Signed Contract.pdf')">View Signed PDF</button>
         </div>
-        <div style="font-size:11px;color:var(--text-l);margin-top:6px;">Approving attaches the signed PDF to the assignment and replaces the original contract.</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:6px;">Approving attaches the signed PDF to the assignment alongside the original contract.</div>
       </div>
       <div class="pending-sub-actions">
         <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveESignedContract('${a.id}')">✓ Approve</button>
@@ -7086,11 +7086,8 @@ async function approveESignedContract(assignmentId){
   try{
     const oid=currentOrgId||SITE_ORG_ID;
     const signedPath=a.signedFilePath;
-    // 1. Deactivate the original (unsigned) contract files for this assignment
-    if(sbClient&&sbSession){
-      await sbClient.from('project_assignment_files').update({active:false}).eq('project_assignment_id',assignmentId).eq('org_id',oid).catch(()=>{});
-    }
-    // 2. Insert the signed PDF as the sole active file
+    // 1. Insert the signed PDF as an ADDITIONAL active file — the original (unsigned)
+    //    contract that was sent for signing is kept alongside it, not overwritten.
     const fileId=crypto.randomUUID();
     const signedName=`Signed Contract ${new Date().toLocaleDateString('en-GB')}.pdf`;
     if(sbClient&&sbSession){
@@ -7100,14 +7097,15 @@ async function approveESignedContract(assignmentId){
       });
       if(fe) throw fe;
     }
-    // 3. Mark the assignment signed (signed_file_path kept for record)
+    // 2. Mark the assignment signed (signed_file_path kept for record)
     if(sbClient&&sbSession){
       const {error:ae}=await sbClient.from('project_assignments').update({signature_status:'signed'}).eq('id',assignmentId).eq('org_id',oid);
       if(ae) throw ae;
     }
-    // 4. Update in-memory state — signed PDF becomes the only contract file
+    // 3. Update in-memory state — append the signed PDF to the existing contract files
     a.signatureStatus='signed';
-    a.contractFiles=[{dbId:fileId,name:signedName,size:0,type:'application/pdf',file_path:signedPath,storagePath:signedPath,active:true}];
+    if(!Array.isArray(a.contractFiles)) a.contractFiles=[];
+    a.contractFiles=[...a.contractFiles,{dbId:fileId,name:signedName,size:0,type:'application/pdf',file_path:signedPath,storagePath:signedPath,active:true}];
     // Suppress Realtime so the writes above don't trigger an immediate reload race
     sbSuppressRealtimeUntil=Math.max(sbSuppressRealtimeUntil,Date.now()+8000);
     renderESignContracts();

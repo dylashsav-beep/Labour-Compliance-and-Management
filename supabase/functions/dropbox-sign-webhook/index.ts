@@ -121,9 +121,9 @@ Deno.serve(async (req) => {
       const timestamp = Date.now()
 
       if (type === 'assignment') {
-        // Park the signed PDF and route to Approvals for admin review before it
-        // replaces the original contract. The app's approveESignedContract handler
-        // does the file swap (deactivate originals + insert signed file) on approval.
+        // Park the signed PDF and route to Approvals for admin review. On approval the
+        // app's approveESignedContract handler attaches the signed PDF to the assignment
+        // alongside the original contract (the original is kept, not overwritten).
         const signedPath = `${org_id}/assignments/${reference_id}/signed_contract_${timestamp}.pdf`
         const { error: uploadErr } = await sb.storage
           .from('tmc-documents')
