@@ -710,6 +710,43 @@ const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().enc
 
 ---
 
+### 21. Modal State Capture — Use Open-Time Snapshot for Flags That Mutations Would Invalidate
+**Symptom**: After removing a contract file from an assignment modal, clicking Save did nothing — the form appeared to submit but no changes were applied.  
+**Root cause**: `saveProjectAssignment` computed `isProtected = hasContractFile(a)` at save time. But `paRemoveExistingFile` mutated `a.contractFiles` to remove the file (necessary so `sbPersistAll` wouldn't revive it). With all files removed, `hasContractFile(a)` returned `false`, so save took the non-protected path and read rate/notes/worker from disabled form fields — which had no values.  
+**Fix**: Capture `paWasProtected = hasContractFile(a)` at modal-open time in `openEditPA` (before any mutations). `saveProjectAssignment` uses `paWasProtected` instead of recalculating from the possibly-mutated state.  
+**Rule**: Any flag derived from in-memory state that controls a code path in a save function should be captured as a snapshot when the modal opens (`let paWasProtected = false`, set in `openEditPA`/`openAddProjectAssignment`). Never recalculate it from state that the modal itself mutates — you'll get the post-mutation value, not the original intent.
+
+---
+
+### 22. Supabase Realtime Subscription Overwrites In-Memory Resets
+**Symptom**: After removing a signed contract file, the "Signed" banner disappeared immediately but reappeared after a few seconds, and always after a page refresh.  
+**Root cause**: The Realtime subscription (`sbRealtimeChannel`) listens to ALL `postgres_changes` on the `public` schema. Any DB write — including the fire-and-forget `project_assignment_files.active=false` — triggers `sbQueueRemoteReload` → `sbLoadAll` 650ms later. `sbLoadAll` re-reads `project_assignments.signature_status` from the DB, which was still `'signed'` (only the in-memory value had been reset). This silently overwrites the in-memory reset.  
+**Fix**: When resetting a field in memory, also immediately fire-and-forget the same reset to the DB. For critical resets (like signature_status on Save), use `await` so the DB is updated before the modal closes and before any Realtime-triggered reload can re-read the stale value.  
+**Rule**: Any time you reset an in-memory field that is NOT written by `sbPersistAll` (e.g. `signature_status`, `signature_request_id`), you must also write the reset to the DB immediately. The Realtime subscription will fire within ~1 second of any DB write and call `sbLoadAll`, which will overwrite in-memory values from DB. In-memory-only resets do not survive this cycle.  
+**Checklist before any in-memory reset of an excluded field**:
+1. Is this field excluded from `sbPersistAll`? (check the NOTE near line 10876)
+2. Does the Realtime subscription touch this table? (yes — it covers all of `public`)
+3. If yes to both: fire-and-forget the DB reset immediately; also `await` it in any save path.
+
+---
+
+### 23. sbPersistAll Reviving Fire-and-Forget Deactivations
+**Symptom**: A file deactivated via fire-and-forget (`update({active:false})`) kept reappearing — it was gone from the UI for a moment but came back after a sync.  
+**Root cause**: `sbPersistAll` iterates `a.contractFiles` and upserts every entry with `active:true`. The fire-and-forget set the DB row to `active:false`, but `sbPersistAll` (running 650ms later from the debounced sync) re-upserted it as `active:true` because `a.contractFiles` still contained the file.  
+**Fix**: Mutate `a.contractFiles` to remove the file at the time of removal, so `sbPersistAll` never sees it. Pair with `paWasProtected` (lesson 21) to preserve modal protected-mode state.  
+**Rule**: Fire-and-forget `active:false` is only permanent if the in-memory array that `sbPersistAll` iterates is also mutated to remove the item. Otherwise the next sync revives it. The two operations must happen together: (1) mutate in-memory array, (2) fire-and-forget DB deactivation.
+
+---
+
+### 24. Audit Scope — Read sbPersistAll + sbLoadAll + sbQueueRemoteReload Before Touching Modal State
+**Pattern for future sessions**: Before modifying any code that touches in-memory state in a modal (especially remove/archive flows), read these three functions in full:
+- `sbPersistAll` (~line 10750) — what it writes and what it intentionally excludes
+- `sbLoadAll` (~line 11100) — what it re-reads and overwrites on every reload  
+- `sbQueueRemoteReload` (~line 10563) — what triggers a reload and the 650ms debounce
+Without this context, local fixes introduce side effects that only manifest seconds later via the Realtime loop or the next sync. This is the primary reason incremental fixes in this codebase require more iterations than expected.
+
+---
+
 ## Demo Mode — Full Architecture Reference
 
 | Constant / Key | Value | Purpose |
