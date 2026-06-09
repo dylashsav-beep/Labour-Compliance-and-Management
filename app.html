@@ -11012,7 +11012,12 @@ async function sbPersistAll(force=false){
   // in-memory state hasn't been refreshed yet (race condition).
   const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
   await sbUpsertRows('project_assignments',paRows);
-  const paf=[]; projectAssignments.forEach(a=>{(a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}); }); });
+  // Contract files for assignments that are in/through e-signature are OWNED BY THE WEBHOOK:
+  // dropbox-sign-webhook deactivates the original files and inserts the signed PDF. Re-upserting
+  // our stale in-memory rows here would resurrect a superseded (older) signed/original file with
+  // active:true. Skip those assignments — the webhook (and immediate-upload/_persistPAImmediate)
+  // is the sole writer of their files. (See Lessons 17/23.)
+  const paf=[]; projectAssignments.forEach(a=>{ if(a.signatureStatus==='pending'||a.signatureStatus==='signed') return; (a.contractFiles||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) paf.push({id:f.dbId||`${a.id}__file_${i}`,project_assignment_id:a.id,file_name:f.name||'contract',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,active:true,org_id:oid}); }); });
   await sbUpsertRows('project_assignment_files',paf);
   await sbUpsertRows('properties', properties.filter(p=>!inactiveProperties.has(p.id)).map(p=>({id:p.id,name:p.name,address:p.address||'',cost_per_night:p.costPerNight??null,notes:p.notes||'',active:true,org_id:oid})));
   await sbUpsertRows('vehicles', vehicles.filter(v=>!inactiveVehicles.has(v.id)).map(v=>({id:v.id,description:v.desc,registration_plate:v.reg||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||'',active:true,org_id:oid})));
