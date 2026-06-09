@@ -4792,20 +4792,20 @@ async function paRemoveExistingFile(key){
   const a=editingPAId?projectAssignments.find(x=>x.id===editingPAId):null;
   const sigStatus=a?.signatureStatus||'none';
   const willResetSig=sigStatus==='signed'||sigStatus==='pending';
-  const confirmMsg=willResetSig
-    ?'Remove this file? This will also clear the signature status so a new document can be uploaded and re-sent for signing.'
+  const msg=willResetSig
+    ?'Remove this file?\n\nThis will also clear the signature status so a new document can be uploaded and re-sent for signing.'
     :'Remove this document from the assignment?';
-  const ok=await _showConfirm('Remove document',confirmMsg,'Remove');
-  if(!ok) return;
+  if(!window.confirm(msg)) return;
   paRemovedFileIds.push(key);
   paNewFiles=[];
-  // Immediately persist the file removal to DB (don't wait for Save)
+  // Fire-and-forget DB writes — no await so nothing can block the re-render
   if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
-    await sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
-    await sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
+    sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
+    sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
   }
-  // Remove from in-memory contractFiles so it doesn't reappear on modal reopen
+  // Update in-memory contractFiles so file doesn't reappear on modal reopen
   if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path)!==key);
+  // Reset signature status immediately if file carried a signature
   if(willResetSig&&a&&sbClient){
     try{
       await sbClient.from('project_assignments')
