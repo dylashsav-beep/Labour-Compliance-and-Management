@@ -632,6 +632,24 @@ Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the 
 
 ---
 
+### 20. Dropbox Sign Webhook — event_hash Uses HMAC-SHA256, Not Plain SHA256
+**Symptom**: `event_hash verified: false` on every request even after switching away from the header-based approach. Computed and expected hashes were completely different despite the correct API key being loaded (correct `key_len` and `key_first4/key_last4` confirmed via logging).  
+**Root cause**: The formula was implemented as `SHA256(event_time + event_type + api_key)` — a plain SHA-256 digest with the key appended to the message. The Dropbox Sign specification requires `HMAC-SHA256(key=api_key, message=event_time+event_type)` — a proper HMAC where the API key is the cryptographic signing key, not part of the message.  
+**Fix**:
+```typescript
+// WRONG — plain SHA256 with key appended to message
+const hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(eventTime + eventType + apiKey))
+
+// CORRECT — HMAC-SHA256, API key is the HMAC key
+const cryptoKey = await crypto.subtle.importKey(
+  'raw', new TextEncoder().encode(apiKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+)
+const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(eventTime + eventType))
+```
+**Rule**: When a third-party API says "HMAC-SHA256 of X using Y as the key", that means `HMAC(key=Y, msg=X)` — NOT `SHA256(X + Y)`. These produce completely different outputs. Use `crypto.subtle.importKey` + `crypto.subtle.sign('HMAC', ...)`. Add hash-prefix logging before deploying any new webhook verification so mismatches can be diagnosed without access to the full secret.
+
+---
+
 ## Demo Mode — Full Architecture Reference
 
 | Constant / Key | Value | Purpose |
