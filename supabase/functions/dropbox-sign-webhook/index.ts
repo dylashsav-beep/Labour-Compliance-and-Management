@@ -22,10 +22,14 @@ async function verifyEventHash(payload: any): Promise<boolean> {
       console.warn('[dropbox-sign-webhook] payload missing event_time/event_type/event_hash')
       return false
     }
-    const message  = eventTime + eventType + DROPBOX_SIGN_API_KEY.trim()
+    const apiKey   = DROPBOX_SIGN_API_KEY.trim()
+    const message  = eventTime + eventType + apiKey
+    console.log('[dropbox-sign-webhook] hash input: time=', JSON.stringify(eventTime), 'type=', JSON.stringify(eventType), 'key_len=', apiKey.length, 'key_first4=', apiKey.substring(0, 4), 'key_last4=', apiKey.slice(-4))
     const hashBuf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message))
     const computed = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
     const match    = computed === eventHash
+    console.log('[dropbox-sign-webhook] computed (first 16):', computed.substring(0, 16))
+    console.log('[dropbox-sign-webhook] expected (first 16):', eventHash.substring(0, 16))
     console.log('[dropbox-sign-webhook] event_hash verified:', match)
     return match
   } catch (e: any) {
