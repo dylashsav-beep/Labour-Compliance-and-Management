@@ -88,6 +88,11 @@ Deno.serve(async (req) => {
     formData.append('signers[0][email_address]', worker.email)
     formData.append('signers[0][name]',          worker.full_name || worker.email)
     formData.append('file_urls[0]',              signedUrlData.signedUrl)
+    // Parse embedded text tags in the PDF (e.g. [sig|req|signer1], [date|req|signer1]).
+    // Safe for all PDFs — if no tags found, Dropbox Sign falls back to drag-to-place UI.
+    // hide_text_tags=1 makes the tag strings invisible in the final signed document.
+    formData.append('use_text_tags',  '1')
+    formData.append('hide_text_tags', '1')
     // Metadata is echoed back in webhook — used to route the signed PDF
     formData.append('metadata[type]',         type)
     formData.append('metadata[reference_id]', reference_id)
