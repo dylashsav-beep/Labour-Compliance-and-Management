@@ -11,7 +11,7 @@ const ACK = new Response('Hello API Event Received', {
 })
 
 // Verify using event_hash — the officially supported Dropbox Sign method.
-// SHA256(event_time + event_type + api_key) must equal payload.event.event_hash.
+// HMAC-SHA256(key=api_key, message=event_time+event_type) must equal payload.event.event_hash.
 // This is inside the payload itself, so no header dependency.
 async function verifyEventHash(payload: any): Promise<boolean> {
   try {
@@ -22,14 +22,15 @@ async function verifyEventHash(payload: any): Promise<boolean> {
       console.warn('[dropbox-sign-webhook] payload missing event_time/event_type/event_hash')
       return false
     }
-    const apiKey   = DROPBOX_SIGN_API_KEY.trim()
-    const message  = eventTime + eventType + apiKey
-    console.log('[dropbox-sign-webhook] hash input: time=', JSON.stringify(eventTime), 'type=', JSON.stringify(eventType), 'key_len=', apiKey.length, 'key_first4=', apiKey.substring(0, 4), 'key_last4=', apiKey.slice(-4))
-    const hashBuf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message))
-    const computed = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    const apiKey    = DROPBOX_SIGN_API_KEY.trim()
+    const keyBytes  = new TextEncoder().encode(apiKey)
+    const msgBytes  = new TextEncoder().encode(eventTime + eventType)
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    )
+    const sigBuf   = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes)
+    const computed = Array.from(new Uint8Array(sigBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
     const match    = computed === eventHash
-    console.log('[dropbox-sign-webhook] computed (first 16):', computed.substring(0, 16))
-    console.log('[dropbox-sign-webhook] expected (first 16):', eventHash.substring(0, 16))
     console.log('[dropbox-sign-webhook] event_hash verified:', match)
     return match
   } catch (e: any) {
