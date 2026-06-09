@@ -14,6 +14,7 @@
   --text:#1a2340; --text-m:#4a5568; --text-l:#7a8ba8;
   --red:#c53030;   --red-l:#fff5f5;   --red-b:#fed7d7;
   --amber:#b45309; --amber-l:#fffbeb; --amber-b:#fde68a;
+  --orange:#c2410c; --orange-l:#fff7ed; --orange-b:#fed7aa;
   --green:#276749; --green-l:#f0fff4; --green-b:#c6f6d5;
   --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
 }
@@ -160,13 +161,13 @@ td{padding:10px 14px;vertical-align:middle;}
 .chip.ok{color:var(--green);border-color:var(--green-b);background:var(--green-l);}
 .chip.missing{color:var(--red);border-color:var(--red-b);background:var(--red-l);}
 .chip.expiring{color:var(--amber);border-color:var(--amber-b);background:var(--amber-l);}
-.chip.expired{color:#991b1b;border-color:#fca5a5;background:#fee2e2;}
+.chip.expired{color:var(--orange);border-color:var(--orange-b);background:var(--orange-l);}
 .chip:hover{opacity:.75;}
 .chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .chip.ok .chip-dot{background:var(--green);}
 .chip.missing .chip-dot{background:var(--red);}
 .chip.expiring .chip-dot{background:var(--amber);}
-.chip.expired .chip-dot{background:#dc2626;}
+.chip.expired .chip-dot{background:var(--orange);}
 
 /* SCORE */
 .score-cell{display:flex;align-items:center;gap:8px;}
@@ -335,7 +336,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .doc-item.ok{border-left-color:var(--green);}
 .doc-item.missing{border-left-color:var(--red);}
 .doc-item.expiring{border-left-color:var(--amber);}
-.doc-item.expired{border-left-color:#dc2626;}
+.doc-item.expired{border-left-color:var(--orange);}
 .doc-item-row{display:flex;align-items:center;padding:8px 12px;gap:8px;}
 .doc-icon{font-size:15px;flex-shrink:0;}
 .doc-info{flex:1;min-width:0;}
@@ -353,7 +354,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .status-select.ok{background:var(--green-l);color:var(--green);border-color:var(--green-b);}
 .status-select.missing{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
 .status-select.expiring{background:var(--amber-l);color:var(--amber);border-color:var(--amber-b);}
-.status-select.expired{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+.status-select.expired{background:var(--orange-l);color:var(--orange);border-color:var(--orange-b);}
 .status-select option{background:#fff;color:var(--text);}
 .attach-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text-m);cursor:pointer;transition:all .15s;}
 .attach-btn:hover{border-color:var(--navy);color:var(--navy);}
@@ -794,7 +795,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-filter-tab:active{opacity:.85;}
 .wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
 .wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
-.wp-filter-tab.active[data-f="expired"]{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+.wp-filter-tab.active[data-f="expired"]{background:var(--orange-l);color:var(--orange);border-color:var(--orange-b);}
 .wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
 .wp-filter-tab.active[data-f="optional"]{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
 .wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
@@ -812,7 +813,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
 .wp-status-pill.ok{background:#dcfce7;color:#166534;}
 .wp-status-pill.expiring{background:#fef3c7;color:#92400e;}
 .wp-status-pill.missing{background:#fee2e2;color:#b91c1c;}
-.wp-status-pill.expired{background:#fee2e2;color:#991b1b;}
+.wp-status-pill.expired{background:var(--orange-l);color:var(--orange);}
 .wp-status-pill.opt-neutral{background:#f1f5f9;color:#475569;}
 .wp-req-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:#ffe4e6;color:#be123c;border:1px solid #fecdd3;margin-left:6px;vertical-align:middle;letter-spacing:.02em;}
 .wp-opt-badge{display:inline-flex;align-items:center;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;margin-left:6px;vertical-align:middle;}
@@ -5127,7 +5128,7 @@ function rebuildModal(id){
   let html=`<div style="padding:12px 16px;background:${goBg};border:1px solid ${goBorder};border-radius:6px;margin-bottom:10px;">
     <div style="font-size:13px;font-weight:700;color:${goColor};margin-bottom:${missingDocs.length||expiredDocs.length||expiringDocs.length?'6px':'0'}">${goText}</div>
     ${missingDocs.length?`<div style="font-size:11px;color:var(--red);margin-top:4px;">Missing: ${missingDocs.map(d=>d.name).join(', ')}</div>`:''}
-    ${expiredDocs.length?`<div style="font-size:11px;color:#991b1b;margin-top:4px;">Expired: ${expiredDocs.map(d=>d.name+(w.docs[d.id]?.date?' (expired '+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
+    ${expiredDocs.length?`<div style="font-size:11px;color:var(--orange);margin-top:4px;">Expired: ${expiredDocs.map(d=>d.name+(w.docs[d.id]?.date?' (expired '+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
     ${expiringDocs.length?`<div style="font-size:11px;color:var(--amber);margin-top:2px;">Expiring: ${expiringDocs.map(d=>d.name+(w.docs[d.id]?.date?' ('+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
   </div>`;
   html+=`<div class="worker-status-edit-panel">
