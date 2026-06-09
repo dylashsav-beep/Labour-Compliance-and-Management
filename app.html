@@ -1599,25 +1599,18 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             </div>
           </div>
 
-          <!-- Compliance Email Report -->
-          <div class="settings-card" id="complianceReportCard">
+          <!-- Daily Digest Recipients -->
+          <div class="settings-card" id="digestRecipientsCard">
             <div class="settings-card-header">
-              <div class="settings-card-title">Compliance Email Report</div>
-              <div class="settings-card-desc">Create a report of active workers currently in Warning or No-Go status and prepare an email to compliance.</div>
+              <div class="settings-card-title">Daily Digest Recipients</div>
+              <div class="settings-card-desc">Email addresses that receive the daily compliance digest. If none are added, the digest is sent to the organisation owner only.</div>
             </div>
-            <div id="complianceReportGrid" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px;">
-              <div class="form-field">
-                <label class="form-label">Report recipient</label>
-                <input class="form-input" id="complianceReportEmail" type="email" value="" onchange="setComplianceReportEmail(this.value)"/>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="btn btn-primary" onclick="openComplianceEmailReport()">Prepare Email</button>
-                <button class="btn btn-cancel" onclick="copyComplianceReport()">Copy Report</button>
-                <button class="btn btn-cancel" onclick="downloadComplianceReportCsv()">Download CSV</button>
-              </div>
+            <div style="display:flex;gap:8px;margin-top:12px;margin-bottom:10px;">
+              <input class="form-input" id="digestEmailInput" type="email" placeholder="Enter email address" style="flex:1;"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();addDigestEmail();}"/>
+              <button class="btn btn-primary" onclick="addDigestEmail()">Add</button>
             </div>
-            <div id="complianceReportSummary" style="font-size:12px;color:var(--text-m);margin-bottom:8px;"></div>
-            <div id="complianceReportPreview" style="max-height:220px;overflow:auto;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-size:12px;line-height:1.45;white-space:pre-wrap;"></div>
+            <div id="digestEmailList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:28px;"></div>
           </div>
         </div><!-- /sset-compliance -->
 
@@ -3042,7 +3035,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
-let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, notifyWorkerTypes: [], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
+let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', digestEmails: [], rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, notifyWorkerTypes: [], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
 // ── DEMO MODE (no-auth, sessionStorage persistence) ──────────────────
@@ -7215,7 +7208,7 @@ function renderSettings(){
     const rdInput=document.getElementById('rejectDeleteDaysInput');
     if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
     _updateRejectDeleteDesc();
-    renderComplianceReportSettings();
+    renderDigestEmailSettings();
     renderDigestSettings();
   }
   if(active==='org') renderWorkerTypesSettings();
@@ -7245,7 +7238,7 @@ function switchSettingsSection(name){
     const rdInput=document.getElementById('rejectDeleteDaysInput');
     if(rdInput) rdInput.value=settings.rejectDeleteDays??30;
     _updateRejectDeleteDesc();
-    renderComplianceReportSettings();
+    renderDigestEmailSettings();
     renderDigestSettings();
   }
   if(name==='org') renderWorkerTypesSettings();
@@ -7658,89 +7651,31 @@ function applyWarningDays(days){
   renderComplianceReportSettings();
 }
 
-// ── Compliance Email Report ──
-function setComplianceReportEmail(email){
-  settings.complianceReportEmail=(email||'').trim()||'compliance@tmconstruction.nl';
-  saveSettings();
-  renderComplianceReportSettings();
-  if(sbReady) sbScheduleSync();
+// ── Daily Digest Recipients ───────────────────────────────────────────────────
+function addDigestEmail(){
+  const input=document.getElementById('digestEmailInput');
+  const email=((input?.value)||'').trim().toLowerCase();
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){alert('Please enter a valid email address.');return;}
+  if((settings.digestEmails||[]).includes(email)){alert('That email is already in the list.');return;}
+  settings.digestEmails=[...(settings.digestEmails||[]),email];
+  if(input) input.value='';
+  renderDigestEmailSettings();
+  sbScheduleSync();
 }
-function complianceReportRecipient(){ return (settings.complianceReportEmail||(DEMO_MODE?'sales@work-force.nl':'compliance@tmconstruction.nl')).trim(); }
-function complianceIssueDocs(w, status){
-  const ref=new Date();
-  const targetStatus = status==='nogo' ? 'missing' : 'expiring';
-  const docs=tmpl(w).filter(d=>d.req).filter(d=>docStatusAt(w.docs[d.id], ref)===targetStatus);
-  return docs.map(d=>{
-    const wd=w.docs[d.id]||{};
-    const exp=wd.date ? ` (expiry: ${wd.date})` : '';
-    return `${d.name}${exp}`;
-  });
+function removeDigestEmail(email){
+  settings.digestEmails=(settings.digestEmails||[]).filter(e=>e!==email);
+  renderDigestEmailSettings();
+  sbScheduleSync();
 }
-function complianceReportRows(){
-  const ref=new Date();
-  return workers
-    .filter(w=>w.active!==false)
-    .map(w=>({worker:w,status:goStatusAt(w,ref),score:scoreAt(w,ref)}))
-    .filter(r=>r.status==='warning'||r.status==='nogo')
-    .sort((a,b)=> a.status===b.status ? a.worker.name.localeCompare(b.worker.name) : (a.status==='nogo'?-1:1));
-}
-function complianceReportText(){
-  const rows=complianceReportRows();
-  const today=new Date().toLocaleDateString('en-GB');
-  const warning=rows.filter(r=>r.status==='warning').length;
-  const nogo=rows.filter(r=>r.status==='nogo').length;
-  let txt=`${DEMO_MODE?'Work Force':'TMC'} Compliance Report - ${today}\n\n`;
-  txt+=`Active workers requiring attention: ${rows.length}\n`;
-  txt+=`No-Go: ${nogo}\n`;
-  txt+=`Warning: ${warning}\n\n`;
-  if(!rows.length){ txt+=`No active workers currently have Warning or No-Go status.\n`; return txt; }
-  rows.forEach((r,i)=>{
-    const w=r.worker;
-    const label=r.status==='nogo'?'NO-GO':'WARNING';
-    const issueDocs=complianceIssueDocs(w,r.status);
-    txt+=`${i+1}. ${w.name} (${w.id}) - ${label} - Score ${r.score}%\n`;
-    txt+=`   Type: ${workerTypeLabel(w.type)} · Nationality: ${w.nat||'—'}\n`;
-    txt+=`   Issue: ${issueDocs.length?issueDocs.join('; '):'Required document issue'}\n\n`;
-  });
-  return txt;
-}
-function complianceReportCsv(){
-  const rows=[['Worker ID','Worker Name','Type','Nationality','Status','Score','Issue Documents']];
-  complianceReportRows().forEach(r=>{
-    const w=r.worker;
-    rows.push([w.id,w.name,w.type,w.nat||'',r.status==='nogo'?'No-Go':'Warning',String(r.score),complianceIssueDocs(w,r.status).join('; ')]);
-  });
-  return rows.map(r=>r.map(v=>`"${String(v??'').replaceAll('\"','\"\"')}"`).join(',')).join('\n');
-}
-function renderComplianceReportSettings(){
-  const emailEl=document.getElementById('complianceReportEmail');
-  if(emailEl) emailEl.value=complianceReportRecipient();
-  const rows=complianceReportRows();
-  const warning=rows.filter(r=>r.status==='warning').length;
-  const nogo=rows.filter(r=>r.status==='nogo').length;
-  const summary=document.getElementById('complianceReportSummary');
-  const preview=document.getElementById('complianceReportPreview');
-  if(summary) summary.innerHTML=`<strong>${rows.length}</strong> active worker${rows.length!==1?'s':''} requiring attention · <strong style="color:var(--red)">${nogo}</strong> No-Go · <strong style="color:var(--amber)">${warning}</strong> Warning`;
-  if(preview) preview.textContent=complianceReportText();
-}
-function openComplianceEmailReport(){
-  const recipient=complianceReportRecipient();
-  const subject=`${DEMO_MODE?'Work Force':'TMC'} Compliance Report - ${new Date().toLocaleDateString('en-GB')}`;
-  const body=complianceReportText();
-  window.location.href=`mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-async function copyComplianceReport(){
-  const txt=complianceReportText();
-  try{ await navigator.clipboard.writeText(txt); alert('Compliance report copied to clipboard.'); }
-  catch(e){ window.prompt('Copy compliance report:', txt); }
-}
-function downloadComplianceReportCsv(){
-  const blob=new Blob([complianceReportCsv()],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`${DEMO_MODE?'wf':'tmc'}_compliance_warning_nogo_report_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+function renderDigestEmailSettings(){
+  const list=document.getElementById('digestEmailList');
+  if(!list) return;
+  const emails=settings.digestEmails||[];
+  if(!emails.length){
+    list.innerHTML='<span style="font-size:12px;color:var(--text-l);">No recipients added — digest will go to the organisation owner only.</span>';
+    return;
+  }
+  list.innerHTML=emails.map(e=>`<span style="display:inline-flex;align-items:center;gap:5px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:20px;padding:4px 12px;font-size:12px;color:#1d4ed8;">${esc(e)}<button onclick="removeDigestEmail('${e.replace(/'/g, "\\'")}') " style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;line-height:1;padding:0;margin-left:2px;" title="Remove">×</button></span>`).join('');
 }
 
 // ── Document Sets render ──
@@ -10624,7 +10559,7 @@ async function sbPersistAll(force=false){
     sbRemoteWorkerActiveMap()
   ]);
   // No destructive delete/reinsert sync. This app now upserts active records and marks removed records inactive through deleted_items.
-  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),notify_workers_enabled:settings.notifyWorkersEnabled||false,notify_worker_types:settings.notifyWorkerTypes||[],digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
+  if(sbCanWriteTable('settings')){ const {error:settingsErr}=await sbClient.from('settings').upsert({id:oid,org_id:oid,warning_days:settings.warningDays||60,compliance_report_email:settings.complianceReportEmail||'',reject_delete_days:settings.rejectDeleteDays??30,worker_types:(settings.workerTypes||[]).map(t=>({id:t.id,label:t.label})),notify_workers_enabled:settings.notifyWorkersEnabled||false,notify_worker_types:settings.notifyWorkerTypes||[],digest_emails:settings.digestEmails||[],digest_sections:settings.digestSections||null,updated_at:new Date().toISOString()}); if(settingsErr) throw settingsErr; }
   await sbUpsertRows('document_sets', docSets.filter(s=>!inactiveDocSets.has(s.id)).map(s=>({id:s.id,name:s.name,description:s.description||'',country:s.country||'',built_in:!!s.builtIn,active:true,org_id:oid})));
   const dsi=[];
   // allow_issue is intentionally excluded here — it is written directly by sbRemoteUpsertDocSetItem
@@ -11026,7 +10961,7 @@ async function sbLoadAll(){
       saveDocReq();
     }
 
-    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.notify_workers_enabled!=null) settings.notifyWorkersEnabled=!!settingsData.notify_workers_enabled; if(Array.isArray(settingsData.notify_worker_types)) settings.notifyWorkerTypes=settingsData.notify_worker_types; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); renderWorkerNotifySettings(); }
+    if(settingsData){ settings.warningDays=settingsData.warning_days||60; if(settingsData.compliance_report_email) settings.complianceReportEmail=settingsData.compliance_report_email; if(settingsData.reject_delete_days!=null) settings.rejectDeleteDays=settingsData.reject_delete_days; const loaded=Array.isArray(settingsData.worker_types)?settingsData.worker_types.filter(t=>t&&t.id&&t.label).map(t=>({id:t.id,label:t.label})):null; if(loaded&&loaded.length) settings.workerTypes=loaded; if(settingsData.notify_workers_enabled!=null) settings.notifyWorkersEnabled=!!settingsData.notify_workers_enabled; if(Array.isArray(settingsData.notify_worker_types)) settings.notifyWorkerTypes=settingsData.notify_worker_types; if(Array.isArray(settingsData.digest_emails)) settings.digestEmails=settingsData.digest_emails; if(settingsData.digest_sections&&typeof settingsData.digest_sections==='object'){ const defs=settings.digestSections; Object.keys(defs).forEach(k=>{ if(settingsData.digest_sections[k]) defs[k]={...defs[k],...settingsData.digest_sections[k]}; }); } updateWarnDesc(); renderWorkerTypeFilter(); renderWorkerNotifySettings(); renderDigestEmailSettings(); }
     if((setData||[]).length){
       docSets=(setData||[]).map(s=>({id:s.id,name:s.name,description:s.description,country:s.country,builtIn:s.built_in}));
       docSetItems={}; docSets.forEach(s=>docSetItems[s.id]=[]);

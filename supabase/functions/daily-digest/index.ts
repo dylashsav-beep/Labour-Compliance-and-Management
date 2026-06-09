@@ -184,11 +184,15 @@ async function digestForOrg(sb: any, org: any, today: Date) {
   const todayStr = today.toISOString().slice(0, 10)
 
   // Recipients: org compliance email + owner. Skip if neither.
-  const recipients = [...new Set([org.compliance_email, org.owner_email].filter(Boolean))]
+  // Use digest_emails from settings if configured; fall back to org compliance_email + owner_email
+  const configuredEmails = Array.isArray(orgSettings?.digest_emails) && orgSettings.digest_emails.length > 0
+    ? orgSettings.digest_emails
+    : [org.compliance_email, org.owner_email].filter(Boolean)
+  const recipients = [...new Set(configuredEmails)]
   if (!recipients.length) return { org: orgName, sent: false, reason: 'no recipient configured' }
 
   // Merge org section prefs with defaults (org overrides defaults per key).
-  const { data: orgSettings } = await sb.from('settings').select('digest_sections, notify_workers_enabled, notify_worker_types').eq('id', orgId).maybeSingle()
+  const { data: orgSettings } = await sb.from('settings').select('digest_sections, notify_workers_enabled, notify_worker_types, digest_emails').eq('id', orgId).maybeSingle()
   const stored: Record<string, any> = orgSettings?.digest_sections || {}
   const sec = (key: string) => {
     const def = SECTION_DEFAULTS[key]
