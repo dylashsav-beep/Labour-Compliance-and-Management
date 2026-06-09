@@ -4788,8 +4788,25 @@ function paViewFile(key, name){
   if(f.file_path||f.storagePath){ sbSignedDownload(f.file_path||f.storagePath, f.name); return; }
   if(f.dataUrl){ const doDownload=()=>{const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();}; openFileViewer(f.dataUrl,f.name,doDownload); }
 }
-function paRemoveExistingFile(key){
+async function paRemoveExistingFile(key){
+  const a=editingPAId?projectAssignments.find(x=>x.id===editingPAId):null;
+  const sigStatus=a?.signatureStatus||'none';
+  const willResetSig=sigStatus==='signed'||sigStatus==='pending';
+  const confirmMsg=willResetSig
+    ?'Remove this file? This will also clear the signature status so a new document can be uploaded and re-sent for signing.'
+    :'Remove this document from the assignment?';
+  const ok=await _showConfirm('Remove document',confirmMsg,'Remove');
+  if(!ok) return;
   paRemovedFileIds.push(key);
+  if(willResetSig&&a&&sbClient){
+    try{
+      await sbClient.from('project_assignments')
+        .update({signature_status:'none',signature_request_id:null})
+        .eq('id',editingPAId);
+      const idx=projectAssignments.findIndex(x=>x.id===editingPAId);
+      if(idx>=0) projectAssignments[idx]={...projectAssignments[idx],signatureStatus:'none',signatureRequestId:null};
+    }catch(e){ console.warn('[TMC] paRemoveExistingFile: sig reset failed:',e.message); }
+  }
   renderPAFileList();
 }
 function paRemoveNewFile(idx){
