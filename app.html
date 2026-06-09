@@ -1353,6 +1353,14 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <div id="returnRequestsList"></div>
     </div>
 
+    <div id="eSignedDocsSection" style="display:none;margin-bottom:18px;">
+      <div class="appr-sub-group-label">
+        <span>✍️ E-Signed Documents</span>
+        <span id="eSignedDocsCount" class="appr-status-pill pending"></span>
+      </div>
+      <div id="eSignedDocsList"></div>
+    </div>
+
     <div id="approvalsPendingEmpty" class="appr-pending-empty" style="display:none;">
       <div class="appr-empty-icon">✓</div>
       <div>All clear — no pending approvals</div>
@@ -6305,7 +6313,7 @@ let approvalsApprovedPage = 1, approvalsRejectedPage = 1;
 let approvalsApprovedPageSize = 10, approvalsRejectedPageSize = 10;
 
 function updateApprovalsBadge(){
-  const pendingCount=(wpSubmissions.filter(s=>s.status==='pending').length)+(adminReturnRequests.filter(r=>r.status==='pending').length);
+  const pendingCount=(wpSubmissions.filter(s=>s.status==='pending').length)+(adminReturnRequests.filter(r=>r.status==='pending').length)+(issuedDocuments.filter(d=>d.status==='pending_review').length);
   const badge=document.getElementById('approvalsTabBadge');
   if(!badge)return;
   badge.style.display=pendingCount?'':'none';
@@ -6314,8 +6322,9 @@ function updateApprovalsBadge(){
 function _refreshApprovalsPendingEmpty(){
   const hasSubs=document.getElementById('pendingSubmissionsSection')?.style.display!=='none';
   const hasRets=document.getElementById('returnRequestsSection')?.style.display!=='none';
+  const hasESigns=document.getElementById('eSignedDocsSection')?.style.display!=='none';
   const el=document.getElementById('approvalsPendingEmpty');
-  if(el)el.style.display=(hasSubs||hasRets)?'none':'';
+  if(el)el.style.display=(hasSubs||hasRets||hasESigns)?'none':'';
 }
 
 async function loadApprovalsData(){
@@ -6359,12 +6368,14 @@ async function autoDeleteOldRejections(){
 function renderApprovalsView(){
   const hasPendingSubs=wpSubmissions.filter(s=>s.status==='pending').length>0;
   const hasPendingRets=adminReturnRequests.filter(r=>r.status==='pending').length>0;
+  const hasPendingESigns=issuedDocuments.filter(d=>d.status==='pending_review').length>0;
   const emptyEl=document.getElementById('approvalsPendingEmpty');
-  if(emptyEl)emptyEl.style.display=(hasPendingSubs||hasPendingRets)?'none':'';
+  if(emptyEl)emptyEl.style.display=(hasPendingSubs||hasPendingRets||hasPendingESigns)?'none':'';
   const noteEl=document.getElementById('approvalsRejectedAutoDeleteNote');
   if(noteEl){const d=settings.rejectDeleteDays??30;noteEl.textContent=d>0?`Rejected items are automatically removed after ${d} day${d!==1?'s':''}.`:'Auto-delete of rejected items is disabled.';}
   renderApprovalsHistory('approved');
   renderApprovalsHistory('rejected');
+  renderESignPending();
   updateApprovalsBadge();
 }
 
@@ -6738,6 +6749,100 @@ function renderAdminReturnRequests(){
       </div>
     </div>`;
   }).join('');
+}
+function renderESignPending(){
+  const section=document.getElementById('eSignedDocsSection');
+  const list=document.getElementById('eSignedDocsList');
+  const count=document.getElementById('eSignedDocsCount');
+  if(!section||!list||!count) return;
+  const pending=issuedDocuments.filter(d=>d.status==='pending_review'&&d.signedFilePath);
+  if(!pending.length){section.style.display='none';updateApprovalsBadge();_refreshApprovalsPendingEmpty();return;}
+  section.style.display='block';
+  count.textContent=pending.length+' pending';
+  updateApprovalsBadge();
+  _refreshApprovalsPendingEmpty();
+  list.innerHTML=pending.map(d=>{
+    const w=workers.find(x=>x.id===d.workerId);
+    const workerName=w?.name||'Unknown worker';
+    const docItems=docSetItems[w?.docSetId]||[];
+    const docItem=docItems.find(x=>x.id===d.docKey)||{name:d.docKey,icon:'📄'};
+    const signedDate=d.signedAt?new Date(d.signedAt).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):'';
+    const issueDateDefault=d.signedAt?d.signedAt.slice(0,10):'';
+    return`<div class="pending-sub-card" id="esign_${d.id}">
+      <div style="font-size:20px;">✍️</div>
+      <div class="pending-sub-info">
+        <div style="font-size:13px;font-weight:700;color:#1a2035;">${esc(workerName)} — ${esc(docItem.name||d.docKey)}</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:2px;">${signedDate?`Signed ${signedDate} · `:''}<span style="display:inline-block;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">✍ E-Signed</span></div>
+        <div style="font-size:12px;color:var(--text-m);margin-top:6px;">
+          <button class="btn" style="font-size:10px;padding:1px 8px;" onclick="sbSignedDownload('${d.signedFilePath}','${esc(d.fileName)}')">View Signed PDF</button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Issue date <input type="date" id="esignIssue_${d.id}" value="${issueDateDefault}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>
+          <label style="font-size:11px;color:var(--text-m);display:flex;flex-direction:column;gap:3px;">Expiry date <span style="font-size:10px;color:var(--text-l);">(optional)</span><input type="date" id="esignExpiry_${d.id}" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:6px;color:var(--text);"/></label>
+        </div>
+        <div style="margin-top:8px;">
+          <input type="text" class="form-input" id="esignNotes_${d.id}" placeholder="Review notes (optional)" style="width:220px;font-size:11px;"/>
+        </div>
+      </div>
+      <div class="pending-sub-actions">
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="approveESignedDoc('${d.id}')">✓ Approve</button>
+        <button class="btn btn-danger" style="font-size:11px;padding:4px 10px;" onclick="rejectESignedDoc('${d.id}')">✕ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function approveESignedDoc(docId){
+  const doc=issuedDocuments.find(d=>d.id===docId); if(!doc) return;
+  const expiryDate=(document.getElementById(`esignExpiry_${docId}`)?.value||'').trim()||null;
+  const issueDate=(document.getElementById(`esignIssue_${docId}`)?.value||'').trim()||null;
+  const w=workers.find(x=>x.id===doc.workerId);
+  if(!w){alert('Worker not found');return;}
+  try{
+    const wdId=`${doc.workerId}__${doc.docKey}`;
+    const updates={id:wdId,worker_id:doc.workerId,doc_key:doc.docKey,status:'ok',active:true,updated_at:new Date().toISOString(),org_id:currentOrgId||SITE_ORG_ID};
+    if(expiryDate) updates.expiry_date=expiryDate;
+    if(issueDate)  updates.issue_date=issueDate;
+    const {error:wdErr}=await sbClient.from('worker_documents').upsert(updates);
+    if(wdErr) throw wdErr;
+    if(!w.docs) w.docs={};
+    if(!w.docs[doc.docKey]) w.docs[doc.docKey]={};
+    if(expiryDate) w.docs[doc.docKey].date=expiryDate;
+    if(issueDate)  w.docs[doc.docKey].issueDate=issueDate;
+    w.docs[doc.docKey].status='ok';
+    if(doc.signedFilePath){
+      const fileRecId=`${wdId}__esign${docId.replace(/-/g,'').slice(-12)}`;
+      const {error:wdfErr}=await sbClient.from('worker_document_files').upsert({
+        id:fileRecId,worker_id:doc.workerId,worker_document_id:wdId,
+        file_name:doc.fileName,file_path:doc.signedFilePath,
+        size_bytes:0,mime_type:'application/pdf',superseded:false,active:true,
+        org_id:currentOrgId||SITE_ORG_ID
+      },{onConflict:'id'});
+      if(wdfErr) console.warn('[TMC] approveESignedDoc: file record failed:',wdfErr.message);
+      else{
+        if(!fileStore[doc.workerId]) fileStore[doc.workerId]={};
+        if(!fileStore[doc.workerId][doc.docKey]) fileStore[doc.workerId][doc.docKey]=[];
+        fileStore[doc.workerId][doc.docKey].push({name:doc.fileName,size:0,type:'application/pdf',file_path:doc.signedFilePath,storagePath:doc.signedFilePath,superseded:false});
+      }
+    }
+    await sbClient.from('issued_documents').update({status:'signed'}).eq('id',docId);
+    issuedDocuments=issuedDocuments.map(d=>d.id===docId?{...d,status:'signed'}:d);
+    renderESignPending();
+    renderTable();
+    if(curW) rebuildModal(curW);
+    _showSaveToast('E-signed document approved and filed in worker profile');
+  }catch(e){alert('Approve failed: '+e.message);}
+}
+async function rejectESignedDoc(docId){
+  const doc=issuedDocuments.find(d=>d.id===docId); if(!doc) return;
+  const ok=await _showConfirm('Reject signed document','This will reset the signature so the document can be corrected and re-issued. The signed PDF will be removed.','Reject & Reset');
+  if(!ok) return;
+  try{
+    if(doc.signedFilePath) await sbClient.storage.from(SB_BUCKET).remove([doc.signedFilePath]).catch(()=>{});
+    await sbClient.from('issued_documents').update({status:'none',signature_request_id:null,signed_file_path:null}).eq('id',docId);
+    issuedDocuments=issuedDocuments.map(d=>d.id===docId?{...d,status:'none',signatureRequestId:null,signedFilePath:null}:d);
+    renderESignPending();
+    _showSaveToast('Signature reset — document can be corrected and re-issued');
+  }catch(e){alert('Reject failed: '+e.message);}
 }
 async function approveReturnRequest(reqId){
   const r=adminReturnRequests.find(x=>x.id===reqId); if(!r) return;
@@ -10735,8 +10840,8 @@ async function sbPersistAll(force=false){
     await sbUpsertRows('tool_assignments',ta);
     await sbUpsertRows('tool_charges', toolCharges.filter(c=>c.charged).map(c=>({id:c.id,assignment_id:c.assignmentId,week_key:c.weekKey,charged:true,invoice_number:c.invoiceNumber||null,invoice_amount:c.invoiceAmount||null,charged_at:c.chargedAt||new Date().toISOString(),charged_by:c.chargedBy||'',active:true,org_id:oid})));
   }catch(e){ console.warn('[TMC] tools sync skipped — run migrations/add_tools.sql to enable:', e.message); }
-  // NOTE: signature_request_id + signed_file_path excluded — written only by edge functions.
-  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,status:d.status,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
+  // NOTE: status, signature_request_id, signed_file_path, signed_at excluded — written only by edge functions / direct approval actions.
+  if(issuedDocuments.length){ try{ await sbUpsertRows('issued_documents', issuedDocuments.map(d=>({id:d.id,worker_id:d.workerId,doc_key:d.docKey,file_path:d.filePath,file_name:d.fileName,issued_by:d.issuedBy||null,issued_at:d.issuedAt,active:true,org_id:oid}))); }catch(e){ console.warn('[TMC] issued_documents sync skipped:', e.message); } }
   await sbUpsertRows('deleted_items', deletedItems.filter(it=>it.type!=='worker_status_change').map(it=>({id:it.id,item_type:it.type,label:it.label,payload:it.payload||{},details:it.payload?._meta||{},deleted_by_email:it.deletedBy||'',deleted_at:it.deletedAt||new Date().toISOString(),restored:!!it.restored,org_id:oid})));
   await sbUpsertRows('compliance_documents', complianceDocs.map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||new Date().toISOString(),org_id:oid})));
   await sbApplyArchivedDeletionsToSupabase();
@@ -11082,7 +11187,7 @@ async function sbLoadAll(){
     tools=(toolData||[]).map(t=>({id:t.id,name:t.name,desc:t.description||'',serial:t.serial_number||'',notes:t.notes||''}));
     toolHistory={}; (taData||[]).forEach(a=>{ if(!toolHistory[a.worker_id]) toolHistory[a.worker_id]=[]; toolHistory[a.worker_id].push({id:a.id,toolId:a.tool_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null,issueFilePath:a.issue_file_path||null,issueFileName:a.issue_file_name||null,returnFilePath:a.return_file_path||null,returnFileName:a.return_file_name||null}); });
     toolCharges=(toolChargesData||[]).map(c=>({id:c.id,assignmentId:c.assignment_id,weekKey:c.week_key,charged:c.charged,invoiceNumber:c.invoice_number||null,invoiceAmount:c.invoice_amount||null,chargedAt:c.charged_at,chargedBy:c.charged_by||''}));
-    issuedDocuments=(issuedDocsData||[]).map(d=>({id:d.id,workerId:d.worker_id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature',signatureRequestId:d.signature_request_id||null,signedFilePath:d.signed_file_path||null}));
+    issuedDocuments=(issuedDocsData||[]).map(d=>({id:d.id,workerId:d.worker_id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature',signatureRequestId:d.signature_request_id||null,signedFilePath:d.signed_file_path||null,signedAt:d.signed_at||null}));
     deletedItems=(deletedData||[]).filter(d=>d.item_type!=='worker_status_change').map(d=>{
       const payload = d.payload || {};
       payload._meta = {...(payload._meta||{}), ...(d.details||{})};

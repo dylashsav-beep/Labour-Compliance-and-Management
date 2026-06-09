@@ -155,7 +155,8 @@ Deno.serve(async (req) => {
           .eq('id', reference_id).eq('org_id', org_id)
 
       } else {
-        // Issued document — store signed copy, update status
+        // Issued document — store signed copy, route to Approvals for admin review
+        // before filing into the worker's document set.
         const signedPath = `${org_id}/workers/${worker_id}/issued-docs/signed_${timestamp}.pdf`
         const { error: uploadErr } = await sb.storage
           .from('tmc-documents')
@@ -167,7 +168,7 @@ Deno.serve(async (req) => {
         }
 
         await sb.from('issued_documents')
-          .update({ status: 'signed', signed_file_path: signedPath })
+          .update({ status: 'pending_review', signed_file_path: signedPath, signed_at: new Date().toISOString() })
           .eq('id', reference_id).eq('org_id', org_id)
       }
     }
