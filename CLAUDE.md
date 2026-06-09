@@ -622,11 +622,13 @@ Applied in both `loadDemoDefaults()` and `restoreDemoState()`. Also wrapped the 
 
 ---
 
-### 19. Dropbox Sign Webhook — Form Field Name Is `json` Not `payload`
+### 19. Dropbox Sign Webhook — Form Field Name Is `json` Not `payload`, Sent as `multipart/form-data`
 **Symptom**: Signed documents were never stored. The webhook test passed, but real `signature_request_signed` events were silently ACK'd without doing anything.  
-**Root cause**: Dropbox Sign sends real events as `application/x-www-form-urlencoded` POST with the JSON payload in a field called `json`. The webhook handler used `params.get('payload')` — always null — so every real event hit the early `if (!payloadStr) return ACK` guard.  
-**Fix**: `params.get('json')` — one character change, but completely silent failure without it because the test ping uses a different format and passes regardless.  
-**Rule**: Always verify third-party webhook field names against the provider's actual API docs before assuming. The test ping format ≠ the real event format — a passing test does not confirm the real event path works.
+**Root cause (two compounding issues)**:
+1. Dropbox Sign sends real events as `multipart/form-data` POST — not `application/x-www-form-urlencoded`. `URLSearchParams` cannot parse multipart, so `params.get('json')` always returned null, hitting the early `if (!payloadStr) return ACK` guard with no log output.
+2. The field name is `json`, not `payload`. The test ping uses a different format and passes regardless, masking the bug.  
+**Fix**: Use `req.formData()` for multipart requests (detected via `content-type` header), with `URLSearchParams` fallback for url-encoded test pings. Extract `formData.get('json')` as the payload string.  
+**Rule**: Always verify third-party webhook content-type AND field names against actual API docs. Test ping format ≠ real event format — a passing test does not confirm the real event path works. Add debug logging of `content-type` and body preview to diagnose silently-skipped webhooks.
 
 ---
 
