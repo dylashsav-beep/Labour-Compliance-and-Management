@@ -4823,6 +4823,11 @@ function renderPAFileList(){
       <button type="button" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="paRemoveExistingFile('${key}')">Remove</button>
     </div>`;
   });
+  paUploadingFiles.forEach(name=>{
+    html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:4px;opacity:0.7;">
+      <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(name)}<span style="color:#16a34a;font-size:10px;margin-left:5px;">⏳ uploading…</span></span>
+    </div>`;
+  });
   paNewFiles.forEach((f,i)=>{
     html += `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;margin-bottom:4px;">
       <span style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📎 ${esc(f.name)}<span style="color:var(--text-l);font-size:10px;margin-left:5px;">${fsz(f.size)} · pending upload</span></span>
@@ -4830,7 +4835,7 @@ function renderPAFileList(){
     </div>`;
   });
   cur.innerHTML = html;
-  const hasAny = existing.length > 0 || paNewFiles.length > 0;
+  const hasAny = existing.length > 0 || paNewFiles.length > 0 || paUploadingFiles.length > 0;
   document.getElementById('paContractDropText').textContent = hasAny ? '📎 Add another document' : '📎 Click to attach contract / document (PDF, DOCX)';
 }
 function paViewFile(key, name){
@@ -4923,13 +4928,14 @@ function setPAProtectedMode(isProtected){
 // ─── Project Assignment CRUD ──────────────────────────────────────────────────
 let editingPAId = null;
 let paContractData = null; // legacy compat — use paNewFiles below
-let paNewFiles = [];       // files queued for upload during this modal session
+let paNewFiles = [];           // files queued for upload during this modal session (new assignments only)
+let paUploadingFiles = [];     // filenames currently being uploaded immediately (edit mode) — shown as spinners
 let paRemovedFileIds = []; // dbIds of existing files to archive on save
 let paWasProtected = false;    // captured at modal-open time; used by saveProjectAssignment so contractFiles mutation doesn't break isProtected check
 let paResetSignature = false;  // true when any removal in this session required a signature_status reset; survives Realtime reloads overwriting in-memory signatureStatus
 
 function openAddProjectAssignment(presetWid, presetProjId){
-  editingPAId = null; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = false; paResetSignature = false;
+  editingPAId = null; paContractData = null; paNewFiles = []; paUploadingFiles = []; paRemovedFileIds = []; paWasProtected = false; paResetSignature = false;
   document.getElementById('paModalTitle').textContent = 'New Worker Assignment';
   document.getElementById('paModalSub').textContent   = 'Assign a worker to a project with a contract and rate';
   document.getElementById('paDeleteBtn').style.display = 'none';
@@ -4952,7 +4958,7 @@ function openAddProjectAssignment(presetWid, presetProjId){
 
 function openEditPA(id){
   const a = projectAssignments.find(x=>x.id===id); if(!a) return;
-  editingPAId = id; paContractData = null; paNewFiles = []; paRemovedFileIds = []; paWasProtected = hasContractFile(a); paResetSignature = false;
+  editingPAId = id; paContractData = null; paNewFiles = []; paUploadingFiles = []; paRemovedFileIds = []; paWasProtected = hasContractFile(a); paResetSignature = false;
   document.getElementById('paModalTitle').textContent = 'Edit Worker Assignment';
   document.getElementById('paModalSub').textContent   = '';
   document.getElementById('paDeleteBtn').style.display = 'inline-flex';
@@ -4974,13 +4980,66 @@ function openEditPA(id){
   document.getElementById('paOverlay').classList.add('open');
 }
 
+// Immediately uploads a file to Storage + inserts a project_assignment_files row so
+// Sign/View/Remove buttons are available without requiring a Save → reopen cycle.
+// Only runs in edit mode (editingPAId set). Returns true on success, false on auth-fail,
+// throws on storage/DB error (caller falls back to paNewFiles queue).
+async function paDoImmediateUpload(file, dataUrl){
+  const assignId = editingPAId;
+  if(!assignId || !sbClient || !sbSession || !sbCanWriteTable('project_assignment_files')) return false;
+  const oid = currentOrgId || SITE_ORG_ID;
+  const path = `${oid}/assignments/${assignId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${sbSlug(file.name)}`;
+  await sbUploadDataUrl(path, {name:file.name, size:file.size, type:file.type, dataUrl});
+  const rowId = `${assignId}__file_${Date.now()}`;
+  const {data:fRow, error:dbErr} = await sbClient.from('project_assignment_files').insert({
+    id: rowId, project_assignment_id: assignId,
+    file_name: file.name, file_path: path,
+    mime_type: file.type||'', size_bytes: file.size||0,
+    active: true, org_id: oid
+  }).select().maybeSingle();
+  if(dbErr) throw dbErr;
+  const a = projectAssignments.find(x=>x.id===assignId);
+  if(a){
+    if(!a.contractFiles) a.contractFiles=[];
+    a.contractFiles.push({dbId:fRow?.id||rowId, name:file.name, size:file.size, type:file.type, file_path:path, storagePath:path, active:true});
+    // Show protected-mode UI (locks rate/notes fields). paWasProtected is intentionally NOT
+    // updated here: if the modal opened with no files (paWasProtected=false), saveProjectAssignment
+    // must still read all form fields — disabled inputs still expose their .value so this is safe.
+    if(!paWasProtected){ setPAProtectedMode(true); }
+  }
+  return true;
+}
+
 function handlePAContractUpload(input){
   if(!requireAction('planning','upload assignment contracts')){ input.value=''; return; }
   Array.from(input.files||[]).forEach(file=>{
     const reader = new FileReader();
     reader.onload = e=>{
-      paNewFiles.push({name:file.name, size:file.size, type:file.type, dataUrl:e.target.result});
-      renderPAFileList();
+      if(editingPAId && sbClient && sbSession){
+        // Edit mode — upload immediately so Sign/View/Remove are available right away
+        paUploadingFiles.push(file.name);
+        renderPAFileList();
+        paDoImmediateUpload(file, e.target.result)
+          .then(ok=>{
+            paUploadingFiles = paUploadingFiles.filter(n=>n!==file.name);
+            if(!ok){
+              // No auth / not edit mode — fall back to queued upload on Save
+              paNewFiles.push({name:file.name, size:file.size, type:file.type, dataUrl:e.target.result});
+            }
+            renderPAFileList();
+          })
+          .catch(err=>{
+            console.warn('[TMC] immediate upload failed, queuing for Save:', err?.message);
+            showDiagError('paDoImmediateUpload', err);
+            paUploadingFiles = paUploadingFiles.filter(n=>n!==file.name);
+            paNewFiles.push({name:file.name, size:file.size, type:file.type, dataUrl:e.target.result});
+            renderPAFileList();
+          });
+      } else {
+        // New assignment — queue for upload when Save is clicked
+        paNewFiles.push({name:file.name, size:file.size, type:file.type, dataUrl:e.target.result});
+        renderPAFileList();
+      }
     };
     reader.readAsDataURL(file);
   });
