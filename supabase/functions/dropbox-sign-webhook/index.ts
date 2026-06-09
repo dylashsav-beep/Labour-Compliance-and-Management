@@ -13,13 +13,17 @@ const ACK = new Response('Hello API Event Received', {
 async function verifySignature(payloadStr: string, headerSig: string): Promise<boolean> {
   try {
     const key = await crypto.subtle.importKey(
-      'raw', new TextEncoder().encode(DROPBOX_SIGN_API_KEY),
+      'raw', new TextEncoder().encode(DROPBOX_SIGN_API_KEY.trim()),
       { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
     )
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadStr))
     const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
+    console.log('[dropbox-sign-webhook] api key length:', DROPBOX_SIGN_API_KEY.trim().length)
+    console.log('[dropbox-sign-webhook] computed sig (first 16):', hex.substring(0, 16))
+    console.log('[dropbox-sign-webhook] expected sig (first 16):', headerSig.substring(0, 16))
     return hex === headerSig
-  } catch {
+  } catch (e: any) {
+    console.error('[dropbox-sign-webhook] verify error:', e?.message)
     return false
   }
 }
@@ -48,10 +52,11 @@ Deno.serve(async (req) => {
     }
 
     // Require HMAC signature — reject any call that lacks it or has a bad one.
-    // An attacker posting directly to this endpoint has no API key so cannot
-    // produce a valid signature. Skipping this check would let anyone forge
-    // a 'signed' event and write arbitrary files into any org's storage path.
-    const headerSig = req.headers.get('X-HelloSign-Signature') || ''
+    // Try both the legacy HelloSign header name and the newer Dropbox Sign name.
+    const headerSig = req.headers.get('X-HelloSign-Signature')
+                   || req.headers.get('X-Dropbox-Sign-Signature')
+                   || ''
+    console.log('[dropbox-sign-webhook] signature header present:', !!headerSig, 'length:', headerSig.length)
     if (!headerSig || !(await verifySignature(payloadStr, headerSig))) {
       console.warn('[dropbox-sign-webhook] Missing or invalid signature — rejecting event')
       return ACK
