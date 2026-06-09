@@ -738,6 +738,20 @@ const sigBuf = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().enc
 
 ---
 
+### 25. Signature Reset Must Be Awaited BEFORE File-Deactivation Writes
+
+**Symptom**: `signature_status` reverted to `'signed'` on every page refresh and every 5-minute poll, even though the app code appeared to reset it.
+**Root cause**: Three cascading failures made the fire-and-forget approach unworkable:
+1. The file-deactivation write triggered Supabase Realtime → `sbQueueRemoteReload` → `sbLoadAll` 650ms later, which re-read `signature_status:'signed'` from DB (the sig reset hadn't landed yet)
+2. `archiveDeletedItem` set `sbSuppressRealtimeUntil = Date.now() + 2500`, but was called AFTER the writes — and its 2.5s window could expire before subsequent writes completed
+3. Even the `paResetSignature` flag approach in `saveProjectAssignment` could fail if Realtime reloaded `signatureStatus:'signed'` into memory between Remove and Save
+**Fix**: Make `paRemoveExistingFile` async. **Await the signature DB reset first**, before any write that triggers Realtime. Then extend `sbSuppressRealtimeUntil` to 8 s (overriding `archiveDeletedItem`'s 2.5 s) so the file-deactivation writes don't fire sbLoadAll before the DB is consistent.
+**Rule for any DB field excluded from sbPersistAll that must be reset on removal**:
+1. Make the removal function `async`
+2. `await` the DB reset **first** — before any other write that triggers Realtime
+3. After all writes, set `sbSuppressRealtimeUntil = Math.max(sbSuppressRealtimeUntil, Date.now() + 8000)` to prevent sbLoadAll from firing during the window
+4. Keep the `paResetSignature`-style flag in Save as a safety net
+
 ### 24. Audit Scope — Read sbPersistAll + sbLoadAll + sbQueueRemoteReload Before Touching Modal State
 **Pattern for future sessions**: Before modifying any code that touches in-memory state in a modal (especially remove/archive flows), read these three functions in full:
 - `sbPersistAll` (~line 10750) — what it writes and what it intentionally excludes

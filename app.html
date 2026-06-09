@@ -4804,7 +4804,7 @@ function paViewFile(key, name){
   if(f.file_path||f.storagePath){ sbSignedDownload(f.file_path||f.storagePath, f.name); return; }
   if(f.dataUrl){ const doDownload=()=>{const a=document.createElement('a');a.href=f.dataUrl;a.download=f.name;a.click();}; openFileViewer(f.dataUrl,f.name,doDownload); }
 }
-function paRemoveExistingFile(key){
+async function paRemoveExistingFile(key){
   const a=editingPAId?projectAssignments.find(x=>x.id===editingPAId):null;
   const sigStatus=a?.signatureStatus||'none';
   const willResetSig=sigStatus==='signed'||sigStatus==='pending';
@@ -4812,16 +4812,28 @@ function paRemoveExistingFile(key){
     ?'Remove this file? This will also clear the signature status so a new document can be uploaded and re-sent for signing.'
     :'Remove this document from the assignment?';
   if(!window.confirm(msg)) return;
-  // Find the file object before mutating contractFiles
+
+  // Find the file before mutating contractFiles
   const removedFile=(a?.contractFiles||[]).find(f=>(f.dbId||f.file_path||f.name)===key);
   paRemovedFileIds.push(key);
   paNewFiles=[];
-  // Mutate contractFiles so the debounced sbPersistAll sync cannot revive this file.
-  // paWasProtected (captured at modal-open) preserves the isProtected flag in saveProjectAssignment.
+  // Mutate so sbPersistAll cannot revive this file; paWasProtected preserves isProtected in Save
   if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path||f.name)!==key);
-  // Reset signature banner in memory immediately; set flag for Save to use
+  // Reset in memory + set flag so Save can persist the reset even if Realtime reloads overwrite this in-memory value
   if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; paResetSignature=true; }
-  // Archive to deleted history so it can be viewed in Deleted Items / Restore History
+
+  // ── Signature reset FIRST (awaited) ────────────────────────────────────────
+  // Must complete before the file-deactivation write triggers Realtime → sbLoadAll.
+  // If the sig reset is fire-and-forget it may not have landed in DB by the time
+  // sbLoadAll fires (650ms after the file write), so sbLoadAll reads 'signed'.
+  if(willResetSig&&editingPAId&&sbClient&&sbSession){
+    const {error}=await sbClient.from('project_assignments')
+      .update({signature_status:'none',signature_request_id:null})
+      .eq('id',editingPAId);
+    if(error) console.warn('[TMC] paRemoveExistingFile: sig reset failed:', error.message);
+  }
+
+  // Archive to Deleted Items / Restore History
   if(removedFile){
     const workerName=workerNameById(a?.wid||'');
     const projectName=projectNameById(a?.projectId||'');
@@ -4830,17 +4842,16 @@ function paRemoveExistingFile(key){
       {assignmentId:editingPAId,workerId:a?.wid,projectId:a?.projectId,fileName:removedFile.name,fileSize:removedFile.size,filePath:removedFile.file_path||removedFile.storagePath||'',file:removedFile});
     renderDeletedItems();
   }
-  // Fire-and-forget DB deactivation so the file is gone even if the user doesn't click Save
+
+  // Suppress Realtime reloads for 8 s from now. archiveDeletedItem sets 2.5 s — re-extend
+  // so the file deactivation writes below don't trigger sbLoadAll before DB is consistent.
+  sbSuppressRealtimeUntil = Math.max(sbSuppressRealtimeUntil, Date.now() + 8000);
+
+  // Fire-and-forget file deactivation — sig reset already in DB, so any Realtime-triggered
+  // sbLoadAll that fires after the suppress window reads the correct values.
   if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
     sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
     sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
-  }
-  // Fire-and-forget signature reset in DB so Realtime-triggered sbLoadAll reads the correct value.
-  if(willResetSig&&editingPAId&&sbClient&&sbSession){
-    sbClient.from('project_assignments')
-      .update({signature_status:'none',signature_request_id:null})
-      .eq('id',editingPAId)
-      .then(({error})=>{ if(error) console.warn('[TMC] paRemoveExistingFile: sig reset failed:', error.message); });
   }
   renderPAFileList();
 }
