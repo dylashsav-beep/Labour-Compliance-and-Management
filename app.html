@@ -3040,6 +3040,9 @@ function confirmDeleteAction(message, onConfirm){
   );
 }
 function hasContractFile(a){ return !!(a && (a.contractFiles||[]).some(f=>f.file_path||f.storagePath||f.dataUrl||f.name)); }
+// True if the contract is marked as signed/executed — either via Dropbox Sign or manually by admin.
+// This is display-only and never gates the "has a contract" compliance requirement.
+function paIsSigned(a){ return !!(a && (a.signatureStatus==='signed' || a.contractSigned)); }
 loadDeletedItems();
 
 // ── Built-in seed docs ──
@@ -4783,7 +4786,7 @@ function renderPAList(){
       <td style="white-space:nowrap;">${!noContract
         ?`<span class="contract-pill" onclick="openEditPA('${a.id}')" title="View files">📎 ${fileCount} file${fileCount!==1?'s':''}</span>`
         :`<span class="contract-pill missing" title="${dim?'Completed assignment has no contract on file — this needs attention':'Contract missing'}">⚠ ${dim?'No contract — flag':'Missing'}</span>`
-      }${a.signatureStatus==='pending'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;">⏳ Awaiting sig</span>`:a.signatureStatus==='signed'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#dcfce7;color:#166534;border:1px solid #86efac;">✅ Signed</span>`:a.signatureStatus==='declined'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">❌ Declined</span>`:''}</td>
+      }${a.signatureStatus==='pending'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fef9c3;color:#854d0e;border:1px solid #fde047;">⏳ Awaiting sig</span>`:a.signatureStatus==='pending_review'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;">✍ Review</span>`:paIsSigned(a)?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#dcfce7;color:#166534;border:1px solid #86efac;" title="${a.signatureStatus==='signed'?'Signed via Dropbox Sign':'Manually marked as signed/executed'}">✅ Signed</span>`:a.signatureStatus==='declined'?` <span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:8px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;">❌ Declined</span>`:''}</td>
       <td><span style="font-size:11px;font-weight:600;color:${stColors[st]||'var(--text-m)'};">● ${stLabels[st]||st}</span></td>
       <td><button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;" onclick="openEditPA('${a.id}')">Edit</button></td>
     </tr>`;
@@ -4844,6 +4847,18 @@ function renderPAFileList(){
       <button type="button" style="background:none;border:none;font-size:11px;color:var(--red);cursor:pointer;flex-shrink:0;" onclick="paRemoveNewFile(${i})">Remove</button>
     </div>`;
   });
+  // "Mark as signed" checkbox — shown when files are attached and Dropbox Sign hasn't
+  // already confirmed the signature (if it has, the green banner above is sufficient).
+  const hasFiles = existing.length > 0;
+  const esignSigned = sigStatus === 'signed';
+  if(hasFiles && !esignSigned){
+    const isSigned = a?.contractSigned || false;
+    html += `<div style="margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-m);padding:6px 8px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;">
+      <input type="checkbox" id="paContractSigned" ${isSigned?'checked':''} onchange="onPAContractSignedChange(this.checked)" style="width:15px;height:15px;cursor:pointer;accent-color:#16a34a;flex-shrink:0;">
+      <label for="paContractSigned" style="cursor:pointer;user-select:none;flex:1;">Mark as signed / executed</label>
+      ${isSigned?'<span style="font-size:10px;background:#dcfce7;color:#166534;border:1px solid #86efac;border-radius:4px;padding:1px 7px;font-weight:700;flex-shrink:0;">✅ Signed</span>':''}
+    </div>`;
+  }
   cur.innerHTML = html;
   const hasAny = existing.length > 0 || paNewFiles.length > 0 || paUploadingFiles.length > 0;
   document.getElementById('paContractDropText').textContent = hasAny ? '📎 Add another document' : '📎 Click to attach contract / document (PDF, DOCX)';
@@ -4918,11 +4933,18 @@ function paRemoveNewFile(idx){
   renderPAFileList();
 }
 
+function onPAContractSignedChange(checked){
+  if(!editingPAId) return;
+  const a=projectAssignments.find(x=>x.id===editingPAId);
+  if(a){ a.contractSigned=!!checked; }
+  sbScheduleSync(); // persists via sbPersistAll → contract_signed column
+  renderPAFileList(); // re-render to update the signed badge on the checkbox row
+}
+
 // ─── Protected assignment helpers ─────────────────────────────────────────────
+// Note: protected mode no longer locks fields — all assignment details remain
+// editable even when a contract is attached. The note is purely informational.
 function setPAProtectedMode(isProtected){
-  ['paWorker','paProject','paRate','paRateType','paNotes','paContractFile'].forEach(id=>{
-    const el=document.getElementById(id); if(el){ el.disabled=!!isProtected; el.classList.toggle('protected-input',!!isProtected); }
-  });
   const noteId='paProtectedNote';
   let note=document.getElementById(noteId);
   if(isProtected){
@@ -4931,7 +4953,7 @@ function setPAProtectedMode(isProtected){
       const modal=document.querySelector('#paOverlay .modal-body .form-grid');
       if(modal) modal.insertAdjacentElement('beforebegin',note);
     }
-    note.textContent='Protected assignment: a contract/PO is uploaded. Only the start and end dates can be changed. If this assignment is archived, the assignment details and contract file will be kept in Deleted Items / Restore History and can be restored by authorised users.';
+    note.textContent='A contract is attached to this assignment. All details remain editable. If archived, contract files are kept in Deleted Items and can be restored.';
   } else if(note){ note.remove(); }
 }
 
@@ -5103,7 +5125,7 @@ async function saveProjectAssignment(){
     const oid=currentOrgId||SITE_ORG_ID;
     try{
       if(sbCanWriteTable('project_assignments')){
-        const {error}=await sbClient.from('project_assignments').upsert({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid},{onConflict:'id'});
+        const {error}=await sbClient.from('project_assignments').upsert({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',contract_signed:a.contractSigned||false,active:true,org_id:oid},{onConflict:'id'});
         if(error) console.warn('[TMC] saveProjectAssignment: immediate assignment write failed (will retry on sync):',error.message);
       }
       if(sbCanWriteTable('project_assignment_files')){
@@ -5116,24 +5138,24 @@ async function saveProjectAssignment(){
   if(editingPAId){
     const idx = projectAssignments.findIndex(a=>a.id===editingPAId);
     if(idx > -1){
-      const a = projectAssignments[idx];
-      const isProtected = paWasProtected; // use open-time snapshot — contractFiles may have been mutated by removal
-      // Keep existing files minus removed ones (contractFiles already mutated, but filter is a safe no-op), then add new uploads
-      const remaining = (a.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
+      const existing = projectAssignments[idx];
+      // Keep existing files minus removed ones, then add new uploads
+      const remaining = (existing.contractFiles||[]).filter(f=>!paRemovedFileIds.includes(f.dbId||f.file_path));
       const allFiles = [...remaining, ...uploadedNew];
-      if(isProtected){
-        // Protected: only dates and files can change
-        projectAssignments[idx].startDate = document.getElementById('paStart').value;
-        projectAssignments[idx].endDate   = document.getElementById('paEnd').value;
-        projectAssignments[idx].contractFiles = allFiles;
-        await _persistPAImmediate(editingPAId);
-        savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW); return;
-      }
-      projectAssignments[idx] = {id:editingPAId, wid:document.getElementById('paWorker').value,
+      // Always read all form fields — contract presence no longer restricts editing.
+      // Preserve edge-function-owned + non-form fields from the in-memory record.
+      projectAssignments[idx] = {id:editingPAId,
+        wid:document.getElementById('paWorker').value,
         projectId:document.getElementById('paProject').value,
         startDate:document.getElementById('paStart').value, endDate:document.getElementById('paEnd').value,
         rate:document.getElementById('paRate').value, rateType:document.getElementById('paRateType').value,
-        notes:document.getElementById('paNotes').value.trim(), contractFiles:allFiles};
+        notes:document.getElementById('paNotes').value.trim(), contractFiles:allFiles,
+        contractSigned:document.getElementById('paContractSigned')?.checked||existing.contractSigned||false,
+        // Edge-function-owned — never read from form; preserve from in-memory
+        signatureStatus:existing.signatureStatus||'none',
+        signatureRequestId:existing.signatureRequestId||null,
+        signedFilePath:existing.signedFilePath||null,
+        signedAt:existing.signedAt||null};
     }
   } else {
     const wid = document.getElementById('paWorker').value;
@@ -5143,7 +5165,9 @@ async function saveProjectAssignment(){
     projectAssignments.push({id:assignmentId, wid, projectId,
       startDate:document.getElementById('paStart').value, endDate:document.getElementById('paEnd').value,
       rate:document.getElementById('paRate').value, rateType:document.getElementById('paRateType').value,
-      notes:document.getElementById('paNotes').value.trim(), contractFiles:uploadedNew});
+      notes:document.getElementById('paNotes').value.trim(), contractFiles:uploadedNew,
+      contractSigned:document.getElementById('paContractSigned')?.checked||false,
+      signatureStatus:'none', signatureRequestId:null, signedFilePath:null, signedAt:null});
   }
   await _persistPAImmediate(assignmentId);
   savePA(); closeM('paOverlay'); renderRoster(); renderTable(); if(curW) rebuildModal(curW);
@@ -11112,7 +11136,7 @@ async function sbPersistAll(force=false){
   // functions. Including them in the regular sync would cause sbPersistAll to
   // overwrite a webhook-updated 'signed' status back to 'pending' if the
   // in-memory state hasn't been refreshed yet (race condition).
-  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',active:true,org_id:oid}));
+  const paRows=projectAssignments.filter(a=>!inactiveProjectAssignments.has(a.id)).map(a=>({id:a.id,worker_id:a.wid,project_id:a.projectId,start_date:sbSafeDate(a.startDate),end_date:sbSafeDate(a.endDate),rate:sbMoney(a.rate),rate_type:a.rateType||'day',notes:a.notes||'',contract_signed:a.contractSigned||false,active:true,org_id:oid}));
   await sbUpsertRows('project_assignments',paRows);
   // Contract files for assignments that are in/through e-signature are OWNED BY THE WEBHOOK:
   // dropbox-sign-webhook deactivates the original files and inserts the signed PDF. Re-upserting
@@ -11470,7 +11494,7 @@ async function sbLoadAll(){
     (wfileData||[]).forEach(f=>{const d=(wdocData||[]).find(x=>x.id===f.worker_document_id); const did=d?.doc_key; if(did){ if(!fileStore[f.worker_id]) fileStore[f.worker_id]={}; if(!fileStore[f.worker_id][did]) fileStore[f.worker_id][did]=[]; fileStore[f.worker_id][did].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,superseded:!!f.superseded}); } else { console.warn('[TMC] worker_document_file orphaned — no matching worker_document record:', f.id, f.file_path); }});
     roster={}; (rosterData||[]).forEach(r=>{ if(!roster[r.week_key]) roster[r.week_key]={}; if(!roster[r.week_key][r.worker_id]) roster[r.week_key][r.worker_id]=[]; roster[r.week_key][r.worker_id].push(r.project_name); });
     const paFiles={}; (pafData||[]).forEach(f=>{ if(!paFiles[f.project_assignment_id]) paFiles[f.project_assignment_id]=[]; paFiles[f.project_assignment_id].push({name:f.file_name,size:f.size_bytes,type:f.mime_type,file_path:f.file_path,storagePath:f.file_path,dbId:f.id}); });
-    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',signatureStatus:a.signature_status||'none',signatureRequestId:a.signature_request_id||null,signedFilePath:a.signed_file_path||null,signedAt:a.signed_at||null,contractFiles:paFiles[a.id]||[]}));
+    projectAssignments=(paData||[]).map(a=>({id:a.id,wid:a.worker_id,projectId:a.project_id,startDate:a.start_date||'',endDate:a.end_date||'',rate:a.rate??'',rateType:a.rate_type||'day',notes:a.notes||'',signatureStatus:a.signature_status||'none',signatureRequestId:a.signature_request_id||null,signedFilePath:a.signed_file_path||null,signedAt:a.signed_at||null,contractSigned:a.contract_signed||false,contractFiles:paFiles[a.id]||[]}));
     properties=(propData||[]).map(p=>({id:p.id,name:p.name,address:p.address||'',costPerNight:p.cost_per_night??null,notes:p.notes||''}));
     vehicles=(vehData||[]).map(v=>({id:v.id,desc:v.description,reg:v.registration_plate||'',make:v.make||'',model:v.model||'',colour:v.colour||'',notes:v.notes||''}));
     accomHistory={}; (aaData||[]).forEach(a=>{ if(!accomHistory[a.worker_id]) accomHistory[a.worker_id]=[]; accomHistory[a.worker_id].push({id:a.id,propId:a.property_id,startDate:a.start_date||'',endDate:a.end_date||'',notes:a.notes||'',chargeToOperative:a.charge_to_operative||false,weeklyChargeAmount:a.weekly_charge_amount||null}); });

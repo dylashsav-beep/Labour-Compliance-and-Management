@@ -261,6 +261,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `fix_worker_submission_org_id.sql` | ✅ Run | Recreates submit_worker_document to derive org_id from worker row; backfills existing NULL-org submissions. |
 | `harden_get_worker_portal_org_id.sql` | ⏳ Pending — **run to close the NULL p_org_id anon API hole** | Adds `RAISE EXCEPTION 'p_org_id is required'` guard to get_worker_portal + adds `SET search_path = public`. Prevents direct anon API callers from omitting p_org_id to match workers across all orgs. |
 | `add_assignment_signed_review.sql` | ⏳ Pending — **run to route signed assignment contracts through Approvals** | Adds `signed_file_path` + `signed_at` to `project_assignments`. The dropbox-sign-webhook now parks a signed contract as `signature_status='pending_review'` (instead of auto-applying); admin approves in the Approvals "E-Signed Contracts" card, which attaches the signed PDF to the assignment. **Must also redeploy the `dropbox-sign-webhook` edge function.** |
+| `add_contract_signed.sql` | ⏳ Pending — **run to enable manual "Mark as signed" toggle** | Adds `contract_signed boolean DEFAULT false` to `project_assignments`. App-owned field written by `sbPersistAll` (separate from `signature_status` which is edge-function-owned). Allows admins to mark manually-uploaded/wet-signed contracts as executed without going through Dropbox Sign. |
 
 ---
 
