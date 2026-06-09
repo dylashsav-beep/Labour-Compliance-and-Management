@@ -2796,6 +2796,16 @@ function enrichDeletedPayload(type, payload){
     meta.fileName = meta.fileName || p.file?.name || p.file_name || '—';
     meta.filePath = meta.filePath || p.file?.file_path || p.file?.storagePath || p.file_path || '';
   }
+  if(type==='project_assignment_file'){
+    meta.assignmentId = p.assignmentId || meta.assignmentId;
+    meta.workerId = p.workerId || meta.workerId;
+    meta.workerName = meta.workerName || workerNameById(p.workerId);
+    meta.projectId = p.projectId || meta.projectId;
+    meta.projectName = meta.projectName || projectNameById(p.projectId);
+    meta.fileName = meta.fileName || p.file?.name || p.fileName || '—';
+    meta.filePath = meta.filePath || p.file?.file_path || p.file?.storagePath || p.filePath || '';
+    meta.fileSize = meta.fileSize || p.file?.size || p.fileSize || 0;
+  }
   if(type==='project_assignment'){
     const a=p.assignment || p.entry || p || {};
     meta.workerId = a.wid || a.worker_id || a.workerId || p.wid || p.worker_id || p.workerId || meta.workerId;
@@ -2886,6 +2896,12 @@ function deletedItemDetails(it){
     add('Worker',m.workerName || workerNameById(p.wid));
     add('Document type',m.documentName || docNameByKey(p.wid,p.did));
     add('File',m.fileName || p.file?.name || p.file_name);
+  }
+  else if(it.type==='project_assignment_file'){
+    add('Worker',m.workerName || workerNameById(m.workerId));
+    add('Project',m.projectName || projectNameById(m.projectId));
+    add('File',m.fileName || p.fileName);
+    add('File size',m.fileSize ? Math.round(m.fileSize/1024)+'KB' : '—');
   }
   else if(it.type==='project_assignment'){
     const a=p.assignment || p.entry || p || {};
@@ -4796,6 +4812,8 @@ function paRemoveExistingFile(key){
     ?'Remove this file? This will also clear the signature status so a new document can be uploaded and re-sent for signing.'
     :'Remove this document from the assignment?';
   if(!window.confirm(msg)) return;
+  // Find the file object before mutating contractFiles
+  const removedFile=(a?.contractFiles||[]).find(f=>(f.dbId||f.file_path||f.name)===key);
   paRemovedFileIds.push(key);
   paNewFiles=[];
   // Mutate contractFiles so the debounced sbPersistAll sync cannot revive this file.
@@ -4803,6 +4821,15 @@ function paRemoveExistingFile(key){
   if(a) a.contractFiles=(a.contractFiles||[]).filter(f=>(f.dbId||f.file_path||f.name)!==key);
   // Reset signature banner in memory immediately
   if(willResetSig&&a){ a.signatureStatus='none'; a.signatureRequestId=null; }
+  // Archive to deleted history so it can be viewed in Deleted Items / Restore History
+  if(removedFile){
+    const workerName=workerNameById(a?.wid||'');
+    const projectName=projectNameById(a?.projectId||'');
+    archiveDeletedItem('project_assignment_file',
+      `Assignment file: ${workerName} → ${projectName} · ${removedFile.name||'document'}`,
+      {assignmentId:editingPAId,workerId:a?.wid,projectId:a?.projectId,fileName:removedFile.name,fileSize:removedFile.size,filePath:removedFile.file_path||removedFile.storagePath||'',file:removedFile});
+    renderDeletedItems();
+  }
   // Fire-and-forget DB deactivation so the file is gone even if the user doesn't click Save
   if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
     sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
@@ -9964,7 +9991,7 @@ function delItemMatchesFilter(it){
   const f=delFilterState;
   if(f==='all') return true;
   const workerDocTypes=['worker_document_file','document_set_item','document_set_item_group_delete','document_set'];
-  const assignmentTypes=['project_assignment','project'];
+  const assignmentTypes=['project_assignment','project','project_assignment_file'];
   const complianceTypes=['compliance_document','compliance_document_file'];
   if(f==='worker_docs') return workerDocTypes.includes(it.type);
   if(f==='assignments') return assignmentTypes.includes(it.type);
