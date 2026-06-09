@@ -10,20 +10,26 @@ const ACK = new Response('Hello API Event Received', {
   headers: { 'Content-Type': 'text/plain' },
 })
 
-async function verifySignature(payloadStr: string, headerSig: string): Promise<boolean> {
+// Verify using event_hash — the officially supported Dropbox Sign method.
+// SHA256(event_time + event_type + api_key) must equal payload.event.event_hash.
+// This is inside the payload itself, so no header dependency.
+async function verifyEventHash(payload: any): Promise<boolean> {
   try {
-    const key = await crypto.subtle.importKey(
-      'raw', new TextEncoder().encode(DROPBOX_SIGN_API_KEY.trim()),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-    )
-    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadStr))
-    const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, '0')).join('')
-    console.log('[dropbox-sign-webhook] api key length:', DROPBOX_SIGN_API_KEY.trim().length)
-    console.log('[dropbox-sign-webhook] computed sig (first 16):', hex.substring(0, 16))
-    console.log('[dropbox-sign-webhook] expected sig (first 16):', headerSig.substring(0, 16))
-    return hex === headerSig
+    const eventTime = String(payload?.event?.event_time  || '')
+    const eventType = String(payload?.event?.event_type  || '')
+    const eventHash = String(payload?.event?.event_hash  || '')
+    if (!eventTime || !eventType || !eventHash) {
+      console.warn('[dropbox-sign-webhook] payload missing event_time/event_type/event_hash')
+      return false
+    }
+    const message  = eventTime + eventType + DROPBOX_SIGN_API_KEY.trim()
+    const hashBuf  = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message))
+    const computed = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')
+    const match    = computed === eventHash
+    console.log('[dropbox-sign-webhook] event_hash verified:', match)
+    return match
   } catch (e: any) {
-    console.error('[dropbox-sign-webhook] verify error:', e?.message)
+    console.error('[dropbox-sign-webhook] event_hash verify error:', e?.message)
     return false
   }
 }
@@ -31,7 +37,6 @@ async function verifySignature(payloadStr: string, headerSig: string): Promise<b
 Deno.serve(async (req) => {
   try {
     const contentType = req.headers.get('content-type') || ''
-    console.log('[dropbox-sign-webhook] content-type:', contentType)
 
     // Dropbox Sign sends multipart/form-data with the JSON payload in a field
     // called 'json'. URLSearchParams cannot parse multipart — use formData().
@@ -51,19 +56,16 @@ Deno.serve(async (req) => {
       return ACK
     }
 
-    // Require HMAC signature — reject any call that lacks it or has a bad one.
-    // Try both the legacy HelloSign header name and the newer Dropbox Sign name.
-    const headerSig = req.headers.get('X-HelloSign-Signature')
-                   || req.headers.get('X-Dropbox-Sign-Signature')
-                   || ''
-    console.log('[dropbox-sign-webhook] signature header present:', !!headerSig, 'length:', headerSig.length)
-    if (!headerSig || !(await verifySignature(payloadStr, headerSig))) {
-      console.warn('[dropbox-sign-webhook] Missing or invalid signature — rejecting event')
+    const payload = JSON.parse(payloadStr)
+
+    // Verify the event came from Dropbox Sign using the event_hash field.
+    // SHA256(event_time + event_type + api_key) — no header dependency.
+    if (!(await verifyEventHash(payload))) {
+      console.warn('[dropbox-sign-webhook] event_hash verification failed — rejecting event')
       return ACK
     }
 
-    const payload   = JSON.parse(payloadStr)
-    const eventType = payload?.event?.event_type as string
+    const eventType  = payload?.event?.event_type as string
     const sigRequest = payload?.signature_request
 
     if (!sigRequest) return ACK
