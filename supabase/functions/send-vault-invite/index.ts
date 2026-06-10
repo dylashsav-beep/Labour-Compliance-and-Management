@@ -9,7 +9,7 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FROM       = Deno.env.get('DIGEST_FROM') || 'Work Force Vault <onboarding@resend.dev>'
-const VAULT_URL  = Deno.env.get('VAULT_URL')  || 'https://vault.work-force.nl'
+const VAULT_URL  = Deno.env.get('VAULT_URL')  || 'https://work-force.nl/vault.html'
 
 // ── BRAND — keep in sync with the BRAND object in vault.html ──────────────────
 const BRAND = {
@@ -31,7 +31,7 @@ function esc(s: string) {
 }
 
 function inviteUrl(email: string): string {
-  return `${VAULT_URL}/?email=${encodeURIComponent(email)}`
+  return `${VAULT_URL}?email=${encodeURIComponent(email)}`
 }
 
 function buildInviteHtml(workerName: string, orgName: string, link: string): string {

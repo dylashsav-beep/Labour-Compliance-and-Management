@@ -63,7 +63,7 @@ BEGIN
           ) AS worker,
           (SELECT COALESCE(json_agg(i ORDER BY i.sort_order), '[]'::json)
              FROM document_set_items i
-            WHERE i.active = true AND i.org_id = l.org_id) AS doc_set_items,
+            WHERE i.active = true AND i.document_set_id = w.document_set_id) AS doc_set_items,
           (SELECT COALESCE(json_agg(json_build_object(
                 'id',          d.id,
                 'doc_key',     d.doc_key,
@@ -71,8 +71,7 @@ BEGIN
                 'expiry_date', d.expiry_date,
                 'issue_date',  d.issue_date,
                 'has_file',    EXISTS (SELECT 1 FROM worker_document_files f
-                                        WHERE f.worker_id = l.worker_row_id
-                                          AND f.doc_key = d.doc_key
+                                        WHERE f.worker_document_id = d.id
                                           AND f.active = true)
              )), '[]'::json)
              FROM worker_documents d
