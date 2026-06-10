@@ -1,1 +1,3 @@
-.mcp.json
+# .mcp.json is intentionally committed and is secret-free: the Supabase token
+# is supplied at runtime via the SUPABASE_ACCESS_TOKEN env var, never hardcoded.
+# Do NOT put access tokens or keys directly in .mcp.json.
