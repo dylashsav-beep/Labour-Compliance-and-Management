@@ -1,0 +1,165 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj3 0 obj
+<< /Type /Page /Parent 2 0 R
+   /MediaBox [0 0 595 842]
+   /Contents 4 0 R
+   /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >>
+>>
+endobj4 0 obj
+<< /Length 3150 >>
+stream
+BT
+/F2 11 Tf
+1 0 0 1 70 800 Tm
+(DROPBOX SIGN - TEXT TAG TEST DOCUMENT) Tj
+/F1 10 Tf
+1 0 0 1 70 782 Tm
+(Upload this PDF via Send for Signature to test all tags.) Tj
+/F1 10 Tf
+1 0 0 1 70 766 Tm
+(All tags are real selectable text \(Courier\). Dropbox Sign) Tj
+/F1 10 Tf
+1 0 0 1 70 750 Tm
+(will replace each one with a live interactive field.) Tj
+/F2 11 Tf
+1 0 0 1 70 726 Tm
+(1. BASIC FIELDS) Tj
+/F1 10 Tf
+1 0 0 1 70 708 Tm
+(Signature field:) Tj
+/F1 9 Tf
+1 0 0 1 90 692 Tm
+([sig|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 677 Tm
+(Initials field  \(token: initial  NOT initials\):) Tj
+/F1 9 Tf
+1 0 0 1 90 661 Tm
+([initial|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 646 Tm
+(Date signed \(auto-filled by Dropbox Sign\):) Tj
+/F1 9 Tf
+1 0 0 1 90 630 Tm
+([date|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 615 Tm
+(Free-text input:) Tj
+/F1 9 Tf
+1 0 0 1 90 599 Tm
+([text|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 584 Tm
+(Single checkbox  \(token: check  NOT checkbox\):) Tj
+/F1 9 Tf
+1 0 0 1 90 568 Tm
+([check|req|signer1]) Tj
+/F2 11 Tf
+1 0 0 1 70 545 Tm
+(2. YES / NO  -  grouped, exactly one must be ticked) Tj
+/F1 10 Tf
+1 0 0 1 70 527 Tm
+(I confirm I am available to start work on the agreed date:) Tj
+/F1 9 Tf
+1 0 0 1 90 511 Tm
+([def:$yn|check|req1|signer1|Yes]  Yes          [def:$yn|check|req1|signer1|No]  No) Tj
+/F1 10 Tf
+1 0 0 1 70 496 Tm
+(Both tags share group $yn  |  req1 = exactly one selection required) Tj
+/F2 11 Tf
+1 0 0 1 70 472 Tm
+(3. THREE-OPTION RADIO  -  pick exactly one) Tj
+/F1 10 Tf
+1 0 0 1 70 454 Tm
+(My preferred work schedule is:) Tj
+/F1 9 Tf
+1 0 0 1 90 438 Tm
+([def:$schedule|check|req1|signer1|Monday to Friday]  Monday to Friday) Tj
+/F1 9 Tf
+1 0 0 1 90 423 Tm
+([def:$schedule|check|req1|signer1|Monday to Saturday]  Monday to Saturday) Tj
+/F1 9 Tf
+1 0 0 1 90 408 Tm
+([def:$schedule|check|req1|signer1|Flexible]  Flexible) Tj
+/F1 10 Tf
+1 0 0 1 70 393 Tm
+(All three share group $schedule  |  signer may pick only one) Tj
+/F2 11 Tf
+1 0 0 1 70 369 Tm
+(4. PICK 1 TO 2  -  multi-select with min/max) Tj
+/F1 10 Tf
+1 0 0 1 70 351 Tm
+(I have experience with the following \(select 1 or 2\):) Tj
+/F1 9 Tf
+1 0 0 1 90 335 Tm
+([def:$skills|check|req1-2|signer1|Steelwork]  Steelwork) Tj
+/F1 9 Tf
+1 0 0 1 90 320 Tm
+([def:$skills|check|req1-2|signer1|Scaffolding]  Scaffolding) Tj
+/F1 9 Tf
+1 0 0 1 90 305 Tm
+([def:$skills|check|req1-2|signer1|Groundwork]  Groundwork) Tj
+/F1 10 Tf
+1 0 0 1 70 290 Tm
+(Group $skills  |  req1-2 = between 1 and 2 must be ticked) Tj
+/F2 11 Tf
+1 0 0 1 70 266 Tm
+(5. FULL DECLARATION EXAMPLE) Tj
+/F1 10 Tf
+1 0 0 1 70 248 Tm
+(Worker name:) Tj
+/F1 9 Tf
+1 0 0 1 90 232 Tm
+([text|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 217 Tm
+(I have read and understood the site safety rules:) Tj
+/F1 9 Tf
+1 0 0 1 90 201 Tm
+([def:$safety|check|req1|signer1|Yes]  Yes          [def:$safety|check|req1|signer1|No]  No) Tj
+/F1 10 Tf
+1 0 0 1 70 186 Tm
+(Signature:) Tj
+/F1 9 Tf
+1 0 0 1 90 170 Tm
+([sig|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 155 Tm
+(Date:) Tj
+/F1 9 Tf
+1 0 0 1 90 139 Tm
+([date|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 124 Tm
+(Initials:) Tj
+/F1 9 Tf
+1 0 0 1 90 108 Tm
+([initial|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 70 85 Tm
+(--- END OF TEST DOCUMENT ---) Tj
+ET
+endstream
+endobj5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>
+endobjxref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000063 00000 n 
+0000000119 00000 n 
+0000000263 00000 n 
+0000003464 00000 n 
+0000003558 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+3657
+%%EOF
