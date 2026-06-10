@@ -2590,6 +2590,13 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <div class="export-opt-desc">Older document versions that have been replaced. Excluded by default.</div>
         </div>
       </label>
+      <label class="export-opt-row" style="margin-top:10px;">
+        <input type="checkbox" id="expOptAllSets"/>
+        <div class="export-opt-info">
+          <div class="export-opt-label">Include all document sets</div>
+          <div class="export-opt-desc">Also export files from previous document sets the worker was registered under. By default only their current set is included.</div>
+        </div>
+      </label>
       <div style="font-size:12px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin:18px 0 10px;">Worker scope</div>
       <label class="export-opt-row">
         <input type="radio" name="expScope" id="expScopeFiltered" value="filtered" checked/>
@@ -10598,14 +10605,17 @@ function exportWorkerFiles(){
   if(!sbClient||!sbSession){alert('Please sign in to export files.');return;}
   // Reset options to defaults then show dialog
   const supOpt=document.getElementById('expOptSuperseded');
+  const allSetsOpt=document.getElementById('expOptAllSets');
   const scopeFiltered=document.getElementById('expScopeFiltered');
   if(supOpt) supOpt.checked=false;
+  if(allSetsOpt) allSetsOpt.checked=false;
   if(scopeFiltered) scopeFiltered.checked=true;
   document.getElementById('exportOptionsOverlay').classList.add('open');
 }
 async function _doExportWithOptions(){
   closeM('exportOptionsOverlay');
   const includeSuperseeded=document.getElementById('expOptSuperseded')?.checked||false;
+  const includeAllSets=document.getElementById('expOptAllSets')?.checked||false;
   const scopeAll=document.getElementById('expScopeAll')?.checked||false;
   const list=scopeAll?workers.filter(w=>w.active!==false):filtered();
   if(!list.length){alert('No workers in current filter.');return;}
@@ -10628,7 +10638,13 @@ async function _doExportWithOptions(){
     const safeW=safe(w.name||w.id);
 
     // ── Document files — assign each doc-key to a set, split folders only if 2+ sets ──
-    const docIds=Object.entries(fileStore[w.id]||{}).filter(([,files])=>files&&files.length).map(([id])=>id);
+    // When includeAllSets is false, restrict to keys in the worker's current set only.
+    const currentSetKeys=w.docSetId?setMembership[w.docSetId]?.keys:null;
+    const docIds=Object.entries(fileStore[w.id]||{}).filter(([id,files])=>{
+      if(!files||!files.length) return false;
+      if(!includeAllSets && currentSetKeys && !currentSetKeys.has(id)) return false;
+      return true;
+    }).map(([id])=>id);
     // 1. Keys in the worker's current set belong to it.
     const assignment={}; const orphans=[];
     docIds.forEach(id=>{
