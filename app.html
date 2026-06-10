@@ -10612,17 +10612,57 @@ async function _doExportWithOptions(){
 
   const safe=s=>s.replace(/[/\\:*?"<>|]/g,'_').trim();
 
+  // Build a GLOBAL doc-key index across every document set, so a worker who has
+  // files under keys from more than one set still resolves clean names (not the
+  // raw key like "cbsn") regardless of which set is currently active on them.
+  // setMembership: setId -> {name, keys:Set(docKey)};  itemName(setId,key) -> clean name.
+  const setMembership={};
+  (docSets||[]).forEach(s=>{ setMembership[s.id]={name:s.name||s.id, keys:new Set((docSetItems[s.id]||[]).map(i=>i.id))}; });
+  const itemName=(setId,key)=>{ const it=(docSetItems[setId]||[]).find(i=>i.id===key); return it?it.name:null; };
+  const anyName=(key)=>{ for(const s of (docSets||[])){ const n=itemName(s.id,key); if(n) return n; } return null; };
+
   // Collect all files: {safeW, folderPath, file}
   // folderPath is relative to the worker root, e.g. "Insurance" or "Assignments/ProjectName (2025-01-01 to 2025-06-30)"
   const toExport=[];
   for(const w of list){
     const safeW=safe(w.name||w.id);
 
-    // Document files
-    const docNameMap=Object.fromEntries(tmplForWorker(w).map(d=>[d.id,d.name]));
-    for(const [docId,files] of Object.entries(fileStore[w.id]||{})){
-      if(!files||!files.length) continue;
-      const folder=safe(docNameMap[docId]||docId);
+    // ── Document files — assign each doc-key to a set, split folders only if 2+ sets ──
+    const docIds=Object.entries(fileStore[w.id]||{}).filter(([,files])=>files&&files.length).map(([id])=>id);
+    // 1. Keys in the worker's current set belong to it.
+    const assignment={}; const orphans=[];
+    docIds.forEach(id=>{
+      if(w.docSetId && setMembership[w.docSetId]?.keys.has(id)) assignment[id]=w.docSetId;
+      else orphans.push(id);
+    });
+    // 2. Greedily attribute remaining keys to the other set that covers the most of them.
+    let remaining=orphans.slice();
+    while(remaining.length){
+      let bestSet=null,bestCount=0;
+      for(const sid of Object.keys(setMembership)){
+        if(sid===w.docSetId) continue;
+        const cnt=remaining.filter(id=>setMembership[sid].keys.has(id)).length;
+        if(cnt>bestCount){bestCount=cnt;bestSet=sid;}
+      }
+      if(!bestSet||!bestCount) break;
+      remaining.forEach(id=>{ if(!(id in assignment)&&setMembership[bestSet].keys.has(id)) assignment[id]=bestSet; });
+      remaining=remaining.filter(id=>!(id in assignment));
+    }
+    // 3. Keys not in any set → unknown bucket.
+    remaining.forEach(id=>{ assignment[id]='__unknown'; });
+
+    const setsUsed=new Set(Object.values(assignment));
+    const multiSet=setsUsed.size>1;
+
+    for(const docId of docIds){
+      const files=fileStore[w.id][docId];
+      const sid=assignment[docId];
+      const cleanDoc=safe((sid!=='__unknown'?itemName(sid,docId):null)||anyName(docId)||docId);
+      let folder=cleanDoc;
+      if(multiSet){
+        const setName=safe(sid==='__unknown'?'Other Documents':(setMembership[sid]?.name||'Other Documents'));
+        folder=setName+'/'+cleanDoc;
+      }
       for(const f of files){
         if(f.superseded && !includeSuperseeded) continue;
         toExport.push({safeW,folderPath:folder,file:f,superseded:!!f.superseded});
