@@ -1,0 +1,143 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 2319 >>
+stream
+BT
+/F2 11 Tf
+1 0 0 1 60 800 Tm
+(DROPBOX SIGN - TAG DIAGNOSTIC) Tj
+/F1 10 Tf
+1 0 0 1 60 781 Tm
+(Send this PDF for signature. For each row below:) Tj
+/F1 10 Tf
+1 0 0 1 60 765 Tm
+(  - if the [bracket text] DISAPPEARS or becomes a field = that syntax is VALID) Tj
+/F1 10 Tf
+1 0 0 1 60 749 Tm
+(  - if the [bracket text] stays VISIBLE = that syntax is REJECTED) Tj
+/F2 11 Tf
+1 0 0 1 60 725 Tm
+(CONTROLS \(known good - must convert\)) Tj
+/F1 10 Tf
+1 0 0 1 60 706 Tm
+(Signature:) Tj
+/F1 10 Tf
+1 0 0 1 80 690 Tm
+([sig|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 60 674 Tm
+(Date:) Tj
+/F1 10 Tf
+1 0 0 1 80 658 Tm
+([date|req|signer1]) Tj
+/F2 11 Tf
+1 0 0 1 60 634 Tm
+(TEST A - INITIALS  \(which token converts?\)) Tj
+/F1 10 Tf
+1 0 0 1 60 615 Tm
+(A1 singular:) Tj
+/F1 10 Tf
+1 0 0 1 80 599 Tm
+([initial|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 60 583 Tm
+(A2 plural:) Tj
+/F1 10 Tf
+1 0 0 1 80 567 Tm
+([initials|req|signer1]) Tj
+/F2 11 Tf
+1 0 0 1 60 543 Tm
+(TEST B - SINGLE CHECKBOX) Tj
+/F1 10 Tf
+1 0 0 1 60 524 Tm
+(B1 check:) Tj
+/F1 10 Tf
+1 0 0 1 80 508 Tm
+([check|req|signer1]) Tj
+/F1 10 Tf
+1 0 0 1 60 492 Tm
+(B2 checkbox:) Tj
+/F1 10 Tf
+1 0 0 1 80 476 Tm
+([checkbox|req|signer1]) Tj
+/F2 11 Tf
+1 0 0 1 60 452 Tm
+(TEST C - YES / NO GROUP  \(pick exactly one\)) Tj
+/F1 10 Tf
+1 0 0 1 60 433 Tm
+(C1 grouped, label inside tag:) Tj
+/F1 10 Tf
+1 0 0 1 80 417 Tm
+([def:$g1|check|req1|signer1|Yes]   Yes) Tj
+/F1 10 Tf
+1 0 0 1 80 401 Tm
+([def:$g1|check|req1|signer1|No]    No) Tj
+/F1 10 Tf
+1 0 0 1 60 385 Tm
+(C2 grouped, label as plain text outside tag:) Tj
+/F1 10 Tf
+1 0 0 1 80 369 Tm
+([def:$g2|check|req1|signer1]   Yes) Tj
+/F1 10 Tf
+1 0 0 1 80 353 Tm
+([def:$g2|check|req1|signer1]   No) Tj
+/F1 10 Tf
+1 0 0 1 60 337 Tm
+(C3 two independent plain checkboxes \(no group\):) Tj
+/F1 10 Tf
+1 0 0 1 80 321 Tm
+([check|noreq|signer1]   Yes) Tj
+/F1 10 Tf
+1 0 0 1 80 305 Tm
+([check|noreq|signer1]   No) Tj
+/F2 11 Tf
+1 0 0 1 60 281 Tm
+(TEST D - FREE TEXT) Tj
+/F1 10 Tf
+1 0 0 1 60 262 Tm
+(D1 text:) Tj
+/F1 10 Tf
+1 0 0 1 80 246 Tm
+([text|req|signer1]) Tj
+/F1 8 Tf
+1 0 0 1 60 222 Tm
+(All tags above are clean single-run Courier text \(no Word, no wrapping\).) Tj
+/F1 8 Tf
+1 0 0 1 60 210 Tm
+(Whatever fails HERE is a true syntax problem; whatever works here but) Tj
+/F1 8 Tf
+1 0 0 1 60 198 Tm
+(failed in your Word form is a Word rendering/splitting problem in that doc.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000002628 00000 n 
+0000002723 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2823
+%%EOF
