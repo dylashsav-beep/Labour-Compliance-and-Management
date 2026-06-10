@@ -325,6 +325,78 @@ The webhook reads this to know which table/row to update.
 
 ---
 
+## Dropbox Sign — Text Tags Reference
+
+Source: [developers.hellosign.com/docs/walkthroughs/text-tags](https://developers.hellosign.com/docs/walkthroughs/text-tags)
+
+### Tag anatomy
+
+```
+[type|req|signerN]                              ← minimal form
+[type|req|signerN|Label]                        ← with visible label
+[type|req|signerN|Label|uniqueID]               ← with label + ID (used for prefill)
+[def:$groupName|type|req|signerN|Label|ID]      ← grouped / multiple-choice form
+```
+
+- **`req` / `noreq`** — required or optional. Unrecognised values default to `req`.
+- **`signerN`** — `signer1`, `signer2`, … In this app the worker is always `signer1`.
+- Field **width = literal bracket span** in the PDF. Field height cannot be set.
+- **Tag must stay on one line** — if it wraps to a second line it is silently ignored.
+- Bad/unknown type tokens also fail **silently** (no API error — only `signature_request_invalid` webhook event).
+- API params required: `use_text_tags=1` and `hide_text_tags=1` (already set in `send-for-signature`).
+
+### Single-value field tokens
+
+| Token | Field | Notes |
+|---|---|---|
+| `sig` | Signature box | |
+| `initial` | Initials box | ⚠️ **singular** — `initials` is invalid |
+| `date` | Date-signed (auto-filled) | |
+| `text` | Free-text input | width = bracket span; keep on one line |
+| `check` | Single checkbox | ⚠️ **`checkbox` is invalid** |
+| `hyperlink` | Clickable link | rarely needed |
+
+### Multiple-choice / grouped fields
+
+All options share the **same `$groupName`** — Dropbox Sign treats them as one group.
+The number after `req` is the selection constraint.
+
+| Constraint suffix | Meaning |
+|---|---|
+| `req1` | Exactly 1 must be selected (radio-style) |
+| `req2` | Exactly 2 must be selected |
+| `req1-3` | Between 1 and 3 must be selected |
+| `noreq` | Any number (including zero) |
+
+**Yes / No (pick exactly one):**
+```
+[def:$yn|check|req1|signer1|Yes]    ← place beside "Yes" in the PDF
+[def:$yn|check|req1|signer1|No]     ← place beside "No" in the PDF
+```
+Both share `$yn` → enforces exactly one box ticked.
+
+**Radio group (e.g. 3 options, pick one):**
+```
+[def:$choice|check|req1|signer1|Option A]
+[def:$choice|check|req1|signer1|Option B]
+[def:$choice|check|req1|signer1|Option C]
+```
+
+**Pick 1–2 from a list:**
+```
+[def:$skills|check|req1-2|signer1|Skill A]
+[def:$skills|check|req1-2|signer1|Skill B]
+[def:$skills|check|req1-2|signer1|Skill C]
+```
+
+To have **two independent groups** on the same page, use different `$names` (`$yn1`, `$yn2`, etc.).
+
+### Silent-failure safety net
+Add a `signature_request_invalid` handler to `dropbox-sign-webhook` — this is the only way
+malformed tags surface as an error rather than disappearing. (Not yet implemented — see Lessons Learnt.)
+
+---
+
 ## Email / Edge Function
 
 - **Function**: `supabase/functions/daily-digest/index.ts`
