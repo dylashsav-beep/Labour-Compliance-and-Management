@@ -8658,24 +8658,43 @@ function openAddDocSet(){
   document.getElementById('docSetOverlay').classList.add('open');
 }
 
-function saveDocSet(){
-  const name=document.getElementById('dsName').value.trim();
-  if(!name){alert('Please enter a set name.');return;}
-  const desc=document.getElementById('dsDesc').value.trim();
-  const country=document.getElementById('dsCountry').value.trim();
-  const copyFrom=document.getElementById('dsCopyFrom').value;
-  const newId=crypto.randomUUID();
-  docSets.push({id:newId,name,description:desc,country,builtIn:false});
-  // Copy items from selected set, stripping builtIn flag so they become editable
-  if(copyFrom&&docSetItems[copyFrom]){
-    docSetItems[newId]=docSetItems[copyFrom].map(d=>({...d,id:'c'+d.id,custom:true,builtIn:false}));
-  } else {
-    docSetItems[newId]=[];
+async function saveDocSet(){
+  try{
+    const name=document.getElementById('dsName').value.trim();
+    if(!name){alert('Please enter a set name.');return;}
+    const desc=document.getElementById('dsDesc').value.trim();
+    const country=document.getElementById('dsCountry').value.trim();
+    const copyFrom=document.getElementById('dsCopyFrom').value;
+    const newId=crypto.randomUUID();
+    docSets.push({id:newId,name,description:desc,country,builtIn:false});
+    // Copy items from the source set. Keep the same doc_key (d.id) — the DB row PK
+    // is ${setId}__${docKey}, so the same key in a different set never collides.
+    // The old 'c'+d.id prefix is dropped: it produced ugly keys (cbsn, cvca, etc.)
+    // and caused template/allowIssue fields to be orphaned on refresh (see below).
+    if(copyFrom&&docSetItems[copyFrom]){
+      docSetItems[newId]=docSetItems[copyFrom].map(d=>({...d,custom:true,builtIn:false}));
+    } else {
+      docSetItems[newId]=[];
+    }
+    saveDocSets(); closeM('docSetOverlay');
+    openSetPanels.add(newId); // auto-expand new set
+    renderDocSets();
+    renderDeletedItems();
+    // sbPersistAll (queued by sbWrap after this returns) writes base fields but
+    // intentionally excludes template_file_name, template_file_path, and allow_issue.
+    // Call sbRemoteUpsertDocSetItem for every copied item now so those fields land
+    // in the DB immediately and survive a hard refresh.
+    if(copyFrom&&docSetItems[newId].length&&sbClient&&sbSession&&sbCanWriteTable('document_set_items')){
+      await Promise.all(docSetItems[newId].map(d=>
+        sbRemoteUpsertDocSetItem(newId,d).catch(e=>{
+          console.warn('[TMC] saveDocSet copy: failed to persist item',d.id,e.message);
+        })
+      ));
+    }
+  }catch(e){
+    showDiagError('saveDocSet',e);
+    alert('Error creating document set: '+e.message);
   }
-  saveDocSets();closeM('docSetOverlay');
-  openSetPanels.add(newId); // auto-expand new set
-  renderDocSets();
-  renderDeletedItems();
 }
 
 function deleteDocSet(id){
