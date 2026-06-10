@@ -283,6 +283,34 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_worker_vault.sql` | ⏳ Pending — **Worker Vault Phase 0** | Creates `worker_accounts`, `worker_org_links`, `vault_documents`, `vault_assignment_links` tables + `workers.vault_account_id` + `ensure_vault_account()` RPC. **Worker-scoped** RLS (`worker_account_id = auth.uid()`), NOT org-scoped — see the Worker Vault isolation note in the Tables section. `ensure_vault_account()` is SECURITY DEFINER (reads workers across all orgs by email but derives identity from `auth.uid()`), auto-links all matching `workers.email` rows to the account. Idempotent. |
 | `add_vault_storage_policy.sql` | ⏳ Pending — **run after add_worker_vault.sql** | Storage RLS for the worker-owned `vault/{account_id}/...` prefix in `tmc-documents`. Worker-scoped via `(storage.foldername(name))[2] = auth.uid()::text`. Deliberately uses a `vault/` top-level prefix (NOT `workers/`) to avoid the TMC grandfather clause in `fix_storage_org_isolation.sql` leaking vault files to TMC staff. |
 | `add_get_vault_portal.sql` | ⏳ Pending — **Worker Vault Phase 1** | `get_vault_portal()` SECURITY DEFINER RPC: the authenticated read path for `vault.html`. A vault worker's profile has `org_id = NULL` so `current_org_id()` is NULL and org-scoped RLS returns nothing — this RPC aggregates the worker's compliance docs + assignments across all their `worker_org_links` (scoped to `auth.uid()`). Excludes rate/financial data from assignments. |
+| `add_vault_stripe_index.sql` | ⏳ Pending — **Worker Vault Phase 2** | Index on `worker_accounts.stripe_customer_id` for fast webhook lookups. The Stripe columns (`plan`, `plan_expires`, `stripe_customer_id`, `stripe_subscription_id`) already exist from `add_worker_vault.sql` — no new columns. |
+
+---
+
+## Worker Vault — Phase 2 (Monetization + Downloads)
+
+Phase 2 adds the paid tier: Stripe subscription, server-enforced paywall, and working downloads. **Free tier (view-only) is untouched.**
+
+### Edge functions (deploy to Supabase)
+| Function | Auth | Purpose |
+|---|---|---|
+| `create-vault-checkout` | JWT (worker) | Creates/reuses a Stripe customer for the `worker_account`, opens a subscription Checkout session, returns `{url}`. Identity from `auth.uid()` only. |
+| `create-vault-portal` | JWT (worker) | Opens the Stripe Billing Portal (update card, view invoices, cancel). Returns `{url}`. |
+| `stripe-worker-webhook` | **none** (`verify_jwt=false`) | **Sole writer** of `worker_accounts.plan`/`plan_expires`/`stripe_subscription_id`. REQUIRED Stripe-Signature HMAC check (missing header = rejected). Handles `checkout.session.completed`, `customer.subscription.{created,updated,deleted}`. |
+| `get-vault-file` | JWT (worker) | Download broker. Verifies `plan='vault'` (not expired) **server-side**, confirms the file belongs to a worker row the caller owns (via `worker_org_links`), returns a 120s signed URL. Types: `document` (by doc_key), `contract` (by assignment_id), `vault_doc` (worker-owned). |
+
+### Required secrets (Phase 2)
+- `STRIPE_SECRET_KEY` — Stripe API secret (set in Edge Function secrets)
+- `STRIPE_VAULT_PRICE_ID` — the recurring Price ID for the worker Vault subscription
+- `STRIPE_WEBHOOK_SECRET` — signing secret for the `stripe-worker-webhook` endpoint
+- `VAULT_URL` — optional; defaults to `https://vault.work-force.nl` (checkout success/cancel + portal return)
+
+> **Paywall is enforced server-side**, not just in the UI. `get-vault-file` returns `402 upgrade_required` for non-Vault accounts regardless of client. The UI lock is cosmetic; the broker is the real gate.
+
+> **`worker_accounts.plan` is edge-function-owned** (Rule 7 class): only `stripe-worker-webhook` writes it. `vault.html` reads it via `get_vault_portal` and never writes plan/billing fields.
+
+### Still pending in Phase 2 (durable copies)
+`copy-to-vault` (Option B — durable permanent copies on org approval) is **not yet built**. Today `get-vault-file` brokers directly from the org's Storage copy, so a paid worker can download immediately — but if the org later deletes its file, the worker loses it. The permanence invariant (vault copy survives org deletion) requires the `copy-to-vault` function copying approved files into `vault/{account_id}/...` + a `vault_documents` row. Build next.
 
 ---
 

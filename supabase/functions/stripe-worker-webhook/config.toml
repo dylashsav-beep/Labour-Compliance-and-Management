@@ -1,0 +1,5 @@
+# Stripe sends webhook callbacks with no Supabase JWT — JWT verification is
+# disabled here. Security is the REQUIRED Stripe-Signature HMAC check the
+# function performs on every request (a missing/invalid signature is rejected).
+[functions.stripe-worker-webhook]
+verify_jwt = false

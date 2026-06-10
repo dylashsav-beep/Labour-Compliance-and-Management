@@ -311,6 +311,7 @@ async function enterVault(){
     const name = (data && data.account && data.account.full_name) || '';
     $('vWorkerName').textContent = name;
     renderBody();
+    handlePostCheckout();   // if returning from Stripe, poll until plan flips
   }catch(e){
     $('vBody').innerHTML = '<div class="v-empty"><div class="v-empty-icon">⚠️</div>'
       + 'We couldn\'t load your vault.<br><span style="font-size:12px;">'+esc(e.message||'')+'</span><br><br>'
@@ -397,7 +398,7 @@ function renderDocs(){
 
 function downloadBtn(key, name){
   if(isPaid()){
-    return '<button class="v-download-btn" onclick="onDownload(\''+esc(key)+'\')">⬇ Download</button>';
+    return '<button class="v-download-btn" onclick="onDownload(\''+esc(key)+'\',event)">⬇ Download</button>';
   }
   return '<button class="v-download-btn locked" onclick="onUpgrade()">🔒 Download (Vault plan)</button>';
 }
@@ -433,7 +434,7 @@ function renderAssignments(){
       + '<div class="v-assign-meta">'+esc(a.org_name)+'<br>'+period+'</div>'
       + flag
       + (a.has_contract ? (isPaid()
-            ? '<div>'+'<button class="v-download-btn" onclick="onDownloadContract(\''+esc(a.id)+'\')">⬇ Download contract</button></div>'
+            ? '<div>'+'<button class="v-download-btn" onclick="onDownloadContract(\''+esc(a.id)+'\',event)">⬇ Download contract</button></div>'
             : '<div><button class="v-download-btn locked" onclick="onUpgrade()">🔒 Download contract (Vault plan)</button></div>')
           : '')
       + '</div>';
@@ -463,6 +464,15 @@ function renderAccount(){
       + '<p>🗂️ &nbsp;Add your own personal documents and track their expiry dates</p>'
       + '<button class="v-upgrade-btn" style="margin-top:6px;" onclick="onUpgrade()">Upgrade now</button>'
       + '</div>';
+  } else {
+    const exp = acc.plan_expires ? fmtDate(acc.plan_expires) : null;
+    html += '<div class="v-card">'
+      + '<h3>Manage your subscription</h3>'
+      + '<p>Update your payment card, view invoices, or cancel any time.'
+      + (exp ? ' Your plan renews on <b>'+esc(exp)+'</b>.' : '')
+      + '</p>'
+      + '<button class="v-upgrade-btn" style="margin-top:6px;" onclick="onManageSubscription()">Manage subscription</button>'
+      + '</div>';
   }
   html += '<div class="v-card"><h3>Your organisations</h3>'
     + ((vaultData.memberships||[]).map(m=>'<div class="v-kv"><span class="v-kv-label">'+esc(m.org_name)+'</span><span class="v-kv-val">linked</span></div>').join('') || '<p>No linked organisations yet.</p>')
@@ -470,14 +480,104 @@ function renderAccount(){
   $('vBody').innerHTML = html;
 }
 
-// ── Actions (download/upgrade are Phase 2 — gated for now) ──────────────────
-function onUpgrade(){
-  alert('Vault subscriptions are coming soon. We\'ll email you at '
-    + ((vaultData&&vaultData.account&&vaultData.account.email)||'your address')
-    + ' when you can upgrade.\n\nQuestions? ' + BRAND.salesEmail);
+// ── Edge-function helper ────────────────────────────────────────────────────
+// Calls a Supabase Edge Function with the worker's session bearer token.
+async function callFn(name, body){
+  const { data:{ session } } = await sbClient.auth.getSession();
+  const token = session && session.access_token;
+  if(!token) throw new Error('Your session has expired — please sign in again.');
+  const resp = await fetch(SUPABASE_URL + '/functions/v1/' + name, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+  let data = {};
+  try{ data = await resp.json(); }catch(_e){}
+  if(!resp.ok){
+    const err = new Error((data && data.error) || ('Request failed ('+resp.status+')'));
+    err.status = resp.status; err.code = data && data.error;
+    throw err;
+  }
+  return data;
 }
-function onDownload(){ alert('Downloads unlock with the Vault plan.'); }
-function onDownloadContract(){ alert('Downloads unlock with the Vault plan.'); }
+
+// ── Upgrade → Stripe Checkout ───────────────────────────────────────────────
+async function onUpgrade(){
+  const btns = document.querySelectorAll('.v-upgrade-btn');
+  btns.forEach(b=>{ b.disabled = true; b.dataset._t = b.textContent; b.textContent = 'Opening…'; });
+  try{
+    const { url, already, message } = await callFn('create-vault-checkout', {});
+    if(already){ alert(message || 'You are already on the Vault plan.'); await refreshVault(); return; }
+    if(url){ location.href = url; return; }
+    throw new Error('Could not start checkout.');
+  }catch(e){
+    if(e.status === 503){
+      alert('Vault subscriptions aren\'t switched on yet. We\'ll email you at '
+        + ((vaultData&&vaultData.account&&vaultData.account.email)||'your address')
+        + ' when you can upgrade.\n\nQuestions? ' + BRAND.salesEmail);
+    } else {
+      alert('Could not start the upgrade: ' + (e.message||'unknown error'));
+    }
+  }finally{
+    btns.forEach(b=>{ b.disabled = false; if(b.dataset._t) b.textContent = b.dataset._t; });
+  }
+}
+
+// ── Manage subscription → Stripe Billing Portal ─────────────────────────────
+async function onManageSubscription(){
+  try{
+    const { url } = await callFn('create-vault-portal', {});
+    if(url){ location.href = url; return; }
+    throw new Error('Could not open the billing portal.');
+  }catch(e){
+    alert('Could not open billing management: ' + (e.message||'unknown error'));
+  }
+}
+
+// ── Downloads (server brokers a short-lived signed URL, paywall-enforced) ────
+async function brokerDownload(payload, btn){
+  const orig = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Preparing…'; }
+  try{
+    const { url } = await callFn('get-vault-file', payload);
+    if(url){ window.open(url, '_blank'); }
+    else throw new Error('No file available.');
+  }catch(e){
+    if(e.status === 402 || e.code === 'upgrade_required'){
+      alert('Downloads are part of the Vault plan. Upgrade to download and share your documents.');
+    } else if(e.status === 404){
+      alert('That file isn\'t available to download — your employer may not have uploaded a copy.');
+    } else {
+      alert('Could not prepare the download: ' + (e.message||'unknown error'));
+    }
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = orig; }
+  }
+}
+function onDownload(key, ev){ brokerDownload({ type:'document', doc_key:key }, ev && ev.currentTarget); }
+function onDownloadContract(id, ev){ brokerDownload({ type:'contract', assignment_id:id }, ev && ev.currentTarget); }
+
+// ── Re-fetch the vault view (after upgrade returns) ─────────────────────────
+async function refreshVault(){
+  try{
+    const { data } = await sbClient.rpc('get_vault_portal');
+    if(data){ vaultData = data; renderBody(); }
+  }catch(_e){}
+}
+
+// After returning from Stripe Checkout the webhook may lag a second or two.
+// Poll a few times so the plan flips to Vault without a manual refresh.
+async function handlePostCheckout(){
+  const params = new URLSearchParams(location.search);
+  if(!params.has('upgraded')) return;
+  // Clean the URL so a refresh doesn't re-trigger.
+  history.replaceState({}, '', location.pathname);
+  for(let i=0;i<6;i++){
+    await refreshVault();
+    if(isPaid()){ return; }
+    await new Promise(r=>setTimeout(r, 1500));
+  }
+}
 </script>
 </body>
 </html>
