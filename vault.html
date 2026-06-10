@@ -94,6 +94,40 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-kv-label{color:#64748b;font-weight:500;}
 .v-kv-val{color:#1e293b;font-weight:700;}
 .v-disclaimer{font-size:11px;color:#94a3b8;line-height:1.55;margin-top:6px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #eef2f7;}
+
+/* ── Personal vault / upload ── */
+.v-upload-card{background:#fff;border:1.5px dashed #c4b5fd;border-radius:12px;padding:18px;margin-bottom:18px;text-align:center;}
+.v-upload-card h3{font-size:14px;font-weight:800;color:#1e293b;margin-bottom:4px;}
+.v-upload-card p{font-size:12px;color:#64748b;margin-bottom:12px;line-height:1.5;}
+.v-field{text-align:left;margin-bottom:10px;}
+.v-field label{display:block;font-size:11px;font-weight:600;color:#475569;margin-bottom:4px;}
+.v-field input{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:#1e293b;outline:none;min-height:42px;}
+.v-field input:focus{border-color:var(--accent);}
+.v-field-row{display:flex;gap:10px;}
+.v-field-row .v-field{flex:1;}
+.v-primary-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:46px;}
+.v-primary-btn:hover{background:var(--accent-d);}
+.v-primary-btn:disabled{background:#c4b5fd;cursor:not-allowed;}
+.v-doc-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.v-mini-btn{padding:7px 12px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid #e2e8f0;background:#fff;color:#475569;min-height:38px;}
+.v-mini-btn.danger{color:#b91c1c;border-color:#fecaca;background:#fff5f5;}
+.v-personal-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-top:6px;}
+
+/* ── Modal ── */
+.v-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0;}
+.v-modal-overlay.open{display:flex;}
+.v-modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px 20px 28px;}
+@media(min-width:600px){.v-modal-overlay{align-items:center;}.v-modal{border-radius:16px;}}
+.v-modal h3{font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;}
+.v-modal .v-modal-sub{font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.5;}
+.v-check-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;cursor:pointer;}
+.v-check-row input{width:19px;height:19px;flex-shrink:0;accent-color:var(--accent);}
+.v-check-row .v-check-name{font-size:14px;font-weight:600;color:#1e293b;}
+.v-check-row .v-check-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+.v-modal-actions{display:flex;gap:10px;margin-top:18px;}
+.v-modal-actions button{flex:1;}
+.v-ghost-btn{padding:12px;background:#f1f5f9;color:#475569;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:46px;}
+.v-modal-group-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:14px 0 8px;}
 </style>
 </head>
 <body>
@@ -137,11 +171,17 @@ body{display:flex;flex-direction:column;min-height:100vh;}
   <div class="v-tabs">
     <button class="v-tab active" data-tab="docs">Documents</button>
     <button class="v-tab" data-tab="assignments">Assignments</button>
+    <button class="v-tab" data-tab="files">My Files</button>
     <button class="v-tab" data-tab="account">Account</button>
   </div>
   <div class="v-body" id="vBody">
     <div class="v-loading">Loading your vault…</div>
   </div>
+</div>
+
+<!-- ── Modal (share / confirm) ── -->
+<div class="v-modal-overlay" id="vModalOverlay">
+  <div class="v-modal" id="vModal"></div>
 </div>
 
 <script>
@@ -327,12 +367,14 @@ function renderBody(){
   if(!vaultData){ return; }
   if(activeTab === 'docs')        renderDocs();
   else if(activeTab === 'assignments') renderAssignments();
+  else if(activeTab === 'files')       renderFiles();
   else if(activeTab === 'account')     renderAccount();
 }
 
 function planBanner(){
   if(isPaid()){
-    return '<div class="v-plan-banner vault">✅ <div>You\'re on <b>Vault</b> — download and share any document, anytime.</div></div>';
+    return '<div class="v-plan-banner vault">✅ <div>You\'re on <b>Vault</b> — download and share any document, anytime.</div>'
+      + '<button class="v-upgrade-btn" onclick="openShareModal()">📤 Share</button></div>';
   }
   return '<div class="v-plan-banner free">'
     + '<div>🔓 <b>Free plan.</b> You can see all your documents and their status. '
@@ -478,6 +520,217 @@ function renderAccount(){
     + ((vaultData.memberships||[]).map(m=>'<div class="v-kv"><span class="v-kv-label">'+esc(m.org_name)+'</span><span class="v-kv-val">linked</span></div>').join('') || '<p>No linked organisations yet.</p>')
     + '</div>';
   $('vBody').innerHTML = html;
+}
+
+// ── Personal vault (My Files) ───────────────────────────────────────────────
+function fileStatusByExpiry(expiry){
+  if(!expiry) return 'ok';
+  const e = new Date(expiry); e.setHours(0,0,0,0);
+  const ref = todayMidnight();
+  if(e < ref) return 'expired';
+  if((e - ref)/86400000 <= WARNING_DAYS) return 'expiring';
+  return 'ok';
+}
+
+function renderFiles(){
+  let html = planBanner();
+  if(!isPaid()){
+    html += '<div class="v-card"><h3>🗂️ Your personal document vault</h3>'
+      + '<p>With the Vault plan you can upload your own documents — passport, certificates, anything — '
+      + 'track their expiry dates, and share them in seconds.</p>'
+      + '<button class="v-upgrade-btn" style="margin-top:6px;" onclick="onUpgrade()">Upgrade to add files</button></div>';
+    $('vBody').innerHTML = html;
+    return;
+  }
+  // Upload box
+  html += '<div class="v-upload-card">'
+    + '<h3>Add a personal document</h3>'
+    + '<p>Upload a file you own. Set an expiry date and we\'ll remind you when it\'s running out.</p>'
+    + '<div class="v-field"><label>Document name</label><input id="puName" type="text" placeholder="e.g. Passport, First-aid certificate"/></div>'
+    + '<div class="v-field-row">'
+    +   '<div class="v-field"><label>Issued date (optional)</label><input id="puIssued" type="date"/></div>'
+    +   '<div class="v-field"><label>Expiry date (optional)</label><input id="puExpiry" type="date"/></div>'
+    + '</div>'
+    + '<div class="v-field"><label>File</label><input id="puFile" type="file"/></div>'
+    + '<button class="v-primary-btn" id="puBtn" onclick="uploadPersonalDoc()">⬆ Upload to my vault</button>'
+    + '</div>';
+
+  const personal = (vaultData.vault_docs||[]).filter(d=>d.source==='worker_upload' && d.active!==false);
+  html += '<div class="v-section-title">My personal documents</div>';
+  if(!personal.length){
+    html += '<div class="v-empty" style="padding:28px 16px;"><div class="v-empty-icon">📂</div>'
+      + 'No personal documents yet.<br><span style="font-size:12px;">Upload your first file above.</span></div>';
+  } else {
+    personal.sort((a,b)=> STATUS_RANK[fileStatusByExpiry(a.expiry_date)] - STATUS_RANK[fileStatusByExpiry(b.expiry_date)]);
+    for(const d of personal){
+      const st = fileStatusByExpiry(d.expiry_date);
+      html += '<div class="v-doc-row"><div class="v-doc-top">'
+        + '<div class="v-doc-icon">📄</div>'
+        + '<div class="v-doc-info">'
+        +   '<div class="v-doc-name">'+esc(d.display_name||d.file_name||'Document')+'</div>'
+        +   (d.expiry_date ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(d.expiry_date))+'</div>' : '')
+        +   '<div class="v-personal-badge">Personal · not verified</div>'
+        +   '<div class="v-doc-actions">'
+        +     '<button class="v-mini-btn" onclick="downloadPersonalDoc(\''+esc(d.id)+'\',event)">⬇ Download</button>'
+        +     '<button class="v-mini-btn danger" onclick="deletePersonalDoc(\''+esc(d.id)+'\',\''+esc(d.display_name||d.file_name||'this document')+'\')">Delete</button>'
+        +   '</div>'
+        + '</div>'
+        + '<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>'
+        + '</div></div>';
+    }
+  }
+  html += '<div class="v-disclaimer">Personal documents are yours to manage. They\'re clearly marked "not verified" when you share them, so an employer never mistakes them for an organisation-approved document.</div>';
+  $('vBody').innerHTML = html;
+}
+
+async function uploadPersonalDoc(){
+  const name = ($('puName').value||'').trim();
+  const fileEl = $('puFile');
+  const file = fileEl.files && fileEl.files[0];
+  const issued = $('puIssued').value || null;
+  const expiry = $('puExpiry').value || null;
+  const btn = $('puBtn');
+  if(!file){ alert('Please choose a file to upload.'); return; }
+  if(file.size > 25*1024*1024){ alert('That file is larger than 25 MB. Please upload a smaller file.'); return; }
+  btn.disabled = true; btn.textContent = '⏳ Uploading…';
+  try{
+    const { data:{ session } } = await sbClient.auth.getSession();
+    const uid = session && session.user && session.user.id;
+    if(!uid) throw new Error('Your session has expired — please sign in again.');
+    const safe = (file.name||'file').replace(/[^a-zA-Z0-9._-]/g,'_').slice(-80);
+    const path = 'vault/' + uid + '/' + Date.now() + '_' + safe;
+    const up = await sbClient.storage.from(SB_BUCKET).upload(path, file, { upsert:false, contentType:file.type||undefined });
+    if(up.error) throw up.error;
+    const ins = await sbClient.from('vault_documents').insert({
+      worker_account_id: uid,
+      display_name: name || file.name,
+      file_path: path,
+      file_name: file.name,
+      issued_date: issued,
+      expiry_date: expiry,
+      source: 'worker_upload',
+      active: true,
+    });
+    if(ins.error) throw ins.error;
+    await refreshVault();
+  }catch(e){
+    alert('Upload failed: ' + (e.message||'unknown error'));
+    btn.disabled = false; btn.textContent = '⬆ Upload to my vault';
+  }
+}
+
+async function downloadPersonalDoc(id, ev){
+  const btn = ev && ev.currentTarget; const orig = btn && btn.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = '⏳…'; }
+  try{
+    const d = (vaultData.vault_docs||[]).find(x=>x.id===id);
+    if(!d || !d.file_path) throw new Error('File not found.');
+    const { data, error } = await sbClient.storage.from(SB_BUCKET)
+      .createSignedUrl(d.file_path, 120, { download: d.file_name||'document' });
+    if(error) throw error;
+    if(data && data.signedUrl) window.open(data.signedUrl, '_blank');
+  }catch(e){
+    alert('Could not download: ' + (e.message||'unknown error'));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+async function deletePersonalDoc(id, label){
+  if(!confirm('Delete "'+label+'" from your vault? This cannot be undone.')) return;
+  try{
+    const { error } = await sbClient.from('vault_documents').update({ active:false }).eq('id', id);
+    if(error) throw error;
+    await refreshVault();
+  }catch(e){
+    alert('Could not delete: ' + (e.message||'unknown error'));
+  }
+}
+
+// ── Share modal ─────────────────────────────────────────────────────────────
+function closeModal(){ $('vModalOverlay').classList.remove('open'); $('vModal').innerHTML=''; }
+
+function shareableItems(){
+  const out = { compliance:[], contracts:[], personal:[] };
+  const memberships = vaultData.memberships || [];
+  const meta = buildDocMeta(memberships);
+  const seenKeys = new Set();
+  for(const m of memberships){
+    for(const d of (m.worker_docs||[])){
+      if(!d.doc_key || !d.has_file || seenKeys.has(d.doc_key)) continue;
+      seenKeys.add(d.doc_key);
+      const md = meta[d.doc_key] || { name:d.doc_key };
+      out.compliance.push({ type:'document', doc_key:d.doc_key, label:md.name });
+    }
+    for(const a of (m.assignments||[])){
+      if(a.has_contract) out.contracts.push({ type:'contract', assignment_id:a.id, label:(a.project_name||'Contract')+' — '+m.org_name });
+    }
+  }
+  for(const d of (vaultData.vault_docs||[])){
+    if(d.active===false) continue;
+    out.personal.push({ type:'vault_doc', vault_doc_id:d.id, label:d.display_name||d.file_name||'Document', verified:d.source==='org_approved' });
+  }
+  return out;
+}
+
+function openShareModal(){
+  if(!isPaid()){ onUpgrade(); return; }
+  const items = shareableItems();
+  const total = items.compliance.length + items.contracts.length + items.personal.length;
+  if(!total){ alert('You don\'t have any documents with files to share yet.'); return; }
+
+  let idx = 0;
+  const checkRow = (it, sub) => {
+    const id = 'shareItem_'+(idx++);
+    window._shareMap = window._shareMap || {};
+    window._shareMap[id] = it;
+    return '<label class="v-check-row"><input type="checkbox" data-share="'+id+'"/>'
+      + '<div><div class="v-check-name">'+esc(it.label)+'</div>'
+      + (sub?'<div class="v-check-sub">'+esc(sub)+'</div>':'')+'</div></label>';
+  };
+  window._shareMap = {};
+  let body = '<h3>Share documents</h3>'
+    + '<div class="v-modal-sub">Tick the documents to send, then enter the recipient\'s email. They\'ll get secure download links that expire in 7 days.</div>';
+  if(items.compliance.length){
+    body += '<div class="v-modal-group-title">Compliance — verified by organisations</div>';
+    items.compliance.forEach(it=> body += checkRow(it, 'Verified'));
+  }
+  if(items.contracts.length){
+    body += '<div class="v-modal-group-title">Contracts</div>';
+    items.contracts.forEach(it=> body += checkRow(it, 'Verified'));
+  }
+  if(items.personal.length){
+    body += '<div class="v-modal-group-title">Personal — self-managed, not verified</div>';
+    items.personal.forEach(it=> body += checkRow(it, it.verified?'Approved copy':'Personal'));
+  }
+  body += '<div class="v-field" style="margin-top:14px;"><label>Send to (email)</label><input id="shareTo" type="email" inputmode="email" placeholder="recipient@example.com"/></div>';
+  body += '<div class="v-field"><label>Message (optional)</label><input id="shareMsg" type="text" placeholder="A short note for the recipient"/></div>';
+  body += '<div class="v-modal-actions"><button class="v-ghost-btn" onclick="closeModal()">Cancel</button>'
+    + '<button class="v-primary-btn" id="shareSendBtn" onclick="sendShare()">📤 Send</button></div>';
+  $('vModal').innerHTML = body;
+  $('vModalOverlay').classList.add('open');
+}
+
+async function sendShare(){
+  const to = ($('shareTo').value||'').trim();
+  const message = ($('shareMsg').value||'').trim();
+  const checked = [...document.querySelectorAll('[data-share]:checked')]
+    .map(el=> window._shareMap[el.dataset.share]).filter(Boolean);
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){ alert('Please enter a valid recipient email.'); return; }
+  if(!checked.length){ alert('Select at least one document to share.'); return; }
+  const btn = $('shareSendBtn'); btn.disabled = true; btn.textContent = '⏳ Sending…';
+  try{
+    const items = checked.map(it=> it.type==='document' ? {type:'document',doc_key:it.doc_key,label:it.label}
+      : it.type==='contract' ? {type:'contract',assignment_id:it.assignment_id,label:it.label}
+      : {type:'vault_doc',vault_doc_id:it.vault_doc_id,label:it.label});
+    const res = await callFn('send-vault-share', { to, message, items });
+    closeModal();
+    alert('✓ Sent ' + (res.count||items.length) + ' document(s) to ' + to + '.');
+  }catch(e){
+    if(e.status === 402){ alert('Sharing is part of the Vault plan.'); }
+    else alert('Could not send: ' + (e.message||'unknown error'));
+    btn.disabled = false; btn.textContent = '📤 Send';
+  }
 }
 
 // ── Edge-function helper ────────────────────────────────────────────────────

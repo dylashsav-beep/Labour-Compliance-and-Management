@@ -314,6 +314,30 @@ Phase 2 adds the paid tier: Stripe subscription, server-enforced paywall, and wo
 
 ---
 
+## Worker Vault — Phase 3 (Personal Documents + Share-to-Email)
+
+Phase 3 adds the worker's own document layer and outbound sharing. **Paid (Vault) tier only** — both are gated server-side.
+
+### What's new
+- **My Files tab** (`vault.html` → `renderFiles`): a Vault worker uploads their own documents (passport, certificates, …) straight to `vault/{account_id}/...` Storage + a `vault_documents` row (`source='worker_upload'`). All client-side — the worker-scoped Storage + table RLS already permit it (no edge function needed for upload/download/delete). Worker sets `display_name`, `issued_date`, `expiry_date`; status pill follows the same green/amber/red expiry logic. Downloads use a direct client `createSignedUrl` (worker owns the path); delete is a soft `active=false`.
+- **Share modal** (`openShareModal`/`sendShare`): tick any mix of compliance docs, contracts, and personal files → enter a recipient email → `send-vault-share` emails 7-day signed download links, **visually separating "verified by organisation" from "personal — not verified"** so a recipient never mistakes a self-uploaded file for an approved one.
+
+### Edge function
+| Function | Auth | Purpose |
+|---|---|---|
+| `send-vault-share` | JWT (worker) | Paid-gated (`402` otherwise). Resolves each selected item SERVER-SIDE from the worker's own records (never a caller path), signs a 7-day URL each, emails a branded summary split into verified/personal sections. Reuses `RESEND_API_KEY` + `DIGEST_FROM` — **no new secrets**. |
+
+### Isolation / ownership notes
+- Personal uploads are worker-owned: `vault_documents` RLS is `worker_account_id = auth.uid()`; Storage RLS is `foldername[1]='vault' AND foldername[2]=auth.uid()`. A worker can only ever touch their own `vault/` prefix.
+- `send-vault-share` verifies ownership of every shared item before signing: `document`/`contract` must trace to a `worker_org_links` row the caller owns; `vault_doc` must have `worker_account_id = caller`.
+- `source='org_approved'` vault docs (future `copy-to-vault`) are classed **verified** in shares; `worker_upload` are classed **personal/unverified**.
+
+### Still pending
+- `copy-to-vault` (durable permanence) — carried over from Phase 2.
+- "Upload from vault into an org's compliance request" (worker pushes a personal file back to an org submission) — deferred to a later phase.
+
+---
+
 ## Dropbox Sign Integration Reference
 
 ### How it works
