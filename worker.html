@@ -157,6 +157,7 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-template-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;}
 .wp-template-banner-text{flex:1;min-width:0;}
 .wp-template-banner-label{font-size:12px;font-weight:700;color:#78350f;}
+.wp-esign-summary-banner{display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;padding:10px 14px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:8px;font-size:13px;color:#1e40af;line-height:1.4;}
 .wp-template-banner-sub{font-size:11px;color:#92400e;margin-top:1px;}
 .wp-template-dl-btn{flex-shrink:0;padding:6px 12px;background:#f59e0b;border:none;border-radius:6px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;transition:background .15s;font-family:inherit;}
 .wp-template-dl-btn:hover{background:#d97706;}
@@ -725,7 +726,7 @@ function wpLoadPortalData(data){
   wpVehicles=(data.vehicles||[]).map(v=>({id:v.id,desc:v.description||'',reg:v.registration_plate||''}));
   wpTools=(data.tools||[]).map(tl=>({id:tl.id,name:tl.name,desc:tl.description||'',serial:tl.serial_number||''}));
   wpReturnRequests=(data.return_requests||[]);
-  wpIssuedDocs=(data.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
+  wpIssuedDocs=(data.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature',signatureRequestId:d.signature_request_id||null}));
 }
 
 async function wpLoadSubmissions(){
@@ -837,7 +838,9 @@ async function renderWPDocs(){
     else if(st==='ok') filterCounts.ok++;
   });
 
-  let html=`<div class="wp-filter-tabs">
+  const eSigCount=wpIssuedDocs.filter(x=>x.signatureRequestId).length;
+  let html=`${eSigCount>0?`<div class="wp-esign-summary-banner">✉️&nbsp;<span><strong>You have ${eSigCount} document${eSigCount>1?'s':''} awaiting your e-signature</strong> — check your email for the signing link${eSigCount>1?'s':''} sent by Dropbox Sign.</span></div>`:''}
+<div class="wp-filter-tabs">
     <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')"><span class="wp-filter-label">${t('missing')}</span><span class="wp-filter-count">${filterCounts.missing}</span></button>
     <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')"><span class="wp-filter-label">${t('expiring')}</span><span class="wp-filter-count">${filterCounts.expiring}</span></button>
     <button class="wp-filter-tab${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')"><span class="wp-filter-label">${t('expired')}</span><span class="wp-filter-count">${filterCounts.expired}</span></button>
@@ -861,6 +864,7 @@ async function renderWPDocs(){
     const expiryStr=docData?.date?new Date(docData.date).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}):null;
     const hasPending=!!pendingMap[d.id];
     const isOpen=wpDocSubmitOpen[d.id];
+    const eSigPending=!!wpIssuedDocs.find(x=>x.docKey===d.id&&x.signatureRequestId);
     const reqBadge=d.req?`<span class="wp-req-badge">${t('required')}</span>`:`<span class="wp-opt-badge">${t('reqOptional')}</span>`;
     const safeId=d.id.replace(/[^a-zA-Z0-9_-]/g,'_');
     const infoIcons=(d.infoText||d.infoUrl)?`<div class="wp-card-actions">${d.infoText?`<button class="wp-card-icon-btn" title="${t('helpInfo')}" onclick="var p=document.getElementById('wpit_${safeId}');p.style.display=p.style.display==='none'?'block':'none'"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></button>`:''}${d.infoUrl?`<a class="wp-card-icon-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer" title="${t('openFormLink')}"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a>`:''}</div>`:'';
@@ -883,8 +887,8 @@ async function renderWPDocs(){
           ${d.templateFilePath?(()=>{const _p=d.templateFilePath.replace(/'/g,"\\'"),_n=(d.templateFileName||'template').replace(/'/g,"\\'");return`<div class="wp-template-banner"><div class="wp-template-banner-text"><div class="wp-template-banner-label">${t('officialFormRequired')}</div><div class="wp-template-banner-sub">${t('templateSub')}</div></div><button class="wp-template-dl-btn" onclick="wpDownloadFile('${_p}','${_n}')">${t('download')}</button></div>`;})():''}
         </div>
       </div>
-      ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");return`<div class="wp-template-banner" style="background:#ede9fe;border-color:#c4b5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#6d28d9;">📤 Personalised document to sign</div><div class="wp-template-banner-sub" style="color:#5b21b6;">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="wpDownloadFile('${_ip}','${_in}')">Download</button></div>`;})()}
-      ${isOpen?`<div class="wp-submit-form">
+      ${(()=>{const _iDoc=wpIssuedDocs.find(x=>x.docKey===d.id);if(!_iDoc)return'';const _ip=_iDoc.filePath.replace(/'/g,"\\'"),_in=_iDoc.fileName.replace(/'/g,"\\'");if(_iDoc.signatureRequestId){return`<div class="wp-template-banner" style="background:#eff6ff;border-color:#93c5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#1d4ed8;">✉️ Sent for e-signature</div><div class="wp-template-banner-sub" style="color:#1e40af;">Check your email for the signing link. Once signed, your copy is filed automatically.</div></div><button class="wp-template-dl-btn" style="background:#2563eb;" onclick="wpDownloadFile('${_ip}','${_in}')">Download</button></div>`;}return`<div class="wp-template-banner" style="background:#ede9fe;border-color:#c4b5fd;"><div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#6d28d9;">📤 Personalised document to sign</div><div class="wp-template-banner-sub" style="color:#5b21b6;">Download, sign, and upload your signed copy below</div></div><button class="wp-template-dl-btn" style="background:#7c3aed;" onclick="wpDownloadFile('${_ip}','${_in}')">Download</button></div>`;})()}
+      ${(!eSigPending&&isOpen)?`<div class="wp-submit-form">
         <div><label>${t('expiryDate')}</label><input type="date" class="form-input" id="wpExp_${d.id}" value="${docData?.date||''}"/></div>
         <div><label>${t('issueDate')}</label><input type="date" class="form-input" id="wpIss_${d.id}" value="${docData?.issueDate||''}"/></div>
         <div><label>${t('attachDoc')}</label><input type="file" id="wpFile_${d.id}" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"/></div>
@@ -894,7 +898,7 @@ async function renderWPDocs(){
           <button class="wp-doc-btn cancel" onclick="wpToggleSubmit('${d.id}')">${t('cancel')}</button>
         </div>
       </div>`:''}
-      ${!isOpen?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?t('submitReplacement'):t('submitUpdate')}</button>`:''}
+      ${(!eSigPending&&!isOpen)?`<button class="wp-doc-btn${hasPending?' wp-doc-btn-secondary':''}" onclick="wpToggleSubmit('${d.id}')">${hasPending?t('submitReplacement'):t('submitUpdate')}</button>`:''}
     </div>`;
   };
 
