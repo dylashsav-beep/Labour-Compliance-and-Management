@@ -128,6 +128,21 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-modal-actions button{flex:1;}
 .v-ghost-btn{padding:12px;background:#f1f5f9;color:#475569;border:none;border-radius:9px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;min-height:46px;}
 .v-modal-group-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin:14px 0 8px;}
+
+/* ── Per-org doc sections ── */
+.v-org-section{margin-bottom:32px;}
+.v-org-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,#f5f3ff,#f8fafc);border-radius:12px;border:1px solid #ddd6fe;margin-bottom:14px;}
+.v-org-header-name{font-size:14px;font-weight:800;color:#1e293b;}
+.v-org-header-sub{font-size:11px;color:#7c3aed;margin-top:2px;font-weight:600;}
+.v-org-header-sub .v-urgent-count{color:#b91c1c;}
+.v-cat-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:0 2px;margin:18px 0 8px;}
+.v-cat-header:first-of-type{margin-top:0;}
+.v-cat-header.cat-action{color:#b91c1c;}
+.v-cat-header.cat-expiring{color:#92400e;}
+.v-cat-header.cat-valid{color:#166534;}
+.v-cat-header.cat-optional{color:#94a3b8;}
+.v-doc-urgent{border-left:3px solid #fca5a5;}
+.v-doc-expiring{border-left:3px solid #fde68a;}
 </style>
 </head>
 <body>
@@ -390,53 +405,115 @@ function renderDocs(){
       + 'No linked organisations yet.<br><span style="font-size:12px;">When an employer invites you, your compliance documents appear here.</span></div>';
     return;
   }
-  const meta = buildDocMeta(memberships);
-
-  // Merge documents by doc_key across all orgs (smart deduplication).
-  const merged = {};   // doc_key -> { status, orgs:Set, expiry (soonest), hasAny }
-  for(const m of memberships){
-    for(const d of (m.worker_docs||[])){
-      const key = d.doc_key; if(!key) continue;
-      const st = vaultDocStatus(d);
-      if(!merged[key]) merged[key] = { status: st, orgs: new Set(), expiry: d.expiry_date || null };
-      else merged[key].status = betterStatus(merged[key].status, st);
-      merged[key].orgs.add(m.org_name);
-      // keep the soonest expiry for display
-      if(d.expiry_date && (!merged[key].expiry || new Date(d.expiry_date) < new Date(merged[key].expiry))){
-        merged[key].expiry = d.expiry_date;
-      }
-    }
-  }
-
-  const keys = Object.keys(merged);
-  if(!keys.length){
-    $('vBody').innerHTML = planBanner() + '<div class="v-empty"><div class="v-empty-icon">📄</div>No documents on file yet.</div>';
-    return;
-  }
-  // Sort: problems first (missing/expired/expiring), then valid.
-  keys.sort((a,b)=> STATUS_RANK[merged[a].status] - STATUS_RANK[merged[b].status]);
 
   let html = planBanner();
-  html += '<div class="v-section-title">Compliance documents — verified by your organisations</div>';
-  for(const key of keys){
-    const item = merged[key];
-    const md = meta[key] || { name: key, icon: '📄' };
-    const st = item.status;
-    const orgs = [...item.orgs];
-    html += '<div class="v-doc-row"><div class="v-doc-top">'
-      + '<div class="v-doc-icon">'+esc(md.icon)+'</div>'
-      + '<div class="v-doc-info">'
-      +   '<div class="v-doc-name">'+esc(md.name)+'</div>'
-      +   (item.expiry ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(item.expiry))+'</div>' : '')
-      +   '<div class="v-doc-orgs">Recognised by: '+orgs.map(o=>'<span class="v-org-chip">'+esc(o)+'</span>').join('')+'</div>'
-      +   '<div class="v-verified-badge">✓ Verified by organisation</div>'
-      +   downloadBtn(key, md.name)
+
+  for(const m of memberships){
+    // Build lookup of actual worker document rows by doc_key
+    const wdByKey = {};
+    for(const d of (m.worker_docs||[])) if(d.doc_key) wdByKey[d.doc_key] = d;
+
+    // Build the complete item list from doc_set_items (single source of truth for requirements)
+    const allItems = (m.doc_set_items||[]).map(it => {
+      const key = String(it.id||'').includes('__') ? String(it.id).split('__').pop() : it.id;
+      const wd  = wdByKey[key] || null;
+      return {
+        key,
+        name:     it.name || key,
+        icon:     it.icon || '📄',
+        required: it.required !== false,   // default true if not set
+        status:   wd ? vaultDocStatus(wd) : 'missing',
+        expiry:   wd ? wd.expiry_date : null,
+        wd,
+      };
+    });
+
+    // Extra docs on file that aren't in the current document set (legacy / switched set)
+    const setKeys = new Set(allItems.map(i => i.key));
+    const extraItems = (m.worker_docs||[])
+      .filter(d => d.doc_key && !setKeys.has(d.doc_key) && d.has_file)
+      .map(d => ({
+        key:      d.doc_key,
+        name:     d.doc_key,
+        icon:     '📄',
+        required: false,
+        status:   vaultDocStatus(d),
+        expiry:   d.expiry_date,
+        wd:       d,
+      }));
+
+    // Categorize: required+missing → expired → expiring → valid → optional(missing)
+    const reqMissing = allItems.filter(i =>  i.required && i.status === 'missing');
+    const expired    = [...allItems.filter(i => i.status === 'expired'),
+                        ...extraItems.filter(i => i.status === 'expired')];
+    const expiring   = [...allItems.filter(i => i.status === 'expiring'),
+                        ...extraItems.filter(i => i.status === 'expiring')];
+    const valid      = [...allItems.filter(i => i.status === 'ok'),
+                        ...extraItems.filter(i => i.status === 'ok')];
+    const optMissing = allItems.filter(i => !i.required && i.status === 'missing');
+
+    const totalReq   = allItems.filter(i => i.required).length;
+    const urgentCnt  = reqMissing.length + expired.length;
+
+    html += '<div class="v-org-section">'
+      + '<div class="v-org-header">'
+      + '<span style="font-size:22px;">🏢</span>'
+      + '<div>'
+      +   '<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
+      +   '<div class="v-org-header-sub">'
+      +     totalReq+' required document'+(totalReq!==1?'s':'')+' · '
+      +     valid.length+' valid'
+      +     (urgentCnt ? ' · <span class="v-urgent-count">'+urgentCnt+' need'+(urgentCnt===1?'s':'')+' attention</span>' : '')
+      +   '</div>'
       + '</div>'
-      + '<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>'
-      + '</div></div>';
+      + '</div>';
+
+    if(!allItems.length && !extraItems.length){
+      html += '<p style="font-size:13px;color:#94a3b8;padding:8px 0 4px;">No documents on record yet for this employer.</p>';
+    } else {
+      if(reqMissing.length){
+        html += '<div class="v-cat-header cat-action">⚠ Required — not on file</div>';
+        reqMissing.forEach(i => html += docCard(i, 'urgent'));
+      }
+      if(expired.length){
+        html += '<div class="v-cat-header cat-action">✕ Expired</div>';
+        expired.forEach(i => html += docCard(i, 'urgent'));
+      }
+      if(expiring.length){
+        html += '<div class="v-cat-header cat-expiring">🕐 Expiring soon</div>';
+        expiring.forEach(i => html += docCard(i, 'expiring'));
+      }
+      if(valid.length){
+        html += '<div class="v-cat-header cat-valid">✓ Valid</div>';
+        valid.forEach(i => html += docCard(i, ''));
+      }
+      if(optMissing.length){
+        html += '<div class="v-cat-header cat-optional">○ Optional — not on file</div>';
+        optMissing.forEach(i => html += docCard(i, ''));
+      }
+    }
+
+    html += '</div>'; // v-org-section
   }
-  html += '<div class="v-disclaimer">Status reflects the expiry date on file. Documents you submitted to an employer stay in your vault even if the employer removes their copy — but it\'s up to you to upload a renewed version when one expires.</div>';
+
+  html += '<div class="v-disclaimer">Status reflects the expiry date on file. Documents verified by your employer stay in your vault — it\'s up to you to upload a renewed version when one expires.</div>';
   $('vBody').innerHTML = html;
+}
+
+function docCard(item, variant){
+  const st      = item.status;
+  const hasFile = !!(item.wd && item.wd.has_file);
+  const cls     = variant === 'urgent' ? ' v-doc-urgent' : variant === 'expiring' ? ' v-doc-expiring' : '';
+  return '<div class="v-doc-row'+cls+'"><div class="v-doc-top">'
+    + '<div class="v-doc-icon">'+esc(item.icon)+'</div>'
+    + '<div class="v-doc-info">'
+    +   '<div class="v-doc-name">'+esc(item.name)+'</div>'
+    +   (item.expiry ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(item.expiry))+'</div>' : '')
+    +   (hasFile ? '<div class="v-verified-badge">✓ Verified by organisation</div>' : '')
+    +   (hasFile ? downloadBtn(item.key, item.name) : '')
+    + '</div>'
+    + '<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>'
+    + '</div></div>';
 }
 
 function downloadBtn(key, name){
