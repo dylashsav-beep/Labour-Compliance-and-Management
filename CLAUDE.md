@@ -332,9 +332,28 @@ Phase 3 adds the worker's own document layer and outbound sharing. **Paid (Vault
 - `send-vault-share` verifies ownership of every shared item before signing: `document`/`contract` must trace to a `worker_org_links` row the caller owns; `vault_doc` must have `worker_account_id = caller`.
 - `source='org_approved'` vault docs (future `copy-to-vault`) are classed **verified** in shares; `worker_upload` are classed **personal/unverified**.
 
-### Still pending
-- `copy-to-vault` (durable permanence) — carried over from Phase 2.
-- "Upload from vault into an org's compliance request" (worker pushes a personal file back to an org submission) — deferred to a later phase.
+---
+
+## Worker Vault — Phase 3b (Permanence + Submit-to-Employer)
+
+Closes the two items left open after Phase 3. Both are **service-role edge functions**; identity always from the JWT.
+
+### Edge functions
+| Function | Auth | Purpose |
+|---|---|---|
+| `copy-to-vault` | JWT (worker **or** org staff) | Copies org-approved files into `vault/{account_id}/approved/{org_id}/{doc_key}/...` + a `vault_documents` row (`source='org_approved'`). Idempotent. Two shapes: `{worker_row_id, doc_key?}` (staff, on approval) or `{}` (worker self-backfill on sign-in). Single-worker mode authorises as either the linked vault account or org staff of the worker's org. |
+| `submit-vault-to-org` | JWT (worker) | Worker pushes a vault doc into an employer's compliance queue: copies the file to `${org_id}/worker-submissions/{worker_row}/{doc_key}/...` and inserts a `worker_document_submissions` row (`status='pending'`) so it shows in that org's Approvals. Verifies the caller owns the vault doc AND is actively linked to the target org. |
+
+### Wiring
+- **app.html** `approveSubmission()` → fire-and-forget `_vaultCopyApproved(worker_id, doc_key)` → `copy-to-vault`. Non-fatal; no-op if the worker has no vault account.
+- **vault.html** `enterVault()` → `backfillVaultCopies()` → `copy-to-vault {}` (silent permanence backfill on every sign-in).
+- **vault.html** My Files → each personal doc has **📨 Submit to employer** → `openSubmitToOrgModal` → `submit-vault-to-org`.
+- **get-vault-file** now falls back to the durable `vault_documents` (`source='org_approved'`) copy when the org's own file is gone — **this is the permanence payoff**.
+
+### Notes
+- `copy-to-vault` sets `workers.vault_account_id = auth.uid()` during self-backfill so the vault formally owns the copy.
+- Org-approved vault copies are hidden from the **My Files** list and excluded from the share modal's "personal" group (they're already shown as compliance docs) to avoid duplicates.
+- No new secrets, no new tables — reuses `vault_documents` + existing Storage RLS.
 
 ---
 

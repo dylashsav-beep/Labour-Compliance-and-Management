@@ -78,8 +78,19 @@ Deno.serve(async (req) => {
         .eq('active', true)
         .order('created_at', { ascending: false })
       const pick = (files || []).find(f => !f.superseded) || (files || [])[0]
-      if (!pick) return json({ error: 'Not found' }, 404)
-      filePath = pick.file_path; fileName = pick.file_name || pick.name || fileName
+      if (pick) {
+        filePath = pick.file_path; fileName = pick.file_name || pick.name || fileName
+      } else {
+        // Permanence fallback: the org deleted their copy — serve the durable
+        // vault copy (made by copy-to-vault) if one exists.
+        const { data: vcopy } = await sb.from('vault_documents')
+          .select('file_path, file_name')
+          .eq('worker_account_id', uid).eq('doc_key', body.doc_key)
+          .eq('source', 'org_approved').eq('active', true)
+          .order('approved_at', { ascending: false }).limit(1).maybeSingle()
+        if (!vcopy) return json({ error: 'Not found' }, 404)
+        filePath = vcopy.file_path; fileName = vcopy.file_name || fileName
+      }
 
     } else if (type === 'contract') {
       if (!workerRowIds.length) return json({ error: 'Not found' }, 404)

@@ -6848,6 +6848,10 @@ async function approveSubmission(subId){
       reviewed_by:sbSession.user.email,review_notes:reviewNotes||null
     }).eq('id',subId);
     wpSubmissions=wpSubmissions.filter(s=>s.id!==subId);
+    // If this worker has a personal Vault, copy the approved file into it so the
+    // worker keeps a permanent copy even if we later remove ours. Fire-and-forget,
+    // never blocks the approval (worker may not have a vault account — that's fine).
+    _vaultCopyApproved(sub.worker_id, sub.doc_key);
     approvalsHistory.unshift({...sub,_type:'document',status:'approved',reviewed_at:new Date().toISOString(),reviewed_by:sbSession.user.email,review_notes:reviewNotes||null});
     const _issuedDoc=issuedDocuments.find(d=>d.workerId===sub.worker_id&&d.docKey===sub.doc_key&&d.status==='pending_signature');
     if(_issuedDoc){ try{ await sbClient.from('issued_documents').update({status:'returned'}).eq('id',_issuedDoc.id); issuedDocuments=issuedDocuments.map(d=>d.id===_issuedDoc.id?{...d,status:'returned'}:d); sbClient.storage.from(SB_BUCKET).remove([_issuedDoc.filePath]).catch(()=>{}); }catch(_ie){ console.warn('[TMC] issued_doc cleanup failed:',_ie.message); } }
@@ -7876,6 +7880,20 @@ const VAULT_BASE_URL = 'https://vault.work-force.nl';
 function vaultInviteUrl(email){
   // Pre-fill the worker's email so they only tap "send link".
   return VAULT_BASE_URL + '/?email=' + encodeURIComponent(email||'');
+}
+
+// Fire-and-forget: copy a just-approved document into the worker's Vault (if they
+// have one). Non-fatal — a missing vault account or undeployed function is fine.
+async function _vaultCopyApproved(workerRowId, docKey){
+  try{
+    const {data:{session}}=await sbClient.auth.getSession();
+    if(!session?.access_token) return;
+    await fetch(SUPABASE_URL+'/functions/v1/copy-to-vault',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({worker_row_id:workerRowId,doc_key:docKey})
+    });
+  }catch(err){ console.warn('[vault] copy-to-vault skipped (non-fatal):', err.message); }
 }
 
 async function inviteToVault(wid,e){

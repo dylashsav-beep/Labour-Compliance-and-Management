@@ -352,6 +352,7 @@ async function enterVault(){
     $('vWorkerName').textContent = name;
     renderBody();
     handlePostCheckout();   // if returning from Stripe, poll until plan flips
+    backfillVaultCopies();  // permanence: copy already-approved org docs into the vault
   }catch(e){
     $('vBody').innerHTML = '<div class="v-empty"><div class="v-empty-icon">⚠️</div>'
       + 'We couldn\'t load your vault.<br><span style="font-size:12px;">'+esc(e.message||'')+'</span><br><br>'
@@ -572,6 +573,7 @@ function renderFiles(){
         +   '<div class="v-personal-badge">Personal · not verified</div>'
         +   '<div class="v-doc-actions">'
         +     '<button class="v-mini-btn" onclick="downloadPersonalDoc(\''+esc(d.id)+'\',event)">⬇ Download</button>'
+        +     '<button class="v-mini-btn" onclick="openSubmitToOrgModal(\''+esc(d.id)+'\')">📨 Submit to employer</button>'
         +     '<button class="v-mini-btn danger" onclick="deletePersonalDoc(\''+esc(d.id)+'\',\''+esc(d.display_name||d.file_name||'this document')+'\')">Delete</button>'
         +   '</div>'
         + '</div>'
@@ -667,8 +669,10 @@ function shareableItems(){
     }
   }
   for(const d of (vaultData.vault_docs||[])){
-    if(d.active===false) continue;
-    out.personal.push({ type:'vault_doc', vault_doc_id:d.id, label:d.display_name||d.file_name||'Document', verified:d.source==='org_approved' });
+    // Only the worker's own uploads here — org-approved copies are already
+    // represented above as compliance documents (avoid duplicate share rows).
+    if(d.active===false || d.source==='org_approved') continue;
+    out.personal.push({ type:'vault_doc', vault_doc_id:d.id, label:d.display_name||d.file_name||'Document', verified:false });
   }
   return out;
 }
@@ -730,6 +734,68 @@ async function sendShare(){
     if(e.status === 402){ alert('Sharing is part of the Vault plan.'); }
     else alert('Could not send: ' + (e.message||'unknown error'));
     btn.disabled = false; btn.textContent = '📤 Send';
+  }
+}
+
+// ── Permanence backfill ─────────────────────────────────────────────────────
+// On sign-in, ask the server to copy any already-approved org documents into the
+// worker's vault so they survive the org later deleting their copy. Best-effort
+// and silent — does nothing if there's nothing to copy or the fn isn't deployed.
+async function backfillVaultCopies(){
+  try{ await callFn('copy-to-vault', {}); }catch(_e){ /* non-fatal */ }
+}
+
+// ── Submit a vault document into an employer's compliance request ────────────
+function _docTypesForMembership(m){
+  const setId = m && m.worker && m.worker.document_set_id;
+  return (m.doc_set_items||[])
+    .filter(it=> !setId || String(it.id||'').startsWith(setId+'__'))
+    .map(it=>({ key: String(it.id||'').includes('__') ? String(it.id).split('__').pop() : it.id,
+                name: it.name || it.id }));
+}
+function populateSubmitDocKeys(orgIdx){
+  const m = (vaultData.memberships||[])[orgIdx];
+  const sel = $('submitDocKey');
+  if(!m || !sel) return;
+  const types = _docTypesForMembership(m);
+  sel.innerHTML = types.length
+    ? types.map(t=>'<option value="'+esc(t.key)+'">'+esc(t.name)+'</option>').join('')
+    : '<option value="">No document types for this employer</option>';
+}
+function openSubmitToOrgModal(vaultDocId){
+  const memberships = vaultData.memberships || [];
+  if(!memberships.length){ alert('You\'re not linked to an employer yet, so there\'s nowhere to submit this.'); return; }
+  window._submitVaultDocId = vaultDocId;
+  const d = (vaultData.vault_docs||[]).find(x=>x.id===vaultDocId);
+  let body = '<h3>Submit to an employer</h3>'
+    + '<div class="v-modal-sub">Send <b>'+esc((d&&(d.display_name||d.file_name))||'this document')+'</b> to one of your employers for review. '
+    + 'It will appear in their compliance approvals queue.</div>'
+    + '<div class="v-field"><label>Employer</label><select id="submitOrg" onchange="populateSubmitDocKeys(this.value)">'
+    +   memberships.map((m,i)=>'<option value="'+i+'">'+esc(m.org_name)+'</option>').join('')
+    + '</select></div>'
+    + '<div class="v-field"><label>Which requirement does this satisfy?</label><select id="submitDocKey"></select></div>'
+    + '<div class="v-modal-actions"><button class="v-ghost-btn" onclick="closeModal()">Cancel</button>'
+    +   '<button class="v-primary-btn" id="submitOrgBtn" onclick="submitVaultToOrg()">📨 Submit</button></div>';
+  $('vModal').innerHTML = body;
+  // style the selects to match inputs
+  $('vModal').querySelectorAll('select').forEach(s=>{ s.style.cssText='width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:#1e293b;outline:none;min-height:42px;background:#fff;'; });
+  $('vModalOverlay').classList.add('open');
+  populateSubmitDocKeys(0);
+}
+async function submitVaultToOrg(){
+  const orgIdx = +($('submitOrg').value);
+  const m = (vaultData.memberships||[])[orgIdx];
+  const docKey = $('submitDocKey').value;
+  const vaultDocId = window._submitVaultDocId;
+  if(!m || !docKey){ alert('Please choose an employer and a document type.'); return; }
+  const btn = $('submitOrgBtn'); btn.disabled = true; btn.textContent = '⏳ Submitting…';
+  try{
+    await callFn('submit-vault-to-org', { vault_doc_id: vaultDocId, org_id: m.org_id, doc_key: docKey });
+    closeModal();
+    alert('✓ Sent to ' + m.org_name + ' for review. They\'ll see it in their approvals queue.');
+  }catch(e){
+    alert('Could not submit: ' + (e.message||'unknown error'));
+    btn.disabled = false; btn.textContent = '📨 Submit';
   }
 }
 
