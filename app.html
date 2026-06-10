@@ -4328,6 +4328,7 @@ function renderTable(){
       <td style="max-width:160px;font-size:11px;color:var(--text-m);white-space:pre-wrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(w.notes||'')}">${w.notes?esc(w.notes.length>60?w.notes.slice(0,60)+'…':w.notes):'<span style="color:var(--text-l);">—</span>'}</td>
       <td style="white-space:nowrap;">
         ${w.email?`<button class="detail-btn" style="background:var(--bg);margin-right:4px;" onclick="sendWorkerReminder('${w.id}',event)" title="Send compliance reminder to ${esc(w.email)}">✉</button>`:''}
+        ${w.email?`<button class="detail-btn" style="background:var(--bg);margin-right:4px;" onclick="inviteToVault('${w.id}',event)" title="Invite ${esc(w.email)} to their personal Work Force Vault">🗂️</button>`:''}
         <button class="detail-btn" onclick="openWorker('${w.id}')" title="View details">→</button>
       </td>
     </tr>`;
@@ -7863,6 +7864,72 @@ async function sendWorkerReminder(wid,e){
     _showSaveToast('Reminder sent to '+w.email);
   }catch(err){
     alert('Failed to send reminder: '+err.message);
+  }
+}
+
+// ── Worker Vault invite ───────────────────────────────────────────────────────
+// Base URL for the worker vault. Once the vault.work-force.nl subdomain is
+// configured this becomes 'https://vault.work-force.nl'; until then the
+// same-origin /vault.html works on the live domain. Keep as a single constant.
+const VAULT_BASE_URL = 'https://vault.work-force.nl';
+
+function vaultInviteUrl(email){
+  // Pre-fill the worker's email so they only tap "send link".
+  return VAULT_BASE_URL + '/?email=' + encodeURIComponent(email||'');
+}
+
+async function inviteToVault(wid,e){
+  if(e){e.stopPropagation();}
+  if(!requireAction('workerDocs','invite a worker to their vault')) return;
+  const w=workers.find(x=>x.id===wid);
+  if(!w?.email){alert('This worker has no email address on file.');return;}
+  const url=vaultInviteUrl(w.email);
+  const confirmed = await _showConfirm(
+    `Invite ${esc(w.name)} to their Vault?`,
+    `<div style="margin-bottom:10px;">${esc(w.name)} will be invited to create a free personal
+       <b>Work Force Vault</b> where they own a portable copy of their compliance documents.</div>
+     <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--navy);font-weight:600;margin-bottom:10px;">${esc(w.email)}</div>
+     <div style="color:var(--text-light);font-size:12px;">We'll email them a secure sign-in link. Their documents in your org are linked automatically — nothing leaves your control.</div>`,
+    'Send Invite'
+  );
+  if(!confirmed) return;
+
+  // Best-effort: record the invite link on the org side (non-fatal if it fails;
+  // the worker is auto-linked by email on first vault login regardless).
+  try{
+    if(sbClient && sbSession && currentOrgId){
+      await sbClient.from('worker_org_links')
+        .upsert({
+          worker_row_id: wid,
+          org_id: currentOrgId,
+          status: 'invited',
+          invited_by: (sbProfile&&sbProfile.email)||null,
+          invited_at: new Date().toISOString(),
+        }, { onConflict: 'worker_row_id' });
+    }
+  }catch(err){ console.warn('[vault] invite link record failed (non-fatal):', err.message); }
+
+  // Try to send the branded invite email via the edge function. If it isn't
+  // deployed yet, fall back to a copyable link so the feature still works.
+  try{
+    const {data:{session}}=await sbClient.auth.getSession();
+    if(!session?.access_token) throw new Error('no session');
+    const resp=await fetch(SUPABASE_URL+'/functions/v1/send-vault-invite',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({worker_id:wid})
+    });
+    if(!resp.ok){ const r=await resp.json().catch(()=>({})); throw new Error(r.error||('HTTP '+resp.status)); }
+    _showSaveToast('Vault invite sent to '+w.email);
+  }catch(err){
+    // Edge function unavailable — give staff the link to share manually.
+    await _showConfirm(
+      'Share this vault link',
+      `<div style="margin-bottom:10px;">Email sending isn't set up yet, so send ${esc(w.name)} this link to open their vault:</div>
+       <input readonly value="${esc(url)}" onclick="this.select()" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--navy);">
+       <div style="color:var(--text-light);font-size:12px;margin-top:8px;">They sign in with their email — no password. Their documents link automatically.</div>`,
+      'Done'
+    );
   }
 }
 

@@ -66,7 +66,7 @@
 
 ---
 
-## Site Structure — Four HTML Files
+## Site Structure — HTML Files
 
 | File | Purpose | Notes |
 |---|---|---|
@@ -74,7 +74,8 @@
 | `login.html` | **Management sign-in page** | Email/password + magic link; "Create workspace →" link to signup.html; redirects to `app.html` on success |
 | `signup.html` | **Self-serve workspace creation** | 3-step flow: account → workspace slug → done; calls `create_workspace()` RPC; 30-day trial auto-starts |
 | `worker.html` | **Worker portal** — standalone, email-entry login | Calls `get_worker_portal` RPC (anon); org resolved from `?org=<slug>` param; falls back to TMC SITE_ORG_ID |
-| `app.html` | **Management app** — compliance dashboard | All HTML/CSS/JS (~400KB); requires auth; formerly `index.html` |
+| `vault.html` | **Worker Vault** — portable, worker-owned document vault (`vault.work-force.nl`) | **Authenticated** via Supabase magic link (passwordless, 30-day session). Calls `ensure_vault_account()` then `get_vault_portal()`. Merged read-only compliance + assignment view across ALL linked orgs. Free tier = view only; downloads gated to `plan='vault'` (Phase 2). Has its own `BRAND` constant block (rebrand single-source-of-truth). |
+| `app.html` | **Management app** — compliance dashboard | All HTML/CSS/JS (~400KB); requires auth; formerly `index.html`. Worker rows have an "Invite to Vault" 🗂️ button (`inviteToVault()`) → `send-vault-invite` edge fn (falls back to a copy-link modal if not deployed). |
 
 When making changes:
 - UI changes to the management dashboard → edit `app.html`
@@ -281,6 +282,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_contract_signed.sql` | ⏳ Pending — **run to enable manual "Mark as signed" toggle** | Adds `contract_signed boolean DEFAULT false` to `project_assignments`. App-owned field written by `sbPersistAll` (separate from `signature_status` which is edge-function-owned). Allows admins to mark manually-uploaded/wet-signed contracts as executed without going through Dropbox Sign. |
 | `add_worker_vault.sql` | ⏳ Pending — **Worker Vault Phase 0** | Creates `worker_accounts`, `worker_org_links`, `vault_documents`, `vault_assignment_links` tables + `workers.vault_account_id` + `ensure_vault_account()` RPC. **Worker-scoped** RLS (`worker_account_id = auth.uid()`), NOT org-scoped — see the Worker Vault isolation note in the Tables section. `ensure_vault_account()` is SECURITY DEFINER (reads workers across all orgs by email but derives identity from `auth.uid()`), auto-links all matching `workers.email` rows to the account. Idempotent. |
 | `add_vault_storage_policy.sql` | ⏳ Pending — **run after add_worker_vault.sql** | Storage RLS for the worker-owned `vault/{account_id}/...` prefix in `tmc-documents`. Worker-scoped via `(storage.foldername(name))[2] = auth.uid()::text`. Deliberately uses a `vault/` top-level prefix (NOT `workers/`) to avoid the TMC grandfather clause in `fix_storage_org_isolation.sql` leaking vault files to TMC staff. |
+| `add_get_vault_portal.sql` | ⏳ Pending — **Worker Vault Phase 1** | `get_vault_portal()` SECURITY DEFINER RPC: the authenticated read path for `vault.html`. A vault worker's profile has `org_id = NULL` so `current_org_id()` is NULL and org-scoped RLS returns nothing — this RPC aggregates the worker's compliance docs + assignments across all their `worker_org_links` (scoped to `auth.uid()`). Excludes rate/financial data from assignments. |
 
 ---
 

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Work Force Vault — My Documents</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --navy:#1a3082;--navy-d:#112268;
+  --accent:#7c3aed;--accent-d:#6d28d9;
+  --text:#1a2340;--text-m:#4a5568;--text-l:#7a8ba8;
+  --border:#dde3ec;--bg:#f1f5f9;
+  --red:#c53030;--green:#276749;--amber:#92400e;
+}
+html,body{height:100%;font-family:'Inter',-apple-system,sans-serif;font-size:14px;background:var(--bg);color:var(--text);}
+body{display:flex;flex-direction:column;min-height:100vh;}
+
+/* ── Login ── */
+#loginScreen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 16px;}
+.login-card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.09);width:100%;max-width:400px;padding:36px 32px;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.login-logo-icon{width:42px;height:42px;background:linear-gradient(135deg,var(--accent),var(--navy));border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.login-logo-text{font-size:17px;font-weight:800;color:#1e293b;letter-spacing:-.02em;}
+.login-logo-sub{font-size:11px;color:#94a3b8;margin-top:1px;}
+.login-title{font-size:21px;font-weight:800;color:#1e293b;margin-bottom:6px;}
+.login-sub{font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.55;}
+.login-field label{display:block;font-size:12px;font-weight:600;color:#475569;margin-bottom:6px;}
+.login-field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:15px;font-family:inherit;color:#1e293b;outline:none;transition:border-color .15s;min-height:46px;}
+.login-field input:focus{border-color:var(--accent);}
+.login-btn{width:100%;margin-top:16px;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s;min-height:48px;}
+.login-btn:hover{background:var(--accent-d);}
+.login-btn:disabled{background:#c4b5fd;cursor:not-allowed;}
+.login-msg{font-size:13px;padding:10px 14px;border-radius:7px;margin-top:14px;display:none;line-height:1.5;}
+.login-msg.error{background:#fff5f5;color:var(--red);border:1px solid #fed7d7;}
+.login-msg.ok{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;}
+.login-note{font-size:12px;color:#94a3b8;margin-top:18px;line-height:1.55;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #eef2f7;}
+.login-footer{text-align:center;margin-top:20px;font-size:12px;color:#94a3b8;}
+.login-footer a{color:#94a3b8;text-decoration:none;}
+.login-footer a:hover{color:#475569;}
+
+/* ── Vault ── */
+#vault{display:none;flex:1;flex-direction:column;}
+.v-header{background:linear-gradient(135deg,var(--accent),var(--navy));padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:20;}
+.v-header-title{font-size:15px;font-weight:800;color:#fff;white-space:nowrap;letter-spacing:.01em;}
+.v-header-name{font-size:12px;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
+.v-signout-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
+.v-signout-btn:active{background:rgba(255,255,255,.25);}
+.v-tabs{display:flex;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.v-tab{flex:1;min-width:90px;padding:14px 6px 12px;font-size:13px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
+.v-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
+.v-tab:hover:not(.active){color:#334155;}
+.v-body{max-width:680px;margin:0 auto;padding:20px 16px 48px;width:100%;}
+.v-plan-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;margin-bottom:20px;font-size:13px;line-height:1.45;}
+.v-plan-banner.free{background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;}
+.v-plan-banner.vault{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;}
+.v-plan-banner .v-upgrade-btn{margin-left:auto;flex-shrink:0;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;min-height:40px;white-space:nowrap;}
+.v-plan-banner .v-upgrade-btn:active{background:var(--accent-d);}
+.v-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
+.v-section-title:first-child{margin-top:0;}
+.v-doc-row{padding:16px;background:#fff;border-radius:12px;margin-bottom:10px;border:1px solid #e2e8f0;}
+.v-doc-top{display:flex;align-items:flex-start;gap:12px;}
+.v-doc-icon{font-size:22px;flex-shrink:0;padding-top:2px;width:32px;text-align:center;}
+.v-doc-info{flex:1;min-width:0;}
+.v-doc-name{font-size:15px;font-weight:700;color:#1e293b;line-height:1.3;}
+.v-doc-orgs{font-size:12px;color:#64748b;margin-top:5px;line-height:1.5;}
+.v-doc-orgs .v-org-chip{display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600;color:#475569;margin:2px 4px 0 0;}
+.v-status-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0;}
+.v-status-pill.ok{background:#dcfce7;color:#166534;}
+.v-status-pill.expiring{background:#fef3c7;color:#92400e;}
+.v-status-pill.missing{background:#fee2e2;color:#b91c1c;}
+.v-status-pill.expired{background:#fee2e2;color:#991b1b;}
+.v-expiry-tag{font-size:12px;color:#64748b;margin-top:6px;}
+.v-verified-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:700;background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;margin-top:6px;}
+.v-download-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:9px 16px;background:#f5f3ff;color:var(--accent);border:1.5px solid #ddd6fe;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;min-height:42px;font-family:inherit;transition:background .15s;}
+.v-download-btn:active{background:#ede9fe;}
+.v-download-btn.locked{background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;cursor:pointer;}
+.v-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;}
+.v-assign-title{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.v-assign-meta{font-size:13px;color:#64748b;line-height:1.6;}
+.v-contract-flag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-top:8px;}
+.v-contract-flag.missing{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;}
+.v-contract-flag.signed{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+.v-contract-flag.present{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;}
+.v-empty{text-align:center;padding:48px 16px;color:#94a3b8;font-size:14px;}
+.v-empty-icon{font-size:38px;margin-bottom:12px;}
+.v-loading{text-align:center;padding:60px 16px;color:#94a3b8;font-size:14px;}
+.v-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:14px;}
+.v-card h3{font-size:15px;font-weight:800;color:#1e293b;margin-bottom:10px;}
+.v-card p{font-size:13px;color:#64748b;line-height:1.6;margin-bottom:8px;}
+.v-kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px;}
+.v-kv:last-child{border-bottom:none;}
+.v-kv-label{color:#64748b;font-weight:500;}
+.v-kv-val{color:#1e293b;font-weight:700;}
+.v-disclaimer{font-size:11px;color:#94a3b8;line-height:1.55;margin-top:6px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #eef2f7;}
+</style>
+</head>
+<body>
+
+<!-- ── Login screen ── -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🗂️</div>
+      <div>
+        <div class="login-logo-text" id="brandName">Work Force Vault</div>
+        <div class="login-logo-sub">Your documents, owned by you</div>
+      </div>
+    </div>
+    <div class="login-title">Sign in to your vault</div>
+    <div class="login-sub">Enter your email and we'll send you a secure sign-in link. No password needed.</div>
+    <div class="login-field">
+      <label for="emailInput">Email address</label>
+      <input id="emailInput" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" />
+    </div>
+    <button class="login-btn" id="sendLinkBtn">Send me a sign-in link</button>
+    <div class="login-msg" id="loginMsg"></div>
+    <div class="login-note">
+      🔒 Your session is remembered for <b>30 days</b> on this device — you'll only need to do this once. Avoid private/incognito browsing if you want to stay signed in.
+    </div>
+    <div class="login-footer">
+      <a href="https://work-force.nl">← Back to work-force.nl</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Vault app ── -->
+<div id="vault">
+  <div class="v-header">
+    <div style="min-width:0;">
+      <div class="v-header-title" id="vBrandTitle">Work Force Vault</div>
+      <div class="v-header-name" id="vWorkerName"></div>
+    </div>
+    <button class="v-signout-btn" id="signOutBtn">Sign out</button>
+  </div>
+  <div class="v-tabs">
+    <button class="v-tab active" data-tab="docs">Documents</button>
+    <button class="v-tab" data-tab="assignments">Assignments</button>
+    <button class="v-tab" data-tab="account">Account</button>
+  </div>
+  <div class="v-body" id="vBody">
+    <div class="v-loading">Loading your vault…</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════
+// BRAND — single source of truth for all product-name / contact / colour refs.
+// To rebrand (white-label), change here + the matching constant block at the
+// top of each edge function. Never hardcode the product name elsewhere.
+// ══════════════════════════════════════════════════════════════════════════
+const BRAND = {
+  name:         'Work Force',
+  vaultName:    'Work Force Vault',
+  domain:       'work-force.nl',
+  vaultDomain:  'vault.work-force.nl',
+  supportEmail: 'support@work-force.nl',
+  salesEmail:   'sales@work-force.nl',
+  accentColor:  '#7c3aed',
+};
+
+// ── Supabase config (shared with worker.html / app.html) ───────────────────
+const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
+const SB_BUCKET     = 'tmc-documents';
+const WARNING_DAYS  = 60;
+
+let sbClient = null;
+let vaultData = null;
+let activeTab = 'docs';
+
+// ── Load supabase-js, then boot ────────────────────────────────────────────
+(function(){
+  const s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  s.onload = () => {
+    // persistSession + autoRefreshToken keep the worker signed in across visits.
+    // The 30-day window itself is the refresh-token TTL configured in the
+    // Supabase Dashboard (Auth → Sessions); the client just stores + rotates it.
+    sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: window.localStorage,
+        flowType: 'pkce',
+      },
+    });
+    boot();
+  };
+  document.head.appendChild(s);
+})();
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(s){ if(!s) return ''; try{ return new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return s; } }
+function todayMidnight(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function $(id){ return document.getElementById(id); }
+
+function applyBrand(){
+  $('brandName').textContent   = BRAND.vaultName;
+  $('vBrandTitle').textContent = BRAND.vaultName;
+  document.title = BRAND.vaultName + ' — My Documents';
+}
+
+// Document status from expiry/has_file, mirroring app.html docStatusAt logic.
+function vaultDocStatus(doc){
+  const hasFile = doc.has_file || (doc.status && doc.status!=='missing');
+  if(!hasFile) return 'missing';
+  if(!doc.expiry_date) return 'ok';
+  const expiry = new Date(doc.expiry_date); expiry.setHours(0,0,0,0);
+  const ref = todayMidnight();
+  if(expiry < ref) return 'expired';
+  const daysLeft = (expiry - ref)/86400000;
+  if(daysLeft <= WARNING_DAYS) return 'expiring';
+  return 'ok';
+}
+// "best" = most reassuring status across orgs (ok > expiring > expired > missing)
+const STATUS_RANK = { ok:3, expiring:2, expired:1, missing:0 };
+function betterStatus(a,b){ return STATUS_RANK[a] >= STATUS_RANK[b] ? a : b; }
+function statusLabel(s){ return {ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:'Not on file'}[s] || s; }
+
+// Build a label/icon map by doc_key from all memberships' doc_set_items.
+// doc_set_items.id format is `${setId}__${docKey}`. Prefer the worker's set.
+function buildDocMeta(memberships){
+  const meta = {};   // doc_key -> {name, icon}
+  for(const m of memberships){
+    const setId = m.worker && m.worker.document_set_id;
+    for(const it of (m.doc_set_items||[])){
+      const key = String(it.id||'').includes('__') ? String(it.id).split('__').pop() : it.id;
+      if(!key) continue;
+      const fromWorkerSet = setId && String(it.id||'').startsWith(setId+'__');
+      if(!meta[key] || fromWorkerSet){
+        meta[key] = { name: it.name || key, icon: it.icon || '📄' };
+      }
+    }
+  }
+  return meta;
+}
+
+// ── Boot / auth ────────────────────────────────────────────────────────────
+async function boot(){
+  applyBrand();
+  wireLogin();
+  // detectSessionInUrl handles the magic-link callback; give it a tick.
+  const { data:{ session } } = await sbClient.auth.getSession();
+  if(session){ enterVault(); }
+  else { showLogin(); }
+
+  sbClient.auth.onAuthStateChange((evt, sess) => {
+    if(evt === 'SIGNED_IN' && sess){ enterVault(); }
+    if(evt === 'SIGNED_OUT'){ showLogin(); }
+  });
+}
+
+function showLogin(){
+  $('vault').style.display = 'none';
+  $('loginScreen').style.display = 'flex';
+}
+
+function wireLogin(){
+  const btn = $('sendLinkBtn'), input = $('emailInput'), msg = $('loginMsg');
+  // Pre-fill email from ?email= (e.g. when an org invite links here).
+  const qEmail = new URLSearchParams(location.search).get('email');
+  if(qEmail) input.value = qEmail;
+
+  function setMsg(text, kind){ msg.textContent = text; msg.className = 'login-msg ' + kind; msg.style.display = text ? 'block' : 'none'; }
+
+  async function send(){
+    const email = (input.value||'').trim();
+    if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setMsg('Please enter a valid email address.', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Sending…'; setMsg('', '');
+    try{
+      const { error } = await sbClient.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: location.origin + location.pathname },
+      });
+      if(error) throw error;
+      setMsg('✓ Check your email — we\'ve sent you a secure sign-in link. You can close this tab; the link opens your vault.', 'ok');
+    }catch(e){
+      setMsg('Could not send link: ' + (e.message||'unknown error'), 'error');
+    }finally{
+      btn.disabled = false; btn.textContent = 'Send me a sign-in link';
+    }
+  }
+  btn.onclick = send;
+  input.onkeydown = (e)=>{ if(e.key==='Enter') send(); };
+  $('signOutBtn').onclick = async ()=>{ await sbClient.auth.signOut(); vaultData = null; };
+
+  document.querySelectorAll('.v-tab').forEach(t=>{
+    t.onclick = ()=>{
+      activeTab = t.dataset.tab;
+      document.querySelectorAll('.v-tab').forEach(x=>x.classList.toggle('active', x===t));
+      renderBody();
+    };
+  });
+}
+
+async function enterVault(){
+  $('loginScreen').style.display = 'none';
+  $('vault').style.display = 'flex';
+  $('vBody').innerHTML = '<div class="v-loading">Loading your vault…</div>';
+  try{
+    // 1. Ensure the portable account exists + auto-link any matching org rows.
+    await sbClient.rpc('ensure_vault_account');
+    // 2. Fetch the merged view across all linked orgs.
+    const { data, error } = await sbClient.rpc('get_vault_portal');
+    if(error) throw error;
+    vaultData = data;
+    const name = (data && data.account && data.account.full_name) || '';
+    $('vWorkerName').textContent = name;
+    renderBody();
+  }catch(e){
+    $('vBody').innerHTML = '<div class="v-empty"><div class="v-empty-icon">⚠️</div>'
+      + 'We couldn\'t load your vault.<br><span style="font-size:12px;">'+esc(e.message||'')+'</span><br><br>'
+      + 'If you were just invited, your records may still be linking. Try signing out and back in, '
+      + 'or contact <a href="mailto:'+BRAND.supportEmail+'">'+BRAND.supportEmail+'</a>.</div>';
+  }
+}
+
+function isPaid(){ return vaultData && vaultData.account && vaultData.account.plan === 'vault'; }
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function renderBody(){
+  if(!vaultData){ return; }
+  if(activeTab === 'docs')        renderDocs();
+  else if(activeTab === 'assignments') renderAssignments();
+  else if(activeTab === 'account')     renderAccount();
+}
+
+function planBanner(){
+  if(isPaid()){
+    return '<div class="v-plan-banner vault">✅ <div>You\'re on <b>Vault</b> — download and share any document, anytime.</div></div>';
+  }
+  return '<div class="v-plan-banner free">'
+    + '<div>🔓 <b>Free plan.</b> You can see all your documents and their status. '
+    + 'Upgrade to <b>Vault</b> to download them and send them to anyone.</div>'
+    + '<button class="v-upgrade-btn" onclick="onUpgrade()">Upgrade</button></div>';
+}
+
+function renderDocs(){
+  const memberships = vaultData.memberships || [];
+  if(!memberships.length){
+    $('vBody').innerHTML = planBanner() + '<div class="v-empty"><div class="v-empty-icon">📭</div>'
+      + 'No linked organisations yet.<br><span style="font-size:12px;">When an employer invites you, your compliance documents appear here.</span></div>';
+    return;
+  }
+  const meta = buildDocMeta(memberships);
+
+  // Merge documents by doc_key across all orgs (smart deduplication).
+  const merged = {};   // doc_key -> { status, orgs:Set, expiry (soonest), hasAny }
+  for(const m of memberships){
+    for(const d of (m.worker_docs||[])){
+      const key = d.doc_key; if(!key) continue;
+      const st = vaultDocStatus(d);
+      if(!merged[key]) merged[key] = { status: st, orgs: new Set(), expiry: d.expiry_date || null };
+      else merged[key].status = betterStatus(merged[key].status, st);
+      merged[key].orgs.add(m.org_name);
+      // keep the soonest expiry for display
+      if(d.expiry_date && (!merged[key].expiry || new Date(d.expiry_date) < new Date(merged[key].expiry))){
+        merged[key].expiry = d.expiry_date;
+      }
+    }
+  }
+
+  const keys = Object.keys(merged);
+  if(!keys.length){
+    $('vBody').innerHTML = planBanner() + '<div class="v-empty"><div class="v-empty-icon">📄</div>No documents on file yet.</div>';
+    return;
+  }
+  // Sort: problems first (missing/expired/expiring), then valid.
+  keys.sort((a,b)=> STATUS_RANK[merged[a].status] - STATUS_RANK[merged[b].status]);
+
+  let html = planBanner();
+  html += '<div class="v-section-title">Compliance documents — verified by your organisations</div>';
+  for(const key of keys){
+    const item = merged[key];
+    const md = meta[key] || { name: key, icon: '📄' };
+    const st = item.status;
+    const orgs = [...item.orgs];
+    html += '<div class="v-doc-row"><div class="v-doc-top">'
+      + '<div class="v-doc-icon">'+esc(md.icon)+'</div>'
+      + '<div class="v-doc-info">'
+      +   '<div class="v-doc-name">'+esc(md.name)+'</div>'
+      +   (item.expiry ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(item.expiry))+'</div>' : '')
+      +   '<div class="v-doc-orgs">Recognised by: '+orgs.map(o=>'<span class="v-org-chip">'+esc(o)+'</span>').join('')+'</div>'
+      +   '<div class="v-verified-badge">✓ Verified by organisation</div>'
+      +   downloadBtn(key, md.name)
+      + '</div>'
+      + '<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>'
+      + '</div></div>';
+  }
+  html += '<div class="v-disclaimer">Status reflects the expiry date on file. Documents you submitted to an employer stay in your vault even if the employer removes their copy — but it\'s up to you to upload a renewed version when one expires.</div>';
+  $('vBody').innerHTML = html;
+}
+
+function downloadBtn(key, name){
+  if(isPaid()){
+    return '<button class="v-download-btn" onclick="onDownload(\''+esc(key)+'\')">⬇ Download</button>';
+  }
+  return '<button class="v-download-btn locked" onclick="onUpgrade()">🔒 Download (Vault plan)</button>';
+}
+
+function renderAssignments(){
+  const memberships = vaultData.memberships || [];
+  const rows = [];
+  for(const m of memberships){
+    for(const a of (m.assignments||[])){
+      rows.push({ ...a, org_name: m.org_name });
+    }
+  }
+  rows.sort((a,b)=> new Date(b.start_date||0) - new Date(a.start_date||0));
+
+  let html = planBanner();
+  if(!rows.length){
+    html += '<div class="v-empty"><div class="v-empty-icon">📋</div>No assignments yet.<br>'
+      + '<span style="font-size:12px;">Project assignments from your employers appear here.</span></div>';
+    $('vBody').innerHTML = html;
+    return;
+  }
+  html += '<div class="v-section-title">Your assignments &amp; contracts</div>';
+  for(const a of rows){
+    const signed = a.signature_status === 'signed';
+    let flag;
+    if(signed) flag = '<span class="v-contract-flag signed">✓ Signed contract</span>';
+    else if(a.has_contract) flag = '<span class="v-contract-flag present">📄 Contract on file</span>';
+    else flag = '<span class="v-contract-flag missing">⚠ Missing contract</span>';
+
+    const period = esc(fmtDate(a.start_date)) + (a.end_date ? ' – ' + esc(fmtDate(a.end_date)) : ' – ongoing');
+    html += '<div class="v-assign-card">'
+      + '<div class="v-assign-title">'+esc(a.project_name||'Assignment')+'</div>'
+      + '<div class="v-assign-meta">'+esc(a.org_name)+'<br>'+period+'</div>'
+      + flag
+      + (a.has_contract ? (isPaid()
+            ? '<div>'+'<button class="v-download-btn" onclick="onDownloadContract(\''+esc(a.id)+'\')">⬇ Download contract</button></div>'
+            : '<div><button class="v-download-btn locked" onclick="onUpgrade()">🔒 Download contract (Vault plan)</button></div>')
+          : '')
+      + '</div>';
+  }
+  html += '<div class="v-disclaimer">A permanent record of your engagements across all your employers — handy for proving your work history.</div>';
+  $('vBody').innerHTML = html;
+}
+
+function renderAccount(){
+  const acc = vaultData.account || {};
+  const orgCount = (vaultData.memberships||[]).length;
+  let html = planBanner();
+  html += '<div class="v-card">'
+    + '<h3>Your account</h3>'
+    + '<div class="v-kv"><span class="v-kv-label">Email</span><span class="v-kv-val">'+esc(acc.email||'')+'</span></div>'
+    + '<div class="v-kv"><span class="v-kv-label">Name</span><span class="v-kv-val">'+esc(acc.full_name||'—')+'</span></div>'
+    + '<div class="v-kv"><span class="v-kv-label">Plan</span><span class="v-kv-val">'+(isPaid()?'Vault':'Free')+'</span></div>'
+    + '<div class="v-kv"><span class="v-kv-label">Linked organisations</span><span class="v-kv-val">'+orgCount+'</span></div>'
+    + '</div>';
+
+  if(!isPaid()){
+    html += '<div class="v-card">'
+      + '<h3>Upgrade to Vault</h3>'
+      + '<p>Own your compliance documents for life. With Vault you can:</p>'
+      + '<p>⬇ &nbsp;Download every approved document and contract</p>'
+      + '<p>📤 &nbsp;Send your documents to a new employer or accountant in seconds</p>'
+      + '<p>🗂️ &nbsp;Add your own personal documents and track their expiry dates</p>'
+      + '<button class="v-upgrade-btn" style="margin-top:6px;" onclick="onUpgrade()">Upgrade now</button>'
+      + '</div>';
+  }
+  html += '<div class="v-card"><h3>Your organisations</h3>'
+    + ((vaultData.memberships||[]).map(m=>'<div class="v-kv"><span class="v-kv-label">'+esc(m.org_name)+'</span><span class="v-kv-val">linked</span></div>').join('') || '<p>No linked organisations yet.</p>')
+    + '</div>';
+  $('vBody').innerHTML = html;
+}
+
+// ── Actions (download/upgrade are Phase 2 — gated for now) ──────────────────
+function onUpgrade(){
+  alert('Vault subscriptions are coming soon. We\'ll email you at '
+    + ((vaultData&&vaultData.account&&vaultData.account.email)||'your address')
+    + ' when you can upgrade.\n\nQuestions? ' + BRAND.salesEmail);
+}
+function onDownload(){ alert('Downloads unlock with the Vault plan.'); }
+function onDownloadContract(){ alert('Downloads unlock with the Vault plan.'); }
+</script>
+</body>
+</html>
