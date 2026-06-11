@@ -552,6 +552,7 @@ function wireLogin(){
   const qEmail = new URLSearchParams(location.search).get('email') || '';
   $('signOutBtn').onclick = async ()=>{ await sbClient.auth.signOut(); vaultData=null; };
   renderLoginForm(qEmail);
+  wireTabNav();
 }
 
 function renderLoginForm(prefillEmail, prefillMsg, prefillMsgKind){
@@ -703,11 +704,11 @@ async function sendMagicLink(){
   finally{ if(btn){ btn.disabled=false; btn.textContent='Send magic link'+((_loginMode==='forgot')?'instead':''); } }
 }
 
+function wireTabNav(){
   document.querySelectorAll('.v-tab').forEach(t=>{
     t.onclick = ()=>{
       const prev = activeTab;
       activeTab = t.dataset.tab;
-      // Reset org expand state when re-entering Documents tab
       if(prev !== 'docs' && activeTab === 'docs'){ _orgsInitialized = false; }
       document.querySelectorAll('.v-tab').forEach(x=>x.classList.toggle('active', x===t));
       renderBody();
