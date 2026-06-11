@@ -115,7 +115,7 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 
 /* ── Org sections ── */
 .v-org-section{margin-bottom:32px;}
-.v-org-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,#f5f3ff,#f8fafc);border-radius:12px;border:1px solid #ddd6fe;margin-bottom:14px;cursor:default;}
+.v-org-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(90deg,#f5f3ff,#f8fafc);border-radius:12px;border:1px solid #ddd6fe;margin-bottom:14px;cursor:pointer;user-select:none;-webkit-user-select:none;}
 .v-org-header-name{font-size:14px;font-weight:800;color:#1e293b;}
 .v-org-header-sub{font-size:11px;color:#7c3aed;margin-top:2px;font-weight:600;}
 .v-org-header-sub .v-urgent{color:#b91c1c;}
@@ -127,6 +127,9 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-cat-header.cat-optional{color:#94a3b8;}
 .v-doc-urgent{border-left:3px solid #fca5a5;}
 .v-doc-expiring{border-left:3px solid #fde68a;}
+.v-org-chevron{font-size:13px;margin-left:auto;color:#7c3aed;flex-shrink:0;transition:transform .2s;}
+.v-org-filter-bar{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-bottom:6px;}
+.v-org-filter-bar::-webkit-scrollbar{display:none;}
 
 /* ── Assignments ── */
 .v-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .15s,box-shadow .15s;}
@@ -213,6 +216,15 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-empty-icon{font-size:38px;margin-bottom:12px;}
 .v-loading{text-align:center;padding:60px 16px;color:#94a3b8;font-size:14px;}
 .v-disclaimer{font-size:11px;color:#94a3b8;line-height:1.55;margin-top:16px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #eef2f7;}
+
+/* ── Mobile: prevent iOS zoom + stack date row ── */
+@media(max-width:600px){
+  .v-sf-field input,.v-sf-field select,
+  .v-profile-field input,.v-profile-field textarea,
+  .v-field input,.v-field select,
+  #emailInput{font-size:16px!important;}
+  .v-sf-row{flex-direction:column;gap:0;}
+}
 </style>
 </head>
 <body>
@@ -301,10 +313,12 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const SB_BUCKET     = 'tmc-documents';
 const WARNING_DAYS  = 60;
 
-let sbClient  = null;
-let vaultData = null;
-let activeTab = 'docs';
-let docFilter = 'all';
+let sbClient     = null;
+let vaultData    = null;
+let activeTab    = 'docs';
+let docFilter    = 'all';
+let expandedOrgs = new Set();
+let orgFilters   = {};
 
 // ── Load supabase-js ────────────────────────────────────────────────────────
 (function(){
@@ -489,8 +503,16 @@ function planBanner(){
 }
 
 // ── DOCUMENTS TAB ────────────────────────────────────────────────────────────
-function setDocFilter(f){
-  docFilter = f;
+function setDocFilter(f){ docFilter = f; renderDocs(); }
+
+function toggleOrg(orgIdx){
+  if(expandedOrgs.has(orgIdx)) expandedOrgs.delete(orgIdx);
+  else expandedOrgs.add(orgIdx);
+  renderDocs();
+}
+
+function setOrgFilter(orgIdx, f){
+  orgFilters[orgIdx] = f;
   renderDocs();
 }
 
@@ -505,101 +527,93 @@ function renderDocs(){
   // Pre-categorize all orgs
   const orgData = memberships.map((m, orgIdx) => ({ m, orgIdx, ...categorizeMembership(m) }));
 
-  // Count totals across all orgs for filter chips
-  let cnt = { missing:0, expiring:0, expired:0, valid:0, optional:0 };
-  for(const d of orgData){
-    cnt.missing  += d.reqMissing.length;
-    cnt.expired  += d.expired.length;
-    cnt.expiring += d.expiring.length;
-    cnt.valid    += d.valid.length;
-    cnt.optional += d.optMissing.length;
+  // Expand all orgs on first render
+  if(expandedOrgs.size === 0){
+    orgData.forEach(d => expandedOrgs.add(d.orgIdx));
   }
-  const cntAll = cnt.missing + cnt.expired + cnt.expiring + cnt.valid + cnt.optional;
-
-  const fc = (f, label, n) => {
-    const a = docFilter===f ? ' active' : '';
-    return '<button class="v-filter-chip'+a+'" onclick="setDocFilter(\''+f+'\')">'+label+(n ? '<span class="vc">'+n+'</span>' : '')+'</button>';
-  };
 
   let html = planBanner();
-  html += '<div class="v-filter-bar">'
-    + fc('all','All',cntAll)
-    + fc('missing','Missing',cnt.missing)
-    + fc('expiring','Expiring',cnt.expiring)
-    + fc('expired','Expired',cnt.expired)
-    + fc('valid','Valid',cnt.valid)
-    + fc('optional','Optional',cnt.optional)
-    + '</div>';
 
-  let anyShown = false;
   for(const {m, orgIdx, reqMissing, expired, expiring, valid, optMissing} of orgData){
-    // Determine items to show based on filter
-    let groups;
-    if(docFilter==='all'){
-      groups = [
-        {label:'⚠ Required — not on file', cls:'cat-action', items:reqMissing, variant:'urgent'},
-        {label:'✕ Expired',                cls:'cat-action', items:expired,    variant:'urgent'},
-        {label:'🕐 Expiring soon',          cls:'cat-expiring', items:expiring,  variant:'expiring'},
-        {label:'✓ Valid',                   cls:'cat-valid',   items:valid,     variant:''},
-        {label:'○ Optional — not on file', cls:'cat-optional', items:optMissing, variant:''},
-      ];
-    } else if(docFilter==='missing'){
-      groups = [{label:'⚠ Required — not on file', cls:'cat-action', items:reqMissing, variant:'urgent'}];
-    } else if(docFilter==='expired'){
-      groups = [{label:'✕ Expired', cls:'cat-action', items:expired, variant:'urgent'}];
-    } else if(docFilter==='expiring'){
-      groups = [{label:'🕐 Expiring soon', cls:'cat-expiring', items:expiring, variant:'expiring'}];
-    } else if(docFilter==='valid'){
-      groups = [{label:'✓ Valid', cls:'cat-valid', items:valid, variant:''}];
-    } else if(docFilter==='optional'){
-      groups = [{label:'○ Optional — not on file', cls:'cat-optional', items:optMissing, variant:''}];
-    }
-
-    const totalVisible = groups.reduce((s,g)=>s+g.items.length, 0);
-    if(!totalVisible && docFilter!=='all') continue;
-    anyShown = true;
-
     const totalReq  = (m.doc_set_items||[]).filter(it=>it.required!==false).length;
     const urgentCnt = reqMissing.length + expired.length;
+    const isExpanded = expandedOrgs.has(orgIdx);
 
     // Build lookups for this org
-    const submByKey = {};
-    for(const s of (m.submissions||[])){
-      if(!submByKey[s.doc_key]) submByKey[s.doc_key] = s;
-    }
-    const issuedByKey = {};
-    for(const d of (m.issued_docs||[])){
-      if(!issuedByKey[d.doc_key]) issuedByKey[d.doc_key] = d;
-    }
-    const filesByKey = {};
-    for(const f of (m.worker_doc_files||[])){
-      if(!filesByKey[f.doc_key]) filesByKey[f.doc_key] = f;
-    }
+    const submByKey = {}, issuedByKey = {}, filesByKey = {};
+    for(const s of (m.submissions||[])) if(!submByKey[s.doc_key]) submByKey[s.doc_key] = s;
+    for(const d of (m.issued_docs||[])) if(!issuedByKey[d.doc_key]) issuedByKey[d.doc_key] = d;
+    for(const f of (m.worker_doc_files||[])) if(!filesByKey[f.doc_key]) filesByKey[f.doc_key] = f;
 
-    html += '<div class="v-org-section">'
-      +'<div class="v-org-header"><span style="font-size:22px;">🏢</span><div>'
+    html += '<div class="v-org-section">';
+
+    // Clickable org header
+    html += '<div class="v-org-header" onclick="toggleOrg('+orgIdx+')">'
+      +'<span style="font-size:22px;flex-shrink:0;">🏢</span>'
+      +'<div style="flex:1;min-width:0;">'
       +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
-      +'<div class="v-org-header-sub">'
-      +  totalReq+' required · '+valid.length+' valid'
-      +  (urgentCnt ? ' · <span class="v-urgent">'+urgentCnt+' need attention</span>' : '')
-      +'</div></div></div>';
+      +'<div class="v-org-header-sub">'+totalReq+' required · '+valid.length+' valid'
+      +(urgentCnt ? ' · <span class="v-urgent">'+urgentCnt+' need attention</span>' : '')
+      +'</div></div>'
+      +'<span class="v-org-chevron">'+(isExpanded?'▾':'▸')+'</span>'
+      +'</div>';
 
-    if(!totalVisible && docFilter==='all'){
-      html += '<p style="font-size:13px;color:#94a3b8;padding:4px 0 4px;">No documents on record yet for this employer.</p>';
-    } else {
-      for(const g of groups){
-        if(!g.items.length) continue;
-        html += '<div class="v-cat-header '+g.cls+'">'+g.label+'</div>';
-        for(const item of g.items){
-          html += docCard(item, g.variant, orgIdx, submByKey, issuedByKey, filesByKey);
+    if(isExpanded){
+      const f = orgFilters[orgIdx] || 'all';
+      const allCnt = reqMissing.length + expired.length + expiring.length + valid.length + optMissing.length;
+
+      // Per-org filter chips
+      const ofc = (fval, label, cnt) => {
+        const a = f===fval ? ' active' : '';
+        const cs = cnt ? '<span class="vc">'+cnt+'</span>' : '';
+        return '<button class="v-filter-chip'+a+'" onclick="setOrgFilter('+orgIdx+',\''+fval+'\');event.stopPropagation()">'+label+cs+'</button>';
+      };
+      html += '<div class="v-org-filter-bar">'
+        + ofc('all','All',allCnt)
+        + ofc('attention','Needs attention',urgentCnt)
+        + ofc('expiring','Expiring',expiring.length)
+        + ofc('valid','Valid',valid.length)
+        + ofc('optional','Optional',optMissing.length)
+        + '</div>';
+
+      // Build doc groups based on per-org filter
+      let groups;
+      if(f==='all'){
+        groups = [
+          {label:'⚠ Required — not on file', cls:'cat-action',   items:reqMissing, variant:'urgent'},
+          {label:'✕ Expired',                cls:'cat-action',   items:expired,    variant:'urgent'},
+          {label:'🕐 Expiring soon',          cls:'cat-expiring', items:expiring,   variant:'expiring'},
+          {label:'✓ Valid',                   cls:'cat-valid',   items:valid,       variant:''},
+          {label:'○ Optional — not on file', cls:'cat-optional', items:optMissing,  variant:''},
+        ];
+      } else if(f==='attention'){
+        groups = [
+          {label:'⚠ Required — not on file', cls:'cat-action', items:reqMissing, variant:'urgent'},
+          {label:'✕ Expired',                cls:'cat-action', items:expired,    variant:'urgent'},
+        ];
+      } else if(f==='expiring'){
+        groups = [{label:'🕐 Expiring soon', cls:'cat-expiring', items:expiring, variant:'expiring'}];
+      } else if(f==='valid'){
+        groups = [{label:'✓ Valid', cls:'cat-valid', items:valid, variant:''}];
+      } else if(f==='optional'){
+        groups = [{label:'○ Optional — not on file', cls:'cat-optional', items:optMissing, variant:''}];
+      }
+
+      const totalVisible = groups.reduce((s,g)=>s+g.items.length, 0);
+      if(!totalVisible){
+        html += '<p style="font-size:13px;color:#94a3b8;padding:4px 2px 12px;">'
+          +(f==='all' ? 'No documents on record yet for this employer.' : 'No documents in this category.')
+          +'</p>';
+      } else {
+        for(const g of groups){
+          if(!g.items.length) continue;
+          html += '<div class="v-cat-header '+g.cls+'">'+g.label+'</div>';
+          for(const item of g.items) html += docCard(item, g.variant, orgIdx, submByKey, issuedByKey, filesByKey);
         }
       }
     }
-    html += '</div>';
-  }
 
-  if(!anyShown && docFilter!=='all'){
-    html += '<div class="v-empty"><div class="v-empty-icon">✓</div>No documents in this category.</div>';
+    html += '</div>'; // end v-org-section
   }
 
   html += '<div class="v-disclaimer">Status reflects the expiry date on file with your employer. Submit updated documents when yours expire.</div>';
