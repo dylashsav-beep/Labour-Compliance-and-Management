@@ -74,9 +74,14 @@ Deno.serve(async (req) => {
     }
 
     // Create the subscription Checkout session.
+    // iDEAL is included for NL customers; Stripe automatically converts it to a
+    // SEPA Direct Debit mandate so recurring charges work after the first payment.
     const session = await stripe('checkout/sessions', {
       mode: 'subscription',
       customer: customerId,
+      'payment_method_types[0]': 'card',
+      'payment_method_types[1]': 'ideal',
+      'payment_method_types[2]': 'sepa_debit',
       'line_items[0][price]': VAULT_PRICE_ID,
       'line_items[0][quantity]': '1',
       client_reference_id: user.id,
