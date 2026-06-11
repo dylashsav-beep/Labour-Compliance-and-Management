@@ -424,8 +424,13 @@ let docFilter       = 'all';
 let expandedOrgs    = new Set();
 let orgFilters      = {};
 let _orgsInitialized = false;  // prevents re-expand when all orgs are collapsed
+let _loginMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'setpw'
 
 // ── Load supabase-js ────────────────────────────────────────────────────────
+// Render the login form immediately (before Supabase loads) so it's always visible.
+// boot() later re-renders to pick up email prefill from query string.
+renderLoginForm('');
+
 (function(){
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
@@ -434,6 +439,10 @@ let _orgsInitialized = false;  // prevents re-expand when all orgs are collapsed
       auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storage:window.localStorage, flowType:'pkce' },
     });
     boot();
+  };
+  s.onerror = () => {
+    // CDN failed — form is already rendered, show a warning
+    setLoginMsg('Could not connect to auth service. Please refresh the page.','error');
   };
   document.head.appendChild(s);
 })();
@@ -538,8 +547,6 @@ function showLogin(){
   $('vault').style.display = 'none';
   $('loginScreen').style.display = 'flex';
 }
-
-let _loginMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'setpw'
 
 function wireLogin(){
   const qEmail = new URLSearchParams(location.search).get('email') || '';
