@@ -1039,14 +1039,28 @@ function toggleInfoPanel(id){
 }
 
 function humanizeDocKey(key){
+  // Canonical doc key → friendly name (sourced from document_set_items)
   const map = {
-    bsn:'BSN', cbsn:'CBSN', vca:'VCA', vog:'VOG', vca_vol:'VCA Vol',
-    passport:'Passport', id_card:'ID Card', iban:'IBAN',
-    aansp:'Liability Insurance', payroll:'Payroll Statement',
-    twv:'TWV Work Permit', scc:'SCC', bls:'BLS', ers:'ERS',
-    id:'ID Document', dl:"Driver's License"
+    bsn:'BSN Verification', id:'Valid ID', contract:'Employment Contract',
+    vca:'VCA Certificate', vca_vol:'VCA VOL Certificate', vog:'Certificate of Conduct',
+    kvk:'KvK Registration', payroll:'Payroll Registration', wml:'Minimum Wage Check',
+    rie:'RI&E', scc:'SCC/VCA Certificate', model:'Model Agreement', dba:'ZZP Assessment',
+    limosa:'LIMOSA Declaration', dimona:'DIMONA Declaration', niss:'NISS Verification',
+    onss:'ONSS/RSZ Registration', first_aid:'First Aid Certificate', cao:'CAO Confirmation',
+    a1:'A1 Certificate', btw:'VAT Number', bhv:'BHV Certificate', aansp:'Other Insurances',
+    pc_cao:'Joint Committee (PC/CAO)', single_permit:'Single Permit', ra:'Risk Analysis (RA)',
+    min_wage:'Minimum Wage Check', work_permit:'Work Permit', iban:'IBAN',
+    arbo:'Certificates', svnr:'SV-Nummer Verification', zko:'ZKO Declaration',
+    kv:'Kollektivvertrag (KV)', ogk:'ÖGK Registration', auva:'AUVA Registration',
+    buak:'BUAK Registration', erste_hilfe:'First Aid (Erste Hilfe)',
+    sicherheit:'Safety Induction', cpc_cao:'Joint Committee (PC/CAO)',
   };
   if(map[key]) return map[key];
+  // Strip legacy copy-prefix 'c' chars from doc-set-copy artifacts (e.g. cbsn → bsn, ccvca → vca)
+  // Timestamp-based custom keys (c1779...) start with 'c' then digits — never strip those
+  const stripped = key.replace(/^c+/, '');
+  if(stripped !== key && stripped.length > 0 && !/^\d/.test(stripped) && map[stripped]) return map[stripped];
+  if(/^c\d{10,}$/.test(key)) return 'Custom Document';
   return key.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
 }
 
@@ -1698,13 +1712,18 @@ function shareableItems(){
   const out = { byOrg:[], contracts:[], personal:[] };
   const seenKeys = new Set();
   for(const m of memberships){
+    // Build file path lookup from worker_doc_files for direct signed-URL preview
+    const filePathByKey = {};
+    for(const f of (m.worker_doc_files||[])) if(f.doc_key && f.file_path) filePathByKey[f.doc_key] = { path:f.file_path, name:f.file_name||f.file_path.split('/').pop() };
     const orgDocs = [];
     for(const d of (m.worker_docs||[])){
       if(!d.doc_key || !d.has_file || seenKeys.has(d.doc_key)) continue;
       seenKeys.add(d.doc_key);
+      const fp = filePathByKey[d.doc_key];
       orgDocs.push({ type:'document', doc_key:d.doc_key,
         label: nameMap[d.doc_key] || humanizeDocKey(d.doc_key),
-        status: vaultDocStatus(d) });
+        status: vaultDocStatus(d),
+        file_path: fp && fp.path, file_name: fp && fp.name });
     }
     if(orgDocs.length) out.byOrg.push({ org_name:m.org_name, docs:orgDocs });
     for(const a of (m.assignments||[])){
@@ -1716,7 +1735,8 @@ function shareableItems(){
     if(d.active===false || d.source==='org_approved') continue;
     out.personal.push({ type:'vault_doc', vault_doc_id:d.id,
       label:d.display_name||d.file_name||'Document',
-      status:fileStatusByExpiry(d.expiry_date) });
+      status:fileStatusByExpiry(d.expiry_date),
+      file_path: d.file_path, file_name: d.file_name||d.display_name });
   }
   return out;
 }
@@ -1747,19 +1767,20 @@ async function quickPreviewDoc(shareId, ev){
   const it = window._shareMap && window._shareMap[shareId];
   if(!it) return;
   const btn = document.querySelector('[data-preview="'+shareId+'"]');
-  if(btn){ btn.disabled=true; }
+  if(btn) btn.disabled = true;
   try{
-    const payload = it.type==='document' ? { type:'document', doc_key:it.doc_key }
-      : it.type==='contract' ? { type:'contract', assignment_id:it.assignment_id }
-      : { type:'vault_doc', vault_doc_id:it.vault_doc_id };
-    const res = await callFn('get-vault-file', payload);
-    if(res && res.url) window.open(res.url, '_blank');
-    else alert('Preview not available.');
+    if(it.file_path){
+      // Direct signed URL — works for org docs and personal vault docs without edge function
+      await previewFile(it.file_path, it.file_name||it.label);
+    } else if(it.type==='contract'){
+      alert('Contract preview is not available. The file will be included when you send.');
+    } else {
+      alert('Preview not available for this document.');
+    }
   }catch(e){
-    if(e && e.status===402) alert('Vault plan required for previews.');
-    else alert('Could not open: '+(e&&e.message||'unknown error'));
+    alert('Could not open: '+(e&&e.message||'unknown error'));
   }finally{
-    if(btn){ btn.disabled=false; }
+    if(btn) btn.disabled = false;
   }
 }
 
