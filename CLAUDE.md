@@ -641,6 +641,83 @@ If login or saving ever starts feeling slow as you grow, that is the signal to r
 
 ---
 
+## Mobile UI Standards — Apple HIG (vault.html + any future mobile-first UI)
+
+These rules are hard constraints, not suggestions. Apply them automatically on every UI change without waiting to be asked. The reference is Apple's Human Interface Guidelines; the target aesthetic is Revolut / Stripe / Linear — premium, calm, typographically confident.
+
+### Touch & Tap Targets
+- **Minimum 44×44 px** for every interactive element: buttons, checkboxes, tappable rows, icon-only actions
+- Use `min-height:44px` on all buttons and tappable list rows
+- Tappable rows must span full width — never require tapping a small icon inside a row
+- Fixed bottom elements must include `padding-bottom: env(safe-area-inset-bottom)` for iPhone home indicator
+
+### Typography
+- Minimum sizes: **11px** captions/labels · **13px** secondary text · **15–17px** primary content
+- **Never below 16px on any `<input>` or `<textarea>`** — iOS auto-zooms on anything smaller (already enforced via media query)
+- Font-weight hierarchy: **800** headings · **700** subheadings · **600** labels · **400–500** body
+- Line-height: 1.4–1.6 body · 1.2–1.3 headings
+- Tight letter-spacing (–0.02em) on large bold headings only
+
+### Colour & Contrast
+- **WCAG AA minimum**: 4.5:1 contrast for normal text, 3:1 for large text (18 px+ or 14 px bold)
+- Colour reinforces meaning but is **never the only indicator** — always pair with a label or icon
+- **Limit accent colour to 2–3 uses per screen** — when everything is purple, nothing is purple
+- Semantic palette: green = valid/success · amber = warning/expiring · red = error/missing · grey = inactive/optional
+
+### Layout & Spacing
+- Minimum **16px horizontal padding** from screen edges
+- Card border-radius: **12–16 px** (12 px feels premium; below 8 px feels dated on mobile)
+- Consistent vertical rhythm based on an **8 px grid** (gap:8, margin:16, padding:24)
+- Safe area: `padding-bottom: env(safe-area-inset-bottom)` on any fixed bottom bar
+
+### Icons — MANDATORY
+- **Never use emoji for functional UI chrome** (buttons, status, section headers, navigation, form actions)
+- Use a **single icon library at a consistent stroke-weight** — project standard is **Lucide Icons (2 px stroke)**
+- Icon sizes: 16 px inline with text · 18 px beside content · 20–22 px as primary card icon
+- Icons **always inherit `currentColor`** — never hardcode a colour on an SVG icon
+- **Always pair icons with a text label** unless the action is universally understood (✕ close is fine alone)
+- Emoji acceptable only in: empty-state illustrations, marketing copy, brand logo placeholder
+
+### Status Indicators
+- Use a **6–8 px coloured dot** (`.v-sdot`) for inline status — pill/badge boxes are a dashboard pattern, not premium mobile
+- Loading: spinner or skeleton — never leave a blank white screen
+- Success: brief inline confirmation (checkmark + text), not a blocking `alert()`
+- Errors: inline below the relevant field where possible, not blocking alerts
+
+### Modals & Sheets
+- **Bottom sheet** (slides up from bottom) for mobile — not centred dialogs ← vault already correct
+- Sheet max-height **88vh** to keep visible backdrop for easy dismissal ← vault already correct
+- Always provide an explicit close/cancel — never rely on backdrop-only dismissal
+- Primary action belongs in the **sheet footer** (sticky if content scrolls)
+- Scrollable content + sticky footer: wrap content in `overflow-y:auto` div; footer is `border-top` + `padding-top`
+
+### Buttons
+- **One primary (filled) button per screen/modal** — everything else is secondary (ghost) or tertiary (text only)
+- Labels: **verb-noun format** ("Download document", "Send documents") — avoid "OK", "Submit", "Confirm"
+- Disabled state: `opacity:0.45` + `cursor:not-allowed` — visually unambiguous
+- Primary buttons: **full-width on mobile** (`width:100%`)
+- Minimum height **44 px** on all buttons
+
+### Lists & Rows
+- Minimum **44 px row height** for any tappable row
+- Standard row anatomy: **left avatar/icon → main content → right value/chevron**
+- Use `border-bottom:1px solid #f1f5f9` or card grouping for separators — never heavy borders
+- Disclosure chevron (›) on rows that navigate deeper
+
+### Navigation
+- Tab bar at bottom is the correct iOS primary navigation pattern ← vault already correct
+- Maximum **5 tabs** — consolidate before adding more
+- Tab labels: 1–2 words, paired with an icon in native; text-only tabs are acceptable in web apps
+- Active tab: accent colour; inactive: `#64748b` ← vault already correct
+
+### Org/Contact Avatars (replacing emoji)
+- Use a **rounded square with 2-letter initials** instead of 🏢 for organisations
+- Background: `var(--accent)` with white text, or a tinted version (`rgba(124,58,237,.12)` bg + `var(--accent)` text)
+- Size: **36–40 px**, `border-radius:10px` for orgs/companies · `border-radius:50%` for people
+- Derive initials from first letter of first two words in the name
+
+---
+
 ## Lessons Learnt & Bug Fixes Log
 
 ### 1. Demo Mode — Filter Button UI Not Updating

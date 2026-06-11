@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Work Force Vault — My Documents</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -217,13 +218,47 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-loading{text-align:center;padding:60px 16px;color:#94a3b8;font-size:14px;}
 .v-disclaimer{font-size:11px;color:#94a3b8;line-height:1.55;margin-top:16px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #eef2f7;}
 
-/* ── Mobile: prevent iOS zoom + stack date row ── */
+/* ── Org avatar (initials circle) ── */
+.v-org-avatar{width:38px;height:38px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;letter-spacing:-.01em;flex-shrink:0;user-select:none;}
+.v-org-avatar.tint{background:rgba(124,58,237,.12);color:var(--accent);}
+
+/* ── Status dot (replaces pill boxes) ── */
+.v-sdot{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+.v-sdot::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.v-sdot.ok{color:#166534;}.v-sdot.ok::before{background:#22c55e;}
+.v-sdot.expiring{color:#92400e;}.v-sdot.expiring::before{background:#f59e0b;}
+.v-sdot.expired{color:#991b1b;}.v-sdot.expired::before{background:#ef4444;}
+.v-sdot.missing{color:#991b1b;}.v-sdot.missing::before{background:#ef4444;}
+
+/* ── Lucide icon sizing ── */
+[data-lucide]{pointer-events:none;display:inline-block;vertical-align:middle;}
+
+/* ── Improved download/action buttons ── */
+.v-action-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:9px 16px;background:#f5f3ff;color:var(--accent);border:1.5px solid #ddd6fe;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;transition:background .15s;}
+.v-action-btn:active{background:#ede9fe;}
+.v-action-btn.locked{background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;cursor:pointer;}
+
+/* ── Share modal rows ── */
+.v-share-section{margin-bottom:20px;}
+.v-share-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;}
+.v-share-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;}
+.v-share-selectall{font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 0;min-height:auto;}
+.v-share-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;margin-bottom:4px;cursor:pointer;border:1px solid #f1f5f9;background:#fff;transition:border-color .12s;}
+.v-share-row:hover{border-color:#ddd6fe;background:#fdfcff;}
+.v-share-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);cursor:pointer;margin:0;}
+.v-sr-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#f1f5f9;color:#64748b;}
+.v-sr-main{flex:1;min-width:0;}
+.v-sr-name{font-size:14px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.v-modal-scroll{overflow-y:auto;max-height:50vh;padding-right:2px;}
+.v-modal-footer{border-top:1px solid #e2e8f0;padding-top:14px;margin-top:8px;}
+
+/* ── Mobile: prevent iOS zoom + stack date rows ── */
 @media(max-width:600px){
   .v-sf-field input,.v-sf-field select,
   .v-profile-field input,.v-profile-field textarea,
   .v-field input,.v-field select,
   #emailInput{font-size:16px!important;}
-  .v-sf-row{flex-direction:column;gap:0;}
+  .v-sf-row,.v-field-row{flex-direction:column;gap:0;}
 }
 </style>
 </head>
@@ -307,6 +342,28 @@ const BRAND = {
   salesEmail:   'sales@work-force.nl',
   accentColor:  '#7c3aed',
 };
+
+// ── UI helpers ──────────────────────────────────────────────────────────────
+function icon(name, size=16){
+  return `<i data-lucide="${name}" style="width:${size}px;height:${size}px;"></i>`;
+}
+function orgAvatar(name, tint=false){
+  const words = (name||'?').trim().split(/\s+/);
+  const initials = words.length>=2 ? words[0][0]+words[1][0] : (words[0]||'?').slice(0,2);
+  return `<div class="v-org-avatar${tint?' tint':''}">${esc(initials.toUpperCase())}</div>`;
+}
+function statusDot(status){
+  const labels={ok:'Valid',expiring:'Expiring soon',expired:'Expired',missing:'Not on file'};
+  return `<span class="v-sdot ${status}">${labels[status]||status}</span>`;
+}
+function setBody(html){
+  $('vBody').innerHTML = html;
+  if(window.lucide) lucide.createIcons();
+}
+function setModal(html){
+  $('vModal').innerHTML = html;
+  if(window.lucide) lucide.createIcons();
+}
 
 const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
@@ -494,12 +551,16 @@ function renderBody(){
 
 function planBanner(){
   if(isPaid()){
-    return '<div class="v-plan-banner vault">✅ <div>You\'re on <b>Vault</b> — download and share any document, anytime.</div>'
-      +'<button class="v-upgrade-btn" onclick="openShareModal()">📤 Share</button></div>';
+    return '<div class="v-plan-banner vault">'+icon('shield-check',16)
+      +' <div>You\'re on <b>Vault</b> — download and share any document, anytime.</div>'
+      +'<button class="v-upgrade-btn" onclick="openShareModal()" style="display:inline-flex;align-items:center;gap:6px;">'
+      +icon('share-2',14)+' Share</button></div>';
   }
-  return '<div class="v-plan-banner free"><div>🔓 <b>Free plan.</b> You can see all your documents and their status. '
+  return '<div class="v-plan-banner free">'+icon('lock',16)
+    +' <div><b>Free plan.</b> You can see all your documents and their status. '
     +'Upgrade to <b>Vault</b> to download them and send them to anyone.</div>'
-    +'<button class="v-upgrade-btn" onclick="onUpgrade()">Upgrade</button></div>';
+    +'<button class="v-upgrade-btn" onclick="onUpgrade()" style="display:inline-flex;align-items:center;gap:6px;">'
+    +icon('arrow-up-right',14)+' Upgrade</button></div>';
 }
 
 // ── DOCUMENTS TAB ────────────────────────────────────────────────────────────
@@ -549,13 +610,13 @@ function renderDocs(){
 
     // Clickable org header
     html += '<div class="v-org-header" onclick="toggleOrg('+orgIdx+')">'
-      +'<span style="font-size:22px;flex-shrink:0;">🏢</span>'
+      + orgAvatar(m.org_name)
       +'<div style="flex:1;min-width:0;">'
       +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
       +'<div class="v-org-header-sub">'+totalReq+' required · '+valid.length+' valid'
       +(urgentCnt ? ' · <span class="v-urgent">'+urgentCnt+' need attention</span>' : '')
       +'</div></div>'
-      +'<span class="v-org-chevron">'+(isExpanded?'▾':'▸')+'</span>'
+      + icon(isExpanded?'chevron-down':'chevron-right', 18)
       +'</div>';
 
     if(isExpanded){
@@ -617,7 +678,7 @@ function renderDocs(){
   }
 
   html += '<div class="v-disclaimer">Status reflects the expiry date on file with your employer. Submit updated documents when yours expire.</div>';
-  $('vBody').innerHTML = html;
+  setBody(html);
 }
 
 function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
@@ -629,42 +690,44 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   const issued  = issuedByKey[item.key];
   const orgFile = filesByKey[item.key];
 
-  let inner = '<div class="v-doc-icon">'+esc(item.icon)+'</div>'
+  let inner = '<div class="v-doc-icon" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">'
+    + icon('file-text', 20) + '</div>'
     +'<div class="v-doc-info">'
     +'<div class="v-doc-name">'+esc(item.name)+'</div>'
     +(item.expiry ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(item.expiry))+'</div>' : '');
 
-  // Verified badge + download for org doc
+  // Download for org doc (no redundant "Verified" badge — implied by context)
   if(hasFile){
-    inner += '<div class="v-verified-badge">✓ Verified by organisation</div>';
     if(isPaid() && orgFile){
-      inner += '<div><button class="v-download-btn" onclick="downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name)+'\',event)">⬇ Download</button></div>';
-    } else if(hasFile){
-      inner += '<div><button class="v-download-btn" onclick="onDownload(\''+esc(item.key)+'\',event)">⬇ Download'+(isPaid()?'':' (Vault plan)')+'</button></div>';
+      inner += '<div><button class="v-action-btn" onclick="downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name)+'\',event)">'
+        +icon('download',14)+' Download</button></div>';
+    } else if(!isPaid()){
+      inner += '<div><button class="v-action-btn locked" onclick="onDownload(\''+esc(item.key)+'\',event)">'
+        +icon('lock',14)+' Download — Vault plan</button></div>';
     }
   }
 
   // Issued doc banner (Dropbox Sign)
   if(issued){
     if(issued.status==='pending_signature'||issued.status==='pending'){
-      inner += '<div class="v-issued-banner pending-sig">✏️ Awaiting your signature'
+      inner += '<div class="v-issued-banner pending-sig">'+icon('pen-line',13)+' Awaiting your signature'
         +(issued.signature_request_id?' — check your email for the signing link.':'')+' </div>';
     } else if(issued.status==='signed'||issued.status==='approved'){
-      inner += '<div class="v-issued-banner signed">✅ Signed document on file'
+      inner += '<div class="v-issued-banner signed">'+icon('check-circle-2',13)+' Signed document on file'
         +(isPaid()&&issued.signed_file_path
-          ? ' <button onclick="downloadOrgFile(\''+esc(issued.signed_file_path)+'\',\'signed_doc.pdf\',event)">⬇ Download</button>'
+          ? ' <button onclick="downloadOrgFile(\''+esc(issued.signed_file_path)+'\',\'signed_doc.pdf\',event)">'+icon('download',12)+' Download</button>'
           : '')+'</div>';
     } else if(issued.status==='pending_review'){
-      inner += '<div class="v-issued-banner pending-sig">⏳ Signed — awaiting employer review</div>';
+      inner += '<div class="v-issued-banner pending-sig">'+icon('clock',13)+' Signed — awaiting employer review</div>';
     }
   }
 
   // Submission state
   if(sub){
     if(sub.status==='pending'){
-      inner += '<div class="v-pending-badge">⏳ Submitted — awaiting review</div>';
+      inner += '<div class="v-pending-badge">'+icon('clock',11)+' Submitted — awaiting review</div>';
     } else if(sub.status==='rejected'){
-      inner += '<div class="v-rejected-notice">✕ Rejected'
+      inner += '<div class="v-rejected-notice">'+icon('x-circle',13)+' Rejected'
         +(sub.review_notes ? ' — '+esc(sub.review_notes) : '')
         +'.<br>You can resubmit a corrected document below.</div>';
     }
@@ -672,7 +735,8 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
 
   // Template download
   if(item.template_file_path){
-    inner += '<div><a class="v-tpl-link" href="#" onclick="downloadTemplate(\''+esc(item.template_file_path)+'\',\''+esc(item.template_file_name||'template')+'\');return false;">📋 Download form template</a></div>';
+    inner += '<div><a class="v-tpl-link" href="#" onclick="downloadTemplate(\''+esc(item.template_file_path)+'\',\''+esc(item.template_file_name||'template')+'\');return false;">'
+      +icon('clipboard',12)+' Download form template</a></div>';
   }
 
   // Tip/info
@@ -683,15 +747,16 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   // Submit button (only when not pending review)
   const canSubmit = !(sub && sub.status==='pending');
   if(canSubmit){
-    const btnLabel = hasFile||sub ? '↑ Resubmit' : '↑ Submit document';
     inner += '<div class="v-doc-actions">'
-      +'<button class="v-mini-btn primary" onclick="toggleSubmitForm(\''+sfId+'\')">'+btnLabel+'</button>'
+      +'<button class="v-mini-btn primary" onclick="toggleSubmitForm(\''+sfId+'\')">'
+      + icon(hasFile||sub?'upload':'upload', 13) + (hasFile||sub?' Resubmit':' Submit document')
+      +'</button>'
       +'</div>';
     inner += buildSubmitForm(sfId, orgIdx, item.key);
   }
 
   inner += '</div>';
-  inner += '<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>';
+  inner += statusDot(st);
   return '<div class="v-doc-row'+cls+'"><div class="v-doc-top">'+inner+'</div></div>';
 }
 
@@ -803,7 +868,7 @@ function renderAssignments(){
   if(!rows.length){
     html += '<div class="v-empty"><div class="v-empty-icon">📋</div>No assignments yet.<br>'
       +'<span style="font-size:12px;">Project assignments from your employers appear here.</span></div>';
-    $('vBody').innerHTML = html;
+    setBody(html);
     return;
   }
 
@@ -842,7 +907,7 @@ function renderAssignments(){
   }
 
   html += '<div class="v-disclaimer">Tap an assignment to see full project details.</div>';
-  $('vBody').innerHTML = html;
+  setBody(html);
 }
 
 function openAssignmentDetail(a){
@@ -998,7 +1063,7 @@ function renderResources(){
       +'<span style="font-size:12px;">Accommodation, vehicle and tool assignments from your employers appear here.</span></div>';
   }
 
-  $('vBody').innerHTML = html;
+  setBody(html);
 }
 
 function buildReturnForm(rfId, orgIdx, resType, assignId, worker){
@@ -1111,7 +1176,7 @@ function renderAccount(){
       +'</div>';
   }
 
-  $('vBody').innerHTML = html;
+  setBody(html);
   // Style textareas
   document.querySelectorAll('.v-profile-field textarea').forEach(t=>{ t.style.cssText += ';font-family:inherit;'; });
 }
@@ -1152,7 +1217,7 @@ function renderFiles(){
       +'<p>With the Vault plan you can upload your own documents — passport, certificates, anything — '
       +'track their expiry dates, and share them in seconds.</p>'
       +'<button class="v-primary-btn" style="margin-top:6px;" onclick="onUpgrade()">Upgrade to add files</button></div>';
-    $('vBody').innerHTML = html;
+    setBody(html);
     return;
   }
   html += '<div class="v-upload-card">'
@@ -1163,8 +1228,9 @@ function renderFiles(){
     +  '<div class="v-field"><label>Issued date (optional)</label><input id="puIssued" type="date"/></div>'
     +  '<div class="v-field"><label>Expiry date (optional)</label><input id="puExpiry" type="date"/></div>'
     +'</div>'
-    +'<div class="v-field"><label>File</label><input id="puFile" type="file"/></div>'
-    +'<button class="v-primary-btn" id="puBtn" onclick="uploadPersonalDoc()">⬆ Upload to my vault</button>'
+    +'<div class="v-field"><label>File</label><input id="puFile" type="file" accept="image/*,.pdf,.doc,.docx"/></div>'
+    +'<button class="v-primary-btn" id="puBtn" onclick="uploadPersonalDoc()" style="display:inline-flex;align-items:center;justify-content:center;gap:8px;">'
+    + icon('upload',16)+' Upload to my vault</button>'
     +'</div>';
 
   const personal = (vaultData.vault_docs||[]).filter(d=>d.source==='worker_upload' && d.active!==false);
@@ -1177,23 +1243,24 @@ function renderFiles(){
     for(const d of personal){
       const st = fileStatusByExpiry(d.expiry_date);
       html += '<div class="v-doc-row"><div class="v-doc-top">'
-        +'<div class="v-doc-icon">📄</div>'
+        +'<div class="v-doc-icon" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">'
+        + icon('file-text',20)+'</div>'
         +'<div class="v-doc-info">'
         +'<div class="v-doc-name">'+esc(d.display_name||d.file_name||'Document')+'</div>'
         +(d.expiry_date ? '<div class="v-expiry-tag">Expires '+esc(fmtDate(d.expiry_date))+'</div>' : '')
-        +'<div class="v-personal-badge">Personal · not verified</div>'
+        +'<div class="v-personal-badge">'+icon('user',10)+' Personal · not verified</div>'
         +'<div class="v-doc-actions">'
-        +'<button class="v-mini-btn" onclick="downloadPersonalDoc(\''+esc(d.id)+'\',event)">⬇ Download</button>'
-        +'<button class="v-mini-btn" onclick="openSubmitToOrgModal(\''+esc(d.id)+'\')">📨 Submit to employer</button>'
-        +'<button class="v-mini-btn danger" onclick="deletePersonalDoc(\''+esc(d.id)+'\',\''+esc(d.display_name||d.file_name||'this document')+'\')">Delete</button>'
+        +'<button class="v-mini-btn" style="display:inline-flex;align-items:center;gap:5px;" onclick="downloadPersonalDoc(\''+esc(d.id)+'\',event)">'+icon('download',13)+' Download</button>'
+        +'<button class="v-mini-btn" style="display:inline-flex;align-items:center;gap:5px;" onclick="openSubmitToOrgModal(\''+esc(d.id)+'\')">'+icon('send',13)+' Submit to employer</button>'
+        +'<button class="v-mini-btn danger" style="display:inline-flex;align-items:center;gap:5px;" onclick="deletePersonalDoc(\''+esc(d.id)+'\',\''+esc(d.display_name||d.file_name||'this document')+'\')">'+icon('trash-2',13)+' Delete</button>'
         +'</div>'
         +'</div>'
-        +'<div class="v-status-pill '+st+'">'+statusLabel(st)+'</div>'
+        + statusDot(st)
         +'</div></div>';
     }
   }
   html += '<div class="v-disclaimer">Personal documents are yours to manage. They\'re clearly marked "not verified" when you share them.</div>';
-  $('vBody').innerHTML = html;
+  setBody(html);
 }
 
 async function uploadPersonalDoc(){
@@ -1255,50 +1322,114 @@ async function deletePersonalDoc(id, label){
 function closeModal(){ $('vModalOverlay').classList.remove('open'); $('vModal').innerHTML=''; }
 
 function shareableItems(){
-  const out = { compliance:[], contracts:[], personal:[] };
   const memberships = vaultData.memberships || [];
+
+  // Build a global name map across ALL memberships so no doc ever shows as a raw key
+  const nameMap = {};
+  for(const m of memberships){
+    for(const it of (m.doc_set_items||[])){
+      const key = extractDocKey(it);
+      if(key && it.name && !nameMap[key]) nameMap[key] = it.name;
+    }
+  }
+
+  const out = { byOrg:[], contracts:[], personal:[] };
   const seenKeys = new Set();
   for(const m of memberships){
+    const orgDocs = [];
     for(const d of (m.worker_docs||[])){
       if(!d.doc_key || !d.has_file || seenKeys.has(d.doc_key)) continue;
       seenKeys.add(d.doc_key);
-      const it = (m.doc_set_items||[]).find(i=>extractDocKey(i)===d.doc_key);
-      out.compliance.push({ type:'document', doc_key:d.doc_key, label:(it&&it.name)||d.doc_key });
+      orgDocs.push({ type:'document', doc_key:d.doc_key,
+        label: nameMap[d.doc_key] || d.doc_key,
+        status: vaultDocStatus(d) });
     }
+    if(orgDocs.length) out.byOrg.push({ org_name:m.org_name, docs:orgDocs });
     for(const a of (m.assignments||[])){
-      if(a.has_contract) out.contracts.push({ type:'contract', assignment_id:a.id, label:(a.project_name||'Contract')+' — '+m.org_name });
+      if(a.has_contract) out.contracts.push({ type:'contract', assignment_id:a.id,
+        label:(a.project_name||'Contract'), org_name:m.org_name });
     }
   }
   for(const d of (vaultData.vault_docs||[])){
     if(d.active===false || d.source==='org_approved') continue;
-    out.personal.push({ type:'vault_doc', vault_doc_id:d.id, label:d.display_name||d.file_name||'Document' });
+    out.personal.push({ type:'vault_doc', vault_doc_id:d.id,
+      label:d.display_name||d.file_name||'Document',
+      status:fileStatusByExpiry(d.expiry_date) });
   }
   return out;
+}
+
+function shareSelectAll(sectionId, doCheck){
+  document.querySelectorAll('#'+sectionId+' [data-share]').forEach(cb=>{ cb.checked=doCheck; });
+  updateShareCount();
+}
+function updateShareCount(){
+  const n = document.querySelectorAll('[data-share]:checked').length;
+  const btn = $('shareSendBtn');
+  if(btn) btn.textContent = n ? 'Send '+n+' document'+(n>1?'s':'') : 'Send';
 }
 
 function openShareModal(){
   if(!isPaid()){ onUpgrade(); return; }
   const items = shareableItems();
-  const total = items.compliance.length + items.contracts.length + items.personal.length;
+  const total = items.byOrg.reduce((s,o)=>s+o.docs.length,0) + items.contracts.length + items.personal.length;
   if(!total){ alert('You don\'t have any documents with files to share yet.'); return; }
-  let idx=0;
+
+  let idx = 0;
   window._shareMap = {};
-  const checkRow = (it, sub) => {
-    const id = 'shareItem_'+(idx++);
+
+  function shareRow(it){
+    const id = 'si_'+(idx++);
     window._shareMap[id] = it;
-    return '<label class="v-check-row"><input type="checkbox" data-share="'+id+'"/>'
-      +'<div><div class="v-check-name">'+esc(it.label)+'</div>'+(sub?'<div class="v-check-sub">'+esc(sub)+'</div>':'')+'</div></label>';
-  };
-  let body = '<h3>Share documents</h3>'
-    +'<div class="v-modal-sub">Tick documents to send, then enter the recipient\'s email. Secure download links expire in 7 days.</div>';
-  if(items.compliance.length){ body += '<div class="v-modal-group-title">Compliance — verified by organisations</div>'; items.compliance.forEach(it=>body+=checkRow(it,'Verified')); }
-  if(items.contracts.length){  body += '<div class="v-modal-group-title">Contracts</div>'; items.contracts.forEach(it=>body+=checkRow(it,'Verified')); }
-  if(items.personal.length){   body += '<div class="v-modal-group-title">Personal — self-managed, not verified</div>'; items.personal.forEach(it=>body+=checkRow(it,'Personal')); }
-  body += '<div class="v-field" style="margin-top:14px;"><label>Send to (email)</label><input id="shareTo" type="email" inputmode="email" placeholder="recipient@example.com"/></div>';
-  body += '<div class="v-field"><label>Message (optional)</label><input id="shareMsg" type="text" placeholder="A short note for the recipient"/></div>';
-  body += '<div class="v-modal-actions"><button class="v-ghost-btn" onclick="closeModal()">Cancel</button>'
-    +'<button class="v-primary-btn" id="shareSendBtn" onclick="sendShare()">📤 Send</button></div>';
-  $('vModal').innerHTML = body;
+    const dotHtml = it.status ? statusDot(it.status) : '';
+    return '<label class="v-share-row">'
+      +'<input type="checkbox" data-share="'+id+'" onchange="updateShareCount()"/>'
+      +'<div class="v-sr-icon">'+icon('file-text',16)+'</div>'
+      +'<div class="v-sr-main"><div class="v-sr-name">'+esc(it.label)+'</div></div>'
+      + dotHtml
+      +'</label>';
+  }
+
+  function section(id, title, rows, avatarHtml=''){
+    const allBtn = '<button class="v-share-selectall" onclick="shareSelectAll(\''+id+'\',true)">Select all</button>';
+    return '<div class="v-share-section" id="'+id+'">'
+      +'<div class="v-share-section-hd">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'+(avatarHtml||'')+'<span class="v-share-section-title">'+esc(title)+'</span>'
+      +' <span style="font-size:10px;color:#94a3b8;font-weight:500;">('+rows.length+')</span>'
+      +'</div>'+allBtn+'</div>'
+      + rows.join('')
+      +'</div>';
+  }
+
+  let scrollContent = '';
+  items.byOrg.forEach((org, i) => {
+    const secId = 'ss_org_'+i;
+    scrollContent += section(secId, org.org_name, org.docs.map(shareRow), orgAvatar(org.org_name, true));
+  });
+  if(items.contracts.length){
+    scrollContent += section('ss_contracts','Contracts',
+      items.contracts.map(it=>shareRow({...it, label:it.label+' — '+it.org_name})));
+  }
+  if(items.personal.length){
+    scrollContent += section('ss_personal','My personal files',
+      items.personal.map(shareRow));
+    scrollContent += '<div style="font-size:11px;color:#94a3b8;margin:-8px 0 12px;padding:0 2px;">Personal files are clearly marked "not verified" for the recipient.</div>';
+  }
+
+  const body = '<h3>Share documents</h3>'
+    +'<div class="v-modal-sub">Select documents, enter a recipient email, and send. Links expire in 7 days.</div>'
+    +'<div class="v-modal-scroll">'+scrollContent+'</div>'
+    +'<div class="v-modal-footer">'
+    +'<div class="v-field" style="margin-bottom:10px;"><label>Send to</label>'
+    +'<input id="shareTo" type="email" inputmode="email" autocomplete="email" placeholder="recipient@example.com"/></div>'
+    +'<div class="v-field" style="margin-bottom:14px;"><label>Message (optional)</label>'
+    +'<input id="shareMsg" type="text" placeholder="A short note for the recipient"/></div>'
+    +'<div class="v-modal-actions">'
+    +'<button class="v-ghost-btn" onclick="closeModal()">Cancel</button>'
+    +'<button class="v-primary-btn" id="shareSendBtn" onclick="sendShare()">Send</button>'
+    +'</div></div>';
+
+  setModal(body);
   $('vModalOverlay').classList.add('open');
 }
 
@@ -1308,18 +1439,18 @@ async function sendShare(){
   const checked = [...document.querySelectorAll('[data-share]:checked')].map(el=>window._shareMap[el.dataset.share]).filter(Boolean);
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)){ alert('Please enter a valid recipient email.'); return; }
   if(!checked.length){ alert('Select at least one document to share.'); return; }
-  const btn=$('shareSendBtn'); btn.disabled=true; btn.textContent='⏳ Sending…';
+  const btn=$('shareSendBtn'); btn.disabled=true; btn.textContent='Sending…';
   try{
     const items = checked.map(it=>it.type==='document'?{type:'document',doc_key:it.doc_key,label:it.label}
       :it.type==='contract'?{type:'contract',assignment_id:it.assignment_id,label:it.label}
       :{type:'vault_doc',vault_doc_id:it.vault_doc_id,label:it.label});
     const res = await callFn('send-vault-share', { to, message, items });
     closeModal();
-    alert('✓ Sent '+(res.count||items.length)+' document(s) to '+to+'.');
+    alert('Sent '+(res.count||items.length)+' document'+(items.length>1?'s':'')+' to '+to+'.');
   }catch(e){
     if(e.status===402){ alert('Sharing is part of the Vault plan.'); }
     else alert('Could not send: '+(e.message||'unknown error'));
-    btn.disabled=false; btn.textContent='📤 Send';
+    btn.disabled=false; updateShareCount();
   }
 }
 
