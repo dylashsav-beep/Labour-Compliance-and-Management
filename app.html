@@ -354,7 +354,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .req-tag[onclick]{cursor:pointer;}
 .req-tag[onclick]:hover{opacity:.75;}
 .doc-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
-.expiry-tag{font-size:11px;color:var(--text-l);white-space:nowrap;}
+.expiry-tag{font-size:11px;color:var(--text-l);white-space:nowrap;display:block;margin-top:2px;}
 .status-select{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:4px 8px;border-radius:4px;border:1px solid;cursor:pointer;outline:none;transition:all .12s;}
 .status-select.ok{background:var(--green-l);color:var(--green);border-color:var(--green-b);}
 .status-select.missing{background:var(--red-l);color:var(--red);border-color:var(--red-b);}
@@ -5488,9 +5488,9 @@ function rebuildModal(id){
           <div class="doc-info">
             <div class="doc-name">${d.name}<span class="req-tag ${d.req&&!d.archived?'req':'opt'}${d._overridden?' overridden':''}" ${d.archived?'':`onclick="toggleDocReq('${id}','${d.id}')" title="${d._overridden?'Worker override active — click to reset to document set default':'Click to override requirement for this worker only'}"`}>${d.archived?'Archived':(d.req?'Required':'Optional')}${d._overridden?' ✱':''}</span>${d.archived?'<span class="archived-doc-badge">Archived question</span>':''}${d.infoText?`<button class="doc-info-btn" title="Show info" onclick="showDocInfo(this,'${esc(d.infoText).replace(/'/g,'&#39;')}')">i</button>`:''}${d.infoUrl?`<a class="doc-link-btn" href="${esc(d.infoUrl)}" target="_blank" rel="noopener noreferrer">🔗 Link</a>`:''}</div>
             <div class="doc-tip">${d.tip}</div>
+          ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
           </div>
           <div class="doc-controls">
-            ${doc.date?`<span class="expiry-tag">Expires: ${doc.date}</span>`:''}
             ${(()=>{if(!d.allowIssue)return'';const ai=issuedDocuments.find(x=>x.workerId===id&&x.docKey===d.id&&(x.status==='pending_signature'||x.status==='signed'));if(ai){const revoke=`<button onclick="revokeIssuedDoc('${ai.id}','${ai.filePath.replace(/'/g,"\\'")}')" title="Revoke issued document" style="background:none;border:none;font-size:11px;color:var(--text-l);cursor:pointer;padding:0 2px;text-decoration:underline;">Revoke</button>`;if(ai.status==='signed'){return`<span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#166534;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">✅ eSigned</span>${ai.signedFilePath?`<button onclick="sbSignedDownload('${ai.signedFilePath}','Signed Document')" title="Download signed copy" style="background:none;border:none;font-size:11px;color:#4f46e5;cursor:pointer;padding:0 2px;text-decoration:underline;">Download</button>`:''}${revoke}`;}if(ai.signatureRequestId){return`<span style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#854d0e;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">⏳ Awaiting e-sig</span>${revoke}`;}return`<span style="display:inline-flex;align-items:center;gap:4px;background:#ede9fe;color:#7c3aed;font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">📤 Issued</span><button onclick="sendForSignature('issued_doc','${ai.id}','${ai.filePath.replace(/'/g,"\\'")}','${(ai.fileName||'Document').replace(/'/g,"\\'")}','${id}')" style="background:none;border:none;font-size:11px;color:#7c3aed;font-weight:600;cursor:pointer;padding:0 2px;">✍ Sign</button>${revoke}`;}return sbCanWriteTable('worker_documents')?`<button class="attach-btn" onclick="openIssueDocDialog('${id}','${d.id}','${esc(d.name).replace(/'/g,'&#39;')}')">Issue Doc</button>`:''})()}
             <select class="status-select ${st}" id="ssel_${key}" onchange="setDocStatus('${id}','${d.id}',this.value)">
               <option value="ok"       ${st==='ok'?'selected':''}>Valid</option>
@@ -5548,7 +5548,7 @@ function _setExpiryInline(wid,did,val){
   }
   const key=`${wid}_${did}`,di=document.getElementById(`di_${key}`);
   if(di){let tag=di.querySelector('.expiry-tag');
-    if(val){if(tag)tag.textContent='Expires: '+val;else{const ctrl=di.querySelector('.doc-controls');if(ctrl)ctrl.insertAdjacentHTML('afterbegin',`<span class="expiry-tag">Expires: ${val}</span>`);}}
+    if(val){if(tag)tag.textContent='Expires: '+val;else{const info=di.querySelector('.doc-info');if(info)info.insertAdjacentHTML('beforeend',`<span class="expiry-tag">Expires: ${val}</span>`);}}
     else if(tag)tag.remove();}
 }
 function setExpiry(wid,did,val){
