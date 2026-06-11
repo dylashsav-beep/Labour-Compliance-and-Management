@@ -7,7 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const STRIPE_KEY   = Deno.env.get('STRIPE_SECRET_KEY')!
-const VAULT_URL    = Deno.env.get('VAULT_URL') || 'https://vault.work-force.nl'
+const VAULT_URL    = Deno.env.get('VAULT_URL') || 'https://work-force.nl/vault.html'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
     const session = await stripe('billing_portal/sessions', {
       customer: acct.stripe_customer_id,
-      return_url: `${VAULT_URL}/`,
+      return_url: VAULT_URL,
     })
 
     return json({ url: session.url })

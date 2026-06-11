@@ -12,7 +12,7 @@ const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
 const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const STRIPE_KEY      = Deno.env.get('STRIPE_SECRET_KEY')!
 const VAULT_PRICE_ID  = Deno.env.get('STRIPE_VAULT_PRICE_ID')!
-const VAULT_URL       = Deno.env.get('VAULT_URL') || 'https://vault.work-force.nl'
+const VAULT_URL       = Deno.env.get('VAULT_URL') || 'https://work-force.nl/vault.html'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -86,8 +86,8 @@ Deno.serve(async (req) => {
       client_reference_id: user.id,
       'subscription_data[metadata][worker_account_id]': user.id,
       'metadata[worker_account_id]': user.id,
-      success_url: `${VAULT_URL}/?upgraded=1`,
-      cancel_url: `${VAULT_URL}/?upgrade_cancelled=1`,
+      success_url: `${VAULT_URL}?upgraded=1`,
+      cancel_url: `${VAULT_URL}?upgrade_cancelled=1`,
       allow_promotion_codes: 'true',
     })
 
