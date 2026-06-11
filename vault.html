@@ -233,10 +233,19 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 /* ── Lucide icon sizing ── */
 [data-lucide]{pointer-events:none;display:inline-block;vertical-align:middle;}
 
-/* ── Improved download/action buttons ── */
-.v-action-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:9px 16px;background:#f5f3ff;color:var(--accent);border:1.5px solid #ddd6fe;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;font-family:inherit;transition:background .15s;}
-.v-action-btn:active{background:#ede9fe;}
-.v-action-btn.locked{background:#f8fafc;color:#94a3b8;border-color:#e2e8f0;cursor:pointer;}
+/* ── Download/action buttons — compact, secondary, not overwhelming ── */
+.v-action-btn{display:inline-flex;align-items:center;gap:5px;margin-top:8px;padding:7px 13px;background:#f8fafc;color:#475569;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;font-family:inherit;transition:background .15s;}
+.v-action-btn:active{background:#f1f5f9;}
+.v-action-btn.locked{color:#94a3b8;border-color:#e2e8f0;cursor:pointer;}
+
+/* ── Compact view/download button (work orders, detail panel) ── */
+.v-compact-dl{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;background:#f8fafc;color:#475569;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;min-height:36px;font-family:inherit;transition:background .15s;}
+.v-compact-dl:active{background:#f1f5f9;}
+
+/* ── Submit confirm button — full-width, green ── */
+.v-submit-confirm-btn{width:100%;padding:13px;background:#16a34a;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;min-height:48px;transition:background .15s;}
+.v-submit-confirm-btn:hover{background:#15803d;}
+.v-submit-confirm-btn:disabled{background:#86efac;cursor:not-allowed;}
 
 /* ── Share modal rows ── */
 .v-share-section{margin-bottom:20px;}
@@ -302,7 +311,7 @@ body{display:flex;flex-direction:column;min-height:100vh;}
   </div>
   <div class="v-tabs">
     <button class="v-tab active" data-tab="docs">Documents</button>
-    <button class="v-tab" data-tab="assignments">Assignments</button>
+    <button class="v-tab" data-tab="assignments">Work Orders</button>
     <button class="v-tab" data-tab="resources">Resources</button>
     <button class="v-tab" data-tab="files">My Files</button>
     <button class="v-tab" data-tab="account">Account</button>
@@ -370,12 +379,13 @@ const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 const SB_BUCKET     = 'tmc-documents';
 const WARNING_DAYS  = 60;
 
-let sbClient     = null;
-let vaultData    = null;
-let activeTab    = 'docs';
-let docFilter    = 'all';
-let expandedOrgs = new Set();
-let orgFilters   = {};
+let sbClient        = null;
+let vaultData       = null;
+let activeTab       = 'docs';
+let docFilter       = 'all';
+let expandedOrgs    = new Set();
+let orgFilters      = {};
+let _orgsInitialized = false;  // prevents re-expand when all orgs are collapsed
 
 // ── Load supabase-js ────────────────────────────────────────────────────────
 (function(){
@@ -508,7 +518,10 @@ function wireLogin(){
 
   document.querySelectorAll('.v-tab').forEach(t=>{
     t.onclick = ()=>{
+      const prev = activeTab;
       activeTab = t.dataset.tab;
+      // Reset org expand state when re-entering Documents tab
+      if(prev !== 'docs' && activeTab === 'docs'){ _orgsInitialized = false; }
       document.querySelectorAll('.v-tab').forEach(x=>x.classList.toggle('active', x===t));
       renderBody();
     };
@@ -588,9 +601,10 @@ function renderDocs(){
   // Pre-categorize all orgs
   const orgData = memberships.map((m, orgIdx) => ({ m, orgIdx, ...categorizeMembership(m) }));
 
-  // Expand all orgs on first render
-  if(expandedOrgs.size === 0){
+  // Expand all orgs only on the very first render — not when user has collapsed them all
+  if(!_orgsInitialized){
     orgData.forEach(d => expandedOrgs.add(d.orgIdx));
+    _orgsInitialized = true;
   }
 
   let html = planBanner();
@@ -623,8 +637,9 @@ function renderDocs(){
       const f = orgFilters[orgIdx] || 'all';
       const allCnt = reqMissing.length + expired.length + expiring.length + valid.length + optMissing.length;
 
-      // Per-org filter chips
+      // Per-org filter chips — only show chips with items (plus always show All + active filter)
       const ofc = (fval, label, cnt) => {
+        if(cnt === 0 && fval !== 'all' && fval !== f) return '';
         const a = f===fval ? ' active' : '';
         const cs = cnt ? '<span class="vc">'+cnt+'</span>' : '';
         return '<button class="v-filter-chip'+a+'" onclick="setOrgFilter('+orgIdx+',\''+fval+'\');event.stopPropagation()">'+label+cs+'</button>';
@@ -768,9 +783,10 @@ function buildSubmitForm(sfId, orgIdx, docKey){
     +'</div>'
     +'<div class="v-sf-field"><label>Notes (optional)</label><input type="text" id="'+sfId+'_notes" placeholder="e.g. passport renewal pending"/></div>'
     +'<div class="v-sf-field"><label>File (PDF, image — max 25 MB)</label><input type="file" id="'+sfId+'_file" accept="image/*,.pdf,.doc,.docx"/></div>'
-    +'<div class="v-sf-actions">'
+    +'<div class="v-sf-actions" style="flex-direction:column;gap:8px;">'
+    +  '<button class="v-submit-confirm-btn" id="'+sfId+'_btn" onclick="submitDoc('+orgIdx+',\''+docKey+'\',\''+sfId+'\')" style="display:inline-flex;align-items:center;justify-content:center;gap:7px;">'
+    +  icon('upload',15)+' Submit document</button>'
     +  '<button class="v-ghost-btn" style="font-size:13px;min-height:40px;padding:9px;" onclick="toggleSubmitForm(\''+sfId+'\')">Cancel</button>'
-    +  '<button class="v-mini-btn primary" id="'+sfId+'_btn" onclick="submitDoc('+orgIdx+',\''+docKey+'\',\''+sfId+'\')">Submit →</button>'
     +'</div>'
     +'</div>';
 }
@@ -827,22 +843,66 @@ async function submitDoc(orgIdx, docKey, sfId){
   }
 }
 
-async function downloadOrgFile(path, name, ev){
-  const btn = ev && ev.currentTarget;
-  const orig = btn && btn.textContent;
-  if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
+// ── File preview modal ───────────────────────────────────────────────────────
+// Shows a preview of the file before offering download/save. Called instead of
+// direct download so users can verify they have the right file on mobile.
+async function previewFile(path, name, type, brokerPayload){
+  const btn = event && event.currentTarget;
+  if(btn){ btn.disabled=true; }
   try{
-    if(!isPaid()){ onUpgrade(); return; }
-    const { data, error } = await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 120, { download: name||'document' });
-    if(error) throw error;
-    if(data && data.signedUrl) window.open(data.signedUrl,'_blank');
+    let signedUrl;
+    if(brokerPayload){
+      // Need a brokered signed URL (paywalled)
+      if(!isPaid()){ onUpgrade(); return; }
+      const res = await callFn('get-vault-file', brokerPayload);
+      signedUrl = res.url;
+    } else {
+      const { data, error } = await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 300);
+      if(error) throw error;
+      signedUrl = data.signedUrl;
+    }
+
+    const ext = (name||path||'').split('.').pop().toLowerCase();
+    const isPdf = ext==='pdf';
+    const isImg = ['jpg','jpeg','png','gif','webp','heic'].includes(ext);
+
+    let preview = '';
+    if(isPdf){
+      preview = '<iframe src="'+esc(signedUrl)+'" style="width:100%;height:55vh;border:none;border-radius:8px;background:#f8fafc;" title="'+esc(name)+'"></iframe>';
+    } else if(isImg){
+      preview = '<img src="'+esc(signedUrl)+'" style="width:100%;max-height:55vh;object-fit:contain;border-radius:8px;background:#f8fafc;" alt="'+esc(name)+'"/>';
+    } else {
+      preview = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;color:#94a3b8;">'
+        +icon('file-text',40)+'<div style="margin-top:12px;font-size:13px;font-weight:600;color:#64748b;">'+esc(name||'Document')+'</div>'
+        +'<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Preview not available for this file type</div></div>';
+    }
+
+    const downloadUrl = signedUrl; // fresh 5-min URL is enough for immediate download
+    const body = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'
+      +'<div style="font-size:15px;font-weight:800;color:#1e293b;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(name||'Document')+'</div>'
+      +'<button style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;" onclick="closeModal()">'+icon('x',18)+'</button>'
+      +'</div>'
+      + preview
+      +'<div style="display:flex;gap:10px;margin-top:14px;">'
+      +'<button class="v-ghost-btn" style="flex:1;" onclick="closeModal()">Close</button>'
+      +'<a class="v-primary-btn" style="flex:2;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;" href="'+esc(downloadUrl)+'" download="'+esc(name||'document')+'" target="_blank">'
+      +icon('download',16)+' Download / Save'
+      +'</a>'
+      +'</div>';
+
+    setModal(body);
+    $('vModalOverlay').classList.add('open');
   }catch(e){
-    // Fallback: try brokered download
-    try{ await brokerDownload({ type:'document', file_path:path }, btn); return; }
-    catch(_){ alert('Could not download: '+(e.message||'unknown error')); }
+    alert('Could not open file: '+(e.message||'unknown error'));
   }finally{
-    if(btn){ btn.disabled=false; if(orig) btn.textContent=orig; }
+    if(btn){ btn.disabled=false; }
   }
+}
+
+async function downloadOrgFile(path, name, ev){
+  // Route through preview modal instead of direct download
+  previewFile(path, name, 'org');
+  if(ev){ ev.stopPropagation && ev.stopPropagation(); }
 }
 
 async function downloadTemplate(path, name){
@@ -856,62 +916,85 @@ async function downloadTemplate(path, name){
 // ── ASSIGNMENTS TAB ──────────────────────────────────────────────────────────
 function renderAssignments(){
   const memberships = vaultData.memberships || [];
-  const rows = [];
-  for(const [i, m] of memberships.entries()){
-    for(const a of (m.assignments||[])){
-      rows.push({ ...a, org_name:m.org_name, _orgIdx:i });
-    }
+  const vaultAssigns = vaultData.vault_assignments || [];
+
+  // Build per-org groups
+  const orgGroups = [];
+  for(const m of memberships){
+    const rows = (m.assignments||[]).slice().sort((a,b)=> new Date(b.start_date||0) - new Date(a.start_date||0));
+    if(rows.length) orgGroups.push({ org_name:m.org_name, rows });
   }
-  rows.sort((a,b)=> new Date(b.start_date||0) - new Date(a.start_date||0));
+
+  // Vault copies keyed by assignment_id for merge
+  const vaultByAssignId = {};
+  for(const va of vaultAssigns) if(va.assignment_id) vaultByAssignId[va.assignment_id] = va;
 
   let html = planBanner();
-  if(!rows.length){
-    html += '<div class="v-empty"><div class="v-empty-icon">📋</div>No assignments yet.<br>'
-      +'<span style="font-size:12px;">Project assignments from your employers appear here.</span></div>';
+  if(!orgGroups.length && !vaultAssigns.length){
+    html += '<div class="v-empty"><div class="v-empty-icon" style="font-size:36px;">📋</div>'
+      +'No work orders yet.<br><span style="font-size:12px;">When your employers add you to a project, it appears here.</span></div>';
     setBody(html);
     return;
   }
 
-  // Also show vault_assignments (portable copies)
-  const vaultAssigns = vaultData.vault_assignments || [];
+  for(const grp of orgGroups){
+    html += '<div class="v-org-section">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+      + orgAvatar(grp.org_name,true)
+      +'<div class="v-org-header-name">'+esc(grp.org_name)+'</div></div>';
 
-  html += '<div class="v-section-title">Assignments from your organisations</div>';
-  for(const a of rows){
-    const signed = a.signature_status==='signed'||a.signature_status==='pending_review';
-    let flag;
-    if(signed) flag = '<span class="v-contract-flag signed">✓ Signed contract</span>';
-    else if(a.has_contract) flag = '<span class="v-contract-flag present">📄 Contract on file</span>';
-    else flag = '<span class="v-contract-flag missing">⚠ No contract yet</span>';
+    for(const a of grp.rows){
+      const signed   = a.signature_status==='signed'||a.signature_status==='pending_review';
+      const va       = vaultByAssignId[a.id];
+      const period   = esc(fmtDate(a.start_date))+(a.end_date?' – '+esc(fmtDate(a.end_date)):'– ongoing');
+      const isActive = !a.end_date || new Date(a.end_date) >= new Date();
 
-    const period = esc(fmtDate(a.start_date))+(a.end_date?' – '+esc(fmtDate(a.end_date)):'');
-    html += '<div class="v-assign-card" onclick="openAssignmentDetail('+JSON.stringify(a).replace(/"/g,'&quot;')+')">'
-      +'<div class="v-assign-title">'+esc(a.project_name||'Assignment')+'<span style="font-size:18px;">›</span></div>'
-      +'<div class="v-assign-meta">'+esc(a.org_name)+(period?'<br>'+period:'')+'</div>'
-      +flag
-      +'<div class="v-assign-hint">Tap for project details</div>'
-      +'</div>';
+      let contractHtml = '';
+      if(signed)            contractHtml = '<span class="v-contract-flag signed">'+icon('check-circle-2',11)+' Signed</span>';
+      else if(a.has_contract) contractHtml = '<span class="v-contract-flag present">'+icon('file-text',11)+' Contract on file</span>';
+      else                  contractHtml = '<span class="v-contract-flag missing">'+icon('alert-triangle',11)+' No contract yet</span>';
+
+      const vaultBadge = va ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;margin-left:6px;">'+icon('shield-check',10)+' Vault copy</span>' : '';
+
+      html += '<div class="v-assign-card" onclick="openAssignmentDetail('+JSON.stringify(a).replace(/"/g,'&quot;')+')">'
+        +'<div class="v-assign-title">'
+        + '<span>'+esc(a.project_name||'Work Order')+'</span>'
+        +'<span>'+icon('chevron-right',18)+'</span>'
+        +'</div>'
+        +'<div class="v-assign-meta">'+period+'</div>'
+        +'<div style="display:flex;align-items:center;gap:4px;margin-top:8px;flex-wrap:wrap;">'
+        + contractHtml
+        + (isActive ? '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:6px;border:1px solid #86efac;">Active</span>' : '')
+        + vaultBadge
+        +'</div>'
+        +'</div>';
+    }
+    html += '</div>';
   }
 
-  if(vaultAssigns.length){
-    html += '<div class="v-section-title" style="margin-top:28px;">Vault copies (portable record)</div>';
-    for(const va of vaultAssigns){
+  // Standalone vault copies (no matching live assignment)
+  const standaloneVault = vaultAssigns.filter(va=>!va.assignment_id);
+  if(standaloneVault.length){
+    html += '<div class="v-section-title" style="margin-top:8px;">Portable copies (no longer with employer)</div>';
+    for(const va of standaloneVault){
       const period = esc(fmtDate(va.start_date))+(va.end_date?' – '+esc(fmtDate(va.end_date)):'');
-      html += '<div class="v-assign-card" style="cursor:default;">'
-        +'<div class="v-assign-title">'+esc(va.project_name||'Assignment')+'</div>'
+      html += '<div class="v-assign-card" style="cursor:default;opacity:.8;">'
+        +'<div class="v-assign-title">'+esc(va.project_name||'Work Order')+'</div>'
         +'<div class="v-assign-meta">'+esc(va.org_name||'')+(period?'<br>'+period:'')+'</div>'
         +(va.file_path&&isPaid()
-          ? '<div><button class="v-download-btn" onclick="event.stopPropagation();onDownloadVaultAssign(\''+esc(va.id)+'\',event)">⬇ Download contract</button></div>'
+          ? '<div style="margin-top:10px;"><button class="v-compact-dl" onclick="event.stopPropagation();previewFile(\''+esc(va.file_path)+'\',\'contract.pdf\',\'contract\')">'
+            +icon('eye',13)+' View contract</button></div>'
           : '')
         +'</div>';
     }
   }
 
-  html += '<div class="v-disclaimer">Tap an assignment to see full project details.</div>';
+  html += '<div class="v-disclaimer">Tap a work order to see project details and download contracts.</div>';
   setBody(html);
 }
 
 function openAssignmentDetail(a){
-  $('vDetailTitle').textContent = a.project_name || 'Assignment';
+  $('vDetailTitle').textContent = a.project_name || 'Work Order';
   $('vDetailSub').textContent   = a.org_name || '';
   const period = fmtDate(a.start_date)+(a.end_date?' – '+fmtDate(a.end_date):' – ongoing');
 
@@ -920,6 +1003,7 @@ function openAssignmentDetail(a){
     : '';
 
   let body = kv('Period', period)
+    + kv('Employer', a.org_name)
     + kv('Client', a.project_client)
     + kv('Project manager', a.project_manager)
     + kv('Contact phone', a.project_phone)
@@ -929,15 +1013,18 @@ function openAssignmentDetail(a){
 
   const signed = a.signature_status==='signed';
   body += '<div style="margin-top:16px;">'
-    +(signed ? '<span class="v-contract-flag signed" style="margin-right:8px;">✓ Signed</span>' : '')
+    +(signed ? '<span class="v-contract-flag signed" style="margin-right:8px;">'+icon('check-circle-2',11)+' Signed</span>' : '')
     +(a.has_contract && isPaid()
-      ? '<button class="v-download-btn" onclick="onDownloadContract(\''+esc(a.id)+'\',event)">⬇ Download contract</button>'
+      ? '<button class="v-compact-dl" style="margin-top:4px;" onclick="onDownloadContract(\''+esc(a.id)+'\',event)">'
+        +icon('eye',14)+' View contract</button>'
       : a.has_contract
-        ? '<button class="v-download-btn locked" onclick="onUpgrade()">🔒 Download (Vault plan)</button>'
-        : '<span class="v-contract-flag missing">⚠ No contract</span>')
+        ? '<button class="v-compact-dl" style="color:#94a3b8;margin-top:4px;" onclick="onUpgrade()">'
+          +icon('lock',14)+' View (Vault plan)</button>'
+        : '<span class="v-contract-flag missing">'+icon('alert-triangle',11)+' No contract</span>')
     +'</div>';
 
   $('vDetailBody').innerHTML = body || '<p style="color:#94a3b8;font-size:13px;">No additional details available.</p>';
+  if(window.lucide) lucide.createIcons();
   $('vDetailOverlay').classList.add('open');
   $('vDetailPanel').classList.add('open');
 }
@@ -1297,16 +1384,9 @@ async function uploadPersonalDoc(){
 }
 
 async function downloadPersonalDoc(id, ev){
-  const btn = ev && ev.currentTarget; const orig = btn && btn.textContent;
-  if(btn){ btn.disabled=true; btn.textContent='⏳…'; }
-  try{
-    const d = (vaultData.vault_docs||[]).find(x=>x.id===id);
-    if(!d||!d.file_path) throw new Error('File not found.');
-    const { data, error } = await sbClient.storage.from(SB_BUCKET).createSignedUrl(d.file_path, 120, { download: d.file_name||'document' });
-    if(error) throw error;
-    if(data && data.signedUrl) window.open(data.signedUrl,'_blank');
-  }catch(e){ alert('Could not download: '+(e.message||'unknown error')); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent=orig; } }
+  const d = (vaultData.vault_docs||[]).find(x=>x.id===id);
+  if(!d||!d.file_path){ alert('File not found.'); return; }
+  previewFile(d.file_path, d.display_name||d.file_name||'Document', 'personal');
 }
 
 async function deletePersonalDoc(id, label){
@@ -1571,8 +1651,14 @@ async function brokerDownload(payload, btn){
   }
 }
 function onDownload(key, ev){ brokerDownload({ type:'document', doc_key:key }, ev&&ev.currentTarget); }
-function onDownloadContract(id, ev){ brokerDownload({ type:'contract', assignment_id:id }, ev&&ev.currentTarget); }
-function onDownloadVaultAssign(id, ev){ brokerDownload({ type:'vault_assignment', vault_assignment_id:id }, ev&&ev.currentTarget); }
+function onDownloadContract(id, ev){
+  if(ev) ev.stopPropagation && ev.stopPropagation();
+  previewFile(null, 'Contract', 'contract', { type:'contract', assignment_id:id });
+}
+function onDownloadVaultAssign(id, ev){
+  if(ev) ev.stopPropagation && ev.stopPropagation();
+  previewFile(null, 'Contract', 'contract', { type:'vault_assignment', vault_assignment_id:id });
+}
 
 // ── Refresh ──────────────────────────────────────────────────────────────────
 async function refreshVault(){
