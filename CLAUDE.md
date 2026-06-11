@@ -212,6 +212,7 @@ let resGanttProjectFilter = 'all'
 | `worker_org_links` | **Worker Vault** — junction: one vault account → many org `workers` rows; `worker_account_id, worker_row_id, org_id, status ('invited'\|'active'\|'unlinked'), invited_by, linked_at`. Dual-scoped RLS (worker via `auth.uid()` + org via `current_org_id()`). |
 | `vault_documents` | **Worker Vault** — worker-owned doc metadata + expiry; `worker_account_id, doc_key, display_name, file_path, expiry_date, issued_date, source ('org_approved'\|'worker_upload'), source_org_id, active`. Worker-scoped RLS (`auth.uid()`). |
 | `vault_assignment_links` | **Worker Vault** — worker-owned contract copies; `worker_account_id, assignment_id, org_id, project_name, org_name, start_date, end_date, contract_status, file_path`. No rate/financial data. |
+| `worker_document_sets` | **Per-worker set history** — tracks every document set ever applied to a worker. `workers.document_set_id` remains the primary requirements driver; this table is a management/history layer. `active` flag lets admins deactivate stale sets without deleting them. RLS: `org_id = current_org_id()`. Managed via the worker modal "Applied Document Sets" panel. |
 
 > **⚠️ Worker Vault tables use a DIFFERENT isolation model.** `worker_accounts`,
 > `worker_org_links`, `vault_documents`, `vault_assignment_links` carry an `org_id`
@@ -284,6 +285,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_vault_storage_policy.sql` | ⏳ Pending — **run after add_worker_vault.sql** | Storage RLS for the worker-owned `vault/{account_id}/...` prefix in `tmc-documents`. Worker-scoped via `(storage.foldername(name))[2] = auth.uid()::text`. Deliberately uses a `vault/` top-level prefix (NOT `workers/`) to avoid the TMC grandfather clause in `fix_storage_org_isolation.sql` leaking vault files to TMC staff. |
 | `add_get_vault_portal.sql` | ⏳ Pending — **Worker Vault Phase 1** | `get_vault_portal()` SECURITY DEFINER RPC: the authenticated read path for `vault.html`. A vault worker's profile has `org_id = NULL` so `current_org_id()` is NULL and org-scoped RLS returns nothing — this RPC aggregates the worker's compliance docs + assignments across all their `worker_org_links` (scoped to `auth.uid()`). Excludes rate/financial data from assignments. |
 | `add_vault_stripe_index.sql` | ⏳ Pending — **Worker Vault Phase 2** | Index on `worker_accounts.stripe_customer_id` for fast webhook lookups. The Stripe columns (`plan`, `plan_expires`, `stripe_customer_id`, `stripe_subscription_id`) already exist from `add_worker_vault.sql` — no new columns. |
+| `add_worker_document_sets.sql` | ✅ Run | `worker_document_sets` table: per-worker set history & management layer. `workers.document_set_id` remains the single requirements driver. Includes RLS policies (org-scoped), indexes, and a backfill from current `workers.document_set_id`. Enables the "Applied Document Sets" panel in the worker modal. |
 
 ---
 

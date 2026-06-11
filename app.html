@@ -2422,6 +2422,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <div id="fDocSetHint" style="display:none;font-size:11px;color:var(--navy);margin-top:5px;padding:5px 8px;background:#eef2ff;border-radius:4px;">
             Worker type suggests: <strong id="fDocSetHintName"></strong> &mdash; <a href="#" style="color:var(--navy);font-weight:600;text-decoration:underline;" onclick="event.preventDefault();applyDocSetSuggestion()">Switch to this</a>
           </div>
+          <div id="fAppliedSets" style="display:none;margin-top:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Applied Document Sets</div>
+            <div id="fAppliedSetsList"></div>
+          </div>
         </div>
         <div class="form-field full"><label class="form-label">Notes</label><textarea class="form-input" id="fNotes" rows="2" placeholder="Any additional notes…" style="resize:vertical;"></textarea></div>
       </div>
@@ -2731,7 +2735,7 @@ function requireAction(action, label){ if(canAction(action)) return true; alert(
 function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
-  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents'];
+  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents','worker_document_sets'];
   const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
@@ -3123,6 +3127,7 @@ const DEFAULT_AT_DOCS = [
 // setItems:  {setId: [{id, name, icon, req, cat, tip, custom, builtIn}]}
 let docSets    = [];
 let docSetItems= {};
+let workerDocSets = [];
 let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', digestEmails: [], rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, notifyWorkerTypes: [], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
@@ -7256,6 +7261,7 @@ function openAdd(){
   populateWorkerTypeDropdown('fType','zzp');
   document.getElementById('fNat').value = 'NL';
   document.getElementById('fDocSetHint').style.display='none';
+  const fApplied = document.getElementById('fAppliedSets'); if(fApplied) fApplied.style.display='none';
   // Auto-fill doc set from worker type recommendation, fall back to NL-ZZP
   const defaultType=(settings.workerTypes||[]).find(t=>t.id==='zzp');
   sel.value = defaultType?.docSetId || SET_NL_ZZP;
@@ -7280,6 +7286,7 @@ function openEditWorker(wid){
   sel.value = w.docSetId || SET_NL_ZZP;
   document.getElementById('fDocSetHint').style.display='none';
   document.getElementById('fType').onchange = ()=>{ _applyWorkerTypeDocSetHint(document.getElementById('fType').value); };
+  renderAppliedSetsInModal(wid);
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('fName').focus(), 50);
 }
@@ -7310,6 +7317,7 @@ async function doAdd(){
       updated_at:new Date().toISOString(), org_id:currentOrgId||SITE_ORG_ID
     });
     if(error) throw error;
+    if(dbDocSetId){ sbClient.from('worker_document_sets').upsert({org_id:currentOrgId||SITE_ORG_ID,worker_id:newId,document_set_id:dbDocSetId,active:true,applied_by:sbProfile?.email||null},{onConflict:'worker_id,document_set_id'}).then(()=>{}).catch(()=>{}); }
     closeM('addOverlay');
     await sbLoadAll();
     sbSetStatus('Supabase: worker added', true);
@@ -7350,11 +7358,104 @@ async function doEditWorker(){
       updated_at:new Date().toISOString()
     }).eq('id',w.id);
     if(error) throw error;
+    if(dbDocSetId){ sbClient.from('worker_document_sets').upsert({org_id:currentOrgId||SITE_ORG_ID,worker_id:w.id,document_set_id:dbDocSetId,active:true,applied_by:sbProfile?.email||null},{onConflict:'worker_id,document_set_id'}).then(()=>{}).catch(()=>{}); }
     sbSetStatus('Supabase: worker updated', true);
   }catch(e){
     alert('Worker profile was not saved to Supabase: '+(e.message||e));
     sbSetStatus('Supabase: update failed', false);
   }
+}
+
+// ─── Applied Document Sets helpers ──────────────────────────────────────────
+function renderAppliedSetsInModal(wid){
+  const container = document.getElementById('fAppliedSets');
+  const list = document.getElementById('fAppliedSetsList');
+  if(!container || !list) return;
+  const w = workers.find(x=>x.id===wid); if(!w){ container.style.display='none'; return; }
+  const entries = workerDocSets.filter(e=>e.workerId===wid);
+  if(!entries.length){ container.style.display='none'; return; }
+  container.style.display='block';
+  list.innerHTML = entries.map(e=>{
+    const ds = docSets.find(s=>s.id===e.documentSetId);
+    const name = ds ? ds.name + (ds.country?' ('+ds.country+')':'') : e.documentSetId;
+    const isPrimary = w.docSetId === e.documentSetId;
+    const appliedDate = e.appliedAt ? new Date(e.appliedAt).toLocaleDateString('nl-NL',{day:'2-digit',month:'short',year:'numeric'}) : '';
+    const statusPill = e.active
+      ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#d1fae5;color:#065f46;font-weight:600;">Active</span>`
+      : `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:600;">Inactive</span>`;
+    const primaryBadge = isPrimary ? `<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#e0e7ff;color:#3730a3;font-weight:600;margin-left:4px;">Primary</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:5px;background:${e.active?'#fafafa':'#f9fafb'};">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-d);display:flex;align-items:center;gap:4px;flex-wrap:wrap;">${esc(name)}${primaryBadge}${statusPill}</div>
+        ${appliedDate?`<div style="font-size:10px;color:var(--text-l);margin-top:2px;">Applied ${appliedDate}${e.appliedBy?' by '+esc(e.appliedBy):''}</div>`:''}
+      </div>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        ${!isPrimary && e.active ? `<button class="btn" style="font-size:10px;padding:3px 8px;background:var(--navy);color:#fff;border:none;" onclick="wdsMakePrimary('${wid}','${e.documentSetId}')">Set primary</button>` : ''}
+        <button class="btn" style="font-size:10px;padding:3px 8px;background:${e.active?'#f3f4f6':'#d1fae5'};color:${e.active?'#374151':'#065f46'};border:1px solid ${e.active?'#d1d5db':'#6ee7b7'};" onclick="wdsToggleActive('${wid}','${e.documentSetId}',${!e.active})">${e.active?'Deactivate':'Activate'}</button>
+        <button class="btn" style="font-size:10px;padding:3px 8px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" onclick="wdsDelete('${wid}','${e.documentSetId}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+async function wdsMakePrimary(wid, setId){
+  const w = workers.find(x=>x.id===wid); if(!w) return;
+  if(w.docSetId === setId) return;
+  if(!sbClient || !sbSession){ alert('Not connected.'); return; }
+  try{
+    const {error}=await sbClient.from('workers').update({document_set_id:setId,updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error) throw error;
+    w.docSetId = setId;
+    // Also ensure the entry is active in worker_document_sets
+    await sbClient.from('worker_document_sets').update({active:true}).eq('worker_id',wid).eq('document_set_id',setId).catch(()=>{});
+    // Sync the dropdown value if this modal is open
+    const sel = document.getElementById('fDocSet'); if(sel) sel.value = setId;
+    renderAppliedSetsInModal(wid);
+    renderTable(); renderStats(); if(curW) rebuildModal(curW);
+    sbSetStatus('Supabase: primary set updated', true);
+  }catch(e){ alert('Could not update primary set: '+(e.message||e)); }
+}
+async function wdsToggleActive(wid, setId, newActive){
+  if(!sbClient || !sbSession){ alert('Not connected.'); return; }
+  const w = workers.find(x=>x.id===wid);
+  if(w && !newActive && w.docSetId===setId){ alert('Cannot deactivate the primary document set. Change the primary set first.'); return; }
+  try{
+    const {error}=await sbClient.from('worker_document_sets').update({active:newActive}).eq('worker_id',wid).eq('document_set_id',setId);
+    if(error) throw error;
+    const entry = workerDocSets.find(e=>e.workerId===wid&&e.documentSetId===setId);
+    if(entry) entry.active = newActive;
+    renderAppliedSetsInModal(wid);
+    sbSetStatus('Supabase: set '+( newActive?'activated':'deactivated'), true);
+  }catch(e){ alert('Could not update set: '+(e.message||e)); }
+}
+async function wdsDelete(wid, setId){
+  if(!sbClient || !sbSession){ alert('Not connected.'); return; }
+  const w = workers.find(x=>x.id===wid);
+  if(w && w.docSetId===setId){ alert('Cannot delete the primary document set. Change the primary set first.'); return; }
+  const ds = docSets.find(s=>s.id===setId);
+  const name = ds ? ds.name : setId;
+  if(!confirm(`Delete the "${name}" set from this worker?\n\nThis also removes any document records that belong only to this set (not shared with the current primary set). This cannot be undone.`)) return;
+  try{
+    // Determine doc keys unique to the set being deleted (not in primary set)
+    const primaryKeys = new Set((docSetItems[w?.docSetId||'']||[]).map(d=>d.id));
+    const deletingKeys = (docSetItems[setId]||[]).map(d=>d.id).filter(k=>!primaryKeys.has(k));
+    // Deactivate worker_documents for unique keys
+    if(deletingKeys.length && w){
+      for(const dk of deletingKeys){
+        const docId = `${wid}__${dk}`;
+        await sbClient.from('worker_documents').update({active:false}).eq('id',docId).catch(()=>{});
+        await sbClient.from('worker_document_files').update({active:false}).eq('worker_id',wid).eq('worker_document_id',docId).catch(()=>{});
+        if(fileStore[wid]) delete fileStore[wid][dk];
+        if(w.docs) delete w.docs[dk];
+      }
+    }
+    // Delete the worker_document_sets row
+    const {error}=await sbClient.from('worker_document_sets').delete().eq('worker_id',wid).eq('document_set_id',setId);
+    if(error) throw error;
+    workerDocSets = workerDocSets.filter(e=>!(e.workerId===wid&&e.documentSetId===setId));
+    renderAppliedSetsInModal(wid);
+    renderTable(); renderStats(); if(curW) rebuildModal(curW);
+    sbSetStatus('Supabase: set removed', true);
+  }catch(e){ alert('Could not delete set: '+(e.message||e)); }
 }
 
 // ─── Projects View ────────────────────────────────────────────────────────────
@@ -11611,7 +11712,7 @@ async function sbLoadAll(){
     return errored ? fallback : all;
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData,wdsData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
@@ -11634,7 +11735,8 @@ async function sbLoadAll(){
       q('tools', sbClient.from('tools').select('*').eq('active',true).order('name'), []),
       qPaged('tool_assignments', ()=>sbClient.from('tool_assignments').select('*').eq('active',true).order('id'), []),
       qPaged('tool_charges', ()=>sbClient.from('tool_charges').select('*').eq('active',true).order('id'), []),
-      qPaged('issued_documents', ()=>sbClient.from('issued_documents').select('*').eq('active',true).order('issued_at',{ascending:false}), [])
+      qPaged('issued_documents', ()=>sbClient.from('issued_documents').select('*').eq('active',true).order('issued_at',{ascending:false}), []),
+      qPaged('worker_document_sets', ()=>sbClient.from('worker_document_sets').select('*').order('applied_at',{ascending:false}), [])
     ]);
 
     if(workerData === null){
@@ -11683,6 +11785,7 @@ async function sbLoadAll(){
       return {id:d.id,type:d.item_type,label:d.label,deletedAt:d.deleted_at,deletedBy:d.deleted_by_email,payload:enriched};
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
+    workerDocSets = (wdsData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,documentSetId:r.document_set_id,active:r.active!==false,appliedAt:r.applied_at,appliedBy:r.applied_by||null}));
     sbHasLoadedRemote = true;
     renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
