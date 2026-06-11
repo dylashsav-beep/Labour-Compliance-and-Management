@@ -814,7 +814,8 @@ function renderDocs(){
       +'</div>';
 
     if(isExpanded){
-      const f = orgFilters[orgIdx] || 'all';
+      const urgentDefault = (reqMissing.length + expired.length) > 0 ? 'attention' : 'all';
+      const f = orgFilters[orgIdx] || urgentDefault;
       const allCnt = reqMissing.length + expired.length + expiring.length + valid.length + optMissing.length;
 
       // Per-org filter chips — only show chips with items (plus always show All + active filter)
