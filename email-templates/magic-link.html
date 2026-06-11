@@ -1,0 +1,254 @@
+<!----------------------------------------------------------------------
+  BRANDING SECTION — edit only this block to restyle all vault emails
+  -----------------------------------------------------------------------
+  BRAND_NAME        Work Force Vault
+  BRAND_PRODUCT     Work Force
+  BRAND_DOMAIN      work-force.nl
+  BRAND_VAULT_URL   https://work-force.nl/vault.html
+  BRAND_SUPPORT     support@work-force.nl
+  BRAND_LOGO_EMOJI  🗂️
+  BRAND_TAGLINE     Your documents, owned by you.
+
+  Colours (keep in sync with vault.html CSS variables):
+  BRAND_ACCENT      #7c3aed   (purple)
+  BRAND_NAVY        #1a3082   (navy)
+  BRAND_GRAD_START  #7c3aed
+  BRAND_GRAD_END    #1a3082
+  BRAND_BG          #f1f5f9   (page background)
+  BRAND_TEXT        #1a2340   (primary text)
+  BRAND_TEXT_LIGHT  #64748b   (muted text)
+  BRAND_BORDER      #e2e8f0   (card border)
+  BRAND_CARD_BG     #ffffff   (card background)
+----------------------------------------------------------------------->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Sign in to Work Force Vault</title>
+  <!--[if mso]>
+  <noscript>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0; mso-table-rspace: 0; }
+    img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    a { color: #7c3aed; }
+
+    /* ── Wrapper ── */
+    .email-wrapper { width: 100%; background-color: #f1f5f9; padding: 40px 16px; }
+
+    /* ── Card ── */
+    .email-card { max-width: 520px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 24px rgba(26,48,130,.08); }
+
+    /* ── Header (gradient) ── */
+    .email-header {
+      background: linear-gradient(135deg, #7c3aed 0%, #1a3082 100%);
+      padding: 32px 40px 28px;
+      text-align: center;
+    }
+    .email-logo-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 0;
+    }
+    .email-logo-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,.15);
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      line-height: 1;
+      vertical-align: middle;
+    }
+    .email-logo-text {
+      display: inline-block;
+      vertical-align: middle;
+      text-align: left;
+    }
+    .email-logo-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+      display: block;
+    }
+    .email-logo-tagline {
+      font-size: 11px;
+      color: rgba(255,255,255,.65);
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* ── Body ── */
+    .email-body { padding: 40px 40px 32px; }
+    .email-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #7c3aed;
+      margin: 0 0 12px;
+    }
+    .email-title {
+      font-size: 22px;
+      font-weight: 800;
+      color: #1a2340;
+      margin: 0 0 12px;
+      letter-spacing: -.02em;
+      line-height: 1.25;
+    }
+    .email-body p {
+      font-size: 15px;
+      line-height: 1.65;
+      color: #4a5568;
+      margin: 0 0 24px;
+    }
+
+    /* ── CTA Button ── */
+    .email-btn-wrap { text-align: center; margin: 8px 0 28px; }
+    .email-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #7c3aed, #1a3082);
+      color: #ffffff !important;
+      text-decoration: none !important;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 14px 36px;
+      border-radius: 10px;
+      letter-spacing: -.01em;
+      line-height: 1;
+    }
+    .email-btn:hover { opacity: .92; }
+
+    /* ── Divider ── */
+    .email-divider { border: none; border-top: 1px solid #e2e8f0; margin: 0 0 24px; }
+
+    /* ── Fallback link block ── */
+    .email-link-block {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 24px;
+    }
+    .email-link-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    .email-link-url {
+      font-size: 12px;
+      color: #7c3aed;
+      word-break: break-all;
+      line-height: 1.5;
+    }
+
+    /* ── Small text ── */
+    .email-small {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* ── Footer ── */
+    .email-footer {
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      padding: 20px 40px;
+      text-align: center;
+    }
+    .email-footer p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 0;
+      line-height: 1.7;
+    }
+    .email-footer a { color: #7c3aed; text-decoration: none; }
+    .email-footer a:hover { text-decoration: underline; }
+
+    /* ── Mobile ── */
+    @media (max-width: 560px) {
+      .email-wrapper { padding: 20px 12px; }
+      .email-header { padding: 24px 24px 20px; }
+      .email-body { padding: 28px 24px 24px; }
+      .email-footer { padding: 16px 24px; }
+      .email-title { font-size: 20px; }
+      .email-btn { padding: 13px 28px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+<div class="email-wrapper">
+  <div class="email-card">
+
+    <!-- ═══ HEADER ═══ -->
+    <div class="email-header">
+      <div class="email-logo-wrap">
+        <div class="email-logo-icon">🗂️</div>
+        <div class="email-logo-text">
+          <span class="email-logo-name">Work Force Vault</span>
+          <span class="email-logo-tagline">Your documents, owned by you.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ BODY ═══ -->
+    <div class="email-body">
+      <p class="email-eyebrow">Magic Link</p>
+      <h1 class="email-title">Sign in to your Vault</h1>
+      <p>
+        You requested a sign-in link for your Work Force Vault. Click the button below
+        to open your vault — no password required.
+      </p>
+
+      <!-- CTA -->
+      <div class="email-btn-wrap">
+        <a href="{{ .ConfirmationURL }}" class="email-btn">Open my Vault &rarr;</a>
+      </div>
+
+      <hr class="email-divider">
+
+      <!-- Fallback URL -->
+      <div class="email-link-block">
+        <div class="email-link-label">Or copy this link into your browser</div>
+        <div class="email-link-url">{{ .ConfirmationURL }}</div>
+      </div>
+
+      <!-- Security note -->
+      <p class="email-small">
+        This link expires in <strong>1 hour</strong> and can only be used once.
+        If you didn&rsquo;t request this, you can safely ignore this email &mdash;
+        your account is not affected.<br><br>
+        Questions? Reply to this email or contact
+        <a href="mailto:support@work-force.nl">support@work-force.nl</a>.
+      </p>
+    </div>
+
+    <!-- ═══ FOOTER ═══ -->
+    <div class="email-footer">
+      <p>
+        <strong style="color:#4a5568;">Work Force</strong> &middot;
+        <a href="https://work-force.nl/vault.html">work-force.nl</a><br>
+        &copy; 2026 Work Force. All rights reserved.
+      </p>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>
