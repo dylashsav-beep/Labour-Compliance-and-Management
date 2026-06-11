@@ -133,13 +133,18 @@ Deno.serve(async (req) => {
 
       } else if (it.type === 'document') {
         if (!workerRowIds.length) continue
+        // worker_document_files has no doc_key column — resolve via worker_documents first
+        const { data: wdocs } = await sb.from('worker_documents')
+          .select('id').in('worker_id', workerRowIds).eq('doc_key', it.doc_key).eq('active', true)
+        const wdocIds = (wdocs || []).map((d: { id: string }) => d.id).filter(Boolean)
+        if (!wdocIds.length) continue
         const { data: files } = await sb.from('worker_document_files')
-          .select('file_path, file_name, name, doc_key, worker_id, active, superseded, created_at')
-          .in('worker_id', workerRowIds).eq('doc_key', it.doc_key).eq('active', true)
+          .select('file_path, file_name, active, superseded, created_at')
+          .in('worker_document_id', wdocIds).eq('active', true)
           .order('created_at', { ascending: false })
-        const pick = (files || []).find(f => !f.superseded) || (files || [])[0]
+        const pick = (files || []).find((f: { superseded?: boolean }) => !f.superseded) || (files || [])[0]
         if (!pick) continue
-        path = pick.file_path; name = pick.file_name || pick.name || name
+        path = pick.file_path; name = pick.file_name || name
         isVerified = true
 
       } else if (it.type === 'contract') {
