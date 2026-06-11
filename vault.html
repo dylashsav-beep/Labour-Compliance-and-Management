@@ -135,6 +135,10 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-rejected-notice-label{font-size:11px;font-weight:700;color:#b91c1c;margin-bottom:3px;}
 .wp-rejected-notice-text{font-size:12px;color:#7f1d1d;line-height:1.45;}
 .wp-template-banner{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:8px;}
+.wp-card-actions{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:6px;z-index:1;}
+.wp-card-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;padding:0;flex-shrink:0;font-family:inherit;}
+.wp-card-icon-btn:hover,.wp-card-icon-btn:active{background:#e2e8f0;color:#1e293b;}
+.wp-info-panel{font-size:13px;color:#334155;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-top:10px;line-height:1.6;}
 .wp-template-banner-text{flex:1;min-width:0;}
 .wp-template-banner-label{font-size:12px;font-weight:700;color:#78350f;}
 .wp-template-banner-sub{font-size:11px;color:#92400e;margin-top:1px;}
@@ -296,16 +300,23 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-submit-confirm-btn:disabled{background:#86efac;cursor:not-allowed;}
 
 /* ── Share modal rows ── */
-.v-share-section{margin-bottom:20px;}
-.v-share-section-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px;}
-.v-share-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;}
+.v-share-section{margin-bottom:16px;}
+.v-share-section-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer;user-select:none;-webkit-user-select:none;gap:8px;}
+.v-share-section-hd:hover{background:#f1f5f9;}
+.v-share-section-title{font-size:12px;font-weight:700;color:#334155;text-transform:none;letter-spacing:0;}
+.v-share-section-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 .v-share-selectall{font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 0;min-height:auto;}
-.v-share-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;margin-bottom:4px;cursor:pointer;border:1px solid #f1f5f9;background:#fff;transition:border-color .12s;}
+.v-share-chevron{width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:#94a3b8;transition:transform .2s;flex-shrink:0;}
+.v-share-rows{padding-top:6px;}
+.v-share-row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;margin-bottom:4px;cursor:pointer;border:1px solid #f1f5f9;background:#fff;transition:border-color .12s;}
 .v-share-row:hover{border-color:#ddd6fe;background:#fdfcff;}
 .v-share-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;accent-color:var(--accent);cursor:pointer;margin:0;}
-.v-sr-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#f1f5f9;color:#64748b;}
+.v-sr-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#f1f5f9;color:#64748b;}
 .v-sr-main{flex:1;min-width:0;}
-.v-sr-name{font-size:14px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.v-sr-name{font-size:13px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.v-sr-preview-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;font-family:inherit;flex-shrink:0;transition:background .12s;}
+.v-sr-preview-btn:hover{background:#e2e8f0;color:#334155;}
+.v-sr-preview-btn:disabled{opacity:.4;cursor:not-allowed;}
 .v-modal-scroll{overflow-y:auto;max-height:50vh;padding-right:2px;}
 .v-modal-footer{border-top:1px solid #e2e8f0;padding-top:14px;margin-top:8px;}
 
@@ -894,27 +905,34 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   const sub     = submByKey[item.key];
   const issued  = issuedByKey[item.key];
   const orgFile = filesByKey[item.key];
+  const hasInfo = !!(item.info_text || item.info_url);
+  const infoId  = 'ip_'+orgIdx+'_'+item.key.replace(/[^a-z0-9]/g,'_');
 
   // Status pill (worker portal style)
   const pillLabels = { ok:'Valid', expiring:'Expiring', expired:'Expired', missing:'Not on file' };
   const pillCls = st==='ok' ? 'ok' : st==='expiring' ? 'expiring' : st==='expired' ? 'expired' : 'missing';
-  const optClass = !item.required ? ' opt-neutral' : '';
-  const statusPill = '<span class="wp-status-pill '+(item.required ? pillCls : 'opt-neutral')+'">'+(item.required ? (pillLabels[st]||st) : (pillLabels[st]||st))+'</span>';
+  const statusPill = '<span class="wp-status-pill '+(item.required ? pillCls : 'opt-neutral')+'">'+(pillLabels[st]||st)+'</span>';
 
-  // Org doc download icon (top-right, subtle)
-  let cardActions = '';
-  if(hasFile && isPaid() && orgFile){
-    cardActions = '<div style="position:absolute;top:12px;right:12px;">'
-      +'<button style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;cursor:pointer;font-family:inherit;transition:background .15s;" title="View document" onclick="event.stopPropagation();downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name)+'\',event)">'
-      +icon('download',14)+'</button></div>';
-  } else if(hasFile && !isPaid()){
-    cardActions = '<div style="position:absolute;top:12px;right:12px;">'
-      +'<button style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;color:#94a3b8;cursor:pointer;font-family:inherit;" title="Vault plan required" onclick="event.stopPropagation();onUpgrade()">'
-      +icon('lock',14)+'</button></div>';
+  // Card action buttons (top-right, absolute) — info toggle + download/lock
+  let actionBtns = '';
+  if(hasInfo){
+    actionBtns += '<button class="wp-card-icon-btn" title="More info" onclick="event.stopPropagation();toggleInfoPanel(\''+infoId+'\')">'
+      +icon('info',14)+'</button>';
   }
+  if(hasFile && isPaid() && orgFile){
+    actionBtns += '<button class="wp-card-icon-btn" title="View document" onclick="event.stopPropagation();downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name)+'\',event)">'
+      +icon('download',14)+'</button>';
+  } else if(hasFile && !isPaid()){
+    actionBtns += '<button class="wp-card-icon-btn" title="Vault plan required" onclick="event.stopPropagation();onUpgrade()">'
+      +icon('lock',14)+'</button>';
+  }
+  const cardActions = actionBtns ? '<div class="wp-card-actions">'+actionBtns+'</div>' : '';
+  const btnCount = actionBtns ? (actionBtns.match(/wp-card-icon-btn/g)||[]).length : 0;
+  const topPadding = btnCount > 0 ? ' style="padding-right:'+(btnCount*34+12)+'px;"' : '';
 
+  // Top section: icon + name/status only
   let body = cardActions
-    +'<div class="wp-doc-top"'+(cardActions?' style="padding-right:44px;"':'')+'>'
+    +'<div class="wp-doc-top"'+topPadding+'>'
     +'<div class="wp-doc-icon">'+(item.icon||'📄')+'</div>'
     +'<div class="wp-doc-info">'
     +'<div class="wp-doc-name-row">'
@@ -924,39 +942,42 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
     +'<div class="wp-doc-meta-row">'
     + statusPill
     +(item.expiry ? '<span class="wp-expiry-tag">Expires: '+esc(fmtDate(item.expiry))+'</span>' : '')
-    +'</div>';
+    +'</div>'
+    +'</div></div>'; // close wp-doc-info + wp-doc-top
+
+  // ── Full-width content below the icon row ───────────────────────────────────
 
   // Issued doc banner (Dropbox Sign)
   if(issued){
     if(issued.status==='pending_signature'||issued.status==='pending'){
-      body += '<div class="wp-template-banner" style="background:#eff6ff;border-color:#93c5fd;">'
+      body += '<div class="wp-template-banner" style="background:#eff6ff;border-color:#93c5fd;margin-top:12px;">'
         +'<div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#1d4ed8;">✉️ Sent for e-signature</div>'
         +'<div class="wp-template-banner-sub" style="color:#1e40af;">Check your email for the signing link</div></div></div>';
     } else if(issued.status==='signed'||issued.status==='approved'){
-      body += '<div class="v-issued-banner signed">'+icon('check-circle-2',13)+' Signed document on file'
+      body += '<div class="v-issued-banner signed" style="margin-top:12px;">'+icon('check-circle-2',13)+' Signed document on file'
         +(isPaid()&&issued.signed_file_path
           ? ' <button onclick="event.stopPropagation();downloadOrgFile(\''+esc(issued.signed_file_path)+'\',\'signed_doc.pdf\',event)">'+icon('download',12)+' Download</button>'
           : '')+'</div>';
     } else if(issued.status==='pending_review'){
-      body += '<div class="v-issued-banner pending-sig">'+icon('clock',13)+' Signed — awaiting employer review</div>';
+      body += '<div class="v-issued-banner pending-sig" style="margin-top:12px;">'+icon('clock',13)+' Signed — awaiting employer review</div>';
     }
   }
 
   // Submission state
   if(sub){
     if(sub.status==='pending'){
-      body += '<div class="wp-pending-badge">⏳ Awaiting admin review</div>';
+      body += '<div class="wp-pending-badge" style="display:inline-flex;margin-top:10px;">⏳ Awaiting admin review</div>';
     } else if(sub.status==='rejected'){
-      body += '<div class="wp-rejected-notice">'
+      body += '<div class="wp-rejected-notice" style="margin-top:10px;">'
         +'<div class="wp-rejected-notice-label">❌ Submission rejected</div>'
         +'<div class="wp-rejected-notice-text">'+(sub.review_notes ? esc(sub.review_notes) : 'You can resubmit a corrected document below.')+'</div>'
         +'</div>';
     }
   }
 
-  // Template download
+  // Template download banner
   if(item.template_file_path){
-    body += '<div class="wp-template-banner">'
+    body += '<div class="wp-template-banner" style="margin-top:10px;">'
       +'<div class="wp-template-banner-text"><div class="wp-template-banner-label">📎 Official form required</div>'
       +'<div class="wp-template-banner-sub">Download, complete and submit the official form</div></div>'
       +'<button class="wp-template-dl-btn" onclick="event.stopPropagation();downloadTemplate(\''+esc(item.template_file_path)+'\',\''+esc(item.template_file_name||'template')+'\')">📥 Download</button>'
@@ -965,10 +986,16 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
 
   // Tip text
   if(item.tip){
-    body += '<div class="wp-doc-tip">'+esc(item.tip)+'</div>';
+    body += '<div class="wp-doc-tip" style="margin-top:10px;">'+esc(item.tip)+'</div>';
   }
 
-  body += '</div></div>'; // close wp-doc-info + wp-doc-top
+  // Info panel (hidden; toggled by the ℹ button)
+  if(hasInfo){
+    let infoHtml = '';
+    if(item.info_text) infoHtml += '<div>'+esc(item.info_text)+'</div>';
+    if(item.info_url) infoHtml += '<div style="margin-top:6px;"><a href="'+esc(item.info_url)+'" target="_blank" rel="noopener" style="color:var(--accent);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">'+icon('external-link',12)+' More info</a></div>';
+    body += '<div id="'+infoId+'" class="wp-info-panel" style="display:none;">'+infoHtml+'</div>';
+  }
 
   // Submit button + form (only when not pending)
   const canSubmit = !(sub && sub.status==='pending');
@@ -1003,6 +1030,24 @@ function toggleSubmitForm(sfId){
   const el = $(sfId);
   if(!el) return;
   el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+function toggleInfoPanel(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+function humanizeDocKey(key){
+  const map = {
+    bsn:'BSN', cbsn:'CBSN', vca:'VCA', vog:'VOG', vca_vol:'VCA Vol',
+    passport:'Passport', id_card:'ID Card', iban:'IBAN',
+    aansp:'Liability Insurance', payroll:'Payroll Statement',
+    twv:'TWV Work Permit', scc:'SCC', bls:'BLS', ers:'ERS',
+    id:'ID Document', dl:"Driver's License"
+  };
+  if(map[key]) return map[key];
+  return key.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
 }
 
 async function submitDoc(orgIdx, docKey, sfId){
@@ -1658,7 +1703,7 @@ function shareableItems(){
       if(!d.doc_key || !d.has_file || seenKeys.has(d.doc_key)) continue;
       seenKeys.add(d.doc_key);
       orgDocs.push({ type:'document', doc_key:d.doc_key,
-        label: nameMap[d.doc_key] || d.doc_key,
+        label: nameMap[d.doc_key] || humanizeDocKey(d.doc_key),
         status: vaultDocStatus(d) });
     }
     if(orgDocs.length) out.byOrg.push({ org_name:m.org_name, docs:orgDocs });
@@ -1676,7 +1721,8 @@ function shareableItems(){
   return out;
 }
 
-function shareSelectAll(sectionId, doCheck){
+function shareSelectAll(sectionId, doCheck, ev){
+  if(ev) ev.stopPropagation();
   document.querySelectorAll('#'+sectionId+' [data-share]').forEach(cb=>{ cb.checked=doCheck; });
   updateShareCount();
 }
@@ -1684,6 +1730,37 @@ function updateShareCount(){
   const n = document.querySelectorAll('[data-share]:checked').length;
   const btn = $('shareSendBtn');
   if(btn) btn.textContent = n ? 'Send '+n+' document'+(n>1?'s':'') : 'Send';
+}
+function shareToggleSection(secId, ev){
+  if(ev) ev.stopPropagation();
+  const sec = document.getElementById(secId);
+  if(!sec) return;
+  const rows = sec.querySelector('.v-share-rows');
+  const chev = sec.querySelector('.v-share-chevron');
+  if(!rows) return;
+  const isOpen = rows.style.display !== 'none';
+  rows.style.display = isOpen ? 'none' : '';
+  if(chev) chev.style.transform = isOpen ? 'rotate(-90deg)' : '';
+}
+async function quickPreviewDoc(shareId, ev){
+  if(ev) ev.stopPropagation();
+  const it = window._shareMap && window._shareMap[shareId];
+  if(!it) return;
+  const btn = document.querySelector('[data-preview="'+shareId+'"]');
+  if(btn){ btn.disabled=true; }
+  try{
+    const payload = it.type==='document' ? { type:'document', doc_key:it.doc_key }
+      : it.type==='contract' ? { type:'contract', assignment_id:it.assignment_id }
+      : { type:'vault_doc', vault_doc_id:it.vault_doc_id };
+    const res = await callFn('get-vault-file', payload);
+    if(res && res.url) window.open(res.url, '_blank');
+    else alert('Preview not available.');
+  }catch(e){
+    if(e && e.status===402) alert('Vault plan required for previews.');
+    else alert('Could not open: '+(e&&e.message||'unknown error'));
+  }finally{
+    if(btn){ btn.disabled=false; }
+  }
 }
 
 function openShareModal(){
@@ -1699,38 +1776,48 @@ function openShareModal(){
     const id = 'si_'+(idx++);
     window._shareMap[id] = it;
     const dotHtml = it.status ? statusDot(it.status) : '';
-    return '<label class="v-share-row">'
+    return '<label class="v-share-row" onclick="event.stopPropagation()">'
       +'<input type="checkbox" data-share="'+id+'" onchange="updateShareCount()"/>'
-      +'<div class="v-sr-icon">'+icon('file-text',16)+'</div>'
+      +'<div class="v-sr-icon">'+icon('file-text',15)+'</div>'
       +'<div class="v-sr-main"><div class="v-sr-name">'+esc(it.label)+'</div></div>'
       + dotHtml
+      +'<button class="v-sr-preview-btn" data-preview="'+id+'" title="Quick preview" onclick="quickPreviewDoc(\''+id+'\',event)">'
+      +icon('eye',13)+'</button>'
       +'</label>';
   }
 
-  function section(id, title, rows, avatarHtml=''){
-    const allBtn = '<button class="v-share-selectall" onclick="shareSelectAll(\''+id+'\',true)">Select all</button>';
+  function section(id, title, rows, avatarHtml='', startOpen=true){
+    const chevronStyle = startOpen ? '' : 'transform:rotate(-90deg);';
+    const rowsStyle = startOpen ? '' : 'display:none;';
     return '<div class="v-share-section" id="'+id+'">'
-      +'<div class="v-share-section-hd">'
-      +'<div style="display:flex;align-items:center;gap:8px;">'+(avatarHtml||'')+'<span class="v-share-section-title">'+esc(title)+'</span>'
+      +'<div class="v-share-section-hd" onclick="shareToggleSection(\''+id+'\',event)">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">'+(avatarHtml||'')
+      +'<span class="v-share-section-title">'+esc(title)+'</span>'
       +' <span style="font-size:10px;color:#94a3b8;font-weight:500;">('+rows.length+')</span>'
-      +'</div>'+allBtn+'</div>'
-      + rows.join('')
+      +'</div>'
+      +'<div class="v-share-section-actions">'
+      +'<button class="v-share-selectall" onclick="shareSelectAll(\''+id+'\',true,event)">All</button>'
+      +'<div class="v-share-chevron" style="'+chevronStyle+'">'+icon('chevron-down',14)+'</div>'
+      +'</div>'
+      +'</div>'
+      +'<div class="v-share-rows" style="'+rowsStyle+'">'+rows.join('')+'</div>'
       +'</div>';
   }
 
   let scrollContent = '';
+  const multiOrg = items.byOrg.length > 1;
   items.byOrg.forEach((org, i) => {
     const secId = 'ss_org_'+i;
-    scrollContent += section(secId, org.org_name, org.docs.map(shareRow), orgAvatar(org.org_name, true));
+    // If multiple orgs, collapse all but the first
+    scrollContent += section(secId, org.org_name, org.docs.map(shareRow), orgAvatar(org.org_name, true), i===0||!multiOrg);
   });
   if(items.contracts.length){
     scrollContent += section('ss_contracts','Contracts',
-      items.contracts.map(it=>shareRow({...it, label:it.label+' — '+it.org_name})));
+      items.contracts.map(it=>shareRow({...it, label:it.label+' — '+it.org_name})), '', !multiOrg);
   }
   if(items.personal.length){
-    scrollContent += section('ss_personal','My personal files',
-      items.personal.map(shareRow));
-    scrollContent += '<div style="font-size:11px;color:#94a3b8;margin:-8px 0 12px;padding:0 2px;">Personal files are clearly marked "not verified" for the recipient.</div>';
+    scrollContent += section('ss_personal','My personal files', items.personal.map(shareRow), '', !multiOrg);
+    scrollContent += '<div style="font-size:11px;color:#94a3b8;margin:4px 0 8px;padding:0 2px;">Personal files are clearly marked "not verified" for the recipient.</div>';
   }
 
   const body = '<h3>Share documents</h3>'
