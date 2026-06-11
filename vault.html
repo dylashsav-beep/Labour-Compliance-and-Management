@@ -67,6 +67,15 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-filter-chip{padding:7px 13px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;white-space:nowrap;font-family:inherit;min-height:36px;transition:all .15s;}
 .v-filter-chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 .v-filter-chip .vc{font-size:10px;opacity:.75;margin-left:3px;}
+/* Coloured filter chips — inactive text hint, active fills with status colour */
+.v-filter-chip.f-attention,.v-filter-chip.f-missing,.v-filter-chip.f-expired{color:#b91c1c;}
+.v-filter-chip.f-attention.active,.v-filter-chip.f-missing.active,.v-filter-chip.f-expired.active{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
+.v-filter-chip.f-expiring{color:#92400e;}
+.v-filter-chip.f-expiring.active{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.v-filter-chip.f-valid{color:#166534;}
+.v-filter-chip.f-valid.active{background:#dcfce7;color:#166534;border-color:#86efac;}
+.v-filter-chip.f-optional{color:#64748b;}
+.v-filter-chip.f-optional.active{background:#f1f5f9;color:#475569;border-color:#cbd5e1;}
 
 /* ── Section headings ── */
 .v-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
@@ -322,18 +331,8 @@ body{display:flex;flex-direction:column;min-height:100vh;}
         <div class="login-logo-sub">Your documents, owned by you</div>
       </div>
     </div>
-    <div class="login-title">Sign in to your vault</div>
-    <div class="login-sub">Enter your email and we'll send you a secure sign-in link. No password needed.</div>
-    <div class="login-field">
-      <label for="emailInput">Email address</label>
-      <input id="emailInput" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" />
-    </div>
-    <button class="login-btn" id="sendLinkBtn">Send me a sign-in link</button>
-    <div class="login-msg" id="loginMsg"></div>
-    <div class="login-note">
-      🔒 Your session is remembered for <b>30 days</b> on this device — you'll only need to do this once. Avoid private/incognito browsing if you want to stay signed in.
-    </div>
-    <div class="login-footer">
+    <div id="loginForm"><!-- populated by wireLogin() --></div>
+    <div class="login-footer" style="margin-top:16px;">
       <a href="https://work-force.nl">← Back to work-force.nl</a>
     </div>
   </div>
@@ -523,8 +522,15 @@ async function boot(){
   if(session){ enterVault(); }
   else { showLogin(); }
   sbClient.auth.onAuthStateChange((evt, sess) => {
+    if(evt === 'PASSWORD_RECOVERY'){
+      // User clicked a password-reset link — show the set-new-password form
+      _loginMode = 'setpw';
+      showLogin();
+      renderLoginForm('', 'Reset link verified — choose a new password below.', 'ok');
+      return;
+    }
     if(evt === 'SIGNED_IN' && sess){ enterVault(); }
-    if(evt === 'SIGNED_OUT'){ showLogin(); }
+    if(evt === 'SIGNED_OUT'){ _loginMode='signin'; showLogin(); }
   });
 }
 
@@ -533,27 +539,162 @@ function showLogin(){
   $('loginScreen').style.display = 'flex';
 }
 
+let _loginMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'setpw'
+
 function wireLogin(){
-  const btn = $('sendLinkBtn'), input = $('emailInput'), msg = $('loginMsg');
-  const qEmail = new URLSearchParams(location.search).get('email');
-  if(qEmail) input.value = qEmail;
-
-  function setMsg(text, kind){ msg.textContent=text; msg.className='login-msg '+kind; msg.style.display=text?'block':'none'; }
-
-  async function send(){
-    const email = (input.value||'').trim();
-    if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setMsg('Please enter a valid email address.','error'); return; }
-    btn.disabled=true; btn.textContent='Sending…'; setMsg('','');
-    try{
-      const { error } = await sbClient.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin+location.pathname } });
-      if(error) throw error;
-      setMsg('✓ Check your email — we\'ve sent you a secure sign-in link. You can close this tab; the link opens your vault.','ok');
-    }catch(e){ setMsg('Could not send link: '+(e.message||'unknown error'),'error'); }
-    finally{ btn.disabled=false; btn.textContent='Send me a sign-in link'; }
-  }
-  btn.onclick = send;
-  input.onkeydown = (e)=>{ if(e.key==='Enter') send(); };
+  const qEmail = new URLSearchParams(location.search).get('email') || '';
   $('signOutBtn').onclick = async ()=>{ await sbClient.auth.signOut(); vaultData=null; };
+  renderLoginForm(qEmail);
+}
+
+function renderLoginForm(prefillEmail, prefillMsg, prefillMsgKind){
+  const form = $('loginForm');
+  if(!form) return;
+  const redirectTo = location.origin + location.pathname;
+
+  function html(mode){
+    const fld = (id,type,label,ph,ac,val='')=>
+      '<div class="login-field"><label for="lf_'+id+'">'+label+'</label>'
+      +'<input id="lf_'+id+'" type="'+type+'" autocomplete="'+ac+'" placeholder="'+ph+'" value="'+esc(val)+'" style="font-size:16px!important;"/></div>';
+    const pwToggle = '<button type="button" onclick="toggleLoginPw(\'lf_pw\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password">👁</button>';
+    const pwToggle2 = '<button type="button" onclick="toggleLoginPw(\'lf_pw2\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password">👁</button>';
+
+    if(mode==='signup') return ''
+      +'<div class="login-title">Create your vault</div>'
+      +'<div class="login-sub">Choose a password to protect your vault. You can also always use a magic link to sign in.</div>'
+      +fld('email','email','Email address','you@example.com','email',prefillEmail)
+      +'<div class="login-field" style="position:relative;"><label for="lf_pw">Password</label>'
+      +'<input id="lf_pw" type="password" autocomplete="new-password" placeholder="At least 8 characters" style="font-size:16px!important;padding-right:42px;"/>'+pwToggle+'</div>'
+      +'<div class="login-field" style="position:relative;"><label for="lf_pw2">Confirm password</label>'
+      +'<input id="lf_pw2" type="password" autocomplete="new-password" placeholder="Same again" style="font-size:16px!important;padding-right:42px;"/>'+pwToggle2+'</div>'
+      +'<button class="login-btn" id="lf_btn" onclick="loginAction()">Create account</button>'
+      +'<div class="login-msg" id="lf_msg" style="display:none;"></div>'
+      +'<div style="text-align:center;margin-top:14px;font-size:13px;color:#64748b;">'
+      +'Already have an account? <a href="#" style="color:var(--accent);font-weight:600;" onclick="switchLoginMode(\'signin\');return false;">Sign in</a></div>';
+
+    if(mode==='forgot') return ''
+      +'<div class="login-title">Reset your password</div>'
+      +'<div class="login-sub">Enter your email and we\'ll send a password reset link. Or use the magic link below to sign in directly.</div>'
+      +fld('email','email','Email address','you@example.com','email',prefillEmail)
+      +'<button class="login-btn" id="lf_btn" onclick="loginAction()">Send reset link</button>'
+      +'<div class="login-msg" id="lf_msg" style="display:none;"></div>'
+      +'<div style="text-align:center;margin-top:14px;font-size:13px;color:#64748b;">'
+      +'<a href="#" style="color:var(--accent);font-weight:600;" onclick="switchLoginMode(\'signin\');return false;">← Back to sign in</a></div>'
+      +'<div class="login-field" style="margin-top:16px;padding-top:16px;border-top:1px solid #e2e8f0;">'
+      +'<button id="lf_ml" onclick="sendMagicLink()" style="width:100%;padding:11px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;min-height:44px;">Send magic link instead</button></div>';
+
+    if(mode==='setpw') return ''
+      +'<div class="login-title">Set a new password</div>'
+      +'<div class="login-sub">Choose a new password for your vault account.</div>'
+      +'<div class="login-field" style="position:relative;"><label for="lf_pw">New password</label>'
+      +'<input id="lf_pw" type="password" autocomplete="new-password" placeholder="At least 8 characters" style="font-size:16px!important;padding-right:42px;"/>'+pwToggle+'</div>'
+      +'<div class="login-field" style="position:relative;"><label for="lf_pw2">Confirm new password</label>'
+      +'<input id="lf_pw2" type="password" autocomplete="new-password" placeholder="Same again" style="font-size:16px!important;padding-right:42px;"/>'+pwToggle2+'</div>'
+      +'<button class="login-btn" id="lf_btn" onclick="loginAction()">Update password</button>'
+      +'<div class="login-msg" id="lf_msg" style="display:none;"></div>';
+
+    // default: signin
+    return ''
+      +'<div class="login-title">Sign in to your vault</div>'
+      +'<div class="login-sub">Use your email and password, or sign in with a magic link.</div>'
+      +fld('email','email','Email address','you@example.com','email',prefillEmail)
+      +'<div class="login-field" style="position:relative;"><label for="lf_pw">Password</label>'
+      +'<input id="lf_pw" type="password" autocomplete="current-password" placeholder="Your password" style="font-size:16px!important;padding-right:42px;"/>'+pwToggle+'</div>'
+      +'<button class="login-btn" id="lf_btn" onclick="loginAction()">Sign in</button>'
+      +'<div class="login-msg" id="lf_msg" style="display:none;"></div>'
+      +'<div style="display:flex;justify-content:space-between;margin-top:12px;font-size:13px;">'
+      +'<a href="#" style="color:#64748b;" onclick="switchLoginMode(\'signup\');return false;">New here? Create account</a>'
+      +'<a href="#" style="color:var(--accent);font-weight:600;" onclick="switchLoginMode(\'forgot\');return false;">Forgot password?</a></div>'
+      +'<div style="display:flex;align-items:center;gap:10px;margin:16px 0;"><div style="flex:1;height:1px;background:#e2e8f0;"></div><span style="font-size:11px;font-weight:600;color:#94a3b8;white-space:nowrap;">OR</span><div style="flex:1;height:1px;background:#e2e8f0;"></div></div>'
+      +'<button id="lf_ml" onclick="sendMagicLink()" style="width:100%;padding:11px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;min-height:44px;">Send magic link</button>'
+      +'<div class="login-note" style="margin-top:14px;">🔒 Stay signed in for <b>30 days</b>. Avoid private/incognito if you want to stay logged in.</div>';
+  }
+
+  form.innerHTML = html(_loginMode);
+  if(prefillMsg) setLoginMsg(prefillMsg, prefillMsgKind||'ok');
+
+  // Enter key on password fires sign in
+  const pw = $('lf_pw');
+  if(pw) pw.onkeydown = (e)=>{ if(e.key==='Enter') loginAction(); };
+  const em = $('lf_email');
+  if(em) em.onkeydown = (e)=>{ if(e.key==='Enter'){ if(_loginMode==='forgot') sendMagicLink(); else loginAction(); } };
+}
+
+function switchLoginMode(mode){ _loginMode = mode; renderLoginForm($('lf_email')&&$('lf_email').value||''); }
+function toggleLoginPw(id){ const el=$(id); if(el) el.type = el.type==='password'?'text':'password'; }
+function setLoginMsg(text, kind){ const m=$('lf_msg'); if(!m) return; m.textContent=text; m.className='login-msg '+kind; m.style.display=text?'block':'none'; }
+
+async function loginAction(){
+  const email = ($('lf_email')&&$('lf_email').value||'').trim();
+  const pw    = $('lf_pw')&&$('lf_pw').value||'';
+  const pw2   = $('lf_pw2')&&$('lf_pw2').value||'';
+  const btn   = $('lf_btn');
+  setLoginMsg('','');
+
+  if(_loginMode === 'setpw'){
+    if(pw.length < 8){ setLoginMsg('Password must be at least 8 characters.','error'); return; }
+    if(pw !== pw2){ setLoginMsg('Passwords don\'t match.','error'); return; }
+    if(btn){ btn.disabled=true; btn.textContent='Updating…'; }
+    try{
+      const { error } = await sbClient.auth.updateUser({ password: pw });
+      if(error) throw error;
+      setLoginMsg('✓ Password updated. Signing you in…','ok');
+      setTimeout(()=>enterVault(), 1200);
+    }catch(e){ setLoginMsg('Could not update password: '+(e.message||'unknown error'),'error'); }
+    finally{ if(btn){ btn.disabled=false; btn.textContent='Update password'; } }
+    return;
+  }
+
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setLoginMsg('Please enter a valid email address.','error'); return; }
+
+  if(_loginMode === 'forgot'){
+    if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+    try{
+      const { error } = await sbClient.auth.resetPasswordForEmail(email, { redirectTo: location.origin+location.pathname });
+      if(error) throw error;
+      setLoginMsg('✓ Reset link sent — check your email. Click it to set a new password.','ok');
+    }catch(e){ setLoginMsg('Could not send reset link: '+(e.message||'unknown error'),'error'); }
+    finally{ if(btn){ btn.disabled=false; btn.textContent='Send reset link'; } }
+    return;
+  }
+
+  if(_loginMode === 'signup'){
+    if(pw.length < 8){ setLoginMsg('Password must be at least 8 characters.','error'); return; }
+    if(pw !== pw2){ setLoginMsg('Passwords don\'t match.','error'); return; }
+    if(btn){ btn.disabled=true; btn.textContent='Creating account…'; }
+    try{
+      const { error } = await sbClient.auth.signUp({ email, password:pw, options:{ emailRedirectTo: location.origin+location.pathname } });
+      if(error) throw error;
+      setLoginMsg('✓ Account created! Check your email for a confirmation link, then sign in.','ok');
+      setTimeout(()=>switchLoginMode('signin'), 3000);
+    }catch(e){ setLoginMsg('Could not create account: '+(e.message||'unknown error'),'error'); }
+    finally{ if(btn){ btn.disabled=false; btn.textContent='Create account'; } }
+    return;
+  }
+
+  // signin
+  if(!pw){ setLoginMsg('Please enter your password.','error'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Signing in…'; }
+  try{
+    const { error } = await sbClient.auth.signInWithPassword({ email, password:pw });
+    if(error) throw error;
+    // enterVault() will be triggered by onAuthStateChange SIGNED_IN event
+  }catch(e){ setLoginMsg('Could not sign in: '+(e.message||'unknown error'),'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Sign in'; } }
+}
+
+async function sendMagicLink(){
+  const email = ($('lf_email')&&$('lf_email').value||'').trim();
+  if(!email||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setLoginMsg('Please enter your email address first.','error'); return; }
+  const btn = $('lf_ml');
+  if(btn){ btn.disabled=true; btn.textContent='Sending…'; }
+  try{
+    const { error } = await sbClient.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin+location.pathname } });
+    if(error) throw error;
+    setLoginMsg('✓ Magic link sent — check your email to sign in.','ok');
+  }catch(e){ setLoginMsg('Could not send link: '+(e.message||'unknown error'),'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Send magic link'+((_loginMode==='forgot')?'instead':''); } }
+}
 
   document.querySelectorAll('.v-tab').forEach(t=>{
     t.onclick = ()=>{
@@ -677,18 +818,19 @@ function renderDocs(){
       const allCnt = reqMissing.length + expired.length + expiring.length + valid.length + optMissing.length;
 
       // Per-org filter chips — only show chips with items (plus always show All + active filter)
-      const ofc = (fval, label, cnt) => {
+      const ofc = (fval, label, cnt, colorCls) => {
         if(cnt === 0 && fval !== 'all' && fval !== f) return '';
         const a = f===fval ? ' active' : '';
         const cs = cnt ? '<span class="vc">'+cnt+'</span>' : '';
-        return '<button class="v-filter-chip'+a+'" onclick="setOrgFilter('+orgIdx+',\''+fval+'\');event.stopPropagation()">'+label+cs+'</button>';
+        const cc = colorCls ? ' '+colorCls : '';
+        return '<button class="v-filter-chip'+a+cc+'" onclick="setOrgFilter('+orgIdx+',\''+fval+'\');event.stopPropagation()">'+label+cs+'</button>';
       };
       html += '<div class="v-org-filter-bar">'
         + ofc('all','All',allCnt)
-        + ofc('attention','Needs attention',urgentCnt)
-        + ofc('expiring','Expiring',expiring.length)
-        + ofc('valid','Valid',valid.length)
-        + ofc('optional','Optional',optMissing.length)
+        + ofc('attention','Needs attention',urgentCnt,'f-attention')
+        + ofc('expiring','Expiring',expiring.length,'f-expiring')
+        + ofc('valid','Valid',valid.length,'f-valid')
+        + ofc('optional','Optional',optMissing.length,'f-optional')
         + '</div>';
 
       // Build doc groups based on per-org filter
@@ -1287,6 +1429,15 @@ function renderAccount(){
     +'<div class="v-kv"><span class="v-kv-label">Name</span><span class="v-kv-val">'+esc(acc.full_name||'—')+'</span></div>'
     +'<div class="v-kv"><span class="v-kv-label">Plan</span><span class="v-kv-val">'+(isPaid()?'Vault':'Free')+'</span></div>'
     +'<div class="v-kv"><span class="v-kv-label">Linked organisations</span><span class="v-kv-val">'+orgCount+'</span></div>'
+    +'</div>'
+    +'<div class="v-card"><h3>Change password</h3>'
+    +'<p style="margin-bottom:12px;">Set or update your vault password. Your email remains your username.</p>'
+    +'<div class="v-profile-field"><label>New password</label>'
+    +'<input id="acc_pw1" type="password" autocomplete="new-password" placeholder="At least 8 characters" style="font-size:16px!important;"/></div>'
+    +'<div class="v-profile-field"><label>Confirm new password</label>'
+    +'<input id="acc_pw2" type="password" autocomplete="new-password" placeholder="Same again" style="font-size:16px!important;"/></div>'
+    +'<button class="wp-doc-btn" id="acc_pw_btn" style="margin-top:4px;" onclick="changeVaultPassword()">Update password</button>'
+    +'<div id="acc_pw_msg" class="login-msg" style="display:none;margin-top:10px;"></div>'
     +'</div>';
 
   // Per-org profile editing
@@ -1323,6 +1474,26 @@ function renderAccount(){
   setBody(html);
   // Style textareas
   document.querySelectorAll('.v-profile-field textarea').forEach(t=>{ t.style.cssText += ';font-family:inherit;'; });
+}
+
+async function changeVaultPassword(){
+  const pw1 = ($('acc_pw1')&&$('acc_pw1').value||'').trim();
+  const pw2 = ($('acc_pw2')&&$('acc_pw2').value||'').trim();
+  const btn = $('acc_pw_btn');
+  const msg = $('acc_pw_msg');
+  function setMsg(t,k){ if(!msg)return; msg.textContent=t; msg.className='login-msg '+k; msg.style.display=t?'block':'none'; }
+  setMsg('','');
+  if(pw1.length < 8){ setMsg('Password must be at least 8 characters.','error'); return; }
+  if(pw1 !== pw2){ setMsg('Passwords don\'t match.','error'); return; }
+  if(btn){ btn.disabled=true; btn.textContent='Updating…'; }
+  try{
+    const { error } = await sbClient.auth.updateUser({ password: pw1 });
+    if(error) throw error;
+    setMsg('✓ Password updated successfully.','ok');
+    if($('acc_pw1')) $('acc_pw1').value='';
+    if($('acc_pw2')) $('acc_pw2').value='';
+  }catch(e){ setMsg('Could not update password: '+(e.message||'unknown error'),'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Update password'; } }
 }
 
 async function saveProfile(orgIdx){
