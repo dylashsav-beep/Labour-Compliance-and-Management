@@ -253,7 +253,8 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:flex-end;justify-content:center;z-index:50;padding:0;}
 .v-modal-overlay.open{display:flex;}
 .v-modal{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px 20px 28px;}
-@media(min-width:600px){.v-modal-overlay{align-items:center;}.v-modal{border-radius:16px;}}
+@media(min-width:600px){.v-modal-overlay{align-items:center;}.v-modal{border-radius:16px;}
+  #vPreviewOverlay{align-items:center;}#vPreviewPanel{border-radius:16px;}}
 .v-modal h3{font-size:17px;font-weight:800;color:#1e293b;margin-bottom:4px;}
 .v-modal .v-modal-sub{font-size:13px;color:#64748b;margin-bottom:16px;line-height:1.5;}
 .v-check-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;cursor:pointer;}
@@ -386,6 +387,11 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 <!-- ── Modal ── -->
 <div class="v-modal-overlay" id="vModalOverlay">
   <div class="v-modal" id="vModal"></div>
+</div>
+
+<!-- Separate overlay for quick previews — sits above share modal, closes independently -->
+<div id="vPreviewOverlay" style="position:fixed;inset:0;background:rgba(15,23,42,.65);display:none;align-items:flex-end;justify-content:center;z-index:60;padding:0;">
+  <div id="vPreviewPanel" style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;overflow-y:auto;padding:22px 20px 28px;"></div>
 </div>
 
 <script>
@@ -1696,6 +1702,7 @@ async function deletePersonalDoc(id, label){
 
 // ── Share modal ──────────────────────────────────────────────────────────────
 function closeModal(){ $('vModalOverlay').classList.remove('open'); $('vModal').innerHTML=''; }
+function closePreview(){ const o=$('vPreviewOverlay'); if(o) o.style.display='none'; const p=$('vPreviewPanel'); if(p) p.innerHTML=''; }
 
 function shareableItems(){
   const memberships = vaultData.memberships || [];
@@ -1768,16 +1775,54 @@ async function quickPreviewDoc(shareId, ev){
   if(!it) return;
   const btn = document.querySelector('[data-preview="'+shareId+'"]');
   if(btn) btn.disabled = true;
+
+  if(!it.file_path){
+    if(btn) btn.disabled = false;
+    if(it.type==='contract') alert('Contract preview is not available. The file will be included when you send.');
+    else alert('Preview not available for this document.');
+    return;
+  }
+
+  // Show a spinner in the preview overlay immediately so the share modal stays open beneath
+  const overlay = $('vPreviewOverlay');
+  const panel   = $('vPreviewPanel');
+  if(!overlay || !panel){ if(btn) btn.disabled=false; return; }
+  panel.innerHTML = '<div style="text-align:center;padding:40px 20px;color:#64748b;">'+icon('loader',24)+' Loading…</div>';
+  overlay.style.display = 'flex';
+
   try{
-    if(it.file_path){
-      // Direct signed URL — works for org docs and personal vault docs without edge function
-      await previewFile(it.file_path, it.file_name||it.label);
-    } else if(it.type==='contract'){
-      alert('Contract preview is not available. The file will be included when you send.');
+    const { data, error } = await sbClient.storage.from(SB_BUCKET).createSignedUrl(it.file_path, 300);
+    if(error) throw error;
+    const signedUrl = data.signedUrl;
+    const name = it.file_name || it.label || 'Document';
+    const ext  = (name||it.file_path||'').split('.').pop().toLowerCase();
+    const isPdf = ext==='pdf';
+    const isImg = ['jpg','jpeg','png','gif','webp','heic'].includes(ext);
+    let preview = '';
+    if(isPdf){
+      preview = '<iframe src="'+esc(signedUrl)+'" style="width:100%;height:55vh;border:none;border-radius:8px;background:#f8fafc;" title="'+esc(name)+'"></iframe>';
+    } else if(isImg){
+      preview = '<img src="'+esc(signedUrl)+'" style="width:100%;max-height:55vh;object-fit:contain;border-radius:8px;background:#f8fafc;" alt="'+esc(name)+'"/>';
     } else {
-      alert('Preview not available for this document.');
+      preview = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:140px;color:#94a3b8;">'
+        +icon('file-text',36)+'<div style="margin-top:10px;font-size:13px;font-weight:600;color:#64748b;">'+esc(name)+'</div>'
+        +'<div style="font-size:12px;color:#94a3b8;margin-top:4px;">Preview not available for this file type</div></div>';
     }
+    panel.innerHTML =
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">'
+      +'<div style="font-size:15px;font-weight:800;color:#1e293b;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(name)+'</div>'
+      +'<button style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;" onclick="closePreview()">'+icon('x',18)+'</button>'
+      +'</div>'
+      + preview
+      +'<div style="display:flex;gap:10px;margin-top:14px;">'
+      +'<button class="v-ghost-btn" style="flex:1;" onclick="closePreview()">← Back to share</button>'
+      +'<a class="v-primary-btn" style="flex:2;display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;" href="'+esc(signedUrl)+'" download="'+esc(name)+'" target="_blank">'
+      +icon('download',16)+' Download / Save'
+      +'</a>'
+      +'</div>';
+    lucide.createIcons();
   }catch(e){
+    overlay.style.display = 'none';
     alert('Could not open: '+(e&&e.message||'unknown error'));
   }finally{
     if(btn) btn.disabled = false;
