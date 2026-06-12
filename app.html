@@ -2490,6 +2490,17 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           </select>
         </div>
       </div>
+      <!-- Project Files section — shown only when editing an existing project -->
+      <div id="projFilesSection" style="display:none;margin-top:18px;border-top:1px solid var(--border);padding-top:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px;">Project Files</div>
+          <label style="cursor:pointer;">
+            <input type="file" id="projFileInput" multiple style="display:none;" onchange="uploadProjectFiles(this)" accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"/>
+            <span class="btn btn-sm" style="font-size:12px;padding:4px 10px;">+ Upload File</span>
+          </label>
+        </div>
+        <div id="projFilesList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
       <div class="form-actions">
         <button class="btn btn-cancel" onclick="closeM('projOverlay')">Cancel</button>
         <button class="btn btn-save" id="projSaveBtn" onclick="saveProject()">Save Project</button>
@@ -2763,7 +2774,7 @@ function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
   const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents','worker_document_sets','worker_competencies','worker_competency_assignments','worker_competency_records'];
-  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
+  const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','project_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
   return false;
@@ -3158,6 +3169,7 @@ let workerDocSets = [];
 let competencies          = []; // org competency catalogue
 let competencyAssignments = []; // per-worker requirements
 let competencyRecords     = []; // evidence submissions
+let projectFiles          = []; // project-level file attachments
 let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', digestEmails: [], rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, notifyWorkerTypes: [], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
@@ -7946,6 +7958,7 @@ function openAddProject(){
   document.getElementById('pDesc').value = '';
   document.getElementById('pLocation').value = '';
   document.getElementById('pStatus').value = 'active';
+  document.getElementById('projFilesSection').style.display = 'none';
   document.getElementById('projOverlay').classList.add('open');
 }
 function editProject(id){
@@ -7959,6 +7972,8 @@ function editProject(id){
   document.getElementById('pDesc').value = p.desc||'';
   document.getElementById('pLocation').value = p.location||'';
   document.getElementById('pStatus').value = p.active?'active':'inactive';
+  document.getElementById('projFilesSection').style.display = 'block';
+  renderProjectFilesModal(id);
   document.getElementById('projOverlay').classList.add('open');
 }
 function saveProject(){
@@ -8017,6 +8032,78 @@ function deleteProject(id){
     }
     sbScheduleSync();
   }, {title:'TMC Compliance', subtitle:'Delete project', okText:'Delete'});
+}
+
+// ── Project file management ──────────────────────────────────────────────────
+function renderProjectFilesModal(projectId){
+  const list = document.getElementById('projFilesList'); if(!list) return;
+  const files = projectFiles.filter(f=>f.projectId===projectId);
+  if(!files.length){
+    list.innerHTML='<div style="font-size:12px;color:var(--text-l);padding:6px 0;">No files uploaded yet.</div>';
+    return;
+  }
+  list.innerHTML = files.map(f=>{
+    const isImage = /^image\//i.test(f.mimeType);
+    const icon = isImage ? '🖼' : '📄';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;" data-pf-id="${f.id}">
+      <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(f.fileName)}</div>
+        <input type="text" value="${esc(f.caption)}" placeholder="Add a caption (e.g. Site map, Induction pack)" style="font-size:11px;color:var(--text-m);border:none;border-bottom:1px solid var(--border);background:transparent;width:100%;padding:2px 0;margin-top:2px;" onchange="updateProjectFileCaption('${f.id}',this.value)"/>
+      </div>
+      <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;color:var(--text-m);flex-shrink:0;">
+        <input type="checkbox" ${f.visibleToWorkers?'checked':''} onchange="toggleProjectFileVisibility('${f.id}',this.checked)"/> Workers
+      </label>
+      <button onclick="removeProjectFile('${f.id}')" title="Remove" style="background:none;border:none;cursor:pointer;color:#dc2626;font-size:16px;flex-shrink:0;">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function uploadProjectFiles(input){
+  if(!editingProjectId || !sbClient || !sbSession) return;
+  if(!sbCanWriteTable('project_files')){ alert('Your role cannot upload project files.'); return; }
+  const oid = currentOrgId; if(!oid) return;
+  const files = Array.from(input.files); if(!files.length) return;
+  const btn = input.closest('label')?.querySelector('span');
+  if(btn){ btn.textContent = 'Uploading…'; }
+  for(const file of files){
+    try{
+      const slug = file.name.replace(/[^a-z0-9._-]/gi,'_').toLowerCase();
+      const path = `project-files/${oid}/${editingProjectId}/${Date.now()}_${Math.random().toString(36).slice(2)}_${slug}`;
+      const { error: upErr } = await sbClient.storage.from('tmc-documents').upload(path, file);
+      if(upErr) throw upErr;
+      const row = { org_id:oid, project_id:editingProjectId, file_name:file.name, file_path:path, caption:'', mime_type:file.type||'', size_bytes:file.size||0, visible_to_workers:true, sort_order:projectFiles.filter(f=>f.projectId===editingProjectId).length, active:true, uploaded_by:sbProfile?.email||null };
+      const { data, error: dbErr } = await sbClient.from('project_files').insert(row).select().maybeSingle();
+      if(dbErr) throw dbErr;
+      if(data) projectFiles.push({id:data.id,orgId:data.org_id,projectId:data.project_id,fileName:data.file_name,filePath:data.file_path,caption:data.caption||'',mimeType:data.mime_type||'',sizeBytes:data.size_bytes||0,visibleToWorkers:data.visible_to_workers!==false,sortOrder:data.sort_order||0,active:true,uploadedBy:data.uploaded_by||null});
+    }catch(e){ alert('Upload failed: '+e.message); showDiagError('uploadProjectFile', e); }
+  }
+  input.value='';
+  if(btn){ btn.textContent = '+ Upload File'; }
+  renderProjectFilesModal(editingProjectId);
+}
+
+async function updateProjectFileCaption(fileId, caption){
+  const f = projectFiles.find(x=>x.id===fileId); if(!f) return;
+  f.caption = caption;
+  if(sbClient && sbSession) sbClient.from('project_files').update({caption}).eq('id',fileId).catch(()=>{});
+}
+
+async function toggleProjectFileVisibility(fileId, visible){
+  const f = projectFiles.find(x=>x.id===fileId); if(!f) return;
+  f.visibleToWorkers = visible;
+  if(sbClient && sbSession) sbClient.from('project_files').update({visible_to_workers:visible}).eq('id',fileId).catch(()=>{});
+}
+
+async function removeProjectFile(fileId){
+  if(!confirm('Remove this file from the project?')) return;
+  const f = projectFiles.find(x=>x.id===fileId); if(!f) return;
+  projectFiles = projectFiles.filter(x=>x.id!==fileId);
+  renderProjectFilesModal(editingProjectId||f.projectId);
+  if(sbClient && sbSession){
+    sbClient.from('project_files').update({active:false}).eq('id',fileId).catch(()=>{});
+    sbClient.storage.from('tmc-documents').remove([f.filePath]).catch(()=>{});
+  }
 }
 
 // ─── Settings View ────────────────────────────────────────────────────────────
@@ -12180,7 +12267,7 @@ async function sbLoadAll(){
     return errored ? fallback : all;
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData,wdsData,compData,compAssignData,compRecordData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData,wdsData,compData,compAssignData,compRecordData,projFilesData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
@@ -12207,7 +12294,8 @@ async function sbLoadAll(){
       qPaged('worker_document_sets', ()=>sbClient.from('worker_document_sets').select('*').order('applied_at',{ascending:false}), []),
       qPaged('worker_competencies', ()=>sbClient.from('worker_competencies').select('*').eq('active',true).order('sort_order'), []),
       qPaged('worker_competency_assignments', ()=>sbClient.from('worker_competency_assignments').select('*').eq('active',true).order('assigned_at',{ascending:false}), []),
-      qPaged('worker_competency_records', ()=>sbClient.from('worker_competency_records').select('*').eq('active',true).order('submitted_at',{ascending:false}), [])
+      qPaged('worker_competency_records', ()=>sbClient.from('worker_competency_records').select('*').eq('active',true).order('submitted_at',{ascending:false}), []),
+      qPaged('project_files', ()=>sbClient.from('project_files').select('*').eq('active',true).order('sort_order'), []),
     ]);
 
     if(workerData === null){
@@ -12260,6 +12348,7 @@ async function sbLoadAll(){
     competencies = (compData||[]).map(r=>({id:r.id,orgId:r.org_id,key:r.competency_key,name:r.name,category:r.category||'General',infoText:r.info_text||null,infoUrl:r.info_url||null,templateFileName:r.template_file_name||null,templateFilePath:r.template_file_path||null,allowIssue:!!r.allow_issue,expiryTracking:r.expiry_tracking!==false,sortOrder:r.sort_order||0,active:r.active!==false,createdBy:r.created_by||null}));
     competencyAssignments = (compAssignData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,competencyId:r.competency_id,required:r.required!==false,notes:r.notes||null,active:r.active!==false,assignedBy:r.assigned_by||null,assignedAt:r.assigned_at||null}));
     competencyRecords = (compRecordData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,competencyId:r.competency_id,filePath:r.file_path||null,fileName:r.file_name||null,issuedDate:r.issued_date||null,expiryDate:r.expiry_date||null,status:r.status||'pending',submittedBy:r.submitted_by||'worker',submittedAt:r.submitted_at||null,reviewedBy:r.reviewed_by||null,reviewNotes:r.review_notes||null,active:r.active!==false}));
+    projectFiles = (projFilesData||[]).map(r=>({id:r.id,orgId:r.org_id,projectId:r.project_id,fileName:r.file_name,filePath:r.file_path,caption:r.caption||'',mimeType:r.mime_type||'',sizeBytes:r.size_bytes||0,visibleToWorkers:r.visible_to_workers!==false,sortOrder:r.sort_order||0,active:r.active!==false,uploadedBy:r.uploaded_by||null}));
     sbHasLoadedRemote = true;
     renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){

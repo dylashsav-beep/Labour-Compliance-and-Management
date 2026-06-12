@@ -136,6 +136,13 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-proj-info-value{font-size:14px;font-weight:600;color:#1e293b;flex:1;}
 .wp-proj-map-link{display:inline-flex;align-items:center;gap:5px;color:#2563eb;font-size:14px;font-weight:600;text-decoration:none;}
 .wp-proj-map-link:hover{text-decoration:underline;}
+.wp-proj-files-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:4px;}
+.wp-proj-file-tile{display:flex;flex-direction:column;align-items:center;text-decoration:none;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 8px;gap:6px;transition:background .15s;}
+.wp-proj-file-tile:hover{background:#f1f5f9;}
+.wp-proj-file-thumb{width:100%;height:80px;object-fit:cover;border-radius:6px;}
+.wp-proj-file-icon{font-size:32px;height:80px;display:flex;align-items:center;}
+.wp-proj-file-name{font-size:11px;font-weight:600;color:#1e293b;text-align:center;word-break:break-word;line-height:1.3;}
+.wp-proj-file-caption{font-size:10px;color:#64748b;text-align:center;font-style:italic;}
 .wp-proj-assign-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:14px;}
 .wp-proj-assign-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:10px;}
 .wp-profile-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 16px;}
@@ -291,6 +298,7 @@ let wpDocSubmitOpen = {}, wpIssuedDocs = [];
 let wpAccomAssignments = [], wpVehAssignments = [], wpToolAssignments = [];
 let wpProperties = [], wpVehicles = [], wpTools = [], wpReturnRequests = [];
 let wpCompetencies = [], wpCompRecords = []; // training tab data
+let wpProjectFiles = []; // project files for this worker's assigned projects
 let wpLang = 'en';
 
 const wpLangMeta = { en:{flag:'🇬🇧',code:'EN'}, nl:{flag:'🇳🇱',code:'NL'}, ro:{flag:'🇷🇴',code:'RO'}, tr:{flag:'🇹🇷',code:'TR'} };
@@ -742,6 +750,7 @@ async function wpLoadSubmissions(){
     wpIssuedDocs=(data?.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
     wpCompetencies=(data?.competency_assignments||[]);
     wpCompRecords=(data?.comp_records||[]);
+    wpProjectFiles=(data?.project_files||[]);
   }catch(e){ console.warn('[WP] wpLoadSubmissions:',e.message); }
 }
 
@@ -1022,8 +1031,9 @@ function wpOpenProjDetail(assignmentId){
   const now=new Date().toISOString().slice(0,10);
   const ongoing=!a.endDate||a.endDate>=now;
   const isUrl=proj?.location&&/^https?:\/\//i.test(proj.location);
-  const locationHtml=proj?.location
-    ?(isUrl?`<a class="wp-proj-map-link" href="${esc(proj.location)}" target="_blank" rel="noopener">${t('openInMaps')}</a>`:`<span>${esc(proj.location)}</span>`)
+  const mapsUrl=proj?.location?(isUrl?proj.location:`https://maps.google.com/?q=${encodeURIComponent(proj.location)}`):null;
+  const locationHtml=mapsUrl
+    ?`<a class="wp-proj-map-link" href="${esc(mapsUrl)}" target="_blank" rel="noopener">${t('openInMaps')}${isUrl?'':' 📍'}</a>`
     :'<span style="color:#94a3b8;">—</span>';
   const phoneHtml=proj?.phone?`<a class="wp-call-link" href="tel:${esc(proj.phone.replace(/\s/g,''))}">📞 ${esc(proj.phone)}</a>`:'';
   const infoRows=[
@@ -1043,7 +1053,21 @@ function wpOpenProjDetail(assignmentId){
       <div class="wp-proj-assign-label">${t('yourAssignment')}</div>
       <div class="wp-proj-info-row" style="border-top:none;padding-top:0;"><span class="wp-proj-info-label">${t('periodLabel')}</span><span class="wp-proj-info-value">${esc(a.startDate||'?')} → ${ongoing?`<span style="color:#16a34a;font-weight:700;">${t('ongoing')}</span>`:esc(a.endDate)}</span></div>
       ${a.notes?`<div class="wp-proj-info-row"><span class="wp-proj-info-label">${t('notesLabel')}</span><span class="wp-proj-info-value" style="font-weight:400;color:#475569;">${esc(a.notes)}</span></div>`:''}
-    </div>`;
+    </div>
+    ${(()=>{
+      const pFiles=wpProjectFiles.filter(f=>f.project_id===a.projectId);
+      if(!pFiles.length) return '';
+      const tiles=pFiles.map(f=>{
+        const isImg=/^image\//i.test(f.mime_type||'');
+        const url=wpSb.storage.from('tmc-documents').getPublicUrl(f.file_path).data?.publicUrl||'';
+        return `<a href="${esc(url)}" target="_blank" rel="noopener" class="wp-proj-file-tile">
+          ${isImg?`<img src="${esc(url)}" class="wp-proj-file-thumb" onerror="this.style.display='none'"/>`:'<div class="wp-proj-file-icon">📄</div>'}
+          <div class="wp-proj-file-name">${esc(f.file_name)}</div>
+          ${f.caption?`<div class="wp-proj-file-caption">${esc(f.caption)}</div>`:''}
+        </a>`;
+      }).join('');
+      return `<div class="wp-proj-assign-card"><div class="wp-proj-assign-label">Project Files</div><div class="wp-proj-files-grid">${tiles}</div></div>`;
+    })()}`;
   const pd=document.getElementById('wpProjDetail');
   pd.style.display='block'; pd.scrollTop=0;
 }
