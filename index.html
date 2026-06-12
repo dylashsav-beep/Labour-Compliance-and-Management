@@ -682,9 +682,49 @@ footer{
   .hero-ctas{flex-direction:column;align-items:flex-start;}
   .hero-ctas .btn{width:100%;justify-content:center;max-width:340px;}
 }
+/* ── MOBILE MENU ── */
+.hamburger{
+  display:none;
+  flex-direction:column;justify-content:center;align-items:center;
+  gap:5px;width:44px;height:44px;
+  background:none;border:none;cursor:pointer;padding:0;flex-shrink:0;
+}
+.hamburger span{
+  display:block;width:22px;height:2px;
+  background:var(--navy);border-radius:2px;
+  transition:transform 0.22s,opacity 0.22s;
+}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg);}
+.hamburger.open span:nth-child(2){opacity:0;}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+
+.mobile-menu{
+  display:none;
+  position:fixed;top:68px;left:0;right:0;bottom:0;z-index:190;
+  background:rgba(0,0,0,0.35);
+}
+.mobile-menu.open{display:block;}
+.mobile-menu-panel{
+  background:#fff;border-bottom:1px solid var(--border);
+  padding:0.75rem 1rem 1.25rem;
+  box-shadow:0 8px 24px rgba(0,0,0,0.12);
+}
+.mobile-menu-links{display:flex;flex-direction:column;gap:2px;margin-bottom:0.75rem;}
+.mobile-menu-link{
+  display:block;font-size:0.95rem;font-weight:500;color:var(--text);
+  text-decoration:none;padding:0.65rem 0.5rem;border-radius:8px;
+  min-height:44px;display:flex;align-items:center;
+  transition:background 0.15s;
+}
+.mobile-menu-link:hover{background:#f1f5f9;color:var(--navy);}
+.mobile-menu-divider{height:1px;background:var(--border);margin:0.5rem 0;}
+.mobile-menu-actions{display:flex;flex-direction:column;gap:0.6rem;}
+.mobile-menu-actions .btn{width:100%;justify-content:center;min-height:44px;}
+
 @media(max-width:640px){
-  /* Navbar: hide secondary nav buttons — keep only Request Trial */
+  /* Navbar: hide secondary nav buttons — keep only Request Trial; show hamburger */
   .navbar-right .btn-ghost-nav,.navbar-right .btn-outline-nav{display:none;}
+  .hamburger{display:flex;}
   /* Demo dashboard: 4-col stats → 2×2 */
   .demo-dashboard .stats-row{grid-template-columns:repeat(2,1fr);}
   .demo-dashboard .stats-row .stat:nth-child(even){border-right:none;}
@@ -1101,8 +1141,29 @@ footer{
     <a class="btn btn-ghost-nav" href="app.html">Log in</a>
     <a class="btn btn-outline-nav" href="app.html?demo=1">Live Demo</a>
     <button class="btn btn-primary" onclick="openDemoModal()">Request Trial</button>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+<!-- ── MOBILE MENU ── -->
+<div class="mobile-menu" id="mobileMenu" onclick="closeMobileMenuOnBackdrop(event)">
+  <div class="mobile-menu-panel">
+    <div class="mobile-menu-links">
+      <a class="mobile-menu-link" href="#features" onclick="closeMobileMenu()">Features</a>
+      <a class="mobile-menu-link" href="#how-it-works" onclick="closeMobileMenu()">How It Works</a>
+      <a class="mobile-menu-link" href="#contact" onclick="closeMobileMenu()">Contact</a>
+    </div>
+    <div class="mobile-menu-divider"></div>
+    <div class="mobile-menu-actions">
+      <a class="btn btn-ghost-nav" href="worker.html">Worker Portal</a>
+      <a class="btn btn-ghost-nav" href="app.html">Log in</a>
+      <a class="btn btn-outline-nav" href="app.html?demo=1">Try the Live Demo</a>
+      <button class="btn btn-primary" onclick="openDemoModal();closeMobileMenu();">Request Trial</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════════════════════════════
      HERO
@@ -2227,6 +2288,24 @@ const navbar = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
   navbar.classList.toggle('scrolled', window.scrollY > 20);
 }, {passive:true});
+
+// ── Mobile menu ──
+function toggleMobileMenu(){
+  const btn=document.getElementById('hamburgerBtn');
+  const menu=document.getElementById('mobileMenu');
+  const open=menu.classList.toggle('open');
+  btn.classList.toggle('open',open);
+  btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  document.body.style.overflow = open ? 'hidden' : '';
+}
+function closeMobileMenu(){
+  document.getElementById('hamburgerBtn').classList.remove('open');
+  document.getElementById('mobileMenu').classList.remove('open');
+  document.body.style.overflow='';
+}
+function closeMobileMenuOnBackdrop(e){
+  if(e.target===document.getElementById('mobileMenu')) closeMobileMenu();
+}
 
 // ── Intersection Observer for fade-up ──
 const fadeEls = document.querySelectorAll('.fade-up');
