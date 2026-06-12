@@ -3,15 +3,24 @@
 -- Run in: Supabase → Database → SQL Editor
 -- Run AFTER add_worker_competencies.sql
 --
--- Extends get_worker_portal() to include:
---   competency_assignments — competencies required for this worker in this org
---   comp_records           — this worker's submitted evidence records
+-- ✅ APPLIED to production (TMC Compliance) 2026-06-12 via Supabase MCP.
+--
+-- This is the FULL live get_worker_portal() definition with two competency
+-- fields added (competency_assignments + comp_records). It deliberately
+-- reproduces EVERY existing field — including the pending/rejected submissions
+-- branch, worker_doc_files, tool_assignments, issued_docs, etc. — so a re-run
+-- never regresses the live function. Earlier drafts of this file were simplified
+-- and would have dropped live fields; do NOT restore those.
 --
 -- Safe to re-run (CREATE OR REPLACE).
 -- =============================================================================
 
-CREATE OR REPLACE FUNCTION get_worker_portal(p_email text, p_org_id uuid DEFAULT NULL)
-RETURNS json LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $func$
+CREATE OR REPLACE FUNCTION public.get_worker_portal(p_email text, p_org_id uuid DEFAULT NULL::uuid)
+ RETURNS json
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
 DECLARE
   v_worker            workers%ROWTYPE;
   v_tool_assignments  json := '[]'::json;
@@ -22,7 +31,6 @@ DECLARE
   v_comp_assignments  json := '[]'::json;
   v_comp_records      json := '[]'::json;
 BEGIN
-  -- p_org_id is required (enforced at app level; NULL = cross-org risk).
   IF p_org_id IS NULL THEN
     RAISE EXCEPTION 'p_org_id is required';
   END IF;
@@ -40,22 +48,24 @@ BEGIN
     SELECT COALESCE(json_agg(ta ORDER BY ta.start_date DESC), '[]'::json) INTO v_tool_assignments
     FROM tool_assignments ta WHERE ta.worker_id = v_worker.id AND ta.active = true;
   END IF;
-
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='tools') THEN
     SELECT COALESCE(json_agg(t ORDER BY t.name), '[]'::json) INTO v_tools
     FROM tools t WHERE t.active = true AND t.org_id = v_worker.org_id;
   END IF;
-
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_resource_return_requests') THEN
     SELECT COALESCE(json_agg(rr ORDER BY rr.submitted_at DESC), '[]'::json) INTO v_return_requests
     FROM worker_resource_return_requests rr WHERE rr.worker_id = v_worker.id AND rr.status = 'pending';
   END IF;
-
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_document_submissions') THEN
     SELECT COALESCE(json_agg(s ORDER BY s.submitted_at DESC), '[]'::json) INTO v_submissions
-    FROM worker_document_submissions s WHERE s.worker_id = v_worker.id AND s.active = true AND s.status = 'pending';
+    FROM worker_document_submissions s
+    WHERE s.worker_id = v_worker.id
+      AND s.active = true
+      AND (
+        s.status = 'pending'
+        OR (s.status = 'rejected' AND s.review_notes IS NOT NULL)
+      );
   END IF;
-
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='issued_documents') THEN
     SELECT COALESCE(json_agg(id_doc ORDER BY id_doc.issued_at DESC), '[]'::json) INTO v_issued_docs
     FROM issued_documents id_doc
@@ -64,7 +74,7 @@ BEGIN
       AND id_doc.status = 'pending_signature';
   END IF;
 
-  -- Competency assignments for this worker (joined with catalogue for display info).
+  -- Competency assignments (joined with catalogue for display info)
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_competency_assignments') THEN
     SELECT COALESCE(json_agg(json_build_object(
         'assignment_id',      ca.id,
@@ -90,7 +100,6 @@ BEGIN
       AND c.active     = true;
   END IF;
 
-  -- Active competency evidence records for this worker.
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='worker_competency_records') THEN
     SELECT COALESCE(json_agg(json_build_object(
         'id',            r.id,
@@ -123,26 +132,26 @@ BEGIN
       'document_set_id', v_worker.document_set_id,
       'org_id',          v_worker.org_id
     ),
-    'doc_sets',             (SELECT COALESCE(json_agg(s ORDER BY s.name),        '[]'::json) FROM document_sets s          WHERE s.active = true AND s.org_id = v_worker.org_id),
-    'doc_set_items',        (SELECT COALESCE(json_agg(i ORDER BY i.sort_order),  '[]'::json) FROM document_set_items i     WHERE i.active = true AND i.org_id = v_worker.org_id),
-    'worker_docs',          (SELECT COALESCE(json_agg(d),                        '[]'::json) FROM worker_documents d       WHERE d.worker_id = v_worker.id AND d.active = true),
-    'worker_doc_files',     (SELECT COALESCE(json_agg(f),                        '[]'::json) FROM worker_document_files f  WHERE f.worker_id = v_worker.id AND f.active = true),
-    'assignments',          (SELECT COALESCE(json_agg(a),                        '[]'::json) FROM project_assignments a    WHERE a.worker_id = v_worker.id AND a.active = true),
-    'projects',             (SELECT COALESCE(json_agg(p ORDER BY p.name),        '[]'::json) FROM projects p               WHERE p.active = true AND p.org_id = v_worker.org_id),
-    'submissions',          v_submissions,
-    'accom_assignments',    (SELECT COALESCE(json_agg(aa ORDER BY aa.start_date DESC), '[]'::json) FROM accommodation_assignments aa WHERE aa.worker_id = v_worker.id AND aa.active = true),
-    'properties',           (SELECT COALESCE(json_agg(p ORDER BY p.name),        '[]'::json) FROM properties p             WHERE p.active = true AND p.org_id = v_worker.org_id),
-    'veh_assignments',      (SELECT COALESCE(json_agg(va ORDER BY va.start_date DESC), '[]'::json) FROM vehicle_assignments va WHERE va.worker_id = v_worker.id AND va.active = true),
-    'vehicles',             (SELECT COALESCE(json_agg(v ORDER BY v.description), '[]'::json) FROM vehicles v               WHERE v.active = true AND v.org_id = v_worker.org_id),
-    'tool_assignments',     v_tool_assignments,
-    'tools',                v_tools,
-    'return_requests',      v_return_requests,
-    'issued_docs',          v_issued_docs,
+    'doc_sets',          (SELECT COALESCE(json_agg(s ORDER BY s.name),        '[]'::json) FROM document_sets s          WHERE s.active = true AND s.org_id = v_worker.org_id),
+    'doc_set_items',     (SELECT COALESCE(json_agg(i ORDER BY i.sort_order),  '[]'::json) FROM document_set_items i     WHERE i.active = true AND i.org_id = v_worker.org_id),
+    'worker_docs',       (SELECT COALESCE(json_agg(d),                        '[]'::json) FROM worker_documents d       WHERE d.worker_id = v_worker.id AND d.active = true),
+    'worker_doc_files',  (SELECT COALESCE(json_agg(f),                        '[]'::json) FROM worker_document_files f  WHERE f.worker_id = v_worker.id AND f.active = true),
+    'assignments',       (SELECT COALESCE(json_agg(a),                        '[]'::json) FROM project_assignments a    WHERE a.worker_id = v_worker.id AND a.active = true),
+    'projects',          (SELECT COALESCE(json_agg(p ORDER BY p.name),        '[]'::json) FROM projects p               WHERE p.active = true AND p.org_id = v_worker.org_id),
+    'submissions',       v_submissions,
+    'accom_assignments', (SELECT COALESCE(json_agg(aa ORDER BY aa.start_date DESC), '[]'::json) FROM accommodation_assignments aa WHERE aa.worker_id = v_worker.id AND aa.active = true),
+    'properties',        (SELECT COALESCE(json_agg(p ORDER BY p.name),        '[]'::json) FROM properties p             WHERE p.active = true AND p.org_id = v_worker.org_id),
+    'veh_assignments',   (SELECT COALESCE(json_agg(va ORDER BY va.start_date DESC), '[]'::json) FROM vehicle_assignments va WHERE va.worker_id = v_worker.id AND va.active = true),
+    'vehicles',          (SELECT COALESCE(json_agg(v ORDER BY v.description), '[]'::json) FROM vehicles v               WHERE v.active = true AND v.org_id = v_worker.org_id),
+    'tool_assignments',  v_tool_assignments,
+    'tools',             v_tools,
+    'return_requests',   v_return_requests,
+    'issued_docs',       v_issued_docs,
     'competency_assignments', v_comp_assignments,
     'comp_records',           v_comp_records
   );
 END;
-$func$;
+$function$;
 
 GRANT EXECUTE ON FUNCTION get_worker_portal(text, uuid) TO anon, authenticated;
 
