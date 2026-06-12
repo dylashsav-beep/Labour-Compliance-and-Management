@@ -450,6 +450,31 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
 .res-status.expiring{background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b);}
 .res-status.expired{background:var(--red-l);color:var(--red);border:1px solid var(--red-b);}
 .res-status.none{background:var(--bg);color:var(--text-l);border:1px solid var(--border);}
+/* ── Worker-modal compact GO banner + collapsible resource rows ── */
+.wm-go-banner{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:5px;margin-bottom:8px;font-size:12px;line-height:1.35;flex-wrap:wrap;}
+.wm-go-tag{font-size:12px;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.wm-go-detail{font-size:11px;font-weight:500;}
+.wm-status-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 12px;background:var(--bg);border:1px solid var(--border);border-radius:5px;margin-bottom:10px;}
+.wm-status-bar .wm-status-left{display:flex;align-items:center;gap:8px;min-width:0;}
+.wm-status-note{font-size:10px;color:var(--text-l);}
+@media(max-width:560px){.wm-status-note{display:none;}}
+.wm-res-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
+.wm-res-row{border:1px solid var(--border);border-radius:6px;background:var(--bg);overflow:hidden;}
+.wm-res-row[open]{background:#fff;}
+.wm-res-summary{display:flex;align-items:center;gap:9px;padding:8px 12px;cursor:pointer;list-style:none;min-height:38px;box-sizing:border-box;}
+.wm-res-summary::-webkit-details-marker{display:none;}
+.wm-res-summary:hover{background:var(--sky-xl);}
+.wm-res-icon{font-size:13px;flex-shrink:0;}
+.wm-res-label{font-size:11px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.4px;flex-shrink:0;}
+.wm-res-head-detail{font-size:12px;font-weight:600;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.wm-res-head-detail.empty{color:var(--text-l);font-weight:500;}
+.wm-res-head-status{display:flex;align-items:center;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end;}
+.wm-res-chevron{font-size:11px;color:var(--text-l);flex-shrink:0;transition:transform .15s;margin-left:2px;}
+.wm-res-row[open] .wm-res-chevron{transform:rotate(180deg);}
+.wm-res-body{padding:4px 12px 12px 12px;border-top:1px solid var(--border);}
+.wm-res-card{padding:9px 0;border-bottom:1px dashed var(--border);}
+.wm-res-card:last-of-type{border-bottom:none;}
+.wm-res-count-pill{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--sky-l,#e0ecff);color:var(--navy);flex-shrink:0;}
 .btn-danger{background:var(--red-l);color:var(--red);border:1px solid var(--red-b);font-family:'Inter',sans-serif;font-size:13px;font-weight:500;padding:7px 14px;border-radius:5px;cursor:pointer;transition:all .15s;}
 .btn-danger:hover{background:var(--red);color:#fff;}
 
@@ -5399,6 +5424,38 @@ function setWorkerActiveFromSelect(wid){
   const el=document.getElementById(`workerStatusSelect_${wid}`); if(!el) return;
   setWorkerActiveStatus(wid, el.value === 'active', 'Worker edit menu status dropdown');
 }
+// All project assignments active at refDate (multi-assignment aware)
+function _allCurrentPA(wid, refDate){
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  return projectAssignments.filter(a=>{
+    if(a.wid!==wid) return false;
+    const s = a.startDate ? new Date(a.startDate) : new Date(0);
+    const e = a.endDate   ? new Date(a.endDate)   : new Date(9999,0);
+    return s<=ref && e>=ref;
+  }).sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+}
+function _allCurrentFromHist(hist, refDate){
+  if(!hist||!hist.length) return [];
+  const ref = refDate ? new Date(refDate) : new Date(); ref.setHours(0,0,0,0);
+  return hist.filter(a=>!a.endDate || new Date(a.endDate)>=ref)
+             .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+}
+// Pick the "worst" status across a set of end-dates for the collapsed header pill.
+function _worstResStatus(endDates){
+  let worst='active';
+  for(const ed of endDates){ const st=resDateStatus(ed); if(st==='expired') return 'expired'; if(st==='expiring') worst='expiring'; }
+  return worst;
+}
+// Pick the end-date that drives the worst-status badge (expired > soonest-expiring > active).
+function _worstEndDate(items){
+  const rank={expired:0,expiring:1,active:2};
+  let best=null,bestRank=99,bestDays=Infinity;
+  for(const it of items){
+    const st=resDateStatus(it.endDate); const r=rank[st]??2; const dl=resDaysLeft(it.endDate);
+    if(r<bestRank || (r===bestRank && (dl??Infinity)<bestDays)){ bestRank=r; best=it.endDate; bestDays=dl??Infinity; }
+  }
+  return best;
+}
 function rebuildModal(id){
   const w=workers.find(x=>x.id===id);if(!w)return;
   const refDate=currentWeekMonday; // match the week selected in the workers tab
@@ -5409,29 +5466,25 @@ function rebuildModal(id){
   const goBg=gs==='go'?'#f0fff4':gs==='warning'?'#fffbeb':'#fff5f5';
   const goColor=gs==='go'?'#276749':gs==='warning'?'#b45309':'#c53030';
   const goBorder=gs==='go'?'#c6f6d5':gs==='warning'?'#fde68a':'#fed7d7';
-  const goText=(gs==='go'?'✓ GO — All required documents on file. Worker is cleared for site.'
-    :gs==='warning'?'⚠ WARNING — Worker is on site but one or more required documents are expiring soon. Action required before expiry.'
-    :'✕ NO-GO — One or more required documents are missing or expired. Worker must not be on site until resolved.')+refNote;
+  const goTag=(gs==='go'?'✓ GO':gs==='warning'?'⚠ WARNING':'✕ NO-GO')+refNote;
   const missingDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='missing');
   const expiredDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='expired');
   const expiringDocs=t.filter(d=>d.req&&docStatusAt(w.docs[d.id],refDate)==='expiring');
-  let html=`<div style="padding:12px 16px;background:${goBg};border:1px solid ${goBorder};border-radius:6px;margin-bottom:10px;">
-    <div style="font-size:13px;font-weight:700;color:${goColor};margin-bottom:${missingDocs.length||expiredDocs.length||expiringDocs.length?'6px':'0'}">${goText}</div>
-    ${missingDocs.length?`<div style="font-size:11px;color:var(--red);margin-top:4px;">Missing: ${missingDocs.map(d=>d.name).join(', ')}</div>`:''}
-    ${expiredDocs.length?`<div style="font-size:11px;color:var(--orange);margin-top:4px;">Expired: ${expiredDocs.map(d=>d.name+(w.docs[d.id]?.date?' (expired '+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
-    ${expiringDocs.length?`<div style="font-size:11px;color:var(--amber);margin-top:2px;">Expiring: ${expiringDocs.map(d=>d.name+(w.docs[d.id]?.date?' ('+w.docs[d.id].date+')'  :'')).join(', ')}</div>`:''}
+  const goDetailParts=[];
+  if(missingDocs.length) goDetailParts.push(`<span style="color:var(--red);">Missing: ${missingDocs.map(d=>d.name).join(', ')}</span>`);
+  if(expiredDocs.length) goDetailParts.push(`<span style="color:var(--orange);">Expired: ${expiredDocs.map(d=>d.name+(w.docs[d.id]?.date?' ('+w.docs[d.id].date+')':'')).join(', ')}</span>`);
+  if(expiringDocs.length) goDetailParts.push(`<span style="color:var(--amber);">Expiring: ${expiringDocs.map(d=>d.name+(w.docs[d.id]?.date?' ('+w.docs[d.id].date+')':'')).join(', ')}</span>`);
+  const goDetail=gs==='go'?'All required documents on file — cleared for site.':goDetailParts.join('&nbsp;·&nbsp;');
+  let html=`<div class="wm-go-banner" style="background:${goBg};border:1px solid ${goBorder};">
+    <span class="wm-go-tag" style="color:${goColor};">${goTag}</span>
+    <span class="wm-go-detail" style="color:${goColor};">${goDetail}</span>
   </div>`;
-  html+=`<div class="worker-status-edit-panel">
-    <div class="worker-status-edit-grid">
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--navy);">Worker status</div>
-        <div style="font-size:11px;color:var(--text-l);margin-top:1px;">Inactive workers are moved out of the main active list, kept in the Inactive Workers table, and cannot be selected for new assignments.</div>
-        <div style="margin-top:7px;"><span class="worker-active-badge ${w.active!==false?'active':'inactive'}">${w.active!==false?'● Active':'○ Inactive'}</span></div>
-      </div>
-      <div style="display:flex;align-items:center;justify-content:flex-end;">
-        <button class="btn ${w.active!==false?'btn-danger':'btn-save'}" style="height:36px;min-width:135px;" onclick="toggleWorkerActive('${w.id}')">${w.active!==false?'Set Inactive':'Set Active'}</button>
-      </div>
+  html+=`<div class="wm-status-bar">
+    <div class="wm-status-left">
+      <span class="worker-active-badge ${w.active!==false?'active':'inactive'}">${w.active!==false?'● Active':'○ Inactive'}</span>
+      <span class="wm-status-note">Inactive workers are hidden from the active list and cannot take new assignments.</span>
     </div>
+    <button class="btn ${w.active!==false?'btn-danger':'btn-save'}" style="height:30px;font-size:12px;padding:4px 12px;min-width:110px;flex-shrink:0;" onclick="toggleWorkerActive('${w.id}')">${w.active!==false?'Set Inactive':'Set Active'}</button>
   </div>`;
   html+=`<div class="score-summary">
     <div style="flex:1"><div class="score-summary-label">Documents on file (required)</div>
@@ -5439,63 +5492,83 @@ function rebuildModal(id){
     <div class="score-summary-pct" id="scorePct" style="color:${s===100?'var(--green)':s>0?'var(--amber)':'var(--red)'}">${s}%</div>
   </div>`;
 
-  // Project assignment panel
-  const cpa = currentPA(id, refDate);
-  const cpaProj = cpa ? projectStore.find(p=>p.id===cpa.projectId) : null;
+  // ── Compact collapsible resource rows (multi-assignment aware) ──
   const rateLabel={day:'/ day',hour:'/ hour',week:'/ week',fixed:'fixed'};
-  // Accommodation panel
-  const acc = currentAccom(id, refDate);
-  const accProp = acc ? properties.find(p=>p.id===acc.propId) : null;
-  html += `<div class="worker-summary-grid">
-    <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">📋 PROJECT ASSIGNMENT</div>
-      ${cpa&&cpaProj
-        ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(cpaProj.name)}</div>
-           ${cpa.rate?`<div style="font-size:11px;margin-top:2px;"><span class="rate-tag">€${parseFloat(cpa.rate).toFixed(2)} ${rateLabel[cpa.rateType]||''}</span></div>`:''}
-           <div style="font-size:11px;margin-top:4px;">${cpa.startDate||'—'} → ${cpa.endDate||'Ongoing'} ${resStatusBadge(cpa.endDate)}</div>
-           <div style="font-size:11px;margin-top:3px;">${hasContractFile(cpa)?`<span class="contract-pill" onclick="openEditPA('${cpa.id}')">📎 ${(cpa.contractFiles||[]).length} file${(cpa.contractFiles||[]).length!==1?'s':''}</span>`:'<span class="contract-pill missing">⚠ No contract</span>'}</div>`
-        : `<div style="font-size:12px;color:var(--text-l);">Not assigned</div>`
-      }
-      <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAddProjectAssignment('${id}')">
-        + New Assignment
-      </button>
-    </div>
-    <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">🏠 ACCOMMODATION</div>
-      ${acc&&accProp
-        ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(accProp.name)}</div>
-           <div style="font-size:11px;color:var(--text-l);margin-top:2px;">${esc(accProp.address||'')}</div>
-           <div style="font-size:11px;margin-top:4px;">Check-out: <strong>${acc.endDate||'—'}</strong> ${resStatusBadge(acc.endDate)}</div>`
-        : `<div style="font-size:12px;color:var(--text-l);">Not assigned</div>`
-      }
-      <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignAccom('${id}')">
-        ${acc?'Edit':'Assign'} Accommodation
-      </button>
-    </div>
-    <div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">🚗 VEHICLE</div>
-      ${(()=>{const va=currentVeh(id,refDate);const v=va?vehicles.find(x=>x.id===va.vehicleId):null;return va&&v
-        ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(v.desc||'Unknown')}</div>
-           <div style="font-size:11px;color:var(--text-l);margin-top:2px;">${esc([v.make,v.model].filter(Boolean).join(' ')||'')} ${v.reg?'· '+v.reg:''}</div>
-           <div style="font-size:11px;margin-top:4px;">Until: <strong>${va.endDate||'—'}</strong> ${resStatusBadge(va.endDate)}</div>`
-        : `<div style="font-size:12px;color:var(--text-l);">Not assigned</div>`;})()
-      }
-      <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignVehicle('${id}')">
-        ${currentVeh(id,refDate)?'Edit':'Assign'} Vehicle
-      </button>
-    </div>
-    ${(()=>{const tool=currentTool(id,refDate);const toolItem=tool?tools.find(t=>t.id===tool.toolId):null;return `<div style="padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
-      <div style="font-size:11px;font-weight:600;color:var(--text-l);margin-bottom:6px;">🔧 TOOLS</div>
-      ${tool&&toolItem
-        ? `<div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(toolItem.name)}</div>
-           ${toolItem.serial?`<div style="font-size:11px;color:var(--text-l);margin-top:2px;">S/N: ${esc(toolItem.serial)}</div>`:''}
-           <div style="font-size:11px;margin-top:4px;">Return: <strong>${tool.endDate||'—'}</strong> ${resStatusBadge(tool.endDate)}</div>`
-        : `<div style="font-size:12px;color:var(--text-l);">No tool assigned</div>`
-      }
-      <button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignTool('${id}','${tool?.id||''}')">
-        ${tool?'Edit':'Assign'} Tool
-      </button>
-    </div>`;})()}
+  const _paList   = _allCurrentPA(id, refDate);
+  const _accList  = _allCurrentFromHist(accomHistory[id], refDate);
+  const _vehList  = _allCurrentFromHist(vehHistory[id], refDate);
+  const _toolList = _allCurrentFromHist(toolHistory[id], refDate);
+  // collapsed header: detail text (single name / "N items" / empty) + count pill
+  const _headDetail=(items,oneName,nounPlural)=> items.length===0
+      ? `<span class="wm-res-head-detail empty">Not assigned</span>`
+      : items.length===1
+        ? `<span class="wm-res-head-detail">${oneName(items[0])}</span>`
+        : `<span class="wm-res-head-detail">${items.length} ${nounPlural}</span><span class="wm-res-count-pill">${items.length}</span>`;
+  const _resRow=(icon,label,detailHtml,statusHtml,bodyHtml)=>`
+    <details class="wm-res-row">
+      <summary class="wm-res-summary">
+        <span class="wm-res-icon">${icon}</span>
+        <span class="wm-res-label">${label}</span>
+        ${detailHtml}
+        <span class="wm-res-head-status">${statusHtml||''}</span>
+        <span class="wm-res-chevron">▾</span>
+      </summary>
+      <div class="wm-res-body">${bodyHtml}</div>
+    </details>`;
+
+  // PROJECT ASSIGNMENTS
+  const _paAnyNoContract=_paList.some(a=>!hasContractFile(a));
+  const _paStatus=(_paList.length?resStatusBadge(_worstEndDate(_paList)):'')
+    + (_paAnyNoContract?`<span class="res-status expiring" title="One or more assignments have no contract">⚠ No contract</span>`:'');
+  const _paBody=(_paList.length
+      ? _paList.map(a=>{const pr=projectStore.find(p=>p.id===a.projectId);return `<div class="wm-res-card">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(pr?pr.name:'Unknown project')}</div>
+          ${a.rate?`<div style="font-size:11px;margin-top:2px;"><span class="rate-tag">€${parseFloat(a.rate).toFixed(2)} ${rateLabel[a.rateType]||''}</span></div>`:''}
+          <div style="font-size:11px;margin-top:4px;">${a.startDate||'—'} → ${a.endDate||'Ongoing'} ${resStatusBadge(a.endDate)}</div>
+          <div style="font-size:11px;margin-top:3px;">${hasContractFile(a)?`<span class="contract-pill" onclick="openEditPA('${a.id}')">📎 ${(a.contractFiles||[]).length} file${(a.contractFiles||[]).length!==1?'s':''}</span>`:`<span class="contract-pill missing" onclick="openEditPA('${a.id}')">⚠ No contract</span>`}</div>
+        </div>`;}).join('')
+      : `<div style="font-size:12px;color:var(--text-l);padding:6px 0;">Not assigned to any project.</div>`)
+    + `<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAddProjectAssignment('${id}')">+ New Assignment</button>`;
+
+  // ACCOMMODATION
+  const _accStatus=_accList.length?resStatusBadge(_worstEndDate(_accList)):'';
+  const _accBody=(_accList.length
+      ? _accList.map(a=>{const pr=properties.find(p=>p.id===a.propId);return `<div class="wm-res-card">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(pr?pr.name:'Unknown property')}</div>
+          ${pr&&pr.address?`<div style="font-size:11px;color:var(--text-l);margin-top:2px;">${esc(pr.address)}</div>`:''}
+          <div style="font-size:11px;margin-top:4px;">Check-out: <strong>${a.endDate||'—'}</strong> ${resStatusBadge(a.endDate)}</div>
+        </div>`;}).join('')
+      : `<div style="font-size:12px;color:var(--text-l);padding:6px 0;">Not assigned.</div>`)
+    + `<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignAccom('${id}')">${_accList.length?'Edit':'Assign'} Accommodation</button>`;
+
+  // VEHICLE
+  const _vehStatus=_vehList.length?resStatusBadge(_worstEndDate(_vehList)):'';
+  const _vehBody=(_vehList.length
+      ? _vehList.map(a=>{const v=vehicles.find(x=>x.id===a.vehicleId);return `<div class="wm-res-card">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(v?(v.desc||'Unknown'):'Unknown vehicle')}</div>
+          ${v?`<div style="font-size:11px;color:var(--text-l);margin-top:2px;">${esc([v.make,v.model].filter(Boolean).join(' ')||'')} ${v.reg?'· '+esc(v.reg):''}</div>`:''}
+          <div style="font-size:11px;margin-top:4px;">Until: <strong>${a.endDate||'—'}</strong> ${resStatusBadge(a.endDate)}</div>
+        </div>`;}).join('')
+      : `<div style="font-size:12px;color:var(--text-l);padding:6px 0;">Not assigned.</div>`)
+    + `<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignVehicle('${id}')">${_vehList.length?'Edit':'Assign'} Vehicle</button>`;
+
+  // TOOLS
+  const _toolStatus=_toolList.length?resStatusBadge(_worstEndDate(_toolList)):'';
+  const _toolBody=(_toolList.length
+      ? _toolList.map(a=>{const tl=tools.find(t=>t.id===a.toolId);return `<div class="wm-res-card">
+          <div style="font-size:13px;font-weight:600;color:var(--navy);">${esc(tl?tl.name:'Unknown tool')}</div>
+          ${tl&&tl.serial?`<div style="font-size:11px;color:var(--text-l);margin-top:2px;">S/N: ${esc(tl.serial)}</div>`:''}
+          <div style="font-size:11px;margin-top:4px;">Return: <strong>${a.endDate||'—'}</strong> ${resStatusBadge(a.endDate)}</div>
+          <div style="margin-top:6px;"><button class="btn btn-cancel" style="font-size:11px;padding:3px 9px;" onclick="openAssignTool('${id}','${a.id}')">Edit</button></div>
+        </div>`;}).join('')
+      : `<div style="font-size:12px;color:var(--text-l);padding:6px 0;">No tool assigned.</div>`)
+    + `<button class="btn btn-cancel" style="font-size:11px;padding:4px 10px;margin-top:8px;" onclick="openAssignTool('${id}','')">+ Assign Tool</button>`;
+
+  html += `<div class="wm-res-rows">
+    ${_resRow('📋','Project Assignment', _headDetail(_paList,a=>{const pr=projectStore.find(p=>p.id===a.projectId);return esc(pr?pr.name:'Unknown');},'active projects'), _paStatus, _paBody)}
+    ${_resRow('🏠','Accommodation', _headDetail(_accList,a=>{const pr=properties.find(p=>p.id===a.propId);return esc(pr?pr.name:'Unknown');},'properties'), _accStatus, _accBody)}
+    ${_resRow('🚗','Vehicle', _headDetail(_vehList,a=>{const v=vehicles.find(x=>x.id===a.vehicleId);return esc(v?(v.desc||'Unknown'):'Unknown');},'vehicles'), _vehStatus, _vehBody)}
+    ${_resRow('🔧','Tools', _headDetail(_toolList,a=>{const tl=tools.find(t=>t.id===a.toolId);return esc(tl?tl.name:'Unknown');},'tools'), _toolStatus, _toolBody)}
   </div>`;
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">🏢 Agency / Company Name</div>
