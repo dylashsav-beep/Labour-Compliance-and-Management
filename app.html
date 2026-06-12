@@ -8967,8 +8967,10 @@ async function saveCompetency(compId, existingKey){
   // Handle template upload
   const tmplFile = document.getElementById('cedit_tmpl_'+compId)?.files[0];
   if(tmplFile){
+    if(!currentOrgId){ alert('No active workspace — cannot upload template.'); return; }
     const slugName = tmplFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const tmplPath = `doc-templates/competencies/${currentOrgId}/${key}/${slugName}`;
+    // org_id as 2nd path segment so the org-scoped doc-templates write policy allows it
+    const tmplPath = `doc-templates/${currentOrgId}/competencies/${key}/${slugName}`;
     // Delete old if different
     if(templateFilePath && templateFilePath!==tmplPath){
       await sbClient.storage.from('tmc-documents').remove([templateFilePath]).catch(()=>{});
@@ -9391,8 +9393,12 @@ async function saveDocItemEdit(setId,docId){
   if(tmplClear){ doc.templateFileName=null; doc.templateFilePath=null; }
   try{
     if(!tmplClear && tmplFile && sbClient && sbSession){
+      if(!currentOrgId) throw new Error('No active workspace — cannot upload template.');
       const oldPath=doc.templateFilePath;
-      const newPath=`doc-templates/${setId}/${docId}/${sbSlug(tmplFile.name)}`;
+      // Org-prefixed under doc-templates/ so the org-scoped storage write policy
+      // (foldername[2]=org_id) allows it while the public read policy
+      // (foldername[1]='doc-templates') still serves anon worker-portal downloads.
+      const newPath=`doc-templates/${currentOrgId}/${setId}/${docId}/${sbSlug(tmplFile.name)}`;
       const {error:upErr}=await sbClient.storage.from(SB_BUCKET).upload(newPath,tmplFile,{contentType:tmplFile.type||'application/octet-stream',upsert:true});
       if(upErr) throw new Error('Template upload failed: '+upErr.message);
       if(oldPath && oldPath!==newPath) sbClient.storage.from(SB_BUCKET).remove([oldPath]).catch(()=>{});
