@@ -639,8 +639,15 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   /* Prevent page-level horizontal scroll caused by header overflow */
   html,body{max-width:100%;overflow-x:hidden;}
   .wrap{padding:0 12px;}
-  /* Header — hide bulk export buttons; not needed in the field */
+  /* Header — shrink logo so all buttons fit in one row */
+  .logo-mark{width:82px!important;height:44px!important;padding:4px 6px!important;}
+  .header-inner{overflow:hidden;gap:8px;}
+  .header-actions{gap:4px;flex-shrink:0;}
+  /* Hide bulk export buttons; not needed in the field */
   .header-actions .btn-outline{display:none!important;}
+  /* Shrink sync pill to dot+text only; hide Sync/Logout labels if needed */
+  .hsync-pill{font-size:11px;padding:3px 7px;}
+  .btn-hdr{padding:4px 9px;font-size:11px;}
   /* Tabs become a horizontal scroll strip */
   .main-nav-inner{padding:0 12px;}
   .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;}
@@ -1161,16 +1168,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   <!-- WORKERS VIEW -->
   <div id="viewWorkers">
     <div class="filter-bar">
-      <div class="pf-wrap" id="dsfWrap">
-        <button class="fbtn pf-trigger" id="dsfTrigger" onclick="toggleDSFPanel(event)">
-          <span id="dsfLabel">All Doc Sets</span><span class="pf-caret">▼</span>
-        </button>
-        <div class="pf-panel" id="dsfPanel">
-          <div class="pf-panel-head"><span>Filter by document set</span><button class="pf-clear" onclick="setFDS('all')">Clear</button></div>
-          <div class="pf-options" id="dsfGroup"></div>
-        </div>
-      </div>
-      <div class="filter-sep"></div>
       <span class="filter-label">Worker:</span>
       <div style="display:flex;gap:4px;">
         <button class="fbtn"        data-fa="all"      onclick="setFA('all',this)">All</button>
@@ -1185,6 +1182,16 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <button class="fbtn f-green" data-fs="go"      onclick="setFS('go',this)">✓ Go</button>
         <button class="fbtn f-amber" data-fs="warning" onclick="setFS('warning',this)">⚠ Warning</button>
         <button class="fbtn f-red"   data-fs="nogo"    onclick="setFS('nogo',this)">✕ No-Go</button>
+      </div>
+      <div class="filter-sep"></div>
+      <div class="pf-wrap" id="dsfWrap">
+        <button class="fbtn pf-trigger" id="dsfTrigger" onclick="toggleDSFPanel(event)">
+          <span id="dsfLabel">All Doc Sets</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="dsfPanel">
+          <div class="pf-panel-head"><span>Filter by document set</span><button class="pf-clear" onclick="setFDS('all')">Clear</button></div>
+          <div class="pf-options" id="dsfGroup"></div>
+        </div>
       </div>
       <div class="filter-sep"></div>
       <div class="pf-wrap" id="pfWrap">
