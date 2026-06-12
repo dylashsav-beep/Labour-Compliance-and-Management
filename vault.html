@@ -1883,7 +1883,7 @@ async function vaultUploadCompetency(competencyId, orgId, input){
 async function downloadVaultCompTemplate(path, name){
   const {data,error} = await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 300, {download:name});
   if(error||!data?.signedUrl){ alert('Could not open template.'); return; }
-  window.location.href = data.signedUrl;
+  window.open(data.signedUrl,'_blank');
 }
 
 // Pick-from-vault-files modal for competency submission

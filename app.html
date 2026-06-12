@@ -6222,7 +6222,7 @@ async function wpDownloadFile(path, name){
   try{
     const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path,300,{download:name||'document'});
     if(error||!data?.signedUrl) throw new Error(error?.message||'Could not create download link');
-    window.location.href=data.signedUrl;
+    window.open(data.signedUrl,'_blank');
   }catch(e){
     alert('Download failed: '+e.message);
   }finally{
