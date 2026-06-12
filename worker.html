@@ -1349,11 +1349,12 @@ async function wpDownloadFile(path, name){
   const btn=event?.currentTarget;
   const origTxt=btn?.textContent;
   if(btn){btn.disabled=true;btn.textContent='…';}
+  const win=window.open('','_blank');
   try{
     const {data,error}=await sbClient.storage.from(SB_BUCKET).createSignedUrl(path,300,{download:name||'document'});
     if(error||!data?.signedUrl) throw new Error(error?.message||'Could not create download link');
-    window.open(data.signedUrl,'_blank');
-  }catch(e){ alert('Download failed: '+e.message); }
+    win.location.href=data.signedUrl;
+  }catch(e){ if(win) win.close(); alert('Download failed: '+e.message); }
   finally{ if(btn){btn.disabled=false;btn.textContent=origTxt||'Download';} }
 }
 </script>
