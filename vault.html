@@ -438,6 +438,7 @@ let vaultData       = null;
 let activeTab       = 'docs';
 let docFilter       = 'all';
 let expandedOrgs    = new Set();
+let expandedCompOrgs = new Set(); // for competency section per-org
 let orgFilters      = {};
 let _orgsInitialized = false;  // prevents re-expand when all orgs are collapsed
 let _loginMode = 'signin'; // 'signin' | 'signup' | 'forgot' | 'setpw'
@@ -789,6 +790,12 @@ function toggleOrg(orgIdx){
   renderDocs();
 }
 
+function toggleCompOrg(key){
+  if(expandedCompOrgs.has(key)) expandedCompOrgs.delete(key);
+  else expandedCompOrgs.add(key);
+  renderDocs();
+}
+
 function setOrgFilter(orgIdx, f){
   orgFilters[orgIdx] = f;
   renderDocs();
@@ -899,7 +906,50 @@ function renderDocs(){
   }
 
   html += '<div class="v-disclaimer">Status reflects the expiry date on file with your employer. Submit updated documents when yours expire.</div>';
+
+  // ── Competencies & Training section ──────────────────────────────────────
+  const hasAnyComps = memberships.some(m=>(m.competencies||[]).length>0);
+  if(hasAnyComps){
+    html += '<div style="margin-top:28px;">';
+    html += '<div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">Training &amp; Competencies</div>';
+    html += '<div style="font-size:12px;color:#64748b;margin-bottom:16px;">Extra requirements assigned by your employers, separate from standard compliance documents.</div>';
+    for(let mi=0; mi<memberships.length; mi++){
+      const m = memberships[mi];
+      const comps = m.competencies || [];
+      if(!comps.length) continue;
+      const compRecs = m.comp_records || [];
+      const orgKey = 'corg_'+mi;
+      const isOpen = expandedCompOrgs.has(orgKey);
+      html += '<div class="v-org-section" style="margin-bottom:12px;">';
+      html += '<div class="v-org-header" onclick="toggleCompOrg(\''+orgKey+'\')" style="cursor:pointer;">'
+        + orgAvatar(m.org_name)
+        +'<div style="flex:1;min-width:0;">'
+        +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
+        +'<div class="v-org-header-sub">'+comps.length+' competency requirement'+(comps.length!==1?'s':'')+'</div>'
+        +'</div>'
+        + icon(isOpen?'chevron-down':'chevron-right', 18)
+        +'</div>';
+      if(isOpen){
+        comps.forEach(comp=>{
+          const rec = (compRecs||[]).filter(r=>r.competency_id===comp.competency_id)
+            .sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+          html += vaultCompCard(comp, rec, m.org_id, mi);
+        });
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
   setBody(html);
+  // Bind pick-from-files listeners after render
+  document.querySelectorAll('[data-pick-vault-comp]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const compId = this.dataset.pickVaultComp;
+      const orgId  = this.dataset.orgId;
+      openPickVaultDoc(compId, orgId);
+    });
+  });
 }
 
 function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
@@ -1697,6 +1747,147 @@ async function deletePersonalDoc(id, label){
     if(error) throw error;
     await refreshVault();
   }catch(e){ alert('Could not delete: '+(e.message||'unknown error')); }
+}
+
+// ── Competency cards (vault) ─────────────────────────────────────────────────
+
+function vaultCompCard(comp, rec, orgId, orgIdx){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const warnDays = 60;
+  const compIdSafe = (comp.competency_id||'').replace(/[^a-z0-9-]/gi,'_');
+  const infoId = 'vci_'+orgIdx+'_'+compIdSafe;
+
+  function status(){
+    if(!rec) return {label:'Missing',cls:'missing'};
+    if(rec.status==='pending') return {label:'Pending Review',cls:'expiring'};
+    if(rec.status==='rejected') return {label:'Rejected',cls:'expired'};
+    if(rec.status==='approved'){
+      if(comp.expiry_tracking && rec.expiry_date){
+        const exp = new Date(rec.expiry_date); exp.setHours(0,0,0,0);
+        if(exp < today) return {label:'Expired',cls:'expired'};
+        if((exp-today)/(1000*60*60*24) <= warnDays) return {label:'Expiring',cls:'expiring'};
+      }
+      return {label:'Approved',cls:'ok'};
+    }
+    return {label:'Missing',cls:'missing'};
+  }
+  const st = status();
+  const pillLabels = {ok:'Approved',expiring:'Expiring / Pending',expired:'Expired',missing:'Not submitted'};
+  const statusPill = '<span class="wp-status-pill '+st.cls+'">'+(pillLabels[st.cls]||st.label)+'</span>';
+  const hasTmpl = comp.template_file_path;
+  const canUpload = st.cls !== 'expiring' || rec?.status==='rejected'; // allow re-upload if rejected
+
+  let actionBtns = '';
+  if(comp.info_text || comp.info_url){
+    if(comp.info_text) actionBtns += '<button class="wp-card-icon-btn" title="More info" onclick="event.stopPropagation();toggleInfoPanel(\''+infoId+'\')">'
+      +icon('info',14)+'</button>';
+    if(comp.info_url)  actionBtns += '<a class="wp-card-icon-btn" href="'+esc(comp.info_url)+'" target="_blank" title="Training link">'+icon('external-link',14)+'</a>';
+  }
+  const cardActions = actionBtns ? '<div class="wp-card-actions">'+actionBtns+'</div>' : '';
+
+  let html = '<div class="wp-doc-card" style="position:relative;">';
+  html += cardActions;
+  html += '<div class="wp-doc-top"><div class="wp-doc-meta"><span class="wp-doc-name">'+esc(comp.name)+'</span></div>'
+    + statusPill + '</div>';
+
+  if(comp.info_text)
+    html += '<div id="'+infoId+'" class="wp-info-panel" style="display:none;">'+esc(comp.info_text)+'</div>';
+
+  if(rec && rec.expiry_date)
+    html += '<div style="font-size:12px;color:#64748b;padding:0 14px 6px;">Expires: '+esc(rec.expiry_date)+'</div>';
+
+  if(rec && rec.file_name)
+    html += '<div style="font-size:12px;color:#64748b;padding:0 14px 4px;">📄 '+esc(rec.file_name)+'</div>';
+
+  if(rec && rec.review_notes)
+    html += '<div class="wp-banner" style="background:#fee2e2;border-top:1px solid #fca5a5;color:#991b1b;font-size:12px;">'+esc(rec.review_notes)+'</div>';
+
+  if(hasTmpl)
+    html += '<div class="wp-banner wp-banner-tmpl"><span>📋 Template</span>'
+      +'<button class="wp-doc-btn" style="margin-left:auto;" onclick="downloadVaultCompTemplate(\''+esc(hasTmpl)+'\',\''+esc(comp.template_file_name||'template')+'\')">Download</button></div>';
+
+  // Upload / pending section
+  if(rec && rec.status==='pending'){
+    html += '<div class="wp-banner" style="background:#fef3c7;border-top:1px solid #fde68a;color:#92400e;font-size:12px;">⏳ Submission pending review by your employer.</div>';
+  } else {
+    html += '<div style="padding:10px 14px;border-top:1px solid #f1f5f9;display:flex;flex-direction:column;gap:8px;">';
+    html += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer;min-height:44px;">'
+      +'<span>📤 Upload file</span>'
+      +'<input type="file" accept="image/*,.pdf,.doc,.docx" style="flex:1;font-size:12px;" '
+      +'onchange="vaultUploadCompetency(\''+comp.competency_id+'\',\''+orgId+'\',this)"/>'
+      +'</label>';
+    // "Use from My Files" button
+    const myFiles = (vaultData.vault_docs||[]).filter(d=>d.active!==false);
+    if(myFiles.length){
+      html += '<button class="wp-doc-btn" style="background:#f8fafc;color:#334155;border:1px solid #e2e8f0;" '
+        +'data-pick-vault-comp="'+comp.competency_id+'" data-org-id="'+orgId+'">'
+        +'📎 Use from My Files</button>';
+    }
+    html += '</div>';
+  }
+
+  html += '</div>'; // end wp-doc-card
+  return html;
+}
+
+async function vaultUploadCompetency(competencyId, orgId, input){
+  const file = input?.files?.[0]; if(!file) return;
+  if(!sbClient||!vaultData?.account?.id){ alert('Not signed in.'); return; }
+  const btn = input.closest('label')||input.parentElement;
+  if(btn) btn.style.opacity='0.6';
+  try{
+    const ext = file.name.split('.').pop();
+    const uid = vaultData.account.id;
+    const path = `vault/${uid}/competencies/${orgId}/${competencyId}/${Date.now()}.${ext}`;
+    const {error:upErr} = await sbClient.storage.from(SB_BUCKET).upload(path, file, {upsert:true});
+    if(upErr) throw upErr;
+    const {error:rpcErr} = await sbClient.rpc('submit_vault_competency',{
+      p_org_id: orgId, p_competency_id: competencyId,
+      p_file_path: path, p_file_name: file.name
+    });
+    if(rpcErr) throw rpcErr;
+    await refreshVault();
+  }catch(e){ alert('Upload failed: '+(e.message||'unknown error')); if(btn) btn.style.opacity=''; input.value=''; }
+}
+
+async function downloadVaultCompTemplate(path, name){
+  const {data,error} = await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 300, {download:name});
+  if(error||!data?.signedUrl){ alert('Could not open template.'); return; }
+  window.location.href = data.signedUrl;
+}
+
+// Pick-from-vault-files modal for competency submission
+let _pickCompId = null, _pickOrgId = null;
+function openPickVaultDoc(competencyId, orgId){
+  _pickCompId = competencyId; _pickOrgId = orgId;
+  const docs = (vaultData.vault_docs||[]).filter(d=>d.active!==false && d.file_path);
+  if(!docs.length){ alert('No personal files uploaded yet. Upload a file in the My Files tab first.'); return; }
+  const overlay = $('vModalOverlay'); const modal = $('vModal');
+  if(!overlay||!modal) return;
+  modal.innerHTML = '<div style="padding:22px 20px 28px;">'
+    +'<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px;">Select from My Files</div>'
+    +'<div style="font-size:13px;color:#64748b;margin-bottom:16px;">Choose a personal document to submit as evidence.</div>'
+    +docs.map(d=>`<div onclick="pickVaultDocForComp('${d.id}','${esc(d.file_path)}','${esc(d.file_name||d.display_name||'document')}')" style="cursor:pointer;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;background:#fafafa;transition:background .15s;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fafafa'">`
+      +`<div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#1e293b;">${esc(d.display_name||d.file_name||'Untitled')}</div>`
+      +`${d.expiry_date?`<div style="font-size:11px;color:#64748b;">Expires: ${esc(d.expiry_date)}</div>`:''}</div>`
+      +icon('chevron-right',16)+'</div>').join('')
+    +'<button class="wp-doc-btn cancel" style="margin-top:12px;width:100%;" onclick="closeModal()">Cancel</button>'
+    +'</div>';
+  overlay.classList.add('open');
+}
+
+async function pickVaultDocForComp(docId, filePath, fileName){
+  if(!_pickCompId||!_pickOrgId) return;
+  closeModal();
+  try{
+    const {error} = await sbClient.rpc('submit_vault_competency',{
+      p_org_id: _pickOrgId, p_competency_id: _pickCompId,
+      p_file_path: filePath, p_file_name: fileName
+    });
+    if(error) throw error;
+    _pickCompId = null; _pickOrgId = null;
+    await refreshVault();
+  }catch(e){ alert('Submission failed: '+(e.message||'unknown error')); }
 }
 
 // ── Share modal ──────────────────────────────────────────────────────────────

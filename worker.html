@@ -222,12 +222,14 @@ body{display:flex;flex-direction:column;min-height:100vh;}
     <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Projects</button>
     <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
     <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
+    <button class="wp-tab" id="wpTabTraining" onclick="wpSwitch('training')">Training</button>
   </div>
   <div class="wp-body">
     <div id="wpViewDocs"></div>
     <div id="wpViewAssign" style="display:none;"></div>
     <div id="wpViewProfile" style="display:none;"></div>
     <div id="wpViewResources" style="display:none;"></div>
+    <div id="wpViewTraining" style="display:none;"></div>
   </div>
   <!-- Project detail full-screen overlay -->
   <div id="wpProjDetail">
@@ -288,6 +290,7 @@ let wpSubmissions = [], wpActiveTab = 'docs', wpDocFilter = 'missing';
 let wpDocSubmitOpen = {}, wpIssuedDocs = [];
 let wpAccomAssignments = [], wpVehAssignments = [], wpToolAssignments = [];
 let wpProperties = [], wpVehicles = [], wpTools = [], wpReturnRequests = [];
+let wpCompetencies = [], wpCompRecords = []; // training tab data
 let wpLang = 'en';
 
 const wpLangMeta = { en:{flag:'🇬🇧',code:'EN'}, nl:{flag:'🇳🇱',code:'NL'}, ro:{flag:'🇷🇴',code:'RO'}, tr:{flag:'🇹🇷',code:'TR'} };
@@ -737,6 +740,8 @@ async function wpLoadSubmissions(){
     wpSubmissions=(data?.submissions)||[];
     wpReturnRequests=(data?.return_requests)||[];
     wpIssuedDocs=(data?.issued_docs||[]).map(d=>({id:d.id,docKey:d.doc_key,filePath:d.file_path,fileName:d.file_name,issuedBy:d.issued_by||'',issuedAt:d.issued_at,status:d.status||'pending_signature'}));
+    wpCompetencies=(data?.competency_assignments||[]);
+    wpCompRecords=(data?.comp_records||[]);
   }catch(e){ console.warn('[WP] wpLoadSubmissions:',e.message); }
 }
 
@@ -765,8 +770,8 @@ async function initWorkerPortal(workerId){
 // ── Portal navigation ──────────────────────────────────────────────────────
 function wpSwitch(tab){
   wpActiveTab=tab;
-  const tabMap={docs:'Docs',assign:'Assign',profile:'Profile',resources:'Resources'};
-  ['docs','assign','profile','resources'].forEach(tp=>{
+  const tabMap={docs:'Docs',assign:'Assign',profile:'Profile',resources:'Resources',training:'Training'};
+  ['docs','assign','profile','resources','training'].forEach(tp=>{
     const viewId='wpView'+tp.charAt(0).toUpperCase()+tp.slice(1);
     const tabId='wpTab'+tabMap[tp];
     const el=document.getElementById(viewId);
@@ -777,6 +782,7 @@ function wpSwitch(tab){
   if(tab==='assign') renderWPAssignments();
   if(tab==='profile') renderWPProfile();
   if(tab==='resources') renderWPResources();
+  if(tab==='training') renderWPTraining();
 }
 
 // ── Language ───────────────────────────────────────────────────────────────
@@ -1190,6 +1196,127 @@ async function wpSubmitReturn(resourceType, assignmentId){
     }catch(e){ console.warn('[WP] wpSubmitReturn reload:',e.message); }
     renderWPResources();
   }catch(e){ alert(t('couldNotSubmit')+e.message); }
+}
+
+// ── Training & Competencies Tab ───────────────────────────────────────────────
+
+function renderWPTraining(){
+  const el = document.getElementById('wpViewTraining');
+  if(!el) return;
+  if(!wpCompetencies.length){
+    el.innerHTML = `<div style="text-align:center;padding:48px 20px;">
+      <div style="font-size:40px;margin-bottom:14px;">🎓</div>
+      <div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:6px;">No training requirements</div>
+      <div style="font-size:13px;color:#64748b;">Your organisation hasn't assigned any competency requirements yet.</div>
+    </div>`;
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const warnDays = 60;
+
+  function latestRecord(compId){
+    return (wpCompRecords||[])
+      .filter(r=>r.competency_id===compId)
+      .sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+  }
+
+  function compStatus(comp, rec){
+    if(!rec) return {label:'Missing',color:'#dc2626',bg:'#fee2e2'};
+    if(rec.status==='pending') return {label:'Pending Review',color:'#92400e',bg:'#fef3c7'};
+    if(rec.status==='rejected') return {label:'Rejected',color:'#dc2626',bg:'#fee2e2'};
+    if(rec.status==='approved'){
+      if(comp.expiry_tracking && rec.expiry_date){
+        const exp = new Date(rec.expiry_date); exp.setHours(0,0,0,0);
+        if(exp < today) return {label:'Expired',color:'#dc2626',bg:'#fee2e2'};
+        const daysLeft = Math.ceil((exp-today)/(1000*60*60*24));
+        if(daysLeft <= warnDays) return {label:'Expiring in '+daysLeft+'d',color:'#92400e',bg:'#fef3c7'};
+      }
+      return {label:'Approved',color:'#065f46',bg:'#d1fae5'};
+    }
+    return {label:'Missing',color:'#dc2626',bg:'#fee2e2'};
+  }
+
+  // Group by category
+  const cats = {};
+  (wpCompetencies||[]).forEach(c=>{
+    const cat = c.category||'General';
+    if(!cats[cat]) cats[cat]=[];
+    cats[cat].push(c);
+  });
+
+  let html = '<div style="padding:16px;">';
+  Object.entries(cats).forEach(([cat,items])=>{
+    html += `<div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#7c3aed;margin-bottom:10px;">${esc(cat)}</div>`;
+    items.forEach(comp=>{
+      const rec = latestRecord(comp.competency_id);
+      const st = compStatus(comp, rec);
+      const hasTmpl = comp.template_file_path;
+      const infoId = 'wpCompInfo_'+comp.competency_id;
+      html += `<div class="wp-doc-card" style="margin-bottom:12px;">
+        <div class="wp-doc-top">
+          <div class="wp-doc-meta">
+            <span class="wp-doc-name">${esc(comp.name)}</span>
+            ${comp.required===false?'<span style="font-size:11px;color:#94a3b8;margin-left:4px;">(Optional)</span>':''}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            ${comp.info_text?`<button class="wp-card-icon-btn" onclick="document.getElementById('${infoId}').style.display=document.getElementById('${infoId}').style.display==='none'?'block':'none'" title="Info">ℹ</button>`:''}
+            ${comp.info_url?`<a class="wp-card-icon-btn" href="${esc(comp.info_url)}" target="_blank" title="Training link">🔗</a>`:''}
+          </div>
+        </div>
+        ${comp.info_text?`<div id="${infoId}" class="wp-info-panel" style="display:none;">${esc(comp.info_text)}</div>`:''}
+        <div class="wp-doc-status-row">
+          <span class="wp-doc-status" style="background:${st.bg};color:${st.color};">${esc(st.label)}</span>
+          ${rec&&rec.expiry_date?`<span style="font-size:12px;color:#64748b;">Expires: ${rec.expiry_date}</span>`:''}
+        </div>
+        ${rec&&rec.file_name?`<div style="font-size:12px;color:#64748b;padding:0 14px 6px;">📄 ${esc(rec.file_name)}</div>`:''}
+        ${hasTmpl?`<div class="wp-banner wp-banner-tmpl"><span>📋 Template available</span><button class="wp-doc-btn" style="margin-left:auto;" onclick="wpDownloadFile('${esc(hasTmpl)}','${esc(comp.template_file_name||'template')}')">Download</button></div>`:''}
+        <div style="padding:10px 14px;border-top:1px solid #f1f5f9;">
+          ${rec&&rec.status==='pending'
+            ?`<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:8px;padding:8px 12px;">⏳ Your submission is being reviewed. You'll see the status updated here.</div>`
+            :`<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer;min-height:44px;">
+              <span>📤 Upload evidence</span>
+              <input type="file" accept="image/*,.pdf,.doc,.docx" style="flex:1;font-size:12px;" onchange="wpSubmitCompetency('${comp.competency_id}',this)"/>
+            </label>`
+          }
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function wpSubmitCompetency(competencyId, input){
+  const file = input?.files?.[0];
+  if(!file) return;
+  if(!sbClient||!wpWorkerEmail){ alert(t('notSignedIn')||'Not signed in.'); input.value=''; return; }
+  const origLabel = input.previousElementSibling?.textContent||'Upload';
+  const btn = input.parentElement;
+  if(btn) btn.style.opacity='0.6';
+  try{
+    const ext = file.name.split('.').pop();
+    const uuid = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36);
+    const path = `worker-submissions/${resolvedOrgId}/competency/${uuid}.${ext}`;
+    const {error:upErr} = await sbClient.storage.from(SB_BUCKET).upload(path, file);
+    if(upErr) throw upErr;
+    const {error:rpcErr} = await sbClient.rpc('submit_worker_competency',{
+      p_org_id: resolvedOrgId, p_competency_id: competencyId,
+      p_file_path: path, p_file_name: file.name,
+      p_worker_email: wpWorkerEmail
+    });
+    if(rpcErr) throw rpcErr;
+    // Update local state so the card re-renders as pending
+    wpCompRecords = (wpCompRecords||[]).filter(r=>r.competency_id!==competencyId);
+    wpCompRecords.push({competency_id:competencyId,file_name:file.name,file_path:path,status:'pending',submitted_at:new Date().toISOString()});
+    renderWPTraining();
+  }catch(e){
+    alert('Upload failed: '+(e.message||'unknown error'));
+    if(btn) btn.style.opacity='';
+    input.value='';
+  }
 }
 
 // ── File download ──────────────────────────────────────────────────────────

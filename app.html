@@ -1375,6 +1375,13 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <div id="eSignedContractsList"></div>
     </div>
 
+    <div id="pendingCompetenciesCard" style="display:none;margin-bottom:18px;">
+      <div class="appr-sub-group-label">
+        <span>🎓 Competency Evidence</span>
+      </div>
+      <div id="pendingCompetenciesList" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;background:#fff;"></div>
+    </div>
+
     <div id="approvalsPendingEmpty" class="appr-pending-empty" style="display:none;">
       <div class="appr-empty-icon">✓</div>
       <div>All clear — no pending approvals</div>
@@ -1461,6 +1468,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <button class="sset-nav" data-s="docsets" onclick="switchSettingsSection('docsets')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           Document Sets
+        </button>
+        <button class="sset-nav" data-s="competencies" onclick="switchSettingsSection('competencies')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+          Competencies
         </button>
         <button class="sset-nav" data-s="users" onclick="switchSettingsSection('users')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1648,6 +1659,18 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           </div>
           <div id="docSetsContainer"></div>
         </div><!-- /sset-docsets -->
+
+        <!-- COMPETENCIES & TRAINING -->
+        <div id="sset-competencies" class="sset-panel" style="display:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;padding-bottom:14px;border-bottom:2px solid var(--border);">
+            <div>
+              <div style="font-size:17px;font-weight:700;color:var(--text);">Competencies &amp; Training</div>
+              <div style="font-size:12px;color:var(--text-l);margin-top:3px;">Define extra competency and training requirements for your workers. These are separate from document sets and can be assigned to individual workers.</div>
+            </div>
+            <button class="btn btn-primary" onclick="openAddCompetency()">+ Add Competency</button>
+          </div>
+          <div id="competenciesContainer"></div>
+        </div><!-- /sset-competencies -->
 
         <!-- USERS & ROLES -->
         <div id="sset-users" class="sset-panel" style="display:none;">
@@ -2426,6 +2449,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Applied Document Sets</div>
             <div id="fAppliedSetsList"></div>
           </div>
+          <div id="fCompetencies" style="display:none;margin-top:10px;">
+            <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Training &amp; Competencies</div>
+            <div id="fCompetenciesList"></div>
+          </div>
         </div>
         <div class="form-field full"><label class="form-label">Notes</label><textarea class="form-input" id="fNotes" rows="2" placeholder="Any additional notes…" style="resize:vertical;"></textarea></div>
       </div>
@@ -2735,7 +2762,7 @@ function requireAction(action, label){ if(canAction(action)) return true; alert(
 function sbCanWriteTable(table){
   if(sbUserRole === 'admin') return true;
   if(!sbUserActive || sbUserRole === 'no_access') return false;
-  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents','worker_document_sets'];
+  const complianceTables = ['settings','document_sets','document_set_items','workers','worker_documents','worker_document_files','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events','issued_documents','worker_document_sets','worker_competencies','worker_competency_assignments','worker_competency_records'];
   const plannerTables = ['projects','roster_week_allocations','project_assignments','project_assignment_files','properties','vehicles','accommodation_assignments','vehicle_assignments','accommodation_charges','vehicle_charges','tools','tool_assignments','tool_charges','admin_notifications','audit_log','deleted_items','compliance_documents','resource_events'];
   if(sbUserRole === 'compliance') return complianceTables.includes(table);
   if(sbUserRole === 'planner') return plannerTables.includes(table);
@@ -3128,6 +3155,9 @@ const DEFAULT_AT_DOCS = [
 let docSets    = [];
 let docSetItems= {};
 let workerDocSets = [];
+let competencies          = []; // org competency catalogue
+let competencyAssignments = []; // per-worker requirements
+let competencyRecords     = []; // evidence submissions
 let settings   = { warningDays: 60, complianceReportEmail: 'compliance@tmconstruction.nl', digestEmails: [], rejectDeleteDays: 30, workerTypes: [{id:'zzp',label:'ZZP'},{id:'blue',label:'Employed'}], notifyWorkersEnabled: false, notifyWorkerTypes: [], digestSections: { expired_docs:{enabled:true}, expiring_docs:{enabled:true,days:60}, missing_contracts:{enabled:true}, assignments_ending:{enabled:true,days:14}, workers_unassigned:{enabled:true}, accommodation_ending:{enabled:true,days:7}, uncharged_accommodation:{enabled:true}, uncharged_vehicles:{enabled:true} } };
 
 // Built-in set IDs (cannot be deleted)
@@ -6557,7 +6587,7 @@ let approvalsApprovedPage = 1, approvalsRejectedPage = 1;
 let approvalsApprovedPageSize = 10, approvalsRejectedPageSize = 10;
 
 function updateApprovalsBadge(){
-  const pendingCount=(wpSubmissions.filter(s=>s.status==='pending').length)+(adminReturnRequests.filter(r=>r.status==='pending').length)+(issuedDocuments.filter(d=>d.status==='pending_review').length)+(projectAssignments.filter(a=>a.signatureStatus==='pending_review'&&a.signedFilePath).length);
+  const pendingCount=(wpSubmissions.filter(s=>s.status==='pending').length)+(adminReturnRequests.filter(r=>r.status==='pending').length)+(issuedDocuments.filter(d=>d.status==='pending_review').length)+(projectAssignments.filter(a=>a.signatureStatus==='pending_review'&&a.signedFilePath).length)+(competencyRecords.filter(r=>r.status==='pending'&&r.active).length);
   const badge=document.getElementById('approvalsTabBadge');
   if(!badge)return;
   badge.style.display=pendingCount?'':'none';
@@ -6615,15 +6645,46 @@ function renderApprovalsView(){
   const hasPendingRets=adminReturnRequests.filter(r=>r.status==='pending').length>0;
   const hasPendingESigns=issuedDocuments.filter(d=>d.status==='pending_review').length>0;
   const hasPendingContracts=projectAssignments.filter(a=>a.signatureStatus==='pending_review'&&a.signedFilePath).length>0;
+  const hasPendingComps=competencyRecords.filter(r=>r.status==='pending'&&r.active).length>0;
   const emptyEl=document.getElementById('approvalsPendingEmpty');
-  if(emptyEl)emptyEl.style.display=(hasPendingSubs||hasPendingRets||hasPendingESigns||hasPendingContracts)?'none':'';
+  if(emptyEl)emptyEl.style.display=(hasPendingSubs||hasPendingRets||hasPendingESigns||hasPendingContracts||hasPendingComps)?'none':'';
   const noteEl=document.getElementById('approvalsRejectedAutoDeleteNote');
   if(noteEl){const d=settings.rejectDeleteDays??30;noteEl.textContent=d>0?`Rejected items are automatically removed after ${d} day${d!==1?'s':''}.`:'Auto-delete of rejected items is disabled.';}
   renderApprovalsHistory('approved');
   renderApprovalsHistory('rejected');
   renderESignPending();
   renderESignContracts();
+  renderPendingCompetencies();
   updateApprovalsBadge();
+}
+
+function renderPendingCompetencies(){
+  const pending = competencyRecords.filter(r=>r.status==='pending'&&r.active);
+  const el = document.getElementById('pendingCompetenciesCard');
+  if(!el) return;
+  if(!pending.length){ el.style.display='none'; return; }
+  el.style.display='';
+  const list = document.getElementById('pendingCompetenciesList');
+  if(!list) return;
+  list.innerHTML = pending.map(r=>{
+    const w = workers.find(x=>x.id===r.workerId);
+    const c = competencies.find(x=>x.id===r.competencyId);
+    const wName = w?.name||'Unknown worker';
+    const cName = c?.name||'Competency';
+    const submittedAt = r.submittedAt ? new Date(r.submittedAt).toLocaleDateString('en-GB') : '';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:#1e293b;">${esc(wName)}</div>
+        <div style="font-size:12px;color:#64748b;">${esc(cName)}${submittedAt?' · Submitted '+submittedAt:''}</div>
+        ${r.fileName?`<div style="font-size:11px;color:#94a3b8;">📄 ${esc(r.fileName)}</div>`:''}
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        ${r.filePath?`<button class="btn" style="font-size:11px;padding:5px 10px;" onclick="adminViewCompRecord('${r.id}','${esc(r.filePath)}','${esc(r.fileName||'')}')">👁 View</button>`:''}
+        <button class="btn" style="font-size:11px;padding:5px 10px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;" onclick="approveCompRecord('${r.id}','${r.workerId}');renderPendingCompetencies();">✓ Approve</button>
+        <button class="btn" style="font-size:11px;padding:5px 10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" onclick="rejectCompRecord('${r.id}','${r.workerId}');renderPendingCompetencies();">✗ Reject</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderApprovalsHistory(type){
@@ -7262,6 +7323,7 @@ function openAdd(){
   document.getElementById('fNat').value = 'NL';
   document.getElementById('fDocSetHint').style.display='none';
   const fApplied = document.getElementById('fAppliedSets'); if(fApplied) fApplied.style.display='none';
+  const fComp = document.getElementById('fCompetencies'); if(fComp) fComp.style.display='none';
   // Auto-fill doc set from worker type recommendation, fall back to NL-ZZP
   const defaultType=(settings.workerTypes||[]).find(t=>t.id==='zzp');
   sel.value = defaultType?.docSetId || SET_NL_ZZP;
@@ -7287,6 +7349,7 @@ function openEditWorker(wid){
   document.getElementById('fDocSetHint').style.display='none';
   document.getElementById('fType').onchange = ()=>{ _applyWorkerTypeDocSetHint(document.getElementById('fType').value); };
   renderAppliedSetsInModal(wid);
+  renderCompetenciesPanel(wid);
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('fName').focus(), 50);
 }
@@ -7456,6 +7519,220 @@ async function wdsDelete(wid, setId){
     renderTable(); renderStats(); if(curW) rebuildModal(curW);
     sbSetStatus('Supabase: set removed', true);
   }catch(e){ alert('Could not delete set: '+(e.message||e)); }
+}
+
+// ─── Competencies & Training helpers ─────────────────────────────────────────
+
+function renderCompetenciesPanel(wid){
+  const container = document.getElementById('fCompetencies');
+  const list      = document.getElementById('fCompetenciesList');
+  if(!container || !list) return;
+  if(!wid){ container.style.display='none'; return; }
+
+  const myAssignments = competencyAssignments.filter(a=>a.workerId===wid && a.active);
+  const canWrite = sbCanWriteTable('worker_competency_assignments');
+
+  // Unassigned competencies available to add
+  const assignedIds = new Set(myAssignments.map(a=>a.competencyId));
+  const available = competencies.filter(c=>c.active && !assignedIds.has(c.id));
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const warnMs = (settings.warningDays||60)*24*60*60*1000;
+
+  function recordStatus(rec){
+    if(!rec) return {label:'Missing',color:'#dc2626',bg:'#fee2e2'};
+    if(rec.status==='pending') return {label:'Pending Review',color:'#92400e',bg:'#fef3c7'};
+    if(rec.status==='rejected') return {label:'Rejected',color:'#dc2626',bg:'#fee2e2'};
+    if(rec.status==='approved'){
+      if(rec.expiryDate){
+        const exp = new Date(rec.expiryDate); exp.setHours(0,0,0,0);
+        if(exp < today) return {label:'Expired',color:'#dc2626',bg:'#fee2e2'};
+        if(exp - today < warnMs) return {label:'Expiring',color:'#92400e',bg:'#fef3c7'};
+      }
+      return {label:'Approved',color:'#065f46',bg:'#d1fae5'};
+    }
+    return {label:'Missing',color:'#dc2626',bg:'#fee2e2'};
+  }
+
+  let html = '';
+  if(!myAssignments.length && !canWrite){
+    html = '<div style="font-size:12px;color:var(--text-l);padding:6px 0;">No competencies assigned.</div>';
+  }
+
+  myAssignments.forEach(a=>{
+    const c = competencies.find(x=>x.id===a.competencyId);
+    if(!c) return;
+    // Get latest active record for this competency
+    const recs = competencyRecords.filter(r=>r.workerId===wid && r.competencyId===c.id && r.active).sort((a,b)=>new Date(b.submittedAt||0)-new Date(a.submittedAt||0));
+    const latest = recs[0] || null;
+    const st = recordStatus(latest);
+    const hasFile = latest && latest.filePath;
+
+    html += `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;margin-bottom:8px;background:#fafafa;">
+      <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
+            <span style="font-size:13px;font-weight:600;color:#1e293b;">${esc(c.name)}</span>
+            <span style="font-size:11px;font-weight:600;padding:2px 7px;border-radius:12px;background:${st.bg};color:${st.color};">${esc(st.label)}</span>
+            ${c.category&&c.category!=='General'?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#f1f5f9;color:#64748b;">${esc(c.category)}</span>`:''}
+            ${a.required?'':`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#f8fafc;color:#94a3b8;">Optional</span>`}
+          </div>
+          ${a.notes?`<div style="font-size:11px;color:#64748b;margin-bottom:3px;font-style:italic;">${esc(a.notes)}</div>`:''}
+          ${latest&&latest.issuedDate?`<div style="font-size:11px;color:#64748b;">Issued: ${esc(latest.issuedDate)}${latest.expiryDate?' &nbsp;·&nbsp; Expires: '+esc(latest.expiryDate):''}</div>`:''}
+          ${latest&&latest.fileName?`<div style="font-size:11px;color:#334155;margin-top:2px;">📄 ${esc(latest.fileName)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0;">
+          ${c.infoText?`<button class="btn" style="font-size:10px;padding:3px 7px;" onclick="showCompInfo(this,'${esc(c.infoText).replace(/'/g,"&#39;")}')">ℹ Info</button>`:''}
+          ${c.infoUrl?`<a class="btn" href="${esc(c.infoUrl)}" target="_blank" style="font-size:10px;padding:3px 7px;">🔗 Link</a>`:''}
+          ${hasFile?`<button class="btn" style="font-size:10px;padding:3px 7px;" onclick="adminViewCompRecord('${latest.id}','${esc(latest.filePath)}','${esc(latest.fileName||'')}')">👁 View</button>`:''}
+          ${canWrite&&latest&&latest.status==='pending'?`<button class="btn" style="font-size:10px;padding:3px 7px;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;" onclick="approveCompRecord('${latest.id}','${wid}')">✓ Approve</button><button class="btn" style="font-size:10px;padding:3px 7px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" onclick="rejectCompRecord('${latest.id}','${wid}')">✗ Reject</button>`:''}
+          ${canWrite?`<label class="btn" style="font-size:10px;padding:3px 7px;cursor:pointer;" title="Upload evidence"><input type="file" accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="adminUploadCompRecord('${wid}','${c.id}',this)">📤 Upload</label>`:''}
+          ${canWrite?`<button class="btn" style="font-size:10px;padding:3px 7px;background:#f3f4f6;color:#dc2626;" onclick="removeCompetencyAssignment('${a.id}','${wid}')">✕ Remove</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  // Assign competency dropdown
+  if(canWrite && available.length){
+    html += `<div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+      <select id="compAssignSelect_${wid}" style="font-size:12px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;background:#fff;flex:1;min-width:150px;">
+        <option value="">+ Assign a competency…</option>
+        ${available.map(c=>`<option value="${c.id}">${esc(c.name)}${c.category&&c.category!=='General'?' ('+esc(c.category)+')':''}</option>`).join('')}
+      </select>
+      <button class="btn btn-save" style="font-size:11px;padding:5px 12px;" onclick="assignCompetencyToWorker('${wid}')">Assign</button>
+    </div>`;
+  } else if(canWrite && !available.length && !myAssignments.length){
+    html += `<div style="font-size:11px;color:var(--text-l);margin-top:4px;">No competencies in catalogue yet. Add some in Settings → Competencies.</div>`;
+  } else if(canWrite && !available.length){
+    html += `<div style="font-size:11px;color:var(--text-l);margin-top:4px;">All catalogue competencies are assigned to this worker.</div>`;
+  }
+
+  list.innerHTML = html;
+  container.style.display = '';
+}
+
+function showCompInfo(btn, text){
+  const existing = btn.nextElementSibling;
+  if(existing && existing.classList.contains('comp-info-popup')){ existing.remove(); return; }
+  const d = document.createElement('div');
+  d.className = 'comp-info-popup';
+  d.style.cssText='font-size:12px;color:#334155;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:8px 10px;margin-top:4px;line-height:1.5;';
+  d.textContent = text;
+  btn.parentNode.insertBefore(d, btn.nextSibling);
+}
+
+async function assignCompetencyToWorker(wid){
+  if(!requireAction('worker_competency_assignments','assign competency')) return;
+  const sel = document.getElementById('compAssignSelect_'+wid);
+  const compId = sel?.value;
+  if(!compId){ alert('Select a competency to assign.'); return; }
+  if(!currentOrgId) return;
+  try{
+    const {data,error} = await sbClient.from('worker_competency_assignments').upsert({
+      org_id: currentOrgId, worker_id: wid, competency_id: compId,
+      required: true, active: true, assigned_by: sbProfile?.email||null
+    },{onConflict:'org_id,worker_id,competency_id'}).select().maybeSingle();
+    if(error) throw error;
+    const existing = competencyAssignments.find(a=>a.workerId===wid && a.competencyId===compId);
+    if(existing){ existing.active=true; } else {
+      competencyAssignments.push({id:data?.id||crypto.randomUUID(),orgId:currentOrgId,workerId:wid,competencyId:compId,required:true,notes:null,active:true,assignedBy:sbProfile?.email||null,assignedAt:new Date().toISOString()});
+    }
+    renderCompetenciesPanel(wid);
+    sbSetStatus('Competency assigned', true);
+  }catch(e){ alert('Could not assign: '+(e.message||e)); }
+}
+
+async function removeCompetencyAssignment(assignId, wid){
+  if(!requireAction('worker_competency_assignments','remove competency')) return;
+  if(!confirm('Remove this competency requirement from the worker?')) return;
+  try{
+    const {error} = await sbClient.from('worker_competency_assignments').update({active:false}).eq('id',assignId);
+    if(error) throw error;
+    const a = competencyAssignments.find(x=>x.id===assignId);
+    if(a) a.active = false;
+    renderCompetenciesPanel(wid);
+    sbSetStatus('Competency removed', true);
+  }catch(e){ alert('Could not remove: '+(e.message||e)); }
+}
+
+async function approveCompRecord(recordId, wid){
+  if(!requireAction('worker_competency_records','approve competency')) return;
+  try{
+    const {error} = await sbClient.from('worker_competency_records').update({
+      status:'approved', reviewed_by: sbProfile?.email||null, reviewed_at: new Date().toISOString()
+    }).eq('id',recordId);
+    if(error) throw error;
+    const r = competencyRecords.find(x=>x.id===recordId);
+    if(r){ r.status='approved'; r.reviewedBy=sbProfile?.email||null; r.reviewedAt=new Date().toISOString(); }
+    renderCompetenciesPanel(wid);
+    sbSetStatus('Competency approved', true);
+  }catch(e){ alert('Could not approve: '+(e.message||e)); }
+}
+
+async function rejectCompRecord(recordId, wid){
+  if(!requireAction('worker_competency_records','reject competency')) return;
+  const notes = prompt('Rejection reason (optional):') ?? null;
+  try{
+    const {error} = await sbClient.from('worker_competency_records').update({
+      status:'rejected', reviewed_by: sbProfile?.email||null, reviewed_at: new Date().toISOString(), review_notes: notes
+    }).eq('id',recordId);
+    if(error) throw error;
+    const r = competencyRecords.find(x=>x.id===recordId);
+    if(r){ r.status='rejected'; r.reviewedBy=sbProfile?.email||null; r.reviewNotes=notes; }
+    renderCompetenciesPanel(wid);
+    sbSetStatus('Competency rejected', true);
+  }catch(e){ alert('Could not reject: '+(e.message||e)); }
+}
+
+async function adminUploadCompRecord(wid, compId, input){
+  if(!requireAction('worker_competency_records','upload competency')) return;
+  const file = input.files[0]; if(!file) return;
+  if(!currentOrgId) return;
+  const comp = competencies.find(c=>c.id===compId); if(!comp) return;
+  const ext = file.name.split('.').pop();
+  const path = `${currentOrgId}/competencies/${wid}/${comp.key}/${Date.now()}.${ext}`;
+  try{
+    const {error:upErr} = await sbClient.storage.from('tmc-documents').upload(path, file);
+    if(upErr) throw upErr;
+    const {data, error} = await sbClient.from('worker_competency_records').insert({
+      org_id: currentOrgId, worker_id: wid, competency_id: compId,
+      file_path: path, file_name: file.name,
+      status: 'approved', submitted_by: 'admin',
+      reviewed_by: sbProfile?.email||null, reviewed_at: new Date().toISOString()
+    }).select().maybeSingle();
+    if(error) throw error;
+    competencyRecords.push({id:data?.id||crypto.randomUUID(),orgId:currentOrgId,workerId:wid,competencyId:compId,filePath:path,fileName:file.name,issuedDate:null,expiryDate:null,status:'approved',submittedBy:'admin',submittedAt:new Date().toISOString(),reviewedBy:sbProfile?.email||null,reviewNotes:null,active:true});
+    renderCompetenciesPanel(wid);
+    sbSetStatus('Competency evidence uploaded', true);
+  }catch(e){ alert('Upload failed: '+(e.message||e)); }
+  finally{ input.value=''; }
+}
+
+async function adminViewCompRecord(recordId, filePath, fileName){
+  const {data, error} = await sbClient.storage.from('tmc-documents').createSignedUrl(filePath, 300);
+  if(error || !data?.signedUrl){ alert('Could not open file: '+(error?.message||'unknown error')); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+async function sbRemoteUpsertCompetency(comp){
+  if(!currentOrgId) return;
+  const row = {
+    org_id: currentOrgId, competency_key: comp.key, name: comp.name,
+    category: comp.category||'General', info_text: comp.infoText||null, info_url: comp.infoUrl||null,
+    template_file_name: comp.templateFileName||null, template_file_path: comp.templateFilePath||null,
+    allow_issue: !!comp.allowIssue, expiry_tracking: comp.expiryTracking!==false,
+    sort_order: comp.sortOrder||0, active: comp.active!==false,
+    created_by: comp.createdBy || sbProfile?.email || null, updated_at: new Date().toISOString()
+  };
+  if(comp.id) row.id = comp.id;
+  const {data, error} = await sbClient.from('worker_competencies').upsert(row,{onConflict:'org_id,competency_key'}).select().maybeSingle();
+  if(error) throw error;
+  // Update in-memory
+  const existing = competencies.find(c=>c.id===comp.id || c.key===comp.key);
+  if(existing){ Object.assign(existing, comp); if(data?.id) existing.id=data.id; }
+  else { competencies.push({...comp, id: data?.id||comp.id||crypto.randomUUID()}); }
+  return data;
 }
 
 // ─── Projects View ────────────────────────────────────────────────────────────
@@ -7765,6 +8042,7 @@ function renderSettings(){
   }
   if(active==='org') renderWorkerTypesSettings();
   if(active==='docsets') renderDocSets();
+  if(active==='competencies') renderCompetenciesSettings();
   if(active==='users'){ renderRolesPanel(); applyRoleUI(); }
   if(active==='archive') renderDeletedItems?.();
 }
@@ -7795,6 +8073,7 @@ function switchSettingsSection(name){
   }
   if(name==='org') renderWorkerTypesSettings();
   if(name==='docsets') renderDocSets();
+  if(name==='competencies') renderCompetenciesSettings();
   if(name==='users'){ renderRolesPanel(); applyRoleUI(); }
   if(name==='archive') renderDeletedItems?.();
 }
@@ -8373,6 +8652,195 @@ const openSetPanels = new Set();
 let docItemEditActive = {};
 // Track which category headers are in rename mode { [setId||cat]: true }
 let catRenameActive = {};
+
+// ─── Competencies Settings ────────────────────────────────────────────────────
+
+let _compEditActive = {}; // { [compId]: true }
+
+function renderCompetenciesSettings(){
+  const container = document.getElementById('competenciesContainer');
+  if(!container) return;
+  const canWrite = sbCanWriteTable('worker_competencies');
+  if(!competencies.length){
+    container.innerHTML = `<div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:32px;margin-bottom:12px;">🎓</div>
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">No competencies yet</div>
+      <div style="font-size:12px;color:var(--text-l);">Add competencies your workers need to demonstrate — certificates, training, licences, etc.</div>
+    </div>`;
+    return;
+  }
+  // Group by category
+  const cats = {};
+  competencies.filter(c=>c.active).sort((a,b)=>(a.sortOrder-b.sortOrder)||(a.name<b.name?-1:1)).forEach(c=>{
+    const cat = c.category||'General';
+    if(!cats[cat]) cats[cat]=[];
+    cats[cat].push(c);
+  });
+  container.innerHTML = Object.entries(cats).map(([cat,items])=>`
+    <div style="margin-bottom:24px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--navy);margin-bottom:10px;">${esc(cat)}</div>
+      ${items.map(c=>renderCompetencyCard(c, canWrite)).join('')}
+    </div>`).join('');
+}
+
+function renderCompetencyCard(c, canWrite){
+  const isEditing = _compEditActive[c.id];
+  if(isEditing) return renderCompetencyEditForm(c);
+  return `<div class="settings-card" style="margin-bottom:10px;">
+    <div style="display:flex;align-items:flex-start;gap:10px;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:14px;font-weight:600;color:var(--text);">${esc(c.name)}</div>
+        ${c.infoText?`<div style="font-size:12px;color:var(--text-l);margin-top:2px;">${esc(c.infoText)}</div>`:''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+          ${c.expiryTracking?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#dbeafe;color:#1e40af;">Expiry tracking</span>`:''}
+          ${c.allowIssue?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#fef3c7;color:#92400e;">Issuable</span>`:''}
+          ${c.templateFileName?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#f0fdf4;color:#166534;">Has template</span>`:''}
+          ${c.infoUrl?`<a href="${esc(c.infoUrl)}" target="_blank" style="font-size:10px;padding:1px 6px;border-radius:8px;background:#f0f9ff;color:#0369a1;text-decoration:none;">🔗 Link</a>`:''}
+        </div>
+      </div>
+      ${canWrite?`<div style="display:flex;gap:4px;">
+        <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openCompetencyEdit('${c.id}')">Edit</button>
+        <button class="btn" style="font-size:11px;padding:4px 10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;" onclick="deleteCompetency('${c.id}')">Delete</button>
+      </div>`:''}
+    </div>
+  </div>`;
+}
+
+function renderCompetencyEditForm(c){
+  const isNew = !c.id;
+  return `<div class="settings-card" style="margin-bottom:10px;border:1.5px solid var(--navy);">
+    <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px;">${isNew?'New Competency':'Edit Competency'}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-l);display:block;margin-bottom:4px;">Name *</label>
+        <input class="form-input" id="cedit_name_${c.id||'new'}" value="${esc(c.name||'')}" placeholder="e.g. First Aid Certificate" style="font-size:13px;"/>
+      </div>
+      <div>
+        <label style="font-size:11px;font-weight:600;color:var(--text-l);display:block;margin-bottom:4px;">Category</label>
+        <input class="form-input" id="cedit_cat_${c.id||'new'}" value="${esc(c.category||'General')}" placeholder="e.g. Safety" style="font-size:13px;" list="compCatList"/>
+        <datalist id="compCatList"><option value="Safety"/><option value="Equipment"/><option value="Certifications"/><option value="Training"/><option value="Legal"/><option value="General"/></datalist>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;font-weight:600;color:var(--text-l);display:block;margin-bottom:4px;">Info text (shown to worker)</label>
+      <textarea class="form-input" id="cedit_info_${c.id||'new'}" rows="2" placeholder="Instructions or description for the worker…" style="font-size:13px;resize:vertical;">${esc(c.infoText||'')}</textarea>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;font-weight:600;color:var(--text-l);display:block;margin-bottom:4px;">External link (training resource, booking page…)</label>
+      <input class="form-input" id="cedit_url_${c.id||'new'}" type="url" value="${esc(c.infoUrl||'')}" placeholder="https://…" style="font-size:13px;"/>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;font-weight:600;color:var(--text-l);display:block;margin-bottom:4px;">Template file (optional — worker can download)</label>
+      ${c.templateFileName?`<div style="font-size:12px;color:var(--text-l);margin-bottom:4px;">Current: ${esc(c.templateFileName)} <button onclick="clearCompTemplate('${c.id||'new'}')" style="font-size:10px;color:#dc2626;background:none;border:none;cursor:pointer;padding:0;">Remove</button></div>`:''}
+      <input type="file" id="cedit_tmpl_${c.id||'new'}" accept=".pdf,.doc,.docx,.xlsx,.png,.jpg" style="font-size:12px;"/>
+      <input type="hidden" id="cedit_tmpl_remove_${c.id||'new'}" value="0"/>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="cedit_expiry_${c.id||'new'}" ${c.expiryTracking!==false?'checked':''}/>
+        Track expiry date
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="cedit_issue_${c.id||'new'}" ${c.allowIssue?'checked':''}/>
+        Allow admin to issue doc
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-save" onclick="saveCompetency('${c.id||'new'}','${esc(c.key||'')}')">Save</button>
+      <button class="btn btn-cancel" onclick="cancelCompetencyEdit('${c.id||'new'}')">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function openAddCompetency(){
+  if(!sbCanWriteTable('worker_competencies')){ alert('Your role cannot manage competencies.'); return; }
+  const container = document.getElementById('competenciesContainer');
+  if(!container) return;
+  const tempDiv = document.createElement('div');
+  const fakeComp = {id:'new',key:'',name:'',category:'General',infoText:null,infoUrl:null,templateFileName:null,templateFilePath:null,allowIssue:false,expiryTracking:true,sortOrder:competencies.length,active:true};
+  _compEditActive['new'] = true;
+  tempDiv.innerHTML = renderCompetencyEditForm(fakeComp);
+  container.insertBefore(tempDiv.firstElementChild, container.firstChild);
+}
+
+function openCompetencyEdit(compId){
+  _compEditActive[compId] = true;
+  renderCompetenciesSettings();
+}
+
+function cancelCompetencyEdit(compId){
+  delete _compEditActive[compId];
+  renderCompetenciesSettings();
+}
+
+function clearCompTemplate(compId){
+  const removeInput = document.getElementById('cedit_tmpl_remove_'+compId);
+  if(removeInput) removeInput.value='1';
+  const fileInput = document.getElementById('cedit_tmpl_'+compId);
+  if(fileInput) fileInput.value='';
+  const currentDiv = fileInput?.previousElementSibling;
+  if(currentDiv && currentDiv.tagName==='DIV') currentDiv.style.display='none';
+}
+
+async function saveCompetency(compId, existingKey){
+  if(!sbCanWriteTable('worker_competencies')){ alert('Your role cannot manage competencies.'); return; }
+  if(!currentOrgId) return;
+  const isNew = compId==='new';
+  const name = (document.getElementById('cedit_name_'+compId)?.value||'').trim();
+  if(!name){ alert('Name is required.'); return; }
+  const cat = (document.getElementById('cedit_cat_'+compId)?.value||'').trim() || 'General';
+  const infoText = (document.getElementById('cedit_info_'+compId)?.value||'').trim() || null;
+  const infoUrl  = (document.getElementById('cedit_url_'+compId)?.value||'').trim() || null;
+  const expiryTracking = !!document.getElementById('cedit_expiry_'+compId)?.checked;
+  const allowIssue     = !!document.getElementById('cedit_issue_'+compId)?.checked;
+  const removeTemplate = document.getElementById('cedit_tmpl_remove_'+compId)?.value==='1';
+
+  // Generate key from name if new
+  const key = existingKey || (isNew ? name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') : existingKey);
+
+  const existing = isNew ? null : competencies.find(c=>c.id===compId);
+  let templateFilePath = existing?.templateFilePath||null;
+  let templateFileName = existing?.templateFileName||null;
+
+  if(removeTemplate){ templateFilePath=null; templateFileName=null; }
+
+  // Handle template upload
+  const tmplFile = document.getElementById('cedit_tmpl_'+compId)?.files[0];
+  if(tmplFile){
+    const slugName = tmplFile.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    const tmplPath = `doc-templates/competencies/${currentOrgId}/${key}/${slugName}`;
+    // Delete old if different
+    if(templateFilePath && templateFilePath!==tmplPath){
+      await sbClient.storage.from('tmc-documents').remove([templateFilePath]).catch(()=>{});
+    }
+    const {error:upErr} = await sbClient.storage.from('tmc-documents').upload(tmplPath, tmplFile, {upsert:true});
+    if(upErr){ alert('Template upload failed: '+upErr.message); return; }
+    templateFilePath = tmplPath;
+    templateFileName = tmplFile.name;
+  }
+
+  const compData = {id: isNew?undefined:compId, key, name, category:cat, infoText, infoUrl, templateFileName, templateFilePath, allowIssue, expiryTracking, sortOrder: existing?.sortOrder||competencies.length, active:true, createdBy: existing?.createdBy||sbProfile?.email||null};
+  try{
+    const saved = await sbRemoteUpsertCompetency(compData);
+    delete _compEditActive[compId];
+    delete _compEditActive['new'];
+    renderCompetenciesSettings();
+    sbSetStatus('Competency saved', true);
+  }catch(e){ alert('Could not save: '+(e.message||e)); }
+}
+
+async function deleteCompetency(compId){
+  if(!sbCanWriteTable('worker_competencies')){ alert('Your role cannot manage competencies.'); return; }
+  if(!confirm('Delete this competency? Workers with it assigned will lose the requirement.')) return;
+  try{
+    const {error} = await sbClient.from('worker_competencies').update({active:false}).eq('id',compId);
+    if(error) throw error;
+    const c = competencies.find(x=>x.id===compId);
+    if(c) c.active=false;
+    renderCompetenciesSettings();
+    sbSetStatus('Competency deleted', true);
+  }catch(e){ alert('Could not delete: '+(e.message||e)); }
+}
 
 function renderDocSets(){
   const container=document.getElementById('docSetsContainer');if(!container)return;
@@ -11712,7 +12180,7 @@ async function sbLoadAll(){
     return errored ? fallback : all;
   };
   try{
-    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData,wdsData] = await Promise.all([
+    const [setData,itemData,settingsData,projData,workerData,wdocData,wfileData,rosterData,paData,pafData,propData,vehData,aaData,vaData,deletedData,compDocsData,accomChargesData,vehChargesData,resEventsData,toolData,taData,toolChargesData,issuedDocsData,wdsData,compData,compAssignData,compRecordData] = await Promise.all([
       q('document_sets', sbClient.from('document_sets').select('*').eq('active',true).order('name'), []),
       q('document_set_items', sbClient.from('document_set_items').select('*').eq('active',true).order('sort_order'), []),
       q('settings', sbClient.from('settings').select('*').eq('id', currentOrgId || SITE_ORG_ID).maybeSingle(), null),
@@ -11736,7 +12204,10 @@ async function sbLoadAll(){
       qPaged('tool_assignments', ()=>sbClient.from('tool_assignments').select('*').eq('active',true).order('id'), []),
       qPaged('tool_charges', ()=>sbClient.from('tool_charges').select('*').eq('active',true).order('id'), []),
       qPaged('issued_documents', ()=>sbClient.from('issued_documents').select('*').eq('active',true).order('issued_at',{ascending:false}), []),
-      qPaged('worker_document_sets', ()=>sbClient.from('worker_document_sets').select('*').order('applied_at',{ascending:false}), [])
+      qPaged('worker_document_sets', ()=>sbClient.from('worker_document_sets').select('*').order('applied_at',{ascending:false}), []),
+      qPaged('worker_competencies', ()=>sbClient.from('worker_competencies').select('*').eq('active',true).order('sort_order'), []),
+      qPaged('worker_competency_assignments', ()=>sbClient.from('worker_competency_assignments').select('*').eq('active',true).order('assigned_at',{ascending:false}), []),
+      qPaged('worker_competency_records', ()=>sbClient.from('worker_competency_records').select('*').eq('active',true).order('submitted_at',{ascending:false}), [])
     ]);
 
     if(workerData === null){
@@ -11786,6 +12257,9 @@ async function sbLoadAll(){
     });
     if((compDocsData||[]).length){ complianceDocs=(compDocsData||[]).map(d=>({id:d.id,title:d.title,category:d.category,scope_type:d.scope_type,scope_id:d.scope_id,scope_label:d.scope_label||'',notes:d.notes||'',file_name:d.file_name||'',file_path:d.file_path||'',file_size:d.file_size||0,mime_type:d.mime_type||'',uploaded_by:d.uploaded_by||'',active:d.active!==false,created_at:d.created_at||''})); saveComplianceDocs(); }
     workerDocSets = (wdsData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,documentSetId:r.document_set_id,active:r.active!==false,appliedAt:r.applied_at,appliedBy:r.applied_by||null}));
+    competencies = (compData||[]).map(r=>({id:r.id,orgId:r.org_id,key:r.competency_key,name:r.name,category:r.category||'General',infoText:r.info_text||null,infoUrl:r.info_url||null,templateFileName:r.template_file_name||null,templateFilePath:r.template_file_path||null,allowIssue:!!r.allow_issue,expiryTracking:r.expiry_tracking!==false,sortOrder:r.sort_order||0,active:r.active!==false,createdBy:r.created_by||null}));
+    competencyAssignments = (compAssignData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,competencyId:r.competency_id,required:r.required!==false,notes:r.notes||null,active:r.active!==false,assignedBy:r.assigned_by||null,assignedAt:r.assigned_at||null}));
+    competencyRecords = (compRecordData||[]).map(r=>({id:r.id,orgId:r.org_id,workerId:r.worker_id,competencyId:r.competency_id,filePath:r.file_path||null,fileName:r.file_name||null,issuedDate:r.issued_date||null,expiryDate:r.expiry_date||null,status:r.status||'pending',submittedBy:r.submitted_by||'worker',submittedAt:r.submitted_at||null,reviewedBy:r.reviewed_by||null,reviewNotes:r.review_notes||null,active:r.active!==false}));
     sbHasLoadedRemote = true;
     renderProjFilters();renderDocSetFilters();renderMissingDocFilter(); renderWeekLabel(); renderTable(); if(currentView==='roster')renderRoster(); if(currentView==='projects')renderProjects(); if(currentView==='resources')renderResources(); if(currentView==='settings')renderSettings(); if(currentView==='documents')renderDocuments(); renderDeletedItems(); applyRoleUI();
     if(loadErrors.length){
