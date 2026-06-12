@@ -2449,10 +2449,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
             <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Applied Document Sets</div>
             <div id="fAppliedSetsList"></div>
           </div>
-          <div id="fCompetencies" style="display:none;margin-top:10px;">
-            <div style="font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Training &amp; Competencies</div>
-            <div id="fCompetenciesList"></div>
-          </div>
         </div>
         <div class="form-field full"><label class="form-label">Notes</label><textarea class="form-input" id="fNotes" rows="2" placeholder="Any additional notes…" style="resize:vertical;"></textarea></div>
       </div>
@@ -5559,7 +5555,13 @@ function rebuildModal(id){
     });
     html+=`</div>`;
   });
+  // Training & Competencies — separate section below the document-set requirements
+  html+=`<div class="doc-section" id="mCompetencies" style="margin-top:14px;">
+    <div class="doc-section-title">Training &amp; Competencies</div>
+    <div id="mCompetenciesList"></div>
+  </div>`;
   document.getElementById('mBody').innerHTML=html;
+  renderCompetenciesPanel(id);
 }
 
 function setDocStatus(wid,did,val){
@@ -7335,7 +7337,6 @@ function openAdd(){
   document.getElementById('fNat').value = 'NL';
   document.getElementById('fDocSetHint').style.display='none';
   const fApplied = document.getElementById('fAppliedSets'); if(fApplied) fApplied.style.display='none';
-  const fComp = document.getElementById('fCompetencies'); if(fComp) fComp.style.display='none';
   // Auto-fill doc set from worker type recommendation, fall back to NL-ZZP
   const defaultType=(settings.workerTypes||[]).find(t=>t.id==='zzp');
   sel.value = defaultType?.docSetId || SET_NL_ZZP;
@@ -7361,7 +7362,6 @@ function openEditWorker(wid){
   document.getElementById('fDocSetHint').style.display='none';
   document.getElementById('fType').onchange = ()=>{ _applyWorkerTypeDocSetHint(document.getElementById('fType').value); };
   renderAppliedSetsInModal(wid);
-  renderCompetenciesPanel(wid);
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('fName').focus(), 50);
 }
@@ -7536,8 +7536,8 @@ async function wdsDelete(wid, setId){
 // ─── Competencies & Training helpers ─────────────────────────────────────────
 
 function renderCompetenciesPanel(wid){
-  const container = document.getElementById('fCompetencies');
-  const list      = document.getElementById('fCompetenciesList');
+  const container = document.getElementById('mCompetencies');
+  const list      = document.getElementById('mCompetenciesList');
   if(!container || !list) return;
   if(!wid){ container.style.display='none'; return; }
 
