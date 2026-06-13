@@ -379,6 +379,101 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 .feature-title{font-size:0.95rem;font-weight:700;color:var(--navy);margin-bottom:0.45rem;}
 .feature-desc{font-size:0.83rem;color:var(--text-m);line-height:1.65;}
 
+/* ── PRICING SECTION ── */
+.pricing-section{background:var(--bg);}
+/* Billing toggle */
+.billing-toggle-wrap{display:flex;justify-content:center;align-items:center;gap:0.85rem;margin-top:2.25rem;}
+.billing-label{font-size:0.85rem;font-weight:600;color:var(--text-m);transition:color 0.18s;cursor:pointer;user-select:none;}
+.billing-label.active{color:var(--navy);}
+.billing-switch{
+  position:relative;width:52px;height:28px;border-radius:999px;border:none;cursor:pointer;
+  background:var(--blue);padding:0;flex-shrink:0;transition:background 0.2s;
+}
+.billing-switch::after{
+  content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.25);transition:transform 0.22s cubic-bezier(.4,0,.2,1);
+}
+.billing-switch.annual::after{transform:translateX(24px);}
+.billing-save{
+  display:inline-block;font-size:0.7rem;font-weight:700;letter-spacing:0.02em;
+  color:var(--green);background:var(--green-bg);border:1px solid var(--green-border);
+  padding:0.18rem 0.5rem;border-radius:999px;
+}
+/* Calculator card */
+.calc-card{
+  position:relative;overflow:hidden;margin-top:2.5rem;
+  background:linear-gradient(135deg,#13294a 0%,var(--navy) 55%,#1e4a7f 100%);
+  border-radius:20px;padding:2.25rem 2.25rem 2rem;
+  box-shadow:0 18px 50px -12px rgba(19,41,74,0.45);
+  display:grid;grid-template-columns:1.15fr 1fr;gap:2.25rem;align-items:center;
+}
+.calc-card::before{
+  content:'';position:absolute;top:-40%;right:-10%;width:420px;height:420px;border-radius:50%;
+  background:radial-gradient(circle,rgba(59,130,246,0.35),transparent 65%);pointer-events:none;
+}
+.calc-left{position:relative;z-index:1;}
+.calc-eyebrow{font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#9ec5ff;margin-bottom:0.6rem;}
+.calc-workers-num{font-size:1.05rem;font-weight:700;color:#fff;margin-bottom:1rem;}
+.calc-workers-num b{font-size:1.35rem;}
+.calc-range{
+  -webkit-appearance:none;appearance:none;width:100%;height:8px;border-radius:999px;
+  background:rgba(255,255,255,0.18);outline:none;cursor:pointer;
+}
+.calc-range::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;width:26px;height:26px;border-radius:50%;
+  background:#fff;border:4px solid var(--blue);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+  transition:transform 0.12s;
+}
+.calc-range::-webkit-slider-thumb:hover{transform:scale(1.12);}
+.calc-range::-moz-range-thumb{
+  width:26px;height:26px;border-radius:50%;background:#fff;border:4px solid var(--blue);
+  cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);
+}
+.calc-range-labels{display:flex;justify-content:space-between;font-size:0.72rem;color:rgba(255,255,255,0.5);margin-top:0.5rem;}
+.calc-right{
+  position:relative;z-index:1;text-align:center;
+  background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
+  border-radius:16px;padding:1.6rem 1.4rem;backdrop-filter:blur(4px);
+}
+.calc-price{font-size:2.9rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-0.02em;}
+.calc-price span{font-size:1.1rem;font-weight:600;color:rgba(255,255,255,0.6);}
+.calc-rate{font-size:0.8rem;color:#9ec5ff;margin-top:0.5rem;font-weight:600;}
+.calc-sub{font-size:0.74rem;color:rgba(255,255,255,0.55);margin-top:0.15rem;}
+.calc-card .btn{margin-top:1.25rem;width:100%;justify-content:center;}
+/* Tier cards */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:1.75rem;align-items:stretch;}
+.price-card{
+  position:relative;display:flex;flex-direction:column;
+  background:#fff;border:1px solid var(--border);border-radius:16px;padding:1.75rem 1.5rem;
+  transition:box-shadow 0.18s,border-color 0.18s,transform 0.18s;
+}
+.price-card:hover{box-shadow:0 10px 34px rgba(0,0,0,0.09);border-color:#c7d2e0;transform:translateY(-3px);}
+.price-card.popular{
+  border:2px solid var(--blue);
+  box-shadow:0 14px 40px -10px rgba(59,130,246,0.35);
+  background:linear-gradient(180deg,#f5f9ff 0%,#fff 22%);
+}
+.price-ribbon{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  background:var(--blue);color:#fff;font-size:0.68rem;font-weight:700;letter-spacing:0.04em;
+  text-transform:uppercase;padding:0.3rem 0.85rem;border-radius:999px;white-space:nowrap;
+  box-shadow:0 4px 12px rgba(59,130,246,0.4);
+}
+.price-name{font-size:1.05rem;font-weight:800;color:var(--navy);margin-bottom:0.2rem;}
+.price-tag{font-size:0.8rem;color:var(--text-m);margin-bottom:1.1rem;}
+.price-amount{display:flex;align-items:baseline;gap:0.3rem;margin-bottom:0.25rem;}
+.price-amount b{font-size:2.1rem;font-weight:800;color:var(--navy);line-height:1;letter-spacing:-0.02em;}
+.price-amount .price-per{font-size:0.82rem;color:var(--text-m);font-weight:500;}
+.price-rate{font-size:0.78rem;color:var(--blue);font-weight:600;margin-bottom:1.25rem;}
+.price-feats{list-style:none;padding:0;margin:0 0 1.5rem;display:flex;flex-direction:column;gap:0.6rem;}
+.price-feats li{position:relative;padding-left:1.5rem;font-size:0.83rem;color:var(--text);line-height:1.5;}
+.price-feats li::before{content:'✓';position:absolute;left:0;top:0;color:var(--green);font-weight:800;font-size:0.85rem;}
+.price-card .btn{width:100%;justify-content:center;margin-top:auto;}
+.pricing-trust{
+  text-align:center;margin-top:1.75rem;font-size:0.82rem;color:var(--text-m);font-weight:500;
+}
+.pricing-trust b{color:var(--navy);font-weight:700;}
+
 /* ── INTERACTIVE DEMO SECTION ── */
 .demo-section{
   background:var(--navy);padding:5.5rem 2rem;
@@ -660,6 +755,7 @@ footer{
   .steps{grid-template-columns:1fr;}
   .steps::before{display:none;}
   .status-cards{grid-template-columns:1fr;}
+  .pricing-grid{grid-template-columns:repeat(2,1fr);}
 }
 @media(max-width:768px){
   .navbar{padding:0 1rem;}
@@ -668,6 +764,8 @@ footer{
   .hero{padding:4rem 1.25rem 3rem;}
   .features-grid{grid-template-columns:1fr;}
   .pain-grid{grid-template-columns:1fr;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .calc-card{grid-template-columns:1fr;gap:1.5rem;padding:1.75rem 1.5rem;}
   .demo-section{padding:3.5rem 1.25rem;}
   .cta-section{padding:3.5rem 1.25rem;}
   footer{padding:2rem 1.25rem;}
@@ -1133,6 +1231,7 @@ footer{
     <div class="nav-links">
       <a class="nav-link" href="#features">Features</a>
       <a class="nav-link" href="#how-it-works">How It Works</a>
+      <a class="nav-link" href="#pricing">Pricing</a>
       <a class="nav-link" href="#contact">Contact</a>
     </div>
   </div>
@@ -1153,6 +1252,7 @@ footer{
     <div class="mobile-menu-links">
       <a class="mobile-menu-link" href="#features" onclick="closeMobileMenu()">Features</a>
       <a class="mobile-menu-link" href="#how-it-works" onclick="closeMobileMenu()">How It Works</a>
+      <a class="mobile-menu-link" href="#pricing" onclick="closeMobileMenu()">Pricing</a>
       <a class="mobile-menu-link" href="#contact" onclick="closeMobileMenu()">Contact</a>
     </div>
     <div class="mobile-menu-divider"></div>
@@ -2194,6 +2294,93 @@ footer{
 </section>
 
 <!-- ═══════════════════════════════════
+     PRICING
+═══════════════════════════════════ -->
+<section class="section pricing-section" id="pricing">
+  <div class="section-inner">
+    <div class="section-kicker fade-up">Simple, per-worker pricing</div>
+    <div class="section-title fade-up fade-up-d1">Pricing that scales with your workforce.</div>
+    <div class="section-sub fade-up fade-up-d2">Pay only for the workers you manage — from €4 per worker per month, with a 50-worker minimum. The bigger your team, the lower your per-worker rate. Every plan starts with a 30-day free trial.</div>
+
+    <!-- Billing toggle -->
+    <div class="billing-toggle-wrap fade-up fade-up-d2">
+      <span class="billing-label active" id="lblMonthly" onclick="setBilling(false)">Monthly</span>
+      <button class="billing-switch" id="billingSwitch" aria-label="Toggle annual billing" onclick="setBilling(!isAnnual)"></button>
+      <span class="billing-label" id="lblAnnual" onclick="setBilling(true)">Annual</span>
+      <span class="billing-save">2 months free</span>
+    </div>
+
+    <!-- Interactive calculator -->
+    <div class="calc-card fade-up fade-up-d1">
+      <div class="calc-left">
+        <div class="calc-eyebrow">Estimate your price</div>
+        <div class="calc-workers-num">For <b id="calcWorkers">100</b> workers</div>
+        <input type="range" class="calc-range" id="calcRange" min="50" max="500" step="10" value="100" oninput="renderCalc()"/>
+        <div class="calc-range-labels"><span>50</span><span>500+</span></div>
+      </div>
+      <div class="calc-right">
+        <div class="calc-price" id="calcPrice">€375<span>/mo</span></div>
+        <div class="calc-rate" id="calcRate">€3.75 per worker / month</div>
+        <div class="calc-sub" id="calcSub">Billed monthly</div>
+        <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Start free trial</button>
+      </div>
+    </div>
+
+    <!-- Tier cards -->
+    <div class="pricing-grid">
+      <div class="price-card fade-up fade-up-d1">
+        <div class="price-name">Starter</div>
+        <div class="price-tag">For growing teams</div>
+        <div class="price-amount"><b data-price="200">€200</b><span class="price-per">/mo</span></div>
+        <div class="price-rate">€4 / worker · up to 100 workers</div>
+        <ul class="price-feats">
+          <li>GO / WARNING / NO-GO compliance scoring</li>
+          <li>Pre-built &amp; custom document sets</li>
+          <li>Expiry alerts &amp; daily email digest</li>
+          <li>Worker self-service portal</li>
+          <li>Up to 4 team members</li>
+        </ul>
+        <button class="btn btn-ghost-nav" onclick="openDemoModal()">Start free trial</button>
+      </div>
+
+      <div class="price-card popular fade-up fade-up-d2">
+        <div class="price-ribbon">Most Popular</div>
+        <div class="price-name">Growth</div>
+        <div class="price-tag">For established contractors</div>
+        <div class="price-amount"><b data-price="375">€375</b><span class="price-per">/mo</span></div>
+        <div class="price-rate">from €3.75 / worker · 100–300 workers</div>
+        <ul class="price-feats">
+          <li>Everything in Starter</li>
+          <li>Worker Vault invites &amp; portable documents</li>
+          <li>Project assignment Gantt &amp; planning</li>
+          <li>Accommodation &amp; vehicle billing tracker</li>
+          <li>E-signature contracts</li>
+          <li>Unlimited team members</li>
+        </ul>
+        <button class="btn btn-primary" onclick="openDemoModal()">Start free trial</button>
+      </div>
+
+      <div class="price-card fade-up fade-up-d3">
+        <div class="price-name">Enterprise</div>
+        <div class="price-tag">For large workforces</div>
+        <div class="price-amount"><b data-price="975">€975</b><span class="price-per">/mo</span></div>
+        <div class="price-rate">from €3.25 / worker · 300+ workers</div>
+        <ul class="price-feats">
+          <li>Everything in Growth</li>
+          <li>Volume per-worker discounts</li>
+          <li>Single sign-on (SSO)</li>
+          <li>Dedicated onboarding &amp; priority support</li>
+          <li>Bespoke document sets &amp; competencies</li>
+        </ul>
+        <a class="btn btn-ghost-nav" href="mailto:sales@work-force.nl">Contact sales</a>
+      </div>
+    </div>
+
+    <div class="pricing-trust"><b>30-day free trial</b> · No credit card required · Cancel anytime</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
      CTA SECTION
 ═══════════════════════════════════ -->
 <section class="cta-section" id="contact">
@@ -2306,6 +2493,47 @@ function closeMobileMenu(){
 function closeMobileMenuOnBackdrop(e){
   if(e.target===document.getElementById('mobileMenu')) closeMobileMenu();
 }
+
+// ── Pricing calculator + billing toggle ──
+let isAnnual = false;
+// Per-worker rate by headcount band (applied to the whole team)
+function rateFor(n){ if(n>=300) return 3.25; if(n>=200) return 3.50; if(n>=100) return 3.75; return 4.00; }
+function fmtPrice(n){ return '€' + Math.round(n).toLocaleString('en-US'); }
+function renderCalc(){
+  const range = document.getElementById('calcRange');
+  if(!range) return;
+  const workers = parseInt(range.value, 10);
+  document.getElementById('calcWorkers').textContent = workers >= 500 ? '500+' : workers;
+  const billed = Math.max(50, workers);
+  const rate   = rateFor(billed);
+  const monthly = billed * rate;
+  const shown   = isAnnual ? monthly * 10/12 : monthly;
+  const priceEl = document.getElementById('calcPrice');
+  const rateEl  = document.getElementById('calcRate');
+  const subEl   = document.getElementById('calcSub');
+  if(workers >= 500){
+    priceEl.innerHTML = 'Let’s talk';
+    rateEl.textContent = 'Custom volume pricing for 500+ workers';
+    subEl.textContent = '';
+  } else {
+    priceEl.innerHTML = fmtPrice(shown) + '<span>/mo</span>';
+    rateEl.textContent = '€' + rate.toFixed(2) + ' per worker / month';
+    subEl.textContent = isAnnual ? 'Billed annually · 2 months free' : 'Billed monthly';
+  }
+  // Update each tier card's headline "from" price to match billing period
+  document.querySelectorAll('.price-amount b[data-price]').forEach(function(b){
+    const base = parseInt(b.getAttribute('data-price'), 10);
+    b.textContent = fmtPrice(isAnnual ? base * 10/12 : base);
+  });
+}
+function setBilling(annual){
+  isAnnual = annual;
+  document.getElementById('billingSwitch').classList.toggle('annual', annual);
+  document.getElementById('lblMonthly').classList.toggle('active', !annual);
+  document.getElementById('lblAnnual').classList.toggle('active', annual);
+  renderCalc();
+}
+renderCalc();
 
 // ── Intersection Observer for fade-up ──
 const fadeEls = document.querySelectorAll('.fade-up');

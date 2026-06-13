@@ -361,9 +361,9 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
           <label class="field-label">Plan</label>
           <select class="field-input field-select" id="noPlan">
             <option value="trial">Trial</option>
-            <option value="starter">Starter (€49/mo)</option>
-            <option value="growth">Growth (€99/mo)</option>
-            <option value="enterprise">Enterprise (€199/mo)</option>
+            <option value="starter">Starter — €4/worker (50+)</option>
+            <option value="growth">Growth — €3.75/worker (100+)</option>
+            <option value="enterprise">Enterprise — €3.25/worker (300+)</option>
           </select>
         </div>
         <div class="field-group">
@@ -701,9 +701,9 @@ function renderOrgPanelBody(o) {
         <label class="field-label">Plan</label>
         <select class="field-input field-select" id="opPlan">
           <option value="trial"${o.plan==='trial'?' selected':''}>Trial</option>
-          <option value="starter"${o.plan==='starter'?' selected':''}>Starter — €49/mo</option>
-          <option value="growth"${o.plan==='growth'?' selected':''}>Growth — €99/mo</option>
-          <option value="enterprise"${o.plan==='enterprise'?' selected':''}>Enterprise — €199/mo</option>
+          <option value="starter"${o.plan==='starter'?' selected':''}>Starter — €4/worker (50+)</option>
+          <option value="growth"${o.plan==='growth'?' selected':''}>Growth — €3.75/worker (100+)</option>
+          <option value="enterprise"${o.plan==='enterprise'?' selected':''}>Enterprise — €3.25/worker (300+)</option>
           <option value="suspended"${o.plan==='suspended'?' selected':''}>Suspended</option>
         </select>
       </div>
