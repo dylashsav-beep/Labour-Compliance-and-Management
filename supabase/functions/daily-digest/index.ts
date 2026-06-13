@@ -505,12 +505,8 @@ async function digestForOrg(sb: any, org: any, today: Date) {
           end: a.end_date || null,
         }))
 
-        // Vault workers get a direct vault link; portal workers get a pre-filled email link.
-        const portalLink = worker.vault_account_id
-          ? VAULT_URL
-          : org.slug
-            ? `${SITE_URL}/worker.html?org=${encodeURIComponent(org.slug)}&email=${encodeURIComponent(worker.email)}`
-            : `${SITE_URL}/worker.html?email=${encodeURIComponent(worker.email)}`
+        // All worker reminder links go to the vault.
+        const portalLink = VAULT_URL
 
         const workerHtml = buildWorkerEmailHtml(
           worker.full_name, orgName, portalLink,

@@ -29,19 +29,11 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).setHours(0,0,0,0) - now.getTime()) / 86400000)
 }
 
-// If the worker has a vault account, link to the vault (their dedicated portal).
-// Otherwise link to the worker portal pre-filled with their email so they skip
-// the email-entry step and land directly on their documents.
-function buildPortalLink(worker: any, slug: string | null): string {
-  if (worker.vault_account_id) {
-    return VAULT_URL
-  }
-  const base = slug
-    ? `${SITE_URL}/worker.html?org=${encodeURIComponent(slug)}`
-    : `${SITE_URL}/worker.html`
-  return worker.email
-    ? `${base}&email=${encodeURIComponent(worker.email)}`
-    : base
+// All reminder emails now link to the vault. Workers without a vault account
+// will be prompted to create one on arrival — vault.html handles unauthenticated
+// visitors with a magic-link sign-in flow.
+function buildPortalLink(_worker: any, _slug: string | null): string {
+  return VAULT_URL
 }
 
 interface DocIssue  { name: string; date?: string; days?: number }
