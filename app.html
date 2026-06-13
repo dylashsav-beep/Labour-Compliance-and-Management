@@ -1378,7 +1378,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <div style="font-size:14px;font-weight:600;color:var(--text);">Project Register</div>
         <div style="font-size:12px;color:var(--text-l);margin-top:2px;">Manage projects. Inactive projects are hidden from new allocations but preserved in historical data.</div>
       </div>
-      <button class="btn btn-primary" onclick="openAddProject()">+ Add Project</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <input class="search-input" id="projSearch" type="text" placeholder="Search projects…" oninput="handleProjSearch(this.value)" style="margin-left:0;max-width:240px;">
+        <button class="btn btn-primary" onclick="openAddProject()">+ Add Project</button>
+      </div>
     </div>
 
     <div class="table-card">
@@ -1400,7 +1403,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <tbody id="projBody"></tbody>
       </table></div>
       <div class="no-results" id="noProjRes" style="display:none">
-        <div class="no-results-icon">📋</div>No projects yet — add one above
+        <div class="no-results-icon">📋</div><span id="projNoResMsg">No projects yet — add one above</span>
       </div>
       <!-- Inactive projects collapsible -->
       <div id="projInactiveSection" style="display:none;margin-top:12px;">
@@ -8165,15 +8168,30 @@ function _renderProjWorkersBody(){
   document.getElementById('projWorkersBody').innerHTML = toggleBar + tableHtml;
 }
 
+let projSearch = '';
+function handleProjSearch(v){ projSearch = v; renderProjects(); }
+
+function projMatchesSearch(p, q, today){
+  if(!q) return true;
+  const assignedNames = [...new Set(projectAssignments
+    .filter(a=>a.projectId===p.id && (!a.endDate||new Date(a.endDate)>=today))
+    .map(a=>{ const w=workers.find(x=>x.id===a.wid); return w?w.name:a.wid; }))].join(' ');
+  return [p.name,p.client,p.pm,p.desc,p.location,p.phone,assignedNames]
+    .some(v=>(v||'').toLowerCase().includes(q));
+}
+
 function renderProjects(){
   const tb = document.getElementById('projBody');
   const count = document.getElementById('projCount');
   const today = new Date(); today.setHours(0,0,0,0);
+  const q = (projSearch||'').trim().toLowerCase();
 
-  const active = projectStore.filter(p=>p.active!==false);
-  const inactive = projectStore.filter(p=>p.active===false);
+  const active = projectStore.filter(p=>p.active!==false && projMatchesSearch(p,q,today));
+  const inactive = projectStore.filter(p=>p.active===false && projMatchesSearch(p,q,today));
 
-  count.textContent = active.length + ' project' + (active.length!==1?'s':'');
+  count.textContent = active.length + ' project' + (active.length!==1?'s':'') + (q?' found':'');
+  const noResMsg = document.getElementById('projNoResMsg');
+  if(noResMsg) noResMsg.textContent = q ? 'No projects match your search' : 'No projects yet — add one above';
   if(!active.length && !inactive.length){
     tb.innerHTML='';
     document.getElementById('noProjRes').style.display='block';
