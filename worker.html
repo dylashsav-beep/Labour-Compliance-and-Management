@@ -154,6 +154,12 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-profile-save{width:100%;padding:14px;background:#059669;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;min-height:50px;margin-top:6px;transition:background .15s;font-family:inherit;}
 .wp-profile-save:active{background:#047857;}
 .wp-readonly-field{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:14px;color:#475569;min-height:44px;display:flex;align-items:center;}
+/* Profile avatar — top-right per Apple HIG (App Store / Instagram / LinkedIn pattern) */
+.wp-avatar-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,border-color .15s;letter-spacing:-.01em;min-width:34px;font-family:inherit;}
+.wp-avatar-btn:active,.wp-avatar-btn.active{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.75);}
+/* Sign-out button lives inside the profile card */
+.wp-signout-profile-btn{display:block;width:100%;margin-top:20px;padding:13px 16px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:48px;transition:background .15s;font-family:inherit;}
+.wp-signout-profile-btn:active{background:#fee2e2;}
 .wp-filter-label{display:block;font-size:13px;font-weight:600;}
 .wp-doc-optional-intro{font-size:13px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:16px;line-height:1.5;}
 .wp-doc-row:has(.wp-card-actions) .wp-doc-top{padding-right:72px;}
@@ -221,13 +227,12 @@ body{display:flex;flex-direction:column;min-height:100vh;}
           <button class="wp-lang-opt" id="wpLangOptRO" onclick="wpSetLang('ro')">🇷🇴 Română</button>
         </div>
       </div>
-      <button class="wp-signout-btn" id="wpSignOutBtn" onclick="wpSignOut()">Sign out</button>
+      <button class="wp-avatar-btn" id="wpAvatarBtn" onclick="wpSwitch('profile')" title="My profile" aria-label="Profile">?</button>
     </div>
   </div>
   <div class="wp-tabs">
     <button class="wp-tab active" id="wpTabDocs" onclick="wpSwitch('docs')">Documents</button>
     <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Projects</button>
-    <button class="wp-tab" id="wpTabProfile" onclick="wpSwitch('profile')">Profile</button>
     <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
     <button class="wp-tab" id="wpTabTraining" onclick="wpSwitch('training')">Training</button>
   </div>
@@ -767,6 +772,7 @@ async function initWorkerPortal(workerId){
   wpUpdateLangUI();
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
+  wpUpdateAvatar(w?.name);
   if(w){
     const st=goStatusAt(w,new Date());
     const stLabel={go:'✓ GO',warning:'⚠ Warning',nogo:'✕ No-Go'}[st]||'—';
@@ -777,6 +783,15 @@ async function initWorkerPortal(workerId){
 }
 
 // ── Portal navigation ──────────────────────────────────────────────────────
+function wpUpdateAvatar(name){
+  const btn=document.getElementById('wpAvatarBtn');
+  if(!btn) return;
+  const parts=(name||'?').trim().split(/\s+/);
+  const initials=parts.length===1?parts[0][0]:(parts[0][0]+parts[parts.length-1][0]);
+  btn.textContent=initials.toUpperCase();
+  btn.classList.toggle('active',wpActiveTab==='profile');
+}
+
 function wpSwitch(tab){
   wpActiveTab=tab;
   const tabMap={docs:'Docs',assign:'Assign',profile:'Profile',resources:'Resources',training:'Training'};
@@ -792,6 +807,7 @@ function wpSwitch(tab){
   if(tab==='profile') renderWPProfile();
   if(tab==='resources') renderWPResources();
   if(tab==='training') renderWPTraining();
+  wpUpdateAvatar(document.getElementById('wpHeaderName')?.textContent);
 }
 
 // ── Language ───────────────────────────────────────────────────────────────
@@ -1093,6 +1109,7 @@ function renderWPProfile(){
     <div class="wp-profile-field"><label>${t('notesAdditional')}</label><textarea id="wpProfNotes" rows="3" style="resize:vertical;">${esc(w.notes||'')}</textarea></div>
     <button class="wp-profile-save" onclick="saveWPProfile()">${t('saveChanges')}</button>
     <div id="wpProfileMsg" style="margin-top:12px;font-size:13px;color:#059669;display:none;"></div>
+    <button class="wp-signout-profile-btn" onclick="wpSignOut()">${t('signOut')}</button>
   </div>`;
 }
 
