@@ -126,6 +126,12 @@ body.demo-mode .logo-name{display:none!important;}
 /* TABLE */
 .table-card{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:24px;box-shadow:var(--sh);}
 .table-scroll{overflow-x:auto;}
+/* While a column-header filter dropdown is open, let it escape the scroll/clip
+   containers so it stays visible even when the table body is empty (0 results). */
+.table-scroll.panel-open{overflow:visible;}
+.table-card.panel-open{overflow:visible;}
+.clear-all-filters{font-size:11px;color:#fff;background:rgba(255,255,255,.14);border:none;cursor:pointer;font-weight:600;padding:4px 10px;border-radius:4px;white-space:nowrap;line-height:1.4;}
+.clear-all-filters:hover{background:rgba(255,255,255,.26);}
 .table-scroll table{min-width:900px;}
 .table-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--navy-d);}
 .table-head-title{font-size:13px;font-weight:600;color:#fff;}
@@ -1193,7 +1199,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <span id="compLabel">Compliance</span><span class="pf-caret">▼</span>
         </button>
         <div class="pf-panel" id="compPanel">
-          <div class="pf-panel-head"><span>Compliance status</span><button class="pf-clear" onclick="setFS('all')">Clear</button></div>
+          <div class="pf-panel-head"><span>Compliance status</span><button class="pf-clear" onclick="setFS('all');closeCompliancePanel()">Clear</button></div>
           <div class="pf-options">
             <label class="pf-option" onclick="setFS('go');event.preventDefault()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>✓ Go</label>
             <label class="pf-option" onclick="setFS('warning');event.preventDefault()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:4px;vertical-align:middle;"></span>⚠ Warning</label>
@@ -1206,7 +1212,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <span id="dsfLabel">All Doc Sets</span><span class="pf-caret">▼</span>
         </button>
         <div class="pf-panel" id="dsfPanel">
-          <div class="pf-panel-head"><span>Filter by document set</span><button class="pf-clear" onclick="setFDS('all')">Clear</button></div>
+          <div class="pf-panel-head"><span>Filter by document set</span><button class="pf-clear" onclick="setFDS('all');closeDSFPanel()">Clear</button></div>
           <div class="pf-options" id="dsfGroup"></div>
         </div>
       </div>
@@ -1215,7 +1221,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <span id="pfLabel">All Projects</span><span class="pf-caret">▼</span>
         </button>
         <div class="pf-panel" id="pfPanel">
-          <div class="pf-panel-head"><span>Filter by project</span><button class="pf-clear" onclick="setFP('all')">Clear</button></div>
+          <div class="pf-panel-head"><span>Filter by project</span><button class="pf-clear" onclick="setFP('all');closePFPanel()">Clear</button></div>
           <div class="pf-options" id="pfGroup"></div>
         </div>
       </div>
@@ -1229,7 +1235,10 @@ body.wp-mode #headerSyncWrap{display:none!important;}
     <div class="table-card">
       <div class="table-head">
         <span class="table-head-title">Workers</span>
-        <span class="table-head-count" id="tblCount"></span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button class="clear-all-filters" id="clearAllFilters" onclick="clearAllFilters()" style="display:none;">✕ Clear all filters</button>
+          <span class="table-head-count" id="tblCount"></span>
+        </div>
       </div>
       <div class="table-scroll">
       <table>
@@ -1240,7 +1249,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               <span class="th-sort-label" onclick="srt('type')">Type</span>
               <div class="pf-wrap" id="wtfWrap" style="display:inline-flex;">
                 <button class="th-filter-btn" id="wtfTrigger" onclick="toggleWTFPanel(event)" title="Filter by type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
-                <div class="pf-panel" id="wtfPanel" style="left:auto;right:0;min-width:160px;"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options" id="wtfOptions"></div></div>
+                <div class="pf-panel" id="wtfPanel" style="left:auto;right:0;min-width:160px;"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all');closeWTFPanel()">Clear</button></div><div class="pf-options" id="wtfOptions"></div></div>
               </div>
             </div>
           </th>
@@ -1258,7 +1267,7 @@ body.wp-mode #headerSyncWrap{display:none!important;}
               <span class="th-sort-label" onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</span>
               <div class="pf-wrap" id="mdfWrap" style="display:inline-flex;">
                 <button class="th-filter-btn" id="mdfTrigger" onclick="toggleMDFPanel(event)" title="Filter by missing document"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
-                <div class="pf-panel" id="mdfPanel" style="min-width:220px;left:auto;right:0;"><div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div><div class="pf-options" id="mdfGroup"></div></div>
+                <div class="pf-panel" id="mdfPanel" style="min-width:220px;left:auto;right:0;"><div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('');closeMDFPanel()">Clear</button></div><div class="pf-options" id="mdfGroup"></div></div>
               </div>
             </div>
           </th>
@@ -3852,7 +3861,7 @@ let fDocSet= new Set();  // empty = all doc sets (stored as docSetId)
 let fStatus= new Set();  // empty = all compliance statuses
 let fProj  = new Set();  // empty = all projects
 let fActive = 'active';   // worker active filter: active | inactive | all
-let fWorkerType = '';     // worker type filter: '' = all, else type id (e.g. 'zzp')
+let fWorkerType = new Set();  // worker type ids; empty = all types (multi-select)
 let fMissingDoc = '';     // doc_key to filter by missing/expired (empty = all)
 let fAssigned = 'all';    // worker assignment filter: all | assigned | unassigned
 let fSearch='', sortKey='', sortDir=1;
@@ -3955,7 +3964,8 @@ function updateWorkerStatusTrigger(){
   });
 }
 function setFWT(v){
-  fWorkerType = (v==='all') ? '' : (v||'');
+  if(v==='all' || !v){ fWorkerType.clear(); }
+  else { if(fWorkerType.has(v)) fWorkerType.delete(v); else fWorkerType.add(v); }
   renderWorkerTypeFilter();
   renderTable();
 }
@@ -3968,17 +3978,26 @@ function renderWorkerTypeFilter(){
   if(wrap) wrap.style.display=types.length<2?'none':'inline-flex';
   if(!optionsEl) return;
   if(types.length<2){ optionsEl.innerHTML=''; return; }
-  const activeLabel=fWorkerType?(types.find(t=>t.id===fWorkerType)?.label||fWorkerType):'All Types';
+  const selCount=fWorkerType.size;
   if(trigger){
     trigger.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
-    trigger.classList.toggle('active', !!fWorkerType);
-    trigger.title=fWorkerType?`Type: ${esc(activeLabel)}`:'Filter by type';
+    trigger.classList.toggle('active', selCount>0);
+    trigger.title=selCount?`${selCount} type${selCount>1?'s':''} selected`:'Filter by type';
   }
   optionsEl.innerHTML=[{id:'',label:'All Types'},...types].map(t=>{
-    const sel=fWorkerType===t.id;
+    const sel = t.id ? fWorkerType.has(t.id) : selCount===0;
     const v=t.id?`'${t.id}'`:"'all'";
-    return `<label class="pf-option${sel?' checked':''}" onclick="setFWT(${v});closeWTFPanel();event.preventDefault()"><input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFWT(${v});closeWTFPanel()">${esc(t.label)}</label>`;
+    return `<label class="pf-option${sel?' checked':''}" onclick="setFWT(${v});event.preventDefault()"><input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFWT(${v})">${esc(t.label)}</label>`;
   }).join('');
+}
+// Header filter panels live inside the table's overflow/clip containers. When one
+// opens we drop the clipping so the dropdown is always visible — even when the
+// table body is empty (0 results), where the container would otherwise collapse
+// and hide the panel.
+function _panelOverflow(panel, open){
+  if(!panel) return;
+  const sc=panel.closest('.table-scroll'); if(sc) sc.classList.toggle('panel-open', open);
+  const tc=panel.closest('.table-card');   if(tc) tc.classList.toggle('panel-open', open);
 }
 function toggleWTFPanel(e){
   if(e) e.stopPropagation();
@@ -3988,6 +4007,7 @@ function toggleWTFPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
+  _panelOverflow(panel,!isOpen);
   if(!isOpen){
     const pr=panel.getBoundingClientRect();
     if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
@@ -3999,6 +4019,7 @@ function closeWTFPanel(){
   const trigger=document.getElementById('wtfTrigger');
   if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 function toggleWorkerStatusPanel(e){
   if(e) e.stopPropagation();
@@ -4048,6 +4069,7 @@ function toggleAssignHeaderPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
+  _panelOverflow(panel,!isOpen);
   if(!isOpen){
     const pr=panel.getBoundingClientRect();
     if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
@@ -4059,6 +4081,7 @@ function closeAssignHeaderPanel(){
   const trigger=document.getElementById('assignHdrBtn');
   if(panel){panel.classList.remove('open');}
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 
 function toggleInactiveWorkersTable(){
@@ -4197,13 +4220,20 @@ function toggleMDFPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  if(!isOpen){ renderMissingDocFilter(); }
+  _panelOverflow(panel,!isOpen);
+  if(!isOpen){
+    renderMissingDocFilter();
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
 }
 function closeMDFPanel(){
   const panel=document.getElementById('mdfPanel');
   const trigger=document.getElementById('mdfTrigger');
   if(panel){ panel.classList.remove('open'); }
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 document.addEventListener('click',function(e){
   const wrap=document.getElementById('mdfWrap');
@@ -4214,7 +4244,18 @@ function setFMD(normName){
   renderMissingDocFilter();
   renderTable();
 }
-function weekPAs(w){ return getAssignments(currentWeekKey(), w.id); }
+// Project assignments that overlap the currently-viewed week — matches exactly
+// what the "Worker Assignment" column renders, so the assigned/unassigned
+// header filter agrees with the visible cell (📎/⚠ tags vs "Not assigned").
+function weekPAs(w){
+  const wkMon=currentWeekMonday, wkSun=weekSunday(wkMon);
+  return projectAssignments.filter(a=>{
+    if(a.wid!==w.id) return false;
+    const s=a.startDate?new Date(a.startDate):new Date(0);
+    const e=a.endDate?new Date(a.endDate):new Date(9999,0);
+    return s<=wkSun && e>=wkMon;
+  });
+}
 function setFAssigned(v){
   fAssigned=v||'all';
   closeAssignHeaderPanel();
@@ -4478,7 +4519,7 @@ function filtered(){
       return s <= wkSun && e >= wkMon;
     }));
   }
-  if(fWorkerType) l=l.filter(w=>(w.type||'zzp')===fWorkerType);
+  if(fWorkerType.size) l=l.filter(w=>fWorkerType.has(w.type||'zzp'));
   if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
   if(fMissingDoc){l=l.filter(w=>_workerMissingNamedDoc(w,fMissingDoc,refDate));}
   if(fAssigned==='assigned')   l=l.filter(w=>weekPAs(w).length>0);
@@ -4522,6 +4563,7 @@ function renderTable(){
   const wk=currentWeekKey();
   const activeTotal = workers.filter(w=>w.active!==false).length;
   document.getElementById('tblCount').textContent=list.length+' shown · '+activeTotal+' active · '+(workers.length-activeTotal)+' inactive';
+  const clrBtn=document.getElementById('clearAllFilters'); if(clrBtn) clrBtn.style.display=_anyFilterActive()?'inline-block':'none';
   if(!list.length){
     tb.innerHTML='';
     const noResEl=document.getElementById('noRes');
@@ -8964,7 +9006,7 @@ function removeWorkerType(id){
   const inUse=workers.some(w=>w.type===id);
   if(inUse&&!confirm(`"${t.label}" is currently assigned to one or more workers. Those workers will show their type as "${id}" until updated. Remove anyway?`)) return;
   settings.workerTypes=(settings.workerTypes||[]).filter(t=>t.id!==id);
-  if(fWorkerType===id){ fWorkerType=''; }
+  fWorkerType.delete(id);
   saveSettings(); sbScheduleSync();
   renderWorkerTypesSettings(); renderWorkerTypeFilter();
 }
@@ -11824,6 +11866,30 @@ async function _doExportWithOptions(){
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function handleSearch(v){fSearch=v;renderTable();}
+// True when any worker-table filter is narrowing the list (default state = Active only).
+function _anyFilterActive(){
+  return fActive!=='active' || fStatus.size>0 || fProj.size>0 || fDocSet.size>0
+      || fWorkerType.size>0 || !!fMissingDoc || fAssigned!=='all' || !!fSearch;
+}
+function clearAllFilters(){
+  fStatus.clear(); fProj.clear(); fDocSet.clear(); fWorkerType.clear();
+  fMissingDoc=''; fAssigned='all'; fActive='active'; fSearch='';
+  const si=document.querySelector('#viewWorkers .search-input'); if(si) si.value='';
+  // Close every open filter panel
+  closeWTFPanel(); closeMDFPanel(); closeAssignHeaderPanel();
+  closeWorkerStatusPanel(); closeCompliancePanel(); closePFPanel(); closeDSFPanel();
+  // Resync all trigger visuals to the cleared state
+  document.querySelectorAll('[data-fa]').forEach(b=>b.classList.toggle('active', b.dataset.fa==='active'));
+  updateWorkerStatusTrigger();
+  updateComplianceTrigger();
+  renderWorkerTypeFilter();
+  renderMissingDocFilter();
+  renderProjFilters();
+  renderDocSetFilters();
+  const aBtn=document.getElementById('assignHdrBtn'); if(aBtn) aBtn.classList.remove('active');
+  ['assignOptAll','assignOptAssigned','assignOptUnassigned'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.classList.toggle('checked',i===0);});
+  renderTable();
+}
 function srt(k){sortDir=sortKey===k?sortDir*-1:1;sortKey=k;renderTable();}
 function closeM(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
