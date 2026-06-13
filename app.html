@@ -110,7 +110,8 @@ body.demo-mode .logo-name{display:none!important;}
 .search-input{margin-left:auto;font-family:'Inter',sans-serif;font-size:13px;padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:5px;color:var(--text);outline:none;width:220px;transition:border-color .15s;}
 .search-input:focus{border-color:var(--navy);box-shadow:0 0 0 2px rgba(26,48,130,.1);}
 .search-input::placeholder{color:var(--text-l);}
-.th-filterable{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px;white-space:nowrap;}
+.th-filterable{position:relative;white-space:nowrap;}
+.th-inner{display:flex;align-items:center;justify-content:space-between;gap:6px;}
 .th-sort-label{cursor:pointer;flex:1;}
 .th-sort-label:hover{color:var(--navy);}
 .th-filter-btn{border:none;background:none;cursor:pointer;padding:2px;color:#94a3b8;border-radius:3px;line-height:0;flex-shrink:0;}
@@ -1235,24 +1236,30 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <thead><tr>
           <th onclick="srt('name')">Name</th>
           <th class="th-filterable">
-            <span class="th-sort-label" onclick="srt('type')">Type</span>
-            <div class="pf-wrap" id="wtfWrap" style="display:inline-flex;">
-              <button class="th-filter-btn" id="wtfTrigger" onclick="toggleWTFPanel(event)" title="Filter by type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
-              <div class="pf-panel" id="wtfPanel" style="left:auto;right:0;min-width:160px;"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options" id="wtfOptions"></div></div>
+            <div class="th-inner">
+              <span class="th-sort-label" onclick="srt('type')">Type</span>
+              <div class="pf-wrap" id="wtfWrap" style="display:inline-flex;">
+                <button class="th-filter-btn" id="wtfTrigger" onclick="toggleWTFPanel(event)" title="Filter by type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                <div class="pf-panel" id="wtfPanel" style="left:auto;right:0;min-width:160px;"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options" id="wtfOptions"></div></div>
+              </div>
             </div>
           </th>
           <th class="th-filterable no-sort" id="thWeekAssign">
-            <span id="thWeekAssignLabel">Worker Assignment</span>
-            <div class="pf-wrap" id="assignHdrWrap" style="display:inline-flex;">
-              <button class="th-filter-btn" id="assignHdrBtn" onclick="toggleAssignHeaderPanel(event)" title="Filter by assignment"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
-              <div class="pf-panel" id="assignHdrPanel" style="left:auto;right:0;min-width:180px;"><div class="pf-panel-head"><span>Assignment filter</span><button class="pf-clear" onclick="setFAssigned('all')">Clear</button></div><div class="pf-options"><label class="pf-option checked" id="assignOptAll" onclick="setFAssigned('all');event.preventDefault()">All Workers</label><label class="pf-option" id="assignOptAssigned" onclick="setFAssigned('assigned');event.preventDefault()">Assigned this week</label><label class="pf-option" id="assignOptUnassigned" onclick="setFAssigned('unassigned');event.preventDefault()">Unassigned this week</label></div></div>
+            <div class="th-inner">
+              <span id="thWeekAssignLabel">Worker Assignment</span>
+              <div class="pf-wrap" id="assignHdrWrap" style="display:inline-flex;">
+                <button class="th-filter-btn" id="assignHdrBtn" onclick="toggleAssignHeaderPanel(event)" title="Filter by assignment"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                <div class="pf-panel" id="assignHdrPanel" style="left:auto;right:0;min-width:180px;"><div class="pf-panel-head"><span>Assignment filter</span><button class="pf-clear" onclick="setFAssigned('all')">Clear</button></div><div class="pf-options"><label class="pf-option checked" id="assignOptAll" onclick="setFAssigned('all');event.preventDefault()">All Workers</label><label class="pf-option" id="assignOptAssigned" onclick="setFAssigned('assigned');event.preventDefault()">Assigned this week</label><label class="pf-option" id="assignOptUnassigned" onclick="setFAssigned('unassigned');event.preventDefault()">Unassigned this week</label></div></div>
+              </div>
             </div>
           </th>
           <th class="th-filterable">
-            <span class="th-sort-label" onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</span>
-            <div class="pf-wrap" id="mdfWrap" style="display:inline-flex;">
-              <button class="th-filter-btn" id="mdfTrigger" onclick="toggleMDFPanel(event)" title="Filter by missing document"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
-              <div class="pf-panel" id="mdfPanel" style="min-width:220px;left:auto;right:0;"><div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div><div class="pf-options" id="mdfGroup"></div></div>
+            <div class="th-inner">
+              <span class="th-sort-label" onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</span>
+              <div class="pf-wrap" id="mdfWrap" style="display:inline-flex;">
+                <button class="th-filter-btn" id="mdfTrigger" onclick="toggleMDFPanel(event)" title="Filter by missing document"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+                <div class="pf-panel" id="mdfPanel" style="min-width:220px;left:auto;right:0;"><div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div><div class="pf-options" id="mdfGroup"></div></div>
+              </div>
             </div>
           </th>
           <th onclick="srt('score')">Score</th>
@@ -4256,11 +4263,11 @@ function renderMissingDocFilter(){
   // Update trigger label
   if(fMissingDoc&&groups.has(fMissingDoc)){
     const d=groups.get(fMissingDoc);
-    label.innerHTML=`<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;">${esc(d.icon+' '+d.name)}</span>`;
-    trigger.classList.add('active');
+    if(label) label.innerHTML=`<span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom;">${esc(d.icon+' '+d.name)}</span>`;
+    if(trigger) trigger.classList.add('active');
   } else {
-    label.innerHTML='Any Missing Doc';
-    trigger.classList.remove('active');
+    if(label) label.innerHTML='Any Missing Doc';
+    if(trigger) trigger.classList.remove('active');
   }
   if(!groups.size){ g.innerHTML=`<div style="padding:10px 12px;font-size:13px;color:var(--text-l)">No required documents defined</div>`; return; }
   // Group entries by category for the dropdown layout
