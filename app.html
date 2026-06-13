@@ -110,6 +110,12 @@ body.demo-mode .logo-name{display:none!important;}
 .search-input{margin-left:auto;font-family:'Inter',sans-serif;font-size:13px;padding:6px 12px;background:#fff;border:1px solid var(--border);border-radius:5px;color:var(--text);outline:none;width:220px;transition:border-color .15s;}
 .search-input:focus{border-color:var(--navy);box-shadow:0 0 0 2px rgba(26,48,130,.1);}
 .search-input::placeholder{color:var(--text-l);}
+.th-filterable{position:relative;display:flex;align-items:center;justify-content:space-between;gap:4px;white-space:nowrap;}
+.th-sort-label{cursor:pointer;flex:1;}
+.th-sort-label:hover{color:var(--navy);}
+.th-filter-btn{border:none;background:none;cursor:pointer;padding:2px;color:#94a3b8;border-radius:3px;line-height:0;flex-shrink:0;}
+.th-filter-btn:hover{color:var(--navy);}
+.th-filter-btn.active{color:var(--navy);}
 
 /* LEGEND */
 .legend{display:flex;gap:16px;padding:0 0 14px;flex-wrap:wrap;}
@@ -669,7 +675,7 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   .filter-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none;gap:5px;}
   .filter-bar::-webkit-scrollbar{display:none;}
   .filter-bar > *{flex-shrink:0;}
-  .search-input{min-width:130px;width:130px;margin-left:8px;}
+  .search-input{min-width:130px;width:130px;order:-1;margin-left:0;margin-right:8px;}
   /* Status dropdowns — compact on mobile */
   .status-select{padding:3px 5px;font-size:11px;}
   /* NO-GO banner detail — clamp to 2 lines, not a wall of text */
@@ -1168,22 +1174,32 @@ body.wp-mode #headerSyncWrap{display:none!important;}
   <!-- WORKERS VIEW -->
   <div id="viewWorkers">
     <div class="filter-bar">
-      <span class="filter-label">Worker:</span>
-      <div style="display:flex;gap:4px;">
-        <button class="fbtn"        data-fa="all"      onclick="setFA('all',this)">All</button>
-        <button class="fbtn active" data-fa="active"   onclick="setFA('active',this)">● Active</button>
-        <button class="fbtn"        data-fa="inactive" onclick="setFA('inactive',this)">○ Inactive</button>
+      <div class="pf-wrap" id="wsWrap">
+        <button class="fbtn pf-trigger active" id="wsTrigger" onclick="toggleWorkerStatusPanel(event)">
+          <span id="wsLabel">Active</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="wsPanel">
+          <div class="pf-panel-head"><span>Worker status</span></div>
+          <div class="pf-options" id="wsGroup">
+            <label class="pf-option" onclick="setFA('all');closeWorkerStatusPanel();event.preventDefault()">All Workers</label>
+            <label class="pf-option checked" onclick="setFA('active');closeWorkerStatusPanel();event.preventDefault()">● Active</label>
+            <label class="pf-option" onclick="setFA('inactive');closeWorkerStatusPanel();event.preventDefault()">○ Inactive</label>
+          </div>
+        </div>
       </div>
-      <div id="workerTypeFilterWrap" style="display:contents;"></div>
-      <div class="filter-sep"></div>
-      <span class="filter-label">Compliance:</span>
-      <div style="display:flex;gap:4px;">
-        <button class="fbtn active"  data-fs="all"     onclick="setFS('all',this)">All</button>
-        <button class="fbtn f-green" data-fs="go"      onclick="setFS('go',this)">✓ Go</button>
-        <button class="fbtn f-amber" data-fs="warning" onclick="setFS('warning',this)">⚠ Warning</button>
-        <button class="fbtn f-red"   data-fs="nogo"    onclick="setFS('nogo',this)">✕ No-Go</button>
+      <div class="pf-wrap" id="compWrap">
+        <button class="fbtn pf-trigger" id="compTrigger" onclick="toggleCompliancePanel(event)">
+          <span id="compLabel">Compliance</span><span class="pf-caret">▼</span>
+        </button>
+        <div class="pf-panel" id="compPanel">
+          <div class="pf-panel-head"><span>Compliance status</span><button class="pf-clear" onclick="setFS('all')">Clear</button></div>
+          <div class="pf-options">
+            <label class="pf-option" onclick="setFS('go');event.preventDefault()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle;"></span>✓ Go</label>
+            <label class="pf-option" onclick="setFS('warning');event.preventDefault()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--amber);margin-right:4px;vertical-align:middle;"></span>⚠ Warning</label>
+            <label class="pf-option" onclick="setFS('nogo');event.preventDefault()"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle;"></span>✕ No-Go</label>
+          </div>
+        </div>
       </div>
-      <div class="filter-sep"></div>
       <div class="pf-wrap" id="dsfWrap">
         <button class="fbtn pf-trigger" id="dsfTrigger" onclick="toggleDSFPanel(event)">
           <span id="dsfLabel">All Doc Sets</span><span class="pf-caret">▼</span>
@@ -1193,7 +1209,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
           <div class="pf-options" id="dsfGroup"></div>
         </div>
       </div>
-      <div class="filter-sep"></div>
       <div class="pf-wrap" id="pfWrap">
         <button class="fbtn pf-trigger" id="pfTrigger" onclick="togglePFPanel(event)">
           <span id="pfLabel">All Projects</span><span class="pf-caret">▼</span>
@@ -1201,16 +1216,6 @@ body.wp-mode #headerSyncWrap{display:none!important;}
         <div class="pf-panel" id="pfPanel">
           <div class="pf-panel-head"><span>Filter by project</span><button class="pf-clear" onclick="setFP('all')">Clear</button></div>
           <div class="pf-options" id="pfGroup"></div>
-        </div>
-      </div>
-      <div class="filter-sep"></div>
-      <div class="pf-wrap" id="mdfWrap">
-        <button class="fbtn pf-trigger" id="mdfTrigger" onclick="toggleMDFPanel(event)">
-          <span id="mdfLabel">Any Missing Doc</span><span class="pf-caret">▼</span>
-        </button>
-        <div class="pf-panel" id="mdfPanel" style="min-width:220px;">
-          <div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div>
-          <div class="pf-options" id="mdfGroup"></div>
         </div>
       </div>
       <input class="search-input" type="text" placeholder="Search by name or project…" oninput="handleSearch(this.value)"/>
@@ -1229,9 +1234,27 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <table>
         <thead><tr>
           <th onclick="srt('name')">Name</th>
-          <th onclick="srt('type')">Type</th>
-          <th class="no-sort" id="thWeekAssign">Worker Assignment</th>
-          <th onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</th>
+          <th class="th-filterable">
+            <span class="th-sort-label" onclick="srt('type')">Type</span>
+            <div class="pf-wrap" id="wtfWrap" style="display:inline-flex;">
+              <button class="th-filter-btn" id="wtfTrigger" onclick="toggleWTFPanel(event)" title="Filter by type"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+              <div class="pf-panel" id="wtfPanel" style="left:auto;right:0;min-width:160px;"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options" id="wtfOptions"></div></div>
+            </div>
+          </th>
+          <th class="th-filterable no-sort" id="thWeekAssign">
+            <span id="thWeekAssignLabel">Worker Assignment</span>
+            <div class="pf-wrap" id="assignHdrWrap" style="display:inline-flex;">
+              <button class="th-filter-btn" id="assignHdrBtn" onclick="toggleAssignHeaderPanel(event)" title="Filter by assignment"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+              <div class="pf-panel" id="assignHdrPanel" style="left:auto;right:0;min-width:180px;"><div class="pf-panel-head"><span>Assignment filter</span><button class="pf-clear" onclick="setFAssigned('all')">Clear</button></div><div class="pf-options"><label class="pf-option checked" id="assignOptAll" onclick="setFAssigned('all');event.preventDefault()">All Workers</label><label class="pf-option" id="assignOptAssigned" onclick="setFAssigned('assigned');event.preventDefault()">Assigned this week</label><label class="pf-option" id="assignOptUnassigned" onclick="setFAssigned('unassigned');event.preventDefault()">Unassigned this week</label></div></div>
+            </div>
+          </th>
+          <th class="th-filterable">
+            <span class="th-sort-label" onclick="srt('missing')" title="Sort by number of missing/expired required documents">Required Docs</span>
+            <div class="pf-wrap" id="mdfWrap" style="display:inline-flex;">
+              <button class="th-filter-btn" id="mdfTrigger" onclick="toggleMDFPanel(event)" title="Filter by missing document"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></button>
+              <div class="pf-panel" id="mdfPanel" style="min-width:220px;left:auto;right:0;"><div class="pf-panel-head"><span>Filter by missing document</span><button class="pf-clear" onclick="setFMD('')">Clear</button></div><div class="pf-options" id="mdfGroup"></div></div>
+            </div>
+          </th>
           <th onclick="srt('score')">Score</th>
           <th onclick="srt('status')">Go / No-Go</th>
           <th class="no-sort">Notes</th>
@@ -3796,7 +3819,7 @@ function renderWeekLabel(){
   const rl=document.getElementById('rosterWeekLabel');
   if(rl) rl.textContent=`Week ${wn} (${fmtDate(mon)} – ${fmtDate(sun)})`;
   const th=document.getElementById('thWeekAssign');
-  if(th) th.textContent=`W${wn} Worker Assignment`;
+  if(th){ const lbl=document.getElementById('thWeekAssignLabel'); if(lbl) lbl.textContent=`W${wn} Worker Assignment`; else th.textContent=`W${wn} Worker Assignment`; }
 }
 
 // ─── View ─────────────────────────────────────────────────────────────────────
@@ -3824,6 +3847,7 @@ let fProj  = new Set();  // empty = all projects
 let fActive = 'active';   // worker active filter: active | inactive | all
 let fWorkerType = '';     // worker type filter: '' = all, else type id (e.g. 'zzp')
 let fMissingDoc = '';     // doc_key to filter by missing/expired (empty = all)
+let fAssigned = 'all';    // worker assignment filter: all | assigned | unassigned
 let fSearch='', sortKey='', sortDir=1;
 let expandedDoc=null;
 
@@ -3907,7 +3931,21 @@ function renderDocSetFilters(){
 function setFA(v,el){
   fActive = v || 'active';
   document.querySelectorAll('[data-fa]').forEach(b=>b.classList.toggle('active', b.dataset.fa===fActive));
+  updateWorkerStatusTrigger();
   renderTable();
+}
+function updateWorkerStatusTrigger(){
+  const lbl=document.getElementById('wsLabel');
+  const trigger=document.getElementById('wsTrigger');
+  if(lbl) lbl.textContent = fActive==='active'?'Active':fActive==='inactive'?'Inactive':'All Workers';
+  if(trigger) trigger.classList.toggle('active', fActive!=='all');
+  const opts=document.querySelectorAll('#wsGroup .pf-option');
+  opts.forEach(o=>{
+    const txt=o.textContent.trim();
+    o.classList.toggle('checked',
+      (fActive==='all'&&txt.includes('All'))||(fActive==='active'&&txt.includes('Active'))||(fActive==='inactive'&&txt.includes('Inactive'))
+    );
+  });
 }
 function setFWT(v){
   fWorkerType = (v==='all') ? '' : (v||'');
@@ -3915,17 +3953,25 @@ function setFWT(v){
   renderTable();
 }
 function renderWorkerTypeFilter(){
-  const wrap=document.getElementById('workerTypeFilterWrap');
-  if(!wrap) return;
+  const optionsEl=document.getElementById('wtfOptions');
+  const trigger=document.getElementById('wtfTrigger');
+  const wrap=document.getElementById('wtfWrap');
   const types=settings.workerTypes||[];
-  if(types.length<2){ wrap.innerHTML=''; return; }
+  // Hide the entire type filter column control when fewer than 2 types
+  if(wrap) wrap.style.display=types.length<2?'none':'inline-flex';
+  if(!optionsEl) return;
+  if(types.length<2){ optionsEl.innerHTML=''; return; }
   const activeLabel=fWorkerType?(types.find(t=>t.id===fWorkerType)?.label||fWorkerType):'All Types';
-  const options=[{id:'',label:'All Types'},...types].map(t=>{
+  if(trigger){
+    trigger.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+    trigger.classList.toggle('active', !!fWorkerType);
+    trigger.title=fWorkerType?`Type: ${esc(activeLabel)}`:'Filter by type';
+  }
+  optionsEl.innerHTML=[{id:'',label:'All Types'},...types].map(t=>{
     const sel=fWorkerType===t.id;
     const v=t.id?`'${t.id}'`:"'all'";
     return `<label class="pf-option${sel?' checked':''}" onclick="setFWT(${v});closeWTFPanel();event.preventDefault()"><input type="checkbox"${sel?' checked':''} onclick="event.stopPropagation();setFWT(${v});closeWTFPanel()">${esc(t.label)}</label>`;
   }).join('');
-  wrap.innerHTML=`<div class="filter-sep"></div><div class="pf-wrap" id="wtfWrap"><button class="fbtn pf-trigger${fWorkerType?' active':''}" id="wtfTrigger" onclick="toggleWTFPanel(event)"><span>${esc(activeLabel)}</span><span class="pf-caret">▼</span></button><div class="pf-panel" id="wtfPanel"><div class="pf-panel-head"><span>Filter by type</span><button class="pf-clear" onclick="setFWT('all')">Clear</button></div><div class="pf-options">${options}</div></div></div>`;
 }
 function toggleWTFPanel(e){
   if(e) e.stopPropagation();
@@ -3945,6 +3991,66 @@ function closeWTFPanel(){
   const panel=document.getElementById('wtfPanel');
   const trigger=document.getElementById('wtfTrigger');
   if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(trigger) trigger.classList.remove('open');
+}
+function toggleWorkerStatusPanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('wsPanel');
+  const trigger=document.getElementById('wsTrigger');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
+}
+function closeWorkerStatusPanel(){
+  const panel=document.getElementById('wsPanel');
+  const trigger=document.getElementById('wsTrigger');
+  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(trigger) trigger.classList.remove('open');
+}
+function toggleCompliancePanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('compPanel');
+  const trigger=document.getElementById('compTrigger');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
+}
+function closeCompliancePanel(){
+  const panel=document.getElementById('compPanel');
+  const trigger=document.getElementById('compTrigger');
+  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(trigger) trigger.classList.remove('open');
+}
+function toggleAssignHeaderPanel(e){
+  if(e) e.stopPropagation();
+  const panel=document.getElementById('assignHdrPanel');
+  const trigger=document.getElementById('assignHdrBtn');
+  if(!panel) return;
+  const isOpen=panel.classList.contains('open');
+  panel.classList.toggle('open',!isOpen);
+  trigger.classList.toggle('open',!isOpen);
+  if(!isOpen){
+    const pr=panel.getBoundingClientRect();
+    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
+    else{panel.style.left='';panel.style.right='';}
+  }
+}
+function closeAssignHeaderPanel(){
+  const panel=document.getElementById('assignHdrPanel');
+  const trigger=document.getElementById('assignHdrBtn');
+  if(panel){panel.classList.remove('open');}
   if(trigger) trigger.classList.remove('open');
 }
 
@@ -3981,11 +4087,24 @@ function renderInactiveWorkersTable(){
   }).join('');
 }
 function setFS(v,el){
-  const allBtn=document.querySelector('[data-fs="all"]');
-  toggleFilter(fStatus, v, allBtn, '[data-fs]:not([data-fs="all"])');
-  document.querySelectorAll('[data-fs]').forEach(b=>{
-    if(b.dataset.fs==='all') return;
-    b.classList.toggle('active', fStatus.has(b.dataset.fs));
+  if(v==='all'){
+    fStatus.clear();
+  } else {
+    if(fStatus.has(v)) fStatus.delete(v); else fStatus.add(v);
+  }
+  updateComplianceTrigger();
+  renderTable();
+}
+function updateComplianceTrigger(){
+  const lbl=document.getElementById('compLabel');
+  const trigger=document.getElementById('compTrigger');
+  if(lbl) lbl.innerHTML = fStatus.size>0?`Compliance <span class="pf-badge">${fStatus.size}</span>`:'Compliance';
+  if(trigger) trigger.classList.toggle('active', fStatus.size>0);
+  const opts=document.querySelectorAll('#compPanel .pf-option');
+  opts.forEach(o=>{
+    const fsVal = o.querySelector('span[style]') ?
+      (o.textContent.includes('Go')&&!o.textContent.includes('No-Go')&&!o.textContent.includes('Warning')?'go':o.textContent.includes('Warning')?'warning':'nogo') : null;
+    if(fsVal) o.classList.toggle('checked', fStatus.has(fsVal));
   });
 }
 function togglePFPanel(e){
@@ -4012,6 +4131,12 @@ document.addEventListener('click', function(e){
   if(wrap && !wrap.contains(e.target)) closePFPanel();
   const wtfWrap = document.getElementById('wtfWrap');
   if(wtfWrap && !wtfWrap.contains(e.target)) closeWTFPanel();
+  const wsWrap = document.getElementById('wsWrap');
+  if(wsWrap && !wsWrap.contains(e.target)) closeWorkerStatusPanel();
+  const compWrap = document.getElementById('compWrap');
+  if(compWrap && !compWrap.contains(e.target)) closeCompliancePanel();
+  const assignHdrWrap = document.getElementById('assignHdrWrap');
+  if(assignHdrWrap && !assignHdrWrap.contains(e.target)) closeAssignHeaderPanel();
 });
 
 function setFP(v){
@@ -4080,6 +4205,20 @@ document.addEventListener('click',function(e){
 function setFMD(normName){
   fMissingDoc=normName||'';
   renderMissingDocFilter();
+  renderTable();
+}
+function weekPAs(w){ return getAssignments(currentWeekKey(), w.id); }
+function setFAssigned(v){
+  fAssigned=v||'all';
+  closeAssignHeaderPanel();
+  const opts=['assignOptAll','assignOptAssigned','assignOptUnassigned'];
+  const keys=['all','assigned','unassigned'];
+  opts.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.toggle('checked', keys[i]===fAssigned);
+  });
+  const btn=document.getElementById('assignHdrBtn');
+  if(btn) btn.classList.toggle('active', fAssigned!=='all');
   renderTable();
 }
 // Normalise a document name so the same document across different sets groups together.
@@ -4335,6 +4474,8 @@ function filtered(){
   if(fWorkerType) l=l.filter(w=>(w.type||'zzp')===fWorkerType);
   if(fSearch){const q=fSearch.toLowerCase();l=l.filter(w=>w.name.toLowerCase().includes(q)||w.id.toLowerCase().includes(q)||(w.agency||'').toLowerCase().includes(q)||getAssignments(wk,w.id).some(p=>p.toLowerCase().includes(q)));}
   if(fMissingDoc){l=l.filter(w=>_workerMissingNamedDoc(w,fMissingDoc,refDate));}
+  if(fAssigned==='assigned')   l=l.filter(w=>weekPAs(w).length>0);
+  if(fAssigned==='unassigned') l=l.filter(w=>weekPAs(w).length===0);
   if(sortKey){l.sort((a,b)=>{
     let av,bv;
     if(sortKey==='name'){av=a.name;bv=b.name;}

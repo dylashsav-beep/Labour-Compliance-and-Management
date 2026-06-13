@@ -54,21 +54,23 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .wp-lang-opt{display:flex;align-items:center;gap:9px;width:100%;padding:11px 14px;border:none;background:none;font-size:13px;font-weight:500;color:var(--text);cursor:pointer;text-align:left;}
 .wp-lang-opt:hover{background:#f1f5f9;color:#1e293b;}
 .wp-lang-opt.active{font-weight:700;color:#1e293b;}
-.wp-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.wp-tabs{display:flex;gap:0;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;}
 .wp-tab{flex:1;min-width:72px;padding:14px 6px 12px;font-size:13px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
 .wp-tab.active{color:#1e293b;border-bottom-color:#1e293b;font-weight:700;}
 .wp-tab:hover:not(.active){color:#334155;}
 .wp-body{max-width:680px;margin:0 auto;padding:20px 16px 40px;width:100%;}
 .wp-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:24px 0 10px;}
-.wp-filter-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:24px;}
-.wp-filter-tab{padding:10px 4px;border-radius:10px;border:2px solid #e2e8f0;background:#fff;font-size:12px;font-weight:600;color:#64748b;cursor:pointer;min-height:52px;text-align:center;transition:all .15s;}
-.wp-filter-tab:active{opacity:.85;}
-.wp-filter-tab.active[data-f="missing"]{background:#fee2e2;color:#b91c1c;border-color:#fca5a5;}
-.wp-filter-tab.active[data-f="expiring"]{background:#fef3c7;color:#92400e;border-color:#fcd34d;}
-.wp-filter-tab.active[data-f="expired"]{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
-.wp-filter-tab.active[data-f="ok"]{background:#dcfce7;color:#166534;border-color:#86efac;}
-.wp-filter-tab.active[data-f="optional"]{background:#f1f5f9;color:#334155;border-color:#cbd5e1;}
-.wp-filter-count{font-size:11px;font-weight:400;opacity:.8;display:block;margin-top:2px;}
+.wp-filter-chips{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:2px;margin-bottom:20px;}
+.wp-filter-chips::-webkit-scrollbar{display:none;}
+.wp-filter-chip{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:7px 12px;border-radius:20px;border:1.5px solid #e2e8f0;background:#fff;font-size:13px;font-weight:600;color:#64748b;min-height:36px;white-space:nowrap;cursor:pointer;transition:all .15s;}
+.wp-filter-chip:hover{border-color:#94a3b8;}
+.wp-filter-chip[data-f="missing"].active{background:#fee2e2;color:#dc2626;border-color:#fca5a5;}
+.wp-filter-chip[data-f="expiring"].active{background:#fef3c7;color:#d97706;border-color:#fcd34d;}
+.wp-filter-chip[data-f="expired"].active{background:#fee2e2;color:#dc2626;border-color:#fca5a5;}
+.wp-filter-chip[data-f="ok"].active{background:#dcfce7;color:#16a34a;border-color:#86efac;}
+.wp-filter-chip[data-f="optional"].active{background:#f1f5f9;color:#475569;border-color:#cbd5e1;}
+.wp-filter-chip[data-f="current"].active,.wp-filter-chip[data-f="past"].active{background:#f1f5f9;color:#1e293b;border-color:#94a3b8;}
+.wp-chip-count{font-size:11px;background:rgba(0,0,0,.06);border-radius:10px;padding:1px 6px;}
 .wp-empty-filter{text-align:center;padding:40px 16px;color:#94a3b8;font-size:14px;}
 .wp-empty-icon{font-size:36px;margin-bottom:10px;}
 .wp-doc-row{padding:16px;background:#fff;border-radius:12px;margin-bottom:10px;border:1px solid #e2e8f0;transition:box-shadow .15s;position:relative;}
@@ -303,7 +305,7 @@ loadDocReq();
 
 // Worker portal state
 let wpWorkerId = null, wpWorkerObj = null, wpWorkerEmail = null;
-let wpSubmissions = [], wpActiveTab = 'docs', wpDocFilter = 'missing';
+let wpSubmissions = [], wpActiveTab = 'docs', wpDocFilter = 'missing', wpAssignFilter = 'current';
 let wpDocSubmitOpen = {}, wpIssuedDocs = [];
 let wpAccomAssignments = [], wpVehAssignments = [], wpToolAssignments = [];
 let wpProperties = [], wpVehicles = [], wpTools = [], wpReturnRequests = [];
@@ -1044,6 +1046,7 @@ async function initWorkerPortal(workerId){
   document.getElementById('workerPortal').style.display='flex';
   document.body.style.background='var(--bg)';
   wpDocFilter='missing';
+  wpAssignFilter='current';
   wpUpdateLangUI();
   const w=wpWorkerObj;
   document.getElementById('wpHeaderName').textContent=w?w.name:'Worker';
@@ -1146,12 +1149,12 @@ async function renderWPDocs(){
 
   const eSigCount=wpIssuedDocs.filter(x=>x.signatureRequestId).length;
   let html=`${eSigCount>0?`<div class="wp-esign-summary-banner">✉️&nbsp;<span><strong>You have ${eSigCount} document${eSigCount>1?'s':''} awaiting your e-signature</strong> — check your email for the signing link${eSigCount>1?'s':''} sent by Dropbox Sign.</span></div>`:''}
-<div class="wp-filter-tabs">
-    <button class="wp-filter-tab${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')"><span class="wp-filter-label">${t('missing')}</span><span class="wp-filter-count">${filterCounts.missing}</span></button>
-    <button class="wp-filter-tab${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')"><span class="wp-filter-label">${t('expiring')}</span><span class="wp-filter-count">${filterCounts.expiring}</span></button>
-    <button class="wp-filter-tab${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')"><span class="wp-filter-label">${t('expired')}</span><span class="wp-filter-count">${filterCounts.expired}</span></button>
-    <button class="wp-filter-tab${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')"><span class="wp-filter-label">${t('valid')}</span><span class="wp-filter-count">${filterCounts.ok}</span></button>
-    <button class="wp-filter-tab${wpDocFilter==='optional'?' active':''}" data-f="optional" onclick="wpSetDocFilter('optional')"><span class="wp-filter-label">${t('optional')}</span><span class="wp-filter-count">${filterCounts.optional}</span></button>
+<div class="wp-filter-chips">
+    <button class="wp-filter-chip${wpDocFilter==='missing'?' active':''}" data-f="missing" onclick="wpSetDocFilter('missing')">${t('missing')} <span class="wp-chip-count">${filterCounts.missing}</span></button>
+    <button class="wp-filter-chip${wpDocFilter==='expiring'?' active':''}" data-f="expiring" onclick="wpSetDocFilter('expiring')">${t('expiring')} <span class="wp-chip-count">${filterCounts.expiring}</span></button>
+    <button class="wp-filter-chip${wpDocFilter==='expired'?' active':''}" data-f="expired" onclick="wpSetDocFilter('expired')">${t('expired')} <span class="wp-chip-count">${filterCounts.expired}</span></button>
+    <button class="wp-filter-chip${wpDocFilter==='ok'?' active':''}" data-f="ok" onclick="wpSetDocFilter('ok')">${t('valid')} <span class="wp-chip-count">${filterCounts.ok}</span></button>
+    <button class="wp-filter-chip${wpDocFilter==='optional'?' active':''}" data-f="optional" onclick="wpSetDocFilter('optional')">${t('optional')} <span class="wp-chip-count">${filterCounts.optional}</span></button>
   </div>`;
 
   if(wpLang!=='en'){
@@ -1295,16 +1298,19 @@ function renderWPAssignments(){
       </div>
     </div>`;
   };
-  let html='';
-  if(current.length){ html+=`<div class="wp-section-label">${current.length>1?t('currentProjects'):t('currentProject')}</div>`; html+=current.map(mkCard).join(''); }
-  if(past.length){
-    html+=`<button class="wp-past-toggle" onclick="wpTogglePast(this)" aria-expanded="false">
-      <span class="wp-past-toggle-label">${t('pastProjects')} (${past.length})</span>
-      <span class="wp-past-toggle-arrow">▼</span>
-    </button>
-    <div id="wpPastCards" style="display:none;">${past.map(mkCard).join('')}</div>`;
-  }
-  el.innerHTML=html;
+  const chipRow=`<div class="wp-filter-chips" style="margin-bottom:16px;">
+    <button class="wp-filter-chip${wpAssignFilter==='current'?' active':''}" data-f="current" onclick="wpSetAssignFilter('current')">${t('currentProjects')||'Current'} <span class="wp-chip-count">${current.length}</span></button>
+    <button class="wp-filter-chip${wpAssignFilter==='past'?' active':''}" data-f="past" onclick="wpSetAssignFilter('past')">${t('pastProjects')||'Past'} <span class="wp-chip-count">${past.length}</span></button>
+  </div>`;
+  const cards=wpAssignFilter==='past'?past:current;
+  const emptyMsg=wpAssignFilter==='past'
+    ?`<p style="color:#94a3b8;font-size:13px;padding:12px 0;">No past projects.</p>`
+    :`<p style="color:#94a3b8;font-size:13px;padding:12px 0;">${t('noProjects')}</p>`;
+  el.innerHTML=chipRow+(cards.map(mkCard).join('')||emptyMsg);
+}
+function wpSetAssignFilter(v){
+  wpAssignFilter=v||'current';
+  renderWPAssignments();
 }
 
 function wpTogglePast(btn){
