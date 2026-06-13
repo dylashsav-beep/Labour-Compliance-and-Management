@@ -1091,8 +1091,10 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   // Submit button + form (only when not pending)
   const canSubmit = !(sub && sub.status==='pending');
   if(canSubmit){
-    const isResubmit = !!(hasFile || sub);
-    body += '<button class="'+(isResubmit ? 'wp-doc-btn-secondary' : 'wp-doc-btn')+'" onclick="toggleSubmitForm(\''+sfId+'\')">'
+    const isRejected   = sub && sub.status==='rejected';
+    const isResubmit   = !!(hasFile || sub);
+    const btnCls = (!isResubmit || isRejected) ? 'wp-doc-btn' : 'wp-doc-btn-secondary';
+    body += '<button class="'+btnCls+'" onclick="toggleSubmitForm(\''+sfId+'\')">'
       +(isResubmit ? 'Submit replacement' : 'Submit update')+'</button>';
     body += buildSubmitForm(sfId, orgIdx, item.key);
   }
