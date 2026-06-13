@@ -373,7 +373,8 @@ body{display:flex;flex-direction:column;min-height:100vh;}
   </div>
   <div class="v-tabs">
     <button class="v-tab active" data-tab="docs">Documents</button>
-    <button class="v-tab" data-tab="assignments">Work Orders</button>
+    <button class="v-tab" data-tab="assignments">Work Orders / Contracts</button>
+    <button class="v-tab" data-tab="training">Training &amp; Certs</button>
     <button class="v-tab" data-tab="resources">Resources</button>
     <button class="v-tab" data-tab="files">My Files</button>
   </div>
@@ -798,6 +799,7 @@ function renderBody(){
   closeDetail();
   if(activeTab==='docs')        renderDocs();
   else if(activeTab==='assignments') renderAssignments();
+  else if(activeTab==='training')    renderTraining();
   else if(activeTab==='resources')   renderResources();
   else if(activeTab==='files')       renderFiles();
   else if(activeTab==='account')     renderAccount();
@@ -829,7 +831,7 @@ function toggleOrg(orgIdx){
 function toggleCompOrg(key){
   if(expandedCompOrgs.has(key)) expandedCompOrgs.delete(key);
   else expandedCompOrgs.add(key);
-  renderDocs();
+  renderBody();
 }
 
 function setOrgFilter(orgIdx, f){
@@ -938,44 +940,46 @@ function renderDocs(){
       }
     }
 
+    // ── Required Training sub-section (within Docs tab) ──────────────────
+    const orgComps = (m.competencies || []);
+    const reqComps = orgComps.filter(c => c.required !== false);
+    if(reqComps.length){
+      const compRecs = m.comp_records || [];
+      const compOrgKey = 'corg_'+orgIdx;
+      const compIsOpen = expandedCompOrgs.has(compOrgKey);
+
+      const missingComps = reqComps.filter(c=>{
+        const rec = compRecs.filter(r=>r.competency_id===c.competency_id).sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+        if(!rec) return true;
+        return rec.status==='rejected';
+      });
+
+      html += '<div style="border-top:2px solid #f1f5f9;margin-top:4px;">';
+      html += '<div class="v-org-header" style="padding:10px 0 8px;cursor:pointer;" onclick="toggleCompOrg(\''+compOrgKey+'\')">'
+        +'<div style="width:28px;text-align:center;font-size:16px;flex-shrink:0;">🎓</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-size:13px;font-weight:700;color:#1e293b;">Required Training &amp; Certificates</div>'
+        +'<div class="v-org-header-sub">'+reqComps.length+' required'
+        +(missingComps.length?' · <span class="v-urgent">'+missingComps.length+' outstanding</span>':'')
+        +'</div></div>'
+        + icon(compIsOpen?'chevron-down':'chevron-right', 16)
+        +'</div>';
+
+      if(compIsOpen){
+        reqComps.forEach(comp=>{
+          const rec = compRecs.filter(r=>r.competency_id===comp.competency_id)
+            .sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+          html += vaultCompCard(comp, rec, m.org_id, orgIdx);
+        });
+        html += '<div style="padding:4px 0 8px;"><button class="v-filter-chip" style="font-size:11px;" onclick="vSwitchTab(\'training\');event.stopPropagation()">View all training →</button></div>';
+      }
+      html += '</div>';
+    }
+
     html += '</div>'; // end v-org-section
   }
 
   html += '<div class="v-disclaimer">Status reflects the expiry date on file with your employer. Submit updated documents when yours expire.</div>';
-
-  // ── Competencies & Training section ──────────────────────────────────────
-  const hasAnyComps = memberships.some(m=>(m.competencies||[]).length>0);
-  if(hasAnyComps){
-    html += '<div style="margin-top:28px;">';
-    html += '<div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:4px;">Training &amp; Competencies</div>';
-    html += '<div style="font-size:12px;color:#64748b;margin-bottom:16px;">Extra requirements assigned by your employers, separate from standard compliance documents.</div>';
-    for(let mi=0; mi<memberships.length; mi++){
-      const m = memberships[mi];
-      const comps = m.competencies || [];
-      if(!comps.length) continue;
-      const compRecs = m.comp_records || [];
-      const orgKey = 'corg_'+mi;
-      const isOpen = expandedCompOrgs.has(orgKey);
-      html += '<div class="v-org-section" style="margin-bottom:12px;">';
-      html += '<div class="v-org-header" onclick="toggleCompOrg(\''+orgKey+'\')" style="cursor:pointer;">'
-        + orgAvatar(m.org_name)
-        +'<div style="flex:1;min-width:0;">'
-        +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
-        +'<div class="v-org-header-sub">'+comps.length+' competency requirement'+(comps.length!==1?'s':'')+'</div>'
-        +'</div>'
-        + icon(isOpen?'chevron-down':'chevron-right', 18)
-        +'</div>';
-      if(isOpen){
-        comps.forEach(comp=>{
-          const rec = (compRecs||[]).filter(r=>r.competency_id===comp.competency_id)
-            .sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
-          html += vaultCompCard(comp, rec, m.org_id, mi);
-        });
-      }
-      html += '</div>';
-    }
-    html += '</div>';
-  }
 
   setBody(html);
   // Bind pick-from-files listeners after render
@@ -1277,20 +1281,28 @@ async function downloadTemplate(path, name){
 function renderAssignments(){
   const memberships = vaultData.memberships || [];
   const vaultAssigns = vaultData.vault_assignments || [];
-
-  // Build per-org groups
-  const orgGroups = [];
-  for(const m of memberships){
-    const rows = (m.assignments||[]).slice().sort((a,b)=> new Date(b.start_date||0) - new Date(a.start_date||0));
-    if(rows.length) orgGroups.push({ org_name:m.org_name, rows });
-  }
-
-  // Vault copies keyed by assignment_id for merge
   const vaultByAssignId = {};
   for(const va of vaultAssigns) if(va.assignment_id) vaultByAssignId[va.assignment_id] = va;
 
   let html = planBanner();
-  if(!orgGroups.length && !vaultAssigns.length){
+
+  // Build org → project groups
+  const orgGroups = [];
+  for(const m of memberships){
+    const rows = (m.assignments||[]).slice().sort((a,b)=> new Date(b.start_date||0) - new Date(a.start_date||0));
+    if(!rows.length) continue;
+
+    // Group rows by project_id (or project_name as fallback)
+    const projectMap = new Map();
+    for(const a of rows){
+      const key = a.project_id || a.project_name || 'unknown';
+      if(!projectMap.has(key)) projectMap.set(key, { project_name: a.project_name, project_id: a.project_id, contracts: [] });
+      projectMap.get(key).contracts.push(a);
+    }
+    orgGroups.push({ org_name: m.org_name, org_id: m.org_id, projects: [...projectMap.values()], membership: m });
+  }
+
+  if(!orgGroups.length && !vaultAssigns.filter(va=>!va.assignment_id).length){
     html += '<div class="v-empty"><div class="v-empty-icon" style="font-size:36px;">📋</div>'
       +'No work orders yet.<br><span style="font-size:12px;">When your employers add you to a project, it appears here.</span></div>';
     setBody(html);
@@ -1300,36 +1312,54 @@ function renderAssignments(){
   for(const grp of orgGroups){
     html += '<div class="v-org-section">'
       +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
-      + orgAvatar(grp.org_name,true)
+      + orgAvatar(grp.org_name, true)
       +'<div class="v-org-header-name">'+esc(grp.org_name)+'</div></div>';
 
-    for(const a of grp.rows){
-      const signed   = a.signature_status==='signed'||a.signature_status==='pending_review';
-      const va       = vaultByAssignId[a.id];
-      const period   = esc(fmtDate(a.start_date))+(a.end_date?' – '+esc(fmtDate(a.end_date)):'– ongoing');
-      const isActive = !a.end_date || new Date(a.end_date) >= new Date();
+    for(const proj of grp.projects){
+      const allContracts = proj.contracts;
+      const activeContracts = allContracts.filter(a=>!a.end_date||new Date(a.end_date)>=new Date());
+      const hasActive = activeContracts.length > 0;
 
-      let contractHtml = '';
-      if(signed)            contractHtml = '<span class="v-contract-flag signed">'+icon('check-circle-2',11)+' Signed</span>';
-      else if(a.has_contract) contractHtml = '<span class="v-contract-flag present">'+icon('file-text',11)+' Contract on file</span>';
-      else                  contractHtml = '<span class="v-contract-flag missing">'+icon('alert-triangle',11)+' No contract yet</span>';
-
-      const vaultBadge = va ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;margin-left:6px;">'+icon('shield-check',10)+' Vault copy</span>' : '';
-
-      html += '<div class="v-assign-card" onclick="openAssignmentDetail('+JSON.stringify(a).replace(/"/g,'&quot;')+')">'
-        +'<div class="v-assign-title">'
-        + '<span>'+esc(a.project_name||'Work Order')+'</span>'
-        +'<span>'+icon('chevron-right',18)+'</span>'
-        +'</div>'
-        +'<div class="v-assign-meta">'+period+'</div>'
-        +'<div style="display:flex;align-items:center;gap:4px;margin-top:8px;flex-wrap:wrap;">'
-        + contractHtml
-        + (isActive ? '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:6px;border:1px solid #86efac;">Active</span>' : '')
-        + vaultBadge
-        +'</div>'
+      // Project header row
+      html += '<div style="margin-bottom:8px;">';
+      html += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8;margin-bottom:6px;padding:0 2px;display:flex;align-items:center;gap:6px;">'
+        +'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>'
+        +'PROJECT'
+        +(hasActive ? '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:1px 6px;border-radius:4px;border:1px solid #86efac;text-transform:none;">Active</span>' : '')
         +'</div>';
+      html += '<div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:8px;padding:0 2px;">'+esc(proj.project_name||'Unnamed project')+'</div>';
+
+      // Contract rows under the project
+      for(const a of allContracts){
+        const signed   = a.signature_status==='signed'||a.signature_status==='pending_review';
+        const va       = vaultByAssignId[a.id];
+        const start    = fmtDate(a.start_date);
+        const end      = a.end_date ? fmtDate(a.end_date) : 'Ongoing';
+        const isActive = !a.end_date || new Date(a.end_date) >= new Date();
+
+        let contractHtml = '';
+        if(signed)              contractHtml = '<span class="v-contract-flag signed">'+icon('check-circle-2',11)+' Signed</span>';
+        else if(a.has_contract) contractHtml = '<span class="v-contract-flag present">'+icon('file-text',11)+' Contract on file</span>';
+        else                    contractHtml = '<span class="v-contract-flag missing">'+icon('alert-triangle',11)+' No contract yet</span>';
+
+        const vaultBadge = va ? '<span style="font-size:10px;font-weight:600;color:#7c3aed;margin-left:6px;">'+icon('shield-check',10)+' Vault copy</span>' : '';
+
+        html += '<div class="v-assign-card" onclick="openAssignmentDetail('+JSON.stringify(a).replace(/"/g,'&quot;')+')">'
+          +'<div class="v-assign-title">'
+          +'<span style="font-size:13px;font-weight:600;color:#475569;">'+icon('file-text',14)+' Contract</span>'
+          +'<span>'+icon('chevron-right',18)+'</span>'
+          +'</div>'
+          +'<div class="v-assign-meta">'+esc(start)+' – '+esc(end)+'</div>'
+          +'<div style="display:flex;align-items:center;gap:4px;margin-top:8px;flex-wrap:wrap;">'
+          + contractHtml
+          + (isActive ? '<span style="font-size:10px;font-weight:700;color:#166534;background:#dcfce7;padding:2px 8px;border-radius:6px;border:1px solid #86efac;">Active</span>' : '')
+          + vaultBadge
+          +'</div>'
+          +'</div>';
+      }
+      html += '</div>'; // end project group
     }
-    html += '</div>';
+    html += '</div>'; // end org section
   }
 
   // Standalone vault copies (no matching live assignment)
@@ -1349,8 +1379,77 @@ function renderAssignments(){
     }
   }
 
-  html += '<div class="v-disclaimer">Tap a work order to see project details and download contracts.</div>';
+  html += '<div class="v-disclaimer">Tap a contract to see project details and download your signed copy.</div>';
   setBody(html);
+}
+
+// ── TRAINING TAB ─────────────────────────────────────────────────────────────
+function renderTraining(){
+  const memberships = vaultData.memberships || [];
+  const orgsWithComps = memberships.map((m,i)=>({m,i})).filter(({m})=>(m.competencies||[]).length>0);
+
+  if(!orgsWithComps.length){
+    setBody(planBanner()+'<div class="v-empty"><div class="v-empty-icon" style="font-size:36px;">🎓</div>'
+      +'No training requirements yet.<br><span style="font-size:12px;">When an employer assigns training or certificates, they appear here.</span></div>');
+    return;
+  }
+
+  let html = planBanner();
+  html += '<div style="font-size:12px;color:#64748b;margin-bottom:16px;">Training and certificate requirements assigned by your employers. Upload your records to submit them for review.</div>';
+
+  for(const {m, i: mi} of orgsWithComps){
+    const comps = m.competencies || [];
+    const compRecs = m.comp_records || [];
+    const orgKey = 'corg_'+mi;
+
+    // Auto-expand all orgs on first visit to Training tab
+    if(!expandedCompOrgs.has(orgKey)) expandedCompOrgs.add(orgKey);
+    const isOpen = expandedCompOrgs.has(orgKey);
+
+    // Count by status for subtitle
+    const approved = comps.filter(c=>{
+      const rec = (compRecs).filter(r=>r.competency_id===c.competency_id).sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+      return rec?.status==='approved';
+    }).length;
+    const pending = comps.filter(c=>{
+      const rec = (compRecs).filter(r=>r.competency_id===c.competency_id).sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+      return rec?.status==='pending';
+    }).length;
+    const missing = comps.length - approved - pending;
+
+    html += '<div class="v-org-section">';
+    html += '<div class="v-org-header" onclick="toggleCompOrg(\''+orgKey+'\')" style="cursor:pointer;">'
+      + orgAvatar(m.org_name)
+      +'<div style="flex:1;min-width:0;">'
+      +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
+      +'<div class="v-org-header-sub">'+comps.length+' requirement'+(comps.length!==1?'s':'')
+      +(approved?' · <span style="color:#166534;">'+approved+' approved</span>':'')
+      +(pending?' · <span style="color:#92400e;">'+pending+' pending</span>':'')
+      +(missing>0?' · <span style="color:#991b1b;">'+missing+' outstanding</span>':'')
+      +'</div></div>'
+      + icon(isOpen?'chevron-down':'chevron-right', 18)
+      +'</div>';
+
+    if(isOpen){
+      comps.forEach(comp=>{
+        const rec = (compRecs).filter(r=>r.competency_id===comp.competency_id)
+          .sort((a,b)=>new Date(b.submitted_at||0)-new Date(a.submitted_at||0))[0]||null;
+        html += vaultCompCard(comp, rec, m.org_id, mi);
+      });
+    }
+    html += '</div>';
+  }
+
+  html += '<div class="v-disclaimer">Training status reflects your employer\'s records. Submit certificates or evidence to update your status.</div>';
+  setBody(html);
+  // Bind pick-from-files listeners after render
+  document.querySelectorAll('[data-pick-vault-comp]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const compId = this.dataset.pickVaultComp;
+      const orgId  = this.dataset.orgId;
+      openPickVaultDoc(compId, orgId);
+    });
+  });
 }
 
 function openAssignmentDetail(a){
