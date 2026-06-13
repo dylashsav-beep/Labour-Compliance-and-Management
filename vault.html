@@ -15,7 +15,7 @@
   --border:#dde3ec;--bg:#f1f5f9;
   --red:#c53030;--green:#276749;--amber:#92400e;
 }
-html,body{height:100%;font-family:'Inter',-apple-system,sans-serif;font-size:14px;background:var(--bg);color:var(--text);}
+html,body{height:100%;font-family:'Inter',-apple-system,sans-serif;font-size:14px;background:var(--bg);color:var(--text);overflow-x:hidden;}
 body{display:flex;flex-direction:column;min-height:100vh;}
 
 /* ── Login ── */
@@ -48,6 +48,12 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 .v-header-name{font-size:12px;color:rgba(255,255,255,.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;}
 .v-signout-btn{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;min-height:40px;white-space:nowrap;transition:background .15s;}
 .v-signout-btn:active{background:rgba(255,255,255,.25);}
+/* Account avatar — top-right per Apple HIG */
+.v-avatar-btn{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s,border-color .15s;letter-spacing:-.01em;min-width:34px;font-family:inherit;}
+.v-avatar-btn:active,.v-avatar-btn.active{background:rgba(255,255,255,.28);border-color:rgba(255,255,255,.8);}
+/* Sign-out inside account view */
+.v-signout-account-btn{display:block;width:100%;margin-top:20px;padding:13px 16px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:48px;transition:background .15s;font-family:inherit;}
+.v-signout-account-btn:active{background:#fee2e2;}
 .v-tabs{display:flex;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .v-tab{flex:1;min-width:80px;padding:14px 4px 12px;font-size:12px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
 .v-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
@@ -363,14 +369,13 @@ body{display:flex;flex-direction:column;min-height:100vh;}
       <div class="v-header-title" id="vBrandTitle">Work Force Vault</div>
       <div class="v-header-name" id="vWorkerName"></div>
     </div>
-    <button class="v-signout-btn" id="signOutBtn">Sign out</button>
+    <button class="v-avatar-btn" id="vAvatarBtn" onclick="vSwitchTab('account')" title="My account" aria-label="Account">?</button>
   </div>
   <div class="v-tabs">
     <button class="v-tab active" data-tab="docs">Documents</button>
     <button class="v-tab" data-tab="assignments">Work Orders</button>
     <button class="v-tab" data-tab="resources">Resources</button>
     <button class="v-tab" data-tab="files">My Files</button>
-    <button class="v-tab" data-tab="account">Account</button>
   </div>
   <div class="v-body" id="vBody">
     <div class="v-loading">Loading your vault…</div>
@@ -574,7 +579,6 @@ function showLogin(){
 
 function wireLogin(){
   const qEmail = new URLSearchParams(location.search).get('email') || '';
-  $('signOutBtn').onclick = async ()=>{ await sbClient.auth.signOut(); vaultData=null; };
   renderLoginForm(qEmail);
   wireTabNav();
 }
@@ -728,6 +732,29 @@ async function sendMagicLink(){
   finally{ if(btn){ btn.disabled=false; btn.textContent='Send magic link'+((_loginMode==='forgot')?'instead':''); } }
 }
 
+function vUpdateAvatar(name){
+  const btn=document.getElementById('vAvatarBtn');
+  if(!btn) return;
+  const parts=(name||'?').trim().split(/\s+/);
+  const initials=parts.length===1?parts[0][0]:(parts[0][0]+parts[parts.length-1][0]);
+  btn.textContent=initials.toUpperCase();
+  btn.classList.toggle('active', activeTab==='account');
+}
+
+function vSwitchTab(tab){
+  const prev = activeTab;
+  activeTab = tab;
+  if(prev !== 'docs' && tab === 'docs') _orgsInitialized = false;
+  document.querySelectorAll('.v-tab').forEach(x=>x.classList.toggle('active', x.dataset.tab===tab));
+  vUpdateAvatar((vaultData&&vaultData.account&&vaultData.account.full_name)||'');
+  renderBody();
+}
+
+async function vSignOut(){
+  await sbClient.auth.signOut();
+  vaultData=null;
+}
+
 function wireTabNav(){
   document.querySelectorAll('.v-tab').forEach(t=>{
     t.onclick = ()=>{
@@ -735,6 +762,7 @@ function wireTabNav(){
       activeTab = t.dataset.tab;
       if(prev !== 'docs' && activeTab === 'docs'){ _orgsInitialized = false; }
       document.querySelectorAll('.v-tab').forEach(x=>x.classList.toggle('active', x===t));
+      vUpdateAvatar((vaultData&&vaultData.account&&vaultData.account.full_name)||'');
       renderBody();
     };
   });
@@ -750,6 +778,7 @@ async function enterVault(){
     if(error) throw error;
     vaultData = data;
     $('vWorkerName').textContent = (data && data.account && data.account.full_name) || '';
+    vUpdateAvatar((data && data.account && data.account.full_name) || '');
     renderBody();
     handlePostCheckout();
     backfillVaultCopies();
@@ -1235,11 +1264,13 @@ async function downloadOrgFile(path, name, ev){
 }
 
 async function downloadTemplate(path, name){
+  const win=window.open('','_blank');
   try{
     const { data, error } = await sbClient.storage.from(SB_BUCKET).createSignedUrl(path, 120, { download: name });
     if(error) throw error;
-    if(data && data.signedUrl) window.open(data.signedUrl,'_blank');
-  }catch(e){ alert('Could not download template: '+(e.message||'unknown error')); }
+    if(data && data.signedUrl) win.location.href=data.signedUrl;
+    else { win.close(); alert('Could not download template.'); }
+  }catch(e){ if(win) win.close(); alert('Could not download template: '+(e.message||'unknown error')); }
 }
 
 // ── ASSIGNMENTS TAB ──────────────────────────────────────────────────────────
@@ -1624,6 +1655,7 @@ function renderAccount(){
       +'</div>';
   }
 
+  html += '<button class="v-signout-account-btn" onclick="vSignOut()">Sign out</button>';
   setBody(html);
   // Style textareas
   document.querySelectorAll('.v-profile-field textarea').forEach(t=>{ t.style.cssText += ';font-family:inherit;'; });
