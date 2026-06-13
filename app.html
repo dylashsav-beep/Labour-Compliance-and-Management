@@ -663,7 +663,8 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   .btn-hdr{padding:4px 9px;font-size:11px;}
   /* Tabs become a horizontal scroll strip */
   .main-nav-inner{padding:0 12px;}
-  .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;}
+  .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;scrollbar-width:none;}
+  .view-tabs::-webkit-scrollbar{display:none;}
   .vtab{flex-shrink:0;padding:10px 12px;font-size:12px;}
   /* Week navigator compact */
   .week-label{min-width:110px;padding:6px 8px;font-size:12px;}
