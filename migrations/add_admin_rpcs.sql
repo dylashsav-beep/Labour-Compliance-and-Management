@@ -476,7 +476,7 @@ BEGIN
   VALUES (p_name, p_slug, p_owner_email, p_plan, p_trial_ends, p_max_workers)
   RETURNING id INTO v_org_id;
 
-  INSERT INTO settings (id) VALUES (v_org_id) ON CONFLICT DO NOTHING;
+  INSERT INTO settings (id, org_id) VALUES (v_org_id::text, v_org_id) ON CONFLICT DO NOTHING;
 
   RETURN v_org_id;
 END;
