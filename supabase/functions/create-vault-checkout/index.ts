@@ -74,13 +74,12 @@ Deno.serve(async (req) => {
     }
 
     // Create the subscription Checkout session.
-    // iDEAL is converted to a SEPA Direct Debit mandate for recurring charges.
+    // Use automatic_payment_methods so Stripe only offers methods enabled
+    // on the account — avoids errors from pending/disabled payment types.
     const session = await stripe('checkout/sessions', {
       mode: 'subscription',
       customer: customerId,
-      'payment_method_types[0]': 'card',
-      'payment_method_types[1]': 'ideal',
-      'payment_method_types[2]': 'sepa_debit',
+      'automatic_payment_methods[enabled]': 'true',
       'line_items[0][price]': VAULT_PRICE_ID,
       'line_items[0][quantity]': '1',
       client_reference_id: user.id,
