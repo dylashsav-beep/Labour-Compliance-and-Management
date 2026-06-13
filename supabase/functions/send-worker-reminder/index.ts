@@ -3,8 +3,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
 const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const FROM     = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
-const SITE_URL = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
+const FROM      = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
+const SITE_URL  = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
+const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://vault.work-force.nl'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -28,8 +29,19 @@ function daysUntil(dateStr: string): number {
   return Math.ceil((new Date(dateStr).setHours(0,0,0,0) - now.getTime()) / 86400000)
 }
 
-function portalUrl(slug: string | null): string {
-  return slug ? `${SITE_URL}/worker.html?org=${encodeURIComponent(slug)}` : `${SITE_URL}/worker.html`
+// If the worker has a vault account, link to the vault (their dedicated portal).
+// Otherwise link to the worker portal pre-filled with their email so they skip
+// the email-entry step and land directly on their documents.
+function buildPortalLink(worker: any, slug: string | null): string {
+  if (worker.vault_account_id) {
+    return VAULT_URL
+  }
+  const base = slug
+    ? `${SITE_URL}/worker.html?org=${encodeURIComponent(slug)}`
+    : `${SITE_URL}/worker.html`
+  return worker.email
+    ? `${base}&email=${encodeURIComponent(worker.email)}`
+    : base
 }
 
 interface DocIssue  { name: string; date?: string; days?: number }
@@ -187,7 +199,7 @@ Deno.serve(async (req) => {
 
     // Fetch worker — verify it belongs to caller's org (cross-org guard)
     const { data: worker } = await sb.from('workers')
-      .select('id, full_name, email, org_id, document_set_id')
+      .select('id, full_name, email, org_id, document_set_id, vault_account_id')
       .eq('id', workerId)
       .eq('org_id', callerOrgId)
       .eq('active', true)
@@ -249,7 +261,7 @@ Deno.serve(async (req) => {
       end: a.end_date || null,
     }))
 
-    const link    = portalUrl(org?.slug || null)
+    const link    = buildPortalLink(worker, org?.slug || null)
     const orgName = org?.name || 'Your company'
 
     const html = buildWorkerEmailHtml(

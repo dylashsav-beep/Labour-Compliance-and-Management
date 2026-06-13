@@ -11,8 +11,9 @@ const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 // Set DIGEST_FROM in Supabase → Settings → Edge Functions → Secrets once your
 // domain is verified in Resend. Until then the sandbox fallback is used.
-const FROM     = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
-const SITE_URL = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
+const FROM      = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
+const SITE_URL  = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
+const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://vault.work-force.nl'
 
 // Default section config — merged with whatever the org has stored in settings.
 const SECTION_DEFAULTS: Record<string, { enabled: boolean; days?: number }> = {
@@ -212,7 +213,7 @@ async function digestForOrg(sb: any, org: any, today: Date) {
 
   // ── 1. Workers + documents ────────────────────────────────────────────────
   const [{ data: workers }, { data: wdocs }, { data: docItems }] = await Promise.all([
-    sb.from('workers').select('id, full_name, email, document_set_id, worker_type').eq('org_id', orgId).eq('active', true),
+    sb.from('workers').select('id, full_name, email, document_set_id, worker_type, vault_account_id').eq('org_id', orgId).eq('active', true),
     sb.from('worker_documents').select('worker_id, doc_key, status, expiry_date').eq('org_id', orgId).eq('active', true),
     sb.from('document_set_items').select('id, name, required, document_set_id').eq('org_id', orgId).eq('active', true),
   ])
@@ -504,9 +505,12 @@ async function digestForOrg(sb: any, org: any, today: Date) {
           end: a.end_date || null,
         }))
 
-        const portalLink = org.slug
-          ? `${SITE_URL}/worker.html?org=${encodeURIComponent(org.slug)}`
-          : `${SITE_URL}/worker.html`
+        // Vault workers get a direct vault link; portal workers get a pre-filled email link.
+        const portalLink = worker.vault_account_id
+          ? VAULT_URL
+          : org.slug
+            ? `${SITE_URL}/worker.html?org=${encodeURIComponent(org.slug)}&email=${encodeURIComponent(worker.email)}`
+            : `${SITE_URL}/worker.html?email=${encodeURIComponent(worker.email)}`
 
         const workerHtml = buildWorkerEmailHtml(
           worker.full_name, orgName, portalLink,

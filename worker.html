@@ -289,7 +289,7 @@ let sbClient = null;
 (function(){
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); wpTryAutoLogin(); };
+  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); wpBoot(); };
   document.head.appendChild(s);
 })();
 
@@ -310,6 +310,9 @@ let wpProperties = [], wpVehicles = [], wpTools = [], wpReturnRequests = [];
 let wpCompetencies = [], wpCompRecords = []; // training tab data
 let wpProjectFiles = []; // project files for this worker's assigned projects
 let wpLang = 'en';
+// Multi-profile support: set when the email maps to >1 worker rows in this org
+let wpProfiles = [];          // [{id, full_name, reference, worker_type}]
+let wpSelectedWorkerId = null; // pinned worker ID when switcher is used (null = LIMIT 1)
 
 const wpLangMeta = { en:{flag:'🇬🇧',code:'EN'}, nl:{flag:'🇳🇱',code:'NL'}, ro:{flag:'🇷🇴',code:'RO'}, tr:{flag:'🇹🇷',code:'TR'}, es:{flag:'🇪🇸',code:'ES'}, fr:{flag:'🇫🇷',code:'FR'}, de:{flag:'🇩🇪',code:'DE'}, da:{flag:'🇩🇰',code:'DA'} };
 const wpInfoCache = new Map();
@@ -883,6 +886,24 @@ async function wpTranslate(text, targetLang){
   return text;
 }
 
+// ── Boot: session restore → URL param auto-login ──────────────────────────
+async function wpBoot(){
+  const loggedIn = await wpTryAutoLogin();
+  if(!loggedIn) wpAutoLoginFromEmail();
+}
+
+// Read ?email= from the URL (injected by the reminder email link) and pre-fill
+// + auto-submit the login form so the worker skips the email-entry step.
+async function wpAutoLoginFromEmail(){
+  const emailParam = new URLSearchParams(location.search).get('email');
+  if(!emailParam) return;
+  const input = document.getElementById('wpEmailInput');
+  if(input) input.value = decodeURIComponent(emailParam);
+  // Small delay so resolveOrg (called inside wpDirectLogin) can use the
+  // already-set slug if the URL also carries ?org=
+  await wpDirectLogin();
+}
+
 // ── Login flow ─────────────────────────────────────────────────────────────
 function loginMsg(text, isError){
   const el=document.getElementById('wpLoginMsg');
@@ -914,6 +935,9 @@ async function wpDirectLogin(){
       return;
     }
     wpWorkerEmail=email;
+    wpSelectedWorkerId=null; // fresh login always uses LIMIT 1 first
+    // Load all profiles for this email in this org (for switcher if >1)
+    try{ const {data:pl}=await sbClient.rpc('list_worker_profiles',{p_email:email,p_org_id:resolvedOrgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
     try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email, orgId:resolvedOrgId, expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
@@ -927,6 +951,7 @@ async function wpDirectLogin(){
 function wpSignOut(){
   try{ localStorage.removeItem(WP_SESSION_KEY); }catch(_){}
   wpWorkerId=null; wpWorkerObj=null; wpWorkerEmail=null;
+  wpProfiles=[]; wpSelectedWorkerId=null;
   wpSubmissions=[]; wpIssuedDocs=[];
   document.getElementById('workerPortal').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
@@ -937,19 +962,26 @@ function wpSignOut(){
 async function wpTryAutoLogin(){
   try{
     const raw=localStorage.getItem(WP_SESSION_KEY);
-    if(!raw) return;
+    if(!raw) return false;
     const sess=JSON.parse(raw);
-    if(!sess?.email||!sess?.orgId||!sess?.expires) return;
-    if(Date.now()>sess.expires){ localStorage.removeItem(WP_SESSION_KEY); return; }
+    if(!sess?.email||!sess?.orgId||!sess?.expires) return false;
+    if(Date.now()>sess.expires){ localStorage.removeItem(WP_SESSION_KEY); return false; }
     resolvedOrgId=sess.orgId;
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:sess.email,p_org_id:sess.orgId});
-    if(error||!data?.worker){ localStorage.removeItem(WP_SESSION_KEY); return; }
+    // Restore pinned worker ID if a specific profile was previously selected
+    wpSelectedWorkerId=sess.workerId||null;
+    const rpcArgs={p_email:sess.email,p_org_id:sess.orgId};
+    if(wpSelectedWorkerId) rpcArgs.p_worker_id=wpSelectedWorkerId;
+    const {data,error}=await sbClient.rpc('get_worker_portal',rpcArgs);
+    if(error||!data?.worker){ localStorage.removeItem(WP_SESSION_KEY); return false; }
     // Refresh TTL on each successful auto-login
-    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:sess.email,orgId:sess.orgId,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
+    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:sess.email,orgId:sess.orgId,workerId:wpSelectedWorkerId||undefined,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpWorkerEmail=sess.email;
+    // Load profile list for switcher (best-effort; non-fatal)
+    try{ const {data:pl}=await sbClient.rpc('list_worker_profiles',{p_email:sess.email,p_org_id:sess.orgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
-  }catch(e){ console.warn('[WP] auto-login failed:',e.message); localStorage.removeItem(WP_SESSION_KEY); }
+    return true;
+  }catch(e){ console.warn('[WP] auto-login failed:',e.message); localStorage.removeItem(WP_SESSION_KEY); return false; }
 }
 
 // ── Data loading ───────────────────────────────────────────────────────────
@@ -989,7 +1021,9 @@ function wpLoadPortalData(data){
 async function wpLoadSubmissions(){
   if(!sbClient||!wpWorkerId||!wpWorkerEmail) return;
   try{
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId});
+    const rpcArgs={p_email:wpWorkerEmail,p_org_id:resolvedOrgId};
+    if(wpSelectedWorkerId) rpcArgs.p_worker_id=wpSelectedWorkerId;
+    const {data,error}=await sbClient.rpc('get_worker_portal',rpcArgs);
     if(error) throw error;
     wpSubmissions=(data?.submissions)||[];
     wpReturnRequests=(data?.return_requests)||[];
@@ -1332,10 +1366,51 @@ function wpOpenProjDetail(assignmentId){
 function wpCloseProjDetail(){ document.getElementById('wpProjDetail').style.display='none'; }
 
 // ── Profile tab ────────────────────────────────────────────────────────────
+// Switch to a different worker profile (same email, different worker row in this org)
+async function switchWorkerProfile(newWorkerId){
+  if(!sbClient||!wpWorkerEmail||newWorkerId===wpWorkerId) return;
+  const el=document.getElementById('wpViewProfile');
+  if(el) el.innerHTML=`<div style="text-align:center;padding:48px 20px;color:var(--text-l);font-size:14px;">Switching profile…</div>`;
+  try{
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId,p_worker_id:newWorkerId});
+    if(error) throw error;
+    if(!data?.worker){ alert('Could not load that profile. Please try again.'); renderWPProfile(); return; }
+    wpSelectedWorkerId=newWorkerId;
+    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:wpWorkerEmail,orgId:resolvedOrgId,workerId:newWorkerId,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
+    wpLoadPortalData(data);
+    await initWorkerPortal(data.worker.id);
+    // initWorkerPortal calls wpSwitch('docs') which hides Profile — switch back so user sees the result
+    wpSwitch('profile');
+  }catch(e){ alert('Could not switch profile: '+(e.message||e)); renderWPProfile(); }
+}
+
 function renderWPProfile(){
   const el=document.getElementById('wpViewProfile'); if(!el) return;
   const w=wpWorkerObj; if(!w){el.innerHTML=`<p>${t('profileNotFound')}</p>`;return;}
+
+  // Profile switcher — shown only when the same email maps to multiple workers
+  let switcherHtml='';
+  if(wpProfiles.length>1){
+    const cards=wpProfiles.map(p=>{
+      const isActive=p.id===wpWorkerId;
+      const initials=(p.full_name||'?').trim().split(/\s+/).reduce((a,w,i,arr)=>i===0||i===arr.length-1?a+(w[0]||''):a,'').toUpperCase().slice(0,2)||'?';
+      return `<button onclick="switchWorkerProfile('${p.id}')" style="display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;background:${isActive?'#f5f3ff':'#f8fafc'};border:1.5px solid ${isActive?'#c4b5fd':'#e2e8f0'};border-radius:10px;cursor:${isActive?'default':'pointer'};text-align:left;margin-bottom:8px;font-family:inherit;"${isActive?' disabled':''}>
+        <div style="width:36px;height:36px;border-radius:50%;background:${isActive?'#7c3aed':'#94a3b8'};color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${esc(initials)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:600;color:${isActive?'#5b21b6':'#1a2035'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.full_name||'—')}</div>
+          <div style="font-size:12px;color:#64748b;">${p.reference?'#'+esc(p.reference)+' · ':''}${p.worker_type||''}</div>
+        </div>
+        ${isActive?'<span style="font-size:11px;font-weight:700;color:#7c3aed;background:#ede9fe;padding:3px 8px;border-radius:8px;">Active</span>':'<span style="font-size:11px;color:#94a3b8;">Switch →</span>'}
+      </button>`;
+    }).join('');
+    switcherHtml=`<div style="margin-bottom:20px;">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Switch Profile</div>
+      ${cards}
+    </div>`;
+  }
+
   el.innerHTML=`<div class="wp-profile-card">
+    ${switcherHtml}
     <div class="wp-profile-title">${t('myProfile')}</div>
     <div style="font-size:12px;color:#94a3b8;margin-bottom:16px;">${t('profileDesc')}</div>
     <div class="wp-profile-field"><label>${t('fullName')}</label><div class="wp-readonly-field">${esc(w.name||'—')}</div></div>
@@ -1473,7 +1548,9 @@ async function wpSubmitReturn(resourceType, assignmentId){
     if(error) throw error;
     alert(t('returnSubmitted'));
     try{
-      const {data,error:e2}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId});
+      const ra2={p_email:wpWorkerEmail,p_org_id:resolvedOrgId};
+      if(wpSelectedWorkerId) ra2.p_worker_id=wpSelectedWorkerId;
+      const {data,error:e2}=await sbClient.rpc('get_worker_portal',ra2);
       if(!e2&&data) wpLoadPortalData(data);
     }catch(e){ console.warn('[WP] wpSubmitReturn reload:',e.message); }
     renderWPResources();
