@@ -8661,10 +8661,8 @@ async function sendWorkerReminder(wid,e){
 }
 
 // ── Worker Vault invite ───────────────────────────────────────────────────────
-// Base URL for the worker vault. Once the vault.work-force.nl subdomain is
-// configured this becomes 'https://vault.work-force.nl'; until then the
-// same-origin /vault.html works on the live domain. Keep as a single constant.
-const VAULT_BASE_URL = 'https://vault.work-force.nl';
+// Base URL for the worker vault — single source of truth across the management app.
+const VAULT_BASE_URL = 'https://work-force.nl/vault.html';
 
 function vaultInviteUrl(email){
   // Pre-fill the worker's email so they only tap "send link".
