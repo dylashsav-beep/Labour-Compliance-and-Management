@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Work Force · Super Admin</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --accent:#7c3aed;--accent-d:#6d28d9;--accent-l:rgba(124,58,237,.1);
+  --navy:#1a2035;--text:#1a2340;--text-m:#4a5568;--text-l:#94a3b8;
+  --border:#e2e8f0;--bg:#f1f5f9;--white:#fff;
+  --red:#c53030;--red-l:rgba(197,48,48,.1);
+  --green:#166534;--green-l:rgba(22,101,52,.1);
+  --amber:#92400e;--amber-l:rgba(146,64,14,.1);
+  --sh:0 1px 3px rgba(0,0,0,.08);--sh-md:0 4px 16px rgba(0,0,0,.1);
+}
+html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);font-size:14px}
+
+/* ── Auth screen ── */
+#authScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.auth-card{background:var(--white);border-radius:16px;box-shadow:var(--sh-md);padding:40px;width:100%;max-width:400px}
+.auth-logo{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.auth-sub{font-size:12px;color:var(--text-l);margin-bottom:32px}
+.auth-label{display:block;font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px;margin-top:16px}
+.auth-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:15px;outline:none;transition:border .15s}
+.auth-input:focus{border-color:var(--accent)}
+.auth-btn{margin-top:24px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;transition:background .15s}
+.auth-btn:hover{background:var(--accent-d)}
+.auth-err{margin-top:12px;font-size:13px;color:var(--red);text-align:center;min-height:18px}
+#accessDenied{display:none;text-align:center;padding:40px}
+#accessDenied h2{color:var(--red);margin-bottom:8px}
+
+/* ── Main App ── */
+#mainApp{display:none;min-height:100vh;flex-direction:column}
+
+/* Header */
+.adm-header{background:var(--navy);padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100}
+.adm-header-logo{font-size:17px;font-weight:800;color:#fff}
+.adm-header-sep{color:rgba(255,255,255,.2)}
+.adm-header-title{font-size:13px;color:rgba(255,255,255,.6);font-weight:500;letter-spacing:.02em;text-transform:uppercase}
+.adm-header-spacer{flex:1}
+.adm-header-email{font-size:12px;color:rgba(255,255,255,.5);background:rgba(255,255,255,.08);padding:4px 10px;border-radius:20px}
+.adm-signout{font-size:12px;font-weight:600;color:rgba(255,255,255,.7);background:rgba(255,255,255,.1);border:none;padding:6px 14px;border-radius:20px;cursor:pointer;transition:background .15s;margin-left:8px}
+.adm-signout:hover{background:rgba(255,255,255,.18)}
+
+/* Stats bar */
+.stats-bar{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;gap:12px;overflow-x:auto}
+.stat-pill{flex:1;min-width:140px;background:var(--bg);border-radius:10px;padding:12px 16px;display:flex;flex-direction:column;gap:2px}
+.stat-pill-label{font-size:11px;font-weight:600;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em}
+.stat-pill-value{font-size:22px;font-weight:800;color:var(--text)}
+.stat-pill-sub{font-size:11px;color:var(--text-l)}
+
+/* Content */
+.adm-content{max-width:1100px;margin:0 auto;padding:24px;width:100%;flex:1}
+
+/* Tabs */
+.adm-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px}
+.adm-tab{padding:10px 20px;font-size:14px;font-weight:600;color:var(--text-l);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s,border-color .15s;background:none;border-top:none;border-left:none;border-right:none}
+.adm-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.adm-tab:hover:not(.active){color:var(--text-m)}
+.adm-tabpanel{display:none}
+.adm-tabpanel.active{display:block}
+
+/* Table toolbar */
+.tbl-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.tbl-search{border:1.5px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;outline:none;width:240px;transition:border .15s}
+.tbl-search:focus{border-color:var(--accent)}
+.tbl-spacer{flex:1}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+.btn-primary:hover{background:var(--accent-d)}
+.btn-secondary{background:var(--white);color:var(--text-m);border:1.5px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s}
+.btn-danger:hover{background:#9b1c1c}
+.btn-sm{padding:5px 12px;font-size:12px}
+
+/* Data table */
+.data-table{width:100%;border-collapse:collapse;background:var(--white);border-radius:12px;overflow:hidden;box-shadow:var(--sh)}
+.data-table th{padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--border);background:var(--white);cursor:pointer;white-space:nowrap;user-select:none}
+.data-table th:hover{color:var(--text-m)}
+.data-table th.sort-asc::after{content:' ↑'}
+.data-table th.sort-desc::after{content:' ↓'}
+.data-table td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tbody tr{cursor:pointer;transition:background .1s}
+.data-table tbody tr:hover{background:#f8fafc}
+.tbl-empty{text-align:center;color:var(--text-l);padding:40px!important;cursor:default!important}
+.tbl-empty:hover{background:none!important}
+
+/* Plan badges */
+.badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.02em}
+.badge-trial{background:var(--amber-l);color:var(--amber)}
+.badge-starter,.badge-growth,.badge-enterprise,.badge-vault{background:var(--green-l);color:var(--green)}
+.badge-suspended{background:var(--red-l);color:var(--red)}
+.badge-free{background:rgba(0,0,0,.06);color:var(--text-l)}
+.badge-manual{background:var(--amber-l);color:var(--amber);font-size:10px;padding:2px 7px}
+.badge-stripe{background:var(--green-l);color:var(--green);font-size:10px;padding:2px 7px}
+.badge-method{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.04em}
+.badge-manual-method{background:var(--amber-l);color:var(--amber)}
+.badge-stripe-method{background:var(--green-l);color:var(--green)}
+
+/* Side panel */
+.panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;backdrop-filter:blur(2px)}
+.panel-overlay.open{display:block}
+.side-panel{position:fixed;top:0;right:-520px;width:520px;height:100vh;background:var(--white);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:201;overflow-y:auto;transition:right .25s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.side-panel.open{right:0}
+.panel-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px;position:sticky;top:0;background:var(--white);z-index:10}
+.panel-header-info{flex:1;min-width:0}
+.panel-header-name{font-size:17px;font-weight:800;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.panel-header-sub{font-size:12px;color:var(--text-l);margin-top:2px}
+.panel-close{background:none;border:none;cursor:pointer;color:var(--text-l);font-size:20px;padding:4px;line-height:1;border-radius:6px;flex-shrink:0}
+.panel-close:hover{background:var(--bg);color:var(--text)}
+.panel-body{padding:20px 24px;display:flex;flex-direction:column;gap:20px}
+
+/* Cards inside panel */
+.card{background:var(--bg);border-radius:12px;padding:16px}
+.card-title{font-size:12px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px}
+.card-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.card-row:last-child{border-bottom:none}
+.card-row-label{font-size:12px;color:var(--text-l)}
+.card-row-value{font-size:13px;font-weight:600;color:var(--text)}
+.field-group{margin-bottom:12px}
+.field-label{display:block;font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:5px}
+.field-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;background:var(--white);transition:border .15s}
+.field-input:focus{border-color:var(--accent)}
+.field-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+.fields-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.link-btn{background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;padding:0;text-decoration:underline}
+.link-btn:hover{color:var(--accent-d)}
+
+/* Members table inside panel */
+.mini-table{width:100%;border-collapse:collapse}
+.mini-table th{font-size:11px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.04em;padding:4px 8px;text-align:left}
+.mini-table td{padding:6px 8px;vertical-align:middle;border-bottom:1px solid var(--border);font-size:12px}
+.mini-table tr:last-child td{border-bottom:none}
+.mini-select{border:1px solid var(--border);border-radius:6px;padding:3px 6px;font-size:11px;background:var(--white);outline:none;cursor:pointer}
+.mini-toggle{position:relative;display:inline-flex;align-items:center;cursor:pointer}
+.mini-toggle input{opacity:0;width:0;height:0;position:absolute}
+.mini-toggle-slider{width:28px;height:16px;background:#cbd5e1;border-radius:8px;transition:background .2s;flex-shrink:0}
+.mini-toggle input:checked + .mini-toggle-slider{background:var(--accent)}
+.mini-toggle-slider::after{content:'';position:absolute;width:12px;height:12px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.mini-toggle input:checked ~ .mini-toggle-slider::after,.mini-toggle input:checked + .mini-toggle-slider::after{left:14px}
+
+/* Payment log */
+.pay-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.pay-row:last-child{border-bottom:none}
+.pay-row-main{flex:1;min-width:0}
+.pay-row-amount{font-size:14px;font-weight:700;color:var(--text)}
+.pay-row-meta{font-size:11px;color:var(--text-l);margin-top:2px}
+.pay-row-notes{font-size:12px;color:var(--text-m);margin-top:3px;font-style:italic}
+
+/* Danger zone */
+.danger-zone{border:1.5px solid rgba(197,48,48,.3);border-radius:12px;overflow:hidden}
+.danger-zone-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;background:rgba(197,48,48,.04)}
+.danger-zone-toggle:hover{background:rgba(197,48,48,.07)}
+.danger-zone-toggle span{font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.05em}
+.danger-zone-body{padding:16px;display:none}
+.danger-zone.open .danger-zone-body{display:block}
+
+/* Email mini-form */
+.mini-form{background:var(--white);border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-top:10px}
+.mini-form-title{font-size:12px;font-weight:700;color:var(--text-m);margin-bottom:10px}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:var(--sh-md)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:800;color:var(--text)}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--text-l);font-size:20px;line-height:1;border-radius:6px;padding:4px}
+.modal-close:hover{background:var(--bg);color:var(--text)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end}
+
+/* Loading & toast */
+.loading-spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(124,58,237,.2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a2035;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;transition:transform .25s;box-shadow:var(--sh-md)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Stripe link */
+.stripe-link{color:var(--accent);text-decoration:none;font-size:12px}
+.stripe-link:hover{text-decoration:underline}
+
+/* Linked orgs list */
+.linked-org-pill{display:inline-block;background:var(--accent-l);color:var(--accent);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600;margin:2px}
+
+/* Empty states */
+.empty-state{text-align:center;padding:32px;color:var(--text-l);font-size:13px}
+
+/* Responsive */
+@media(max-width:600px){
+  .stats-bar{gap:8px}
+  .stat-pill{min-width:120px}
+  .side-panel{width:100%;right:-100%}
+  .data-table th:nth-child(n+5),.data-table td:nth-child(n+5){display:none}
+  .fields-2col{grid-template-columns:1fr}
+  .adm-content{padding:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="auth-logo">Work Force</div>
+    <div class="auth-sub">Super Admin · Private Access</div>
+    <label class="auth-label" for="authEmail">Email</label>
+    <input class="auth-input" id="authEmail" type="email" placeholder="admin@example.com" autocomplete="username"/>
+    <label class="auth-label" for="authPass">Password</label>
+    <input class="auth-input" id="authPass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    <button class="auth-btn" id="authBtn" onclick="doSignIn()">Sign In</button>
+    <div class="auth-err" id="authErr"></div>
+  </div>
+</div>
+
+<!-- Access Denied -->
+<div id="accessDenied">
+  <h2>Access Denied</h2>
+  <p style="color:var(--text-m);margin-top:8px;margin-bottom:20px">This panel is restricted to the super admin account.</p>
+  <button class="btn-secondary" onclick="doSignOut()">Sign out</button>
+</div>
+
+<!-- Main App -->
+<div id="mainApp">
+  <!-- Header -->
+  <header class="adm-header">
+    <div class="adm-header-logo">Work Force</div>
+    <div class="adm-header-sep">·</div>
+    <div class="adm-header-title">Super Admin</div>
+    <div class="adm-header-spacer"></div>
+    <div class="adm-header-email" id="headerEmail"></div>
+    <button class="adm-signout" onclick="doSignOut()">Sign out</button>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-pill"><div class="stat-pill-label">Total Orgs</div><div class="stat-pill-value" id="st-orgs">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">Active Trials</div><div class="stat-pill-value" id="st-trials">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">Paid Orgs</div><div class="stat-pill-value" id="st-paid-orgs">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">Suspended</div><div class="stat-pill-value" id="st-suspended">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">Vault Workers</div><div class="stat-pill-value" id="st-workers">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">Paid Workers</div><div class="stat-pill-value" id="st-paid-workers">—</div></div>
+  </div>
+
+  <!-- Content -->
+  <div class="adm-content">
+    <!-- Tabs -->
+    <div class="adm-tabs">
+      <button class="adm-tab active" onclick="switchTab('orgs',this)">Organisations</button>
+      <button class="adm-tab" onclick="switchTab('workers',this)">Vault Workers</button>
+    </div>
+
+    <!-- ORGS TAB -->
+    <div class="adm-tabpanel active" id="tab-orgs">
+      <div class="tbl-toolbar">
+        <input class="tbl-search" id="orgSearch" type="search" placeholder="Search name, slug, email…" oninput="filterOrgs()"/>
+        <div class="tbl-spacer"></div>
+        <button class="btn-primary" onclick="openNewOrg()">+ New Org</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="orgTable">
+          <thead>
+            <tr>
+              <th onclick="sortOrgs('name')">Name</th>
+              <th onclick="sortOrgs('slug')">Slug</th>
+              <th onclick="sortOrgs('plan')">Plan</th>
+              <th onclick="sortOrgs('trial_ends')">Trial Ends</th>
+              <th onclick="sortOrgs('worker_count')">Workers</th>
+              <th onclick="sortOrgs('owner_email')">Owner</th>
+              <th onclick="sortOrgs('created_at')">Created</th>
+            </tr>
+          </thead>
+          <tbody id="orgTbody"><tr><td class="tbl-empty" colspan="7"><span class="loading-spinner"></span> Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- WORKERS TAB -->
+    <div class="adm-tabpanel" id="tab-workers">
+      <div class="tbl-toolbar">
+        <input class="tbl-search" id="workerSearch" type="search" placeholder="Search name or email…" oninput="filterWorkers()"/>
+        <div class="tbl-spacer"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="workerTable">
+          <thead>
+            <tr>
+              <th onclick="sortWorkers('full_name')">Name</th>
+              <th onclick="sortWorkers('email')">Email</th>
+              <th onclick="sortWorkers('plan')">Plan</th>
+              <th onclick="sortWorkers('plan_expires')">Expires</th>
+              <th onclick="sortWorkers('linked_org_count')">Linked Orgs</th>
+              <th onclick="sortWorkers('created_at')">Joined</th>
+            </tr>
+          </thead>
+          <tbody id="workerTbody"><tr><td class="tbl-empty" colspan="6"><span class="loading-spinner"></span> Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Org Detail Panel ── -->
+<div class="panel-overlay" id="orgOverlay" onclick="closeOrgPanel()"></div>
+<div class="side-panel" id="orgPanel">
+  <div class="panel-header">
+    <div class="panel-header-info">
+      <div class="panel-header-name" id="opName">—</div>
+      <div class="panel-header-sub" id="opSub">—</div>
+    </div>
+    <button class="panel-close" onclick="closeOrgPanel()">✕</button>
+  </div>
+  <div class="panel-body" id="orgPanelBody">
+    <div class="empty-state"><span class="loading-spinner"></span></div>
+  </div>
+</div>
+
+<!-- ── Worker Detail Panel ── -->
+<div class="panel-overlay" id="wkOverlay" onclick="closeWorkerPanel()"></div>
+<div class="side-panel" id="wkPanel">
+  <div class="panel-header">
+    <div class="panel-header-info">
+      <div class="panel-header-name" id="wpName">—</div>
+      <div class="panel-header-sub" id="wpSub">—</div>
+    </div>
+    <button class="panel-close" onclick="closeWorkerPanel()">✕</button>
+  </div>
+  <div class="panel-body" id="wkPanelBody">
+    <div class="empty-state"><span class="loading-spinner"></span></div>
+  </div>
+</div>
+
+<!-- ── New Org Modal ── -->
+<div class="modal-overlay" id="newOrgModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create New Organisation</div>
+      <button class="modal-close" onclick="closeNewOrg()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Organisation Name *</label>
+        <input class="field-input" id="noName" type="text" placeholder="Acme Corp" oninput="autoSlug()"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Slug (URL identifier) *</label>
+        <input class="field-input" id="noSlug" type="text" placeholder="acme-corp"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Owner Email *</label>
+        <input class="field-input" id="noOwner" type="email" placeholder="owner@company.com"/>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Plan</label>
+          <select class="field-input field-select" id="noPlan">
+            <option value="trial">Trial</option>
+            <option value="starter">Starter (€49/mo)</option>
+            <option value="growth">Growth (€99/mo)</option>
+            <option value="enterprise">Enterprise (€199/mo)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Max Workers</label>
+          <input class="field-input" id="noMaxW" type="number" value="25" min="1"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Trial Ends</label>
+        <input class="field-input" id="noTrial" type="date"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeNewOrg()">Cancel</button>
+      <button class="btn-primary" onclick="createOrg()">Create Organisation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Payment Modal ── -->
+<div class="modal-overlay" id="payModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="payModalTitle">Log Manual Payment</div>
+      <button class="modal-close" onclick="closePayModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Amount *</label>
+          <input class="field-input" id="pmAmount" type="number" step="0.01" placeholder="49.00"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Currency</label>
+          <select class="field-input field-select" id="pmCurrency">
+            <option value="EUR">EUR €</option>
+            <option value="GBP">GBP £</option>
+            <option value="USD">USD $</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date Paid</label>
+        <input class="field-input" id="pmDate" type="date"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Notes</label>
+        <input class="field-input" id="pmNotes" type="text" placeholder="Bank transfer, invoice #…"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closePayModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitPayment()">Log Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Send Email Modal ── -->
+<div class="modal-overlay" id="emailModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="emailModalTitle">Send Email</div>
+      <button class="modal-close" onclick="closeEmailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="emailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeEmailModal()">Cancel</button>
+      <button class="btn-primary" id="emailModalSend">Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+const SUPABASE_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
+const ADMIN_EMAIL   = 'dylashsav@gmail.com';
+const EDGE_BASE     = SUPABASE_URL + '/functions/v1';
+const APP_URL       = 'https://work-force.nl/app.html';
+const VAULT_URL     = 'https://work-force.nl/vault.html';
+
+let sb, session, orgsData = [], workersData = [], orgSort = {key:'created_at', dir:-1}, workerSort = {key:'created_at', dir:-1};
+let currentOrgId = null, currentWorkerId = null;
+let payCtx = null; // {type:'org'|'worker', id, refreshFn}
+let emailCtx = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const { data: { session: s } } = await sb.auth.getSession();
+  if (s) await handleSession(s);
+
+  sb.auth.onAuthStateChange((_event, s) => {
+    if (s) handleSession(s);
+    else showAuth();
+  });
+
+  // Default trial date = 30 days
+  const d = new Date(); d.setDate(d.getDate() + 30);
+  document.getElementById('noTrial').value = d.toISOString().slice(0,10);
+  // Default pay date = today
+  document.getElementById('pmDate').value = new Date().toISOString().slice(0,10);
+});
+
+async function handleSession(s) {
+  session = s;
+  if (s.user.email !== ADMIN_EMAIL) {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('accessDenied').style.display = 'block';
+    return;
+  }
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('accessDenied').style.display = 'none';
+  const app = document.getElementById('mainApp');
+  app.style.display = 'flex';
+  document.getElementById('headerEmail').textContent = s.user.email;
+  await Promise.all([loadStats(), loadOrgs(), loadWorkers()]);
+}
+
+function showAuth() {
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('accessDenied').style.display = 'none';
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function doSignIn() {
+  const email = document.getElementById('authEmail').value.trim();
+  const pass  = document.getElementById('authPass').value;
+  const err   = document.getElementById('authErr');
+  const btn   = document.getElementById('authBtn');
+  err.textContent = '';
+  btn.textContent = 'Signing in…';
+  btn.disabled = true;
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.textContent = 'Sign In';
+  btn.disabled = false;
+  if (error) { err.textContent = error.message; return; }
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  showAuth();
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.adm-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.adm-tabpanel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const { data, error } = await sb.rpc('admin_get_stats');
+    if (error) throw error;
+    const s = typeof data === 'string' ? JSON.parse(data) : data;
+    document.getElementById('st-orgs').textContent         = s.total_orgs ?? 0;
+    document.getElementById('st-trials').textContent       = s.trial_orgs ?? 0;
+    document.getElementById('st-paid-orgs').textContent    = s.paid_orgs ?? 0;
+    document.getElementById('st-suspended').textContent    = s.suspended_orgs ?? 0;
+    document.getElementById('st-workers').textContent      = s.total_workers ?? 0;
+    document.getElementById('st-paid-workers').textContent = s.paid_workers ?? 0;
+  } catch(e) { console.error('stats', e); }
+}
+
+// ── Orgs ──────────────────────────────────────────────────────────────────────
+async function loadOrgs() {
+  const { data, error } = await sb.rpc('admin_get_orgs');
+  if (error) { orgsData = []; renderOrgs(); return; }
+  orgsData = (data || []).map(r => typeof r === 'string' ? JSON.parse(r) : r);
+  renderOrgs();
+}
+
+function filterOrgs() { renderOrgs(); }
+
+function sortOrgs(key) {
+  if (orgSort.key === key) orgSort.dir *= -1;
+  else { orgSort.key = key; orgSort.dir = 1; }
+  document.querySelectorAll('#orgTable th').forEach(th => th.classList.remove('sort-asc','sort-desc'));
+  renderOrgs();
+}
+
+function renderOrgs() {
+  const q = (document.getElementById('orgSearch').value || '').toLowerCase();
+  let rows = orgsData.filter(o =>
+    !q || (o.name||'').toLowerCase().includes(q) ||
+          (o.slug||'').toLowerCase().includes(q) ||
+          (o.owner_email||'').toLowerCase().includes(q)
+  );
+  const k = orgSort.key, d = orgSort.dir;
+  rows.sort((a,b) => {
+    const av = a[k] ?? '', bv = b[k] ?? '';
+    if (typeof av === 'number') return d * (av - bv);
+    return d * String(av).localeCompare(String(bv));
+  });
+  const tbody = document.getElementById('orgTbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="7">No organisations found</td></tr>'; return; }
+  tbody.innerHTML = rows.map(o => `
+    <tr onclick="openOrgPanel('${esc(o.id)}')">
+      <td><strong>${esc(o.name||'—')}</strong></td>
+      <td style="color:var(--text-l);font-family:monospace;font-size:12px">${esc(o.slug||'—')}</td>
+      <td>${planBadge(o.plan)}</td>
+      <td style="font-size:12px;color:var(--text-m)">${fmtDate(o.trial_ends)}</td>
+      <td style="font-size:12px">${o.worker_count ?? 0}</td>
+      <td style="font-size:12px;color:var(--text-m)">${esc(o.owner_email||'—')}</td>
+      <td style="font-size:12px;color:var(--text-l)">${fmtDate(o.created_at)}</td>
+    </tr>`).join('');
+}
+
+// ── Workers ───────────────────────────────────────────────────────────────────
+async function loadWorkers() {
+  const { data, error } = await sb.rpc('admin_get_workers');
+  if (error) { workersData = []; renderWorkers(); return; }
+  workersData = (data || []).map(r => typeof r === 'string' ? JSON.parse(r) : r);
+  renderWorkers();
+}
+
+function filterWorkers() { renderWorkers(); }
+
+function sortWorkers(key) {
+  if (workerSort.key === key) workerSort.dir *= -1;
+  else { workerSort.key = key; workerSort.dir = 1; }
+  renderWorkers();
+}
+
+function renderWorkers() {
+  const q = (document.getElementById('workerSearch').value || '').toLowerCase();
+  let rows = workersData.filter(w =>
+    !q || (w.full_name||'').toLowerCase().includes(q) ||
+          (w.email||'').toLowerCase().includes(q)
+  );
+  const k = workerSort.key, d = workerSort.dir;
+  rows.sort((a,b) => {
+    const av = a[k] ?? '', bv = b[k] ?? '';
+    if (typeof av === 'number') return d * (av - bv);
+    return d * String(av).localeCompare(String(bv));
+  });
+  const tbody = document.getElementById('workerTbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="6">No vault accounts found</td></tr>'; return; }
+  tbody.innerHTML = rows.map(w => `
+    <tr onclick="openWorkerPanel('${esc(w.id)}')">
+      <td><strong>${esc(w.full_name||'—')}</strong></td>
+      <td style="font-size:12px;color:var(--text-m)">${esc(w.email||'—')}</td>
+      <td>${planBadge(w.plan)}</td>
+      <td style="font-size:12px;color:var(--text-m)">${fmtDate(w.plan_expires)}</td>
+      <td style="font-size:12px">${w.linked_org_count ?? 0} org${(w.linked_org_count ?? 0) !== 1 ? 's' : ''}</td>
+      <td style="font-size:12px;color:var(--text-l)">${fmtDate(w.created_at)}</td>
+    </tr>`).join('');
+}
+
+// ── Org Detail Panel ──────────────────────────────────────────────────────────
+async function openOrgPanel(orgId) {
+  currentOrgId = orgId;
+  const panel = document.getElementById('orgPanel');
+  const overlay = document.getElementById('orgOverlay');
+  document.getElementById('opName').textContent = '…';
+  document.getElementById('opSub').textContent = '';
+  document.getElementById('orgPanelBody').innerHTML = '<div class="empty-state"><span class="loading-spinner"></span></div>';
+  panel.classList.add('open'); overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const { data, error } = await sb.rpc('admin_get_org_detail', { p_org_id: orgId });
+  if (error || !data) {
+    document.getElementById('orgPanelBody').innerHTML = `<div class="empty-state">Failed to load: ${esc(error?.message||'unknown')}</div>`;
+    return;
+  }
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+  const o = { ...(result.org || result), members: result.members || [], payments: result.payments || [] };
+  document.getElementById('opName').textContent = o.name || '—';
+  document.getElementById('opSub').innerHTML = `
+    <span style="font-family:monospace;font-size:11px">${esc(o.slug||'')} · created ${fmtDate(o.created_at)}</span>
+    ${o.stripe_customer_id ? ` · <a class="stripe-link" href="https://dashboard.stripe.com/customers/${esc(o.stripe_customer_id)}" target="_blank" rel="noreferrer">Stripe ↗</a>` : ''}
+  `;
+  renderOrgPanelBody(o);
+}
+
+function renderOrgPanelBody(o) {
+  const isManual = !o.stripe_subscription_id;
+  const body = document.getElementById('orgPanelBody');
+  body.innerHTML = `
+    <!-- Subscription Card -->
+    <div class="card">
+      <div class="card-title">Subscription ${isManual ? '<span class="badge badge-manual">⚠ Manual</span>' : '<span class="badge badge-stripe">Stripe</span>'}</div>
+      <div class="field-group">
+        <label class="field-label">Plan</label>
+        <select class="field-input field-select" id="opPlan">
+          <option value="trial"${o.plan==='trial'?' selected':''}>Trial</option>
+          <option value="starter"${o.plan==='starter'?' selected':''}>Starter — €49/mo</option>
+          <option value="growth"${o.plan==='growth'?' selected':''}>Growth — €99/mo</option>
+          <option value="enterprise"${o.plan==='enterprise'?' selected':''}>Enterprise — €199/mo</option>
+          <option value="suspended"${o.plan==='suspended'?' selected':''}>Suspended</option>
+        </select>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Trial Ends</label>
+          <input class="field-input" id="opTrial" type="date" value="${(o.trial_ends||'').slice(0,10)}"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Max Workers</label>
+          <input class="field-input" id="opMaxW" type="number" value="${o.max_workers||25}" min="1"/>
+        </div>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Stripe Customer ID</label>
+          <input class="field-input" id="opStripeCust" type="text" value="${esc(o.stripe_customer_id||'')}" placeholder="cus_…"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Stripe Subscription ID</label>
+          <input class="field-input" id="opStripeSub" type="text" value="${esc(o.stripe_subscription_id||'')}" placeholder="sub_…"/>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-primary btn-sm" onclick="saveOrgSub('${esc(o.id)}')">Save Subscription</button>
+      </div>
+    </div>
+
+    <!-- Contact Card -->
+    <div class="card">
+      <div class="card-title">Contact</div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Owner Email</label>
+          <input class="field-input" id="opOwner" type="email" value="${esc(o.owner_email||'')}"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Compliance Email</label>
+          <input class="field-input" id="opComp" type="email" value="${esc(o.compliance_email||'')}"/>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-secondary btn-sm" onclick="saveOrgContact('${esc(o.id)}')">Save Contact</button>
+        <button class="btn-secondary btn-sm" onclick="sendMagicLink('${esc(o.owner_email||'')}','org','${esc(o.name||'')}')">Send Login Link</button>
+        <button class="btn-secondary btn-sm" onclick="openPayReminder('org','${esc(o.id)}','${esc(o.owner_email||'')}','${esc(o.name||'')}')">Payment Reminder</button>
+        <button class="btn-secondary btn-sm" onclick="openCustomEmail('${esc(o.owner_email||'')}')">Custom Email</button>
+      </div>
+    </div>
+
+    <!-- Members Card -->
+    <div class="card">
+      <div class="card-title">Members (${(o.members||[]).length})</div>
+      ${renderMembersTable(o.members||[], o.id)}
+    </div>
+
+    <!-- Payment Log -->
+    <div class="card">
+      <div class="card-title">Payment Log</div>
+      ${renderPayLog(o.payments||[])}
+      <div style="margin-top:12px">
+        <button class="btn-secondary btn-sm" onclick="openLogPayment('org','${esc(o.id)}',()=>openOrgPanel('${esc(o.id)}'))">+ Log Manual Payment</button>
+      </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="danger-zone" id="dangerZone">
+      <div class="danger-zone-toggle" onclick="this.closest('.danger-zone').classList.toggle('open')">
+        <span>Danger Zone</span>
+        <span style="color:var(--text-l);font-size:16px">›</span>
+      </div>
+      <div class="danger-zone-body">
+        <p style="font-size:12px;color:var(--text-m);margin-bottom:12px">These actions are irreversible. Proceed with caution.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${o.plan !== 'suspended'
+            ? `<button class="btn-danger btn-sm" onclick="suspendOrg('${esc(o.id)}',true)">Suspend Org</button>`
+            : `<button class="btn-secondary btn-sm" onclick="suspendOrg('${esc(o.id)}',false)">Re-activate Org</button>`}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMembersTable(members, orgId) {
+  if (!members.length) return '<div class="empty-state">No members</div>';
+  return `<table class="mini-table">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Active</th></tr></thead>
+    <tbody>${members.map(m => `
+      <tr>
+        <td style="font-size:12px">${esc(m.full_name||'—')}</td>
+        <td style="font-size:11px;color:var(--text-l)">${esc(m.email||'—')}</td>
+        <td>
+          <select class="mini-select" onchange="updateMemberRole('${esc(m.id)}','${esc(orgId)}',this.value)">
+            ${['admin','planner','compliance','viewer','no_access'].map(r =>
+              `<option value="${r}"${m.role===r?' selected':''}>${r}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td>
+          <label class="mini-toggle">
+            <input type="checkbox" ${m.active?'checked':''} onchange="updateMemberActive('${esc(m.id)}','${esc(orgId)}',this.checked)"/>
+            <span class="mini-toggle-slider"></span>
+          </label>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+function renderPayLog(payments) {
+  if (!payments.length) return '<div class="empty-state" style="padding:16px">No payments recorded</div>';
+  return payments.map(p => {
+    const sym = p.currency==='EUR'?'€':p.currency==='GBP'?'£':'$';
+    const isStripe = p.method === 'stripe';
+    return `<div class="pay-row">
+      <div><span class="badge-method ${isStripe?'badge-stripe-method':'badge-manual-method'}">${isStripe?'STRIPE':'MANUAL'}</span></div>
+      <div class="pay-row-main">
+        <div class="pay-row-amount">${sym}${Number(p.amount||0).toFixed(2)} ${p.currency||'EUR'}</div>
+        <div class="pay-row-meta">${fmtDate(p.paid_at||p.created_at)} ${p.recorded_by ? `· ${esc(p.recorded_by)}` : ''}${isStripe&&p.stripe_payment_id ? ` · <a class="stripe-link" href="https://dashboard.stripe.com/payments/${esc(p.stripe_payment_id)}" target="_blank">${esc(p.stripe_payment_id.slice(0,14))}…</a>` : ''}</div>
+        ${p.notes ? `<div class="pay-row-notes">${esc(p.notes)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function closeOrgPanel() {
+  document.getElementById('orgPanel').classList.remove('open');
+  document.getElementById('orgOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentOrgId = null;
+}
+
+// ── Org mutations ─────────────────────────────────────────────────────────────
+async function saveOrgSub(orgId) {
+  const plan        = document.getElementById('opPlan').value;
+  const trial_ends  = document.getElementById('opTrial').value || null;
+  const max_workers = parseInt(document.getElementById('opMaxW').value) || 25;
+  const stripe_customer_id     = document.getElementById('opStripeCust').value.trim() || null;
+  const stripe_subscription_id = document.getElementById('opStripeSub').value.trim() || null;
+
+  const { error } = await sb.rpc('admin_update_org', {
+    p_org_id: orgId, p_plan: plan, p_trial_ends: trial_ends,
+    p_max_workers: max_workers,
+    p_stripe_customer_id: stripe_customer_id,
+    p_stripe_subscription_id: stripe_subscription_id,
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Subscription saved');
+  await loadOrgs();
+  openOrgPanel(orgId);
+}
+
+async function saveOrgContact(orgId) {
+  const owner_email      = document.getElementById('opOwner').value.trim();
+  const compliance_email = document.getElementById('opComp').value.trim() || null;
+  const { error } = await sb.rpc('admin_update_org', {
+    p_org_id: orgId, p_owner_email: owner_email, p_compliance_email: compliance_email,
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Contact saved');
+  await loadOrgs();
+  openOrgPanel(orgId);
+}
+
+async function updateMemberRole(profileId, orgId, role) {
+  const { error } = await sb.rpc('admin_update_member', { p_profile_id: profileId, p_role: role });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Role updated');
+}
+
+async function updateMemberActive(profileId, orgId, active) {
+  const { error } = await sb.rpc('admin_update_member', { p_profile_id: profileId, p_active: active });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast(active ? 'Member activated' : 'Member deactivated');
+}
+
+async function suspendOrg(orgId, suspend) {
+  if (!confirm(suspend ? 'Suspend this organisation? Their team will lose access.' : 'Re-activate this organisation?')) return;
+  const { error } = await sb.rpc('admin_suspend_org', { p_org_id: orgId, p_suspended: suspend });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast(suspend ? 'Org suspended' : 'Org re-activated');
+  await loadOrgs();
+  openOrgPanel(orgId);
+}
+
+// ── Worker Detail Panel ───────────────────────────────────────────────────────
+async function openWorkerPanel(workerId) {
+  currentWorkerId = workerId;
+  const panel = document.getElementById('wkPanel');
+  const overlay = document.getElementById('wkOverlay');
+  document.getElementById('wpName').textContent = '…';
+  document.getElementById('wpSub').textContent = '';
+  document.getElementById('wkPanelBody').innerHTML = '<div class="empty-state"><span class="loading-spinner"></span></div>';
+  panel.classList.add('open'); overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  const { data, error } = await sb.rpc('admin_get_worker_detail', { p_worker_id: workerId });
+  if (error || !data) {
+    document.getElementById('wkPanelBody').innerHTML = `<div class="empty-state">Failed to load: ${esc(error?.message||'unknown')}</div>`;
+    return;
+  }
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+  const w = { ...(result.worker || result), links: result.links || [], payments: result.payments || [] };
+  document.getElementById('wpName').textContent = w.full_name || w.email || '—';
+  document.getElementById('wpSub').innerHTML = `
+    <span style="font-size:11px">${esc(w.email||'')} · joined ${fmtDate(w.created_at)}</span>
+    ${w.stripe_customer_id ? ` · <a class="stripe-link" href="https://dashboard.stripe.com/customers/${esc(w.stripe_customer_id)}" target="_blank" rel="noreferrer">Stripe ↗</a>` : ''}
+  `;
+  renderWorkerPanelBody(w);
+}
+
+function renderWorkerPanelBody(w) {
+  const isManual = !w.stripe_subscription_id;
+  const body = document.getElementById('wkPanelBody');
+  body.innerHTML = `
+    <!-- Vault Plan -->
+    <div class="card">
+      <div class="card-title">Vault Plan ${isManual ? '<span class="badge badge-manual">⚠ Manual</span>' : '<span class="badge badge-stripe">Stripe</span>'}</div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Plan</label>
+          <select class="field-input field-select" id="wpPlan">
+            <option value="free"${w.plan==='free'?' selected':''}>Free</option>
+            <option value="vault"${w.plan==='vault'?' selected':''}>Vault (Paid)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Plan Expires</label>
+          <input class="field-input" id="wpExpires" type="date" value="${(w.plan_expires||'').slice(0,10)}"/>
+        </div>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Stripe Customer ID</label>
+          <input class="field-input" id="wpStripeCust" type="text" value="${esc(w.stripe_customer_id||'')}" placeholder="cus_…"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Stripe Subscription ID</label>
+          <input class="field-input" id="wpStripeSub" type="text" value="${esc(w.stripe_subscription_id||'')}" placeholder="sub_…"/>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-primary btn-sm" onclick="saveWorkerPlan('${esc(w.id)}')">Save Plan</button>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="card">
+      <div class="card-title">Contact</div>
+      <div class="card-row"><span class="card-row-label">Email</span><span class="card-row-value">${esc(w.email||'—')}</span></div>
+      <div class="card-row"><span class="card-row-label">Name</span><span class="card-row-value">${esc(w.full_name||'—')}</span></div>
+      <div class="card-actions" style="margin-top:12px">
+        <button class="btn-secondary btn-sm" onclick="sendMagicLink('${esc(w.email||'')}','worker','${esc(w.full_name||'')}')">Send Vault Login Link</button>
+        <button class="btn-secondary btn-sm" onclick="openPayReminder('worker','${esc(w.id)}','${esc(w.email||'')}','${esc(w.full_name||'')}')">Payment Reminder</button>
+        <button class="btn-secondary btn-sm" onclick="openCustomEmail('${esc(w.email||'')}')">Custom Email</button>
+      </div>
+    </div>
+
+    <!-- Linked Orgs -->
+    <div class="card">
+      <div class="card-title">Linked Organisations (${(w.links||[]).length})</div>
+      ${(w.links||[]).length ? `<table class="mini-table">
+        <thead><tr><th>Org</th><th>Worker Name</th><th>Status</th><th>Linked</th></tr></thead>
+        <tbody>${(w.links||[]).map(l => `
+          <tr>
+            <td style="font-size:12px;font-weight:600">${esc(l.org_name||'—')}</td>
+            <td style="font-size:12px;color:var(--text-m)">${esc(l.worker_name||'—')}</td>
+            <td>${statusBadge(l.status)}</td>
+            <td style="font-size:11px;color:var(--text-l)">${fmtDate(l.linked_at)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '<div class="empty-state" style="padding:12px">Not linked to any organisations</div>'}
+    </div>
+
+    <!-- Payment Log -->
+    <div class="card">
+      <div class="card-title">Payment Log</div>
+      ${renderPayLog(w.payments||[])}
+      <div style="margin-top:12px">
+        <button class="btn-secondary btn-sm" onclick="openLogPayment('worker','${esc(w.id)}',()=>openWorkerPanel('${esc(w.id)}'))">+ Log Manual Payment</button>
+      </div>
+    </div>
+  `;
+}
+
+function closeWorkerPanel() {
+  document.getElementById('wkPanel').classList.remove('open');
+  document.getElementById('wkOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentWorkerId = null;
+}
+
+async function saveWorkerPlan(workerId) {
+  const plan         = document.getElementById('wpPlan').value;
+  const plan_expires = document.getElementById('wpExpires').value || null;
+  const stripe_customer_id     = document.getElementById('wpStripeCust').value.trim() || null;
+  const stripe_subscription_id = document.getElementById('wpStripeSub').value.trim() || null;
+
+  const { error } = await sb.rpc('admin_update_worker', {
+    p_worker_id: workerId,
+    p_plan: plan,
+    p_plan_expires: plan_expires,
+    p_stripe_customer_id: stripe_customer_id,
+    p_stripe_subscription_id: stripe_subscription_id,
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Plan saved');
+  await loadWorkers();
+  openWorkerPanel(workerId);
+}
+
+// ── New Org ───────────────────────────────────────────────────────────────────
+function openNewOrg() {
+  document.getElementById('noName').value = '';
+  document.getElementById('noSlug').value = '';
+  document.getElementById('noOwner').value = '';
+  document.getElementById('noPlan').value = 'trial';
+  document.getElementById('noMaxW').value = '25';
+  const d = new Date(); d.setDate(d.getDate()+30);
+  document.getElementById('noTrial').value = d.toISOString().slice(0,10);
+  document.getElementById('newOrgModal').classList.add('open');
+}
+function closeNewOrg() { document.getElementById('newOrgModal').classList.remove('open'); }
+function autoSlug() {
+  const name = document.getElementById('noName').value;
+  document.getElementById('noSlug').value = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+async function createOrg() {
+  const name       = document.getElementById('noName').value.trim();
+  const slug       = document.getElementById('noSlug').value.trim();
+  const owner      = document.getElementById('noOwner').value.trim();
+  const plan       = document.getElementById('noPlan').value;
+  const trial_ends = document.getElementById('noTrial').value || null;
+  const max_workers = parseInt(document.getElementById('noMaxW').value) || 25;
+  if (!name || !slug || !owner) { showToast('Name, slug and owner email are required', true); return; }
+  const { data, error } = await sb.rpc('admin_create_org', {
+    p_slug: slug, p_name: name, p_owner_email: owner,
+    p_plan: plan, p_trial_ends: trial_ends, p_max_workers: max_workers,
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Organisation created');
+  closeNewOrg();
+  await Promise.all([loadOrgs(), loadStats()]);
+  if (data) openOrgPanel(data);
+}
+
+// ── Payment log ───────────────────────────────────────────────────────────────
+function openLogPayment(type, entityId, refreshFn) {
+  payCtx = { type, id: entityId, refreshFn };
+  document.getElementById('pmAmount').value = '';
+  document.getElementById('pmCurrency').value = 'EUR';
+  document.getElementById('pmDate').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pmNotes').value = '';
+  document.getElementById('payModalTitle').textContent = 'Log Manual Payment';
+  document.getElementById('payModal').classList.add('open');
+}
+function closePayModal() { document.getElementById('payModal').classList.remove('open'); payCtx = null; }
+async function submitPayment() {
+  if (!payCtx) return;
+  const amount   = parseFloat(document.getElementById('pmAmount').value);
+  const currency = document.getElementById('pmCurrency').value;
+  const paid_at  = document.getElementById('pmDate').value || null;
+  const notes    = document.getElementById('pmNotes').value.trim() || null;
+  if (isNaN(amount) || amount <= 0) { showToast('Enter a valid amount', true); return; }
+  const { error } = await sb.rpc('admin_log_payment', {
+    p_entity_type: payCtx.type, p_entity_id: payCtx.id,
+    p_amount: amount, p_currency: currency, p_notes: notes, p_paid_at: paid_at,
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Payment logged');
+  closePayModal();
+  if (payCtx.refreshFn) payCtx.refreshFn();
+}
+
+// ── Email actions ─────────────────────────────────────────────────────────────
+async function sendMagicLink(email, type, name) {
+  if (!email) { showToast('No email address available', true); return; }
+  if (!confirm(`Send a magic login link to ${email}?`)) return;
+  const jwt = session?.access_token;
+  const res = await fetch(`${EDGE_BASE}/admin-action`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'send_magic_link', payload: { email, type, name } }),
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) { showToast('Error: ' + (data.error||'Send failed'), true); return; }
+  showToast(`Login link sent to ${email}`);
+}
+
+function openPayReminder(entityType, entityId, email, name) {
+  emailCtx = { action: 'send_payment_reminder', entityType, entityId, email };
+  const today = new Date(); today.setDate(today.getDate()+7);
+  document.getElementById('emailModalTitle').textContent = 'Send Payment Reminder';
+  document.getElementById('emailModalBody').innerHTML = `
+    <div class="field-group"><label class="field-label">To</label><input class="field-input" id="emTo" type="email" value="${esc(email)}" readonly/></div>
+    <div class="fields-2col">
+      <div class="field-group"><label class="field-label">Amount *</label><input class="field-input" id="emAmount" type="number" step="0.01" placeholder="49.00"/></div>
+      <div class="field-group"><label class="field-label">Currency</label><select class="field-input field-select" id="emCurr"><option>EUR</option><option>GBP</option><option>USD</option></select></div>
+    </div>
+    <div class="field-group"><label class="field-label">Due Date</label><input class="field-input" id="emDue" type="date" value="${today.toISOString().slice(0,10)}"/></div>
+    <div class="field-group"><label class="field-label">Plan / Description</label><input class="field-input" id="emPlan" type="text" placeholder="Starter subscription"/></div>
+    <div class="field-group"><label class="field-label">Notes (optional)</label><input class="field-input" id="emNotes" type="text" placeholder="Additional info…"/></div>
+  `;
+  document.getElementById('emailModalSend').onclick = sendPayReminderEmail;
+  document.getElementById('emailModal').classList.add('open');
+}
+
+async function sendPayReminderEmail() {
+  const email    = document.getElementById('emTo').value.trim();
+  const amount   = parseFloat(document.getElementById('emAmount').value);
+  const currency = document.getElementById('emCurr').value;
+  const due_date = document.getElementById('emDue').value || null;
+  const plan_name = document.getElementById('emPlan').value.trim() || null;
+  const notes    = document.getElementById('emNotes').value.trim() || null;
+  if (isNaN(amount) || amount <= 0) { showToast('Enter a valid amount', true); return; }
+  const jwt = session?.access_token;
+  const res = await fetch(`${EDGE_BASE}/admin-action`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'send_payment_reminder', payload: { email, amount, currency, due_date, plan_name, notes } }),
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) { showToast('Error: ' + (data.error||'Send failed'), true); return; }
+  showToast(`Reminder sent to ${email}`);
+  closeEmailModal();
+}
+
+function openCustomEmail(email) {
+  emailCtx = { action: 'send_custom_message', email };
+  document.getElementById('emailModalTitle').textContent = 'Send Custom Email';
+  document.getElementById('emailModalBody').innerHTML = `
+    <div class="field-group"><label class="field-label">To</label><input class="field-input" id="emTo" type="email" value="${esc(email)}"/></div>
+    <div class="field-group"><label class="field-label">Subject *</label><input class="field-input" id="emSubject" type="text" placeholder="Re: Your Work Force account…"/></div>
+    <div class="field-group"><label class="field-label">Message *</label><textarea class="field-input" id="emMessage" rows="6" style="resize:vertical" placeholder="Type your message…"></textarea></div>
+  `;
+  document.getElementById('emailModalSend').onclick = sendCustomEmail;
+  document.getElementById('emailModal').classList.add('open');
+}
+
+async function sendCustomEmail() {
+  const email   = document.getElementById('emTo').value.trim();
+  const subject = document.getElementById('emSubject').value.trim();
+  const message = document.getElementById('emMessage').value.trim();
+  if (!email || !subject || !message) { showToast('Fill in all fields', true); return; }
+  const jwt = session?.access_token;
+  const res = await fetch(`${EDGE_BASE}/admin-action`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'send_custom_message', payload: { email, subject, message } }),
+  });
+  const data = await res.json().catch(()=>({}));
+  if (!res.ok) { showToast('Error: ' + (data.error||'Send failed'), true); return; }
+  showToast(`Email sent to ${email}`);
+  closeEmailModal();
+}
+
+function closeEmailModal() { document.getElementById('emailModal').classList.remove('open'); emailCtx = null; }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}); }
+  catch(_) { return d; }
+}
+
+function planBadge(plan) {
+  const cls = {
+    trial:'badge-trial', starter:'badge-starter', growth:'badge-growth',
+    enterprise:'badge-enterprise', suspended:'badge-suspended', vault:'badge-vault', free:'badge-free'
+  }[plan] || 'badge-free';
+  const lbl = {
+    trial:'Trial', starter:'Starter', growth:'Growth', enterprise:'Enterprise',
+    suspended:'Suspended', vault:'Vault', free:'Free'
+  }[plan] || (plan||'—');
+  return `<span class="badge ${cls}">${esc(lbl)}</span>`;
+}
+
+function statusBadge(s) {
+  const cls = {active:'badge-starter', invited:'badge-trial', unlinked:'badge-free'}[s] || 'badge-free';
+  return `<span class="badge ${cls}" style="font-size:10px;padding:2px 7px">${esc(s||'—')}</span>`;
+}
+
+let toastTimer;
+function showToast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isErr ? '#9b1c1c' : '#1a2035';
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+
+// Close modals on overlay click
+document.getElementById('newOrgModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewOrg(); });
+document.getElementById('payModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePayModal(); });
+document.getElementById('emailModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEmailModal(); });
+
+// Enter key on auth
+document.getElementById('authPass').addEventListener('keydown', e => { if(e.key==='Enter') doSignIn(); });
+document.getElementById('authEmail').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('authPass').focus(); });
+</script>
+</body>
+</html>
