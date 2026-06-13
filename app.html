@@ -5222,8 +5222,8 @@ async function paPersistFileRemoval(key, a, removedFile, willResetSig){
     sbSuppressRealtimeUntil = Math.max(sbSuppressRealtimeUntil, Date.now() + 8000);
     // Deactivate the file rows in DB (fire-and-forget; sig reset already persisted above)
     if(sbClient&&sbSession&&sbCanWriteTable('project_assignment_files')){
-      sbClient.from('project_assignment_files').update({active:false}).eq('id',key).catch(()=>{});
-      sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).catch(()=>{});
+      sbClient.from('project_assignment_files').update({active:false}).eq('id',key).then(()=>{},()=>{});
+      sbClient.from('project_assignment_files').update({active:false}).eq('file_path',key).then(()=>{},()=>{});
     }
   }catch(e){
     console.warn('[TMC] paPersistFileRemoval: DB/history work failed (UI already updated):', e.message);
@@ -7777,7 +7777,7 @@ async function wdsMakePrimary(wid, setId){
     if(error) throw error;
     w.docSetId = setId;
     // Also ensure the entry is active in worker_document_sets
-    await sbClient.from('worker_document_sets').update({active:true}).eq('worker_id',wid).eq('document_set_id',setId).catch(()=>{});
+    await sbClient.from('worker_document_sets').update({active:true}).eq('worker_id',wid).eq('document_set_id',setId).then(()=>{},()=>{});
     // Sync the dropdown value if this modal is open
     const sel = document.getElementById('fDocSet'); if(sel) sel.value = setId;
     renderAppliedSetsInModal(wid);
@@ -7813,8 +7813,8 @@ async function wdsDelete(wid, setId){
     if(deletingKeys.length && w){
       for(const dk of deletingKeys){
         const docId = `${wid}__${dk}`;
-        await sbClient.from('worker_documents').update({active:false}).eq('id',docId).catch(()=>{});
-        await sbClient.from('worker_document_files').update({active:false}).eq('worker_id',wid).eq('worker_document_id',docId).catch(()=>{});
+        await sbClient.from('worker_documents').update({active:false}).eq('id',docId).then(()=>{},()=>{});
+        await sbClient.from('worker_document_files').update({active:false}).eq('worker_id',wid).eq('worker_document_id',docId).then(()=>{},()=>{});
         if(fileStore[wid]) delete fileStore[wid][dk];
         if(w.docs) delete w.docs[dk];
       }
@@ -8382,13 +8382,13 @@ async function uploadProjectFiles(input){
 async function updateProjectFileCaption(fileId, caption){
   const f = projectFiles.find(x=>x.id===fileId); if(!f) return;
   f.caption = caption;
-  if(sbClient && sbSession) sbClient.from('project_files').update({caption}).eq('id',fileId).catch(()=>{});
+  if(sbClient && sbSession) sbClient.from('project_files').update({caption}).eq('id',fileId).then(()=>{},()=>{});
 }
 
 async function toggleProjectFileVisibility(fileId, visible){
   const f = projectFiles.find(x=>x.id===fileId); if(!f) return;
   f.visibleToWorkers = visible;
-  if(sbClient && sbSession) sbClient.from('project_files').update({visible_to_workers:visible}).eq('id',fileId).catch(()=>{});
+  if(sbClient && sbSession) sbClient.from('project_files').update({visible_to_workers:visible}).eq('id',fileId).then(()=>{},()=>{});
 }
 
 async function removeProjectFile(fileId){
@@ -8397,7 +8397,7 @@ async function removeProjectFile(fileId){
   projectFiles = projectFiles.filter(x=>x.id!==fileId);
   renderProjectFilesModal(editingProjectId||f.projectId);
   if(sbClient && sbSession){
-    sbClient.from('project_files').update({active:false}).eq('id',fileId).catch(()=>{});
+    sbClient.from('project_files').update({active:false}).eq('id',fileId).then(()=>{},()=>{});
     sbClient.storage.from('tmc-documents').remove([f.filePath]).catch(()=>{});
   }
 }
