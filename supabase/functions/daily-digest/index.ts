@@ -13,7 +13,7 @@ const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 // domain is verified in Resend. Until then the sandbox fallback is used.
 const FROM      = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
 const SITE_URL  = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
-const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://vault.work-force.nl'
+const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://work-force.nl/vault.html'
 
 // Default section config — merged with whatever the org has stored in settings.
 const SECTION_DEFAULTS: Record<string, { enabled: boolean; days?: number }> = {

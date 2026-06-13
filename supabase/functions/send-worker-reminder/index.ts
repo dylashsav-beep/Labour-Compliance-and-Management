@@ -5,7 +5,7 @@ const SUPABASE_URL   = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const FROM      = Deno.env.get('DIGEST_FROM') || 'Work Force Compliance <onboarding@resend.dev>'
 const SITE_URL  = Deno.env.get('SITE_URL')    || 'https://work-force.nl'
-const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://vault.work-force.nl'
+const VAULT_URL = Deno.env.get('VAULT_URL')   || 'https://work-force.nl/vault.html'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
