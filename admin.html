@@ -285,6 +285,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
       <div class="tbl-toolbar">
         <input class="tbl-search" id="workerSearch" type="search" placeholder="Search name or email…" oninput="filterWorkers()"/>
         <div class="tbl-spacer"></div>
+        <button class="btn-primary" onclick="openNewWorker()">+ New Vault User</button>
       </div>
       <div style="overflow-x:auto">
         <table class="data-table" id="workerTable">
@@ -378,6 +379,50 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeNewOrg()">Cancel</button>
       <button class="btn-primary" onclick="createOrg()">Create Organisation</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── New Vault User Modal ── -->
+<div class="modal-overlay" id="newWorkerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Create New Vault User</div>
+      <button class="modal-close" onclick="closeNewWorker()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <label class="field-label">Email *</label>
+        <input class="field-input" id="nwEmail" type="email" placeholder="worker@example.com"/>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Full Name</label>
+        <input class="field-input" id="nwName" type="text" placeholder="Jan de Vries"/>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Plan</label>
+          <select class="field-input field-select" id="nwPlan">
+            <option value="free">Free</option>
+            <option value="vault">Vault (Paid)</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Plan Expires</label>
+          <input class="field-input" id="nwExpires" type="date"/>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-m);cursor:pointer;margin-top:4px">
+        <input type="checkbox" id="nwInvite" checked style="width:16px;height:16px;cursor:pointer"/>
+        Email them a vault sign-in link now
+      </label>
+      <p style="font-size:11px;color:var(--text-l);margin-top:10px;line-height:1.5">
+        If the email already has an account, it will be linked to a vault profile instead of creating a duplicate.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeNewWorker()">Cancel</button>
+      <button class="btn-primary" id="nwCreateBtn" onclick="createVaultUser()">Create Vault User</button>
     </div>
   </div>
 </div>
@@ -1004,6 +1049,46 @@ async function createOrg() {
   if (data) openOrgPanel(data);
 }
 
+// ── New Vault User ────────────────────────────────────────────────────────────
+function openNewWorker() {
+  document.getElementById('nwEmail').value = '';
+  document.getElementById('nwName').value = '';
+  document.getElementById('nwPlan').value = 'free';
+  document.getElementById('nwExpires').value = '';
+  document.getElementById('nwInvite').checked = true;
+  document.getElementById('newWorkerModal').classList.add('open');
+}
+function closeNewWorker() { document.getElementById('newWorkerModal').classList.remove('open'); }
+async function createVaultUser() {
+  const email     = document.getElementById('nwEmail').value.trim();
+  const full_name = document.getElementById('nwName').value.trim() || null;
+  const plan      = document.getElementById('nwPlan').value;
+  const plan_expires = document.getElementById('nwExpires').value || null;
+  const send_invite  = document.getElementById('nwInvite').checked;
+  if (!email) { showToast('Email is required', true); return; }
+  const btn = document.getElementById('nwCreateBtn');
+  btn.textContent = 'Creating…'; btn.disabled = true;
+  const jwt = session?.access_token;
+  let data = {};
+  try {
+    const res = await fetch(`${EDGE_BASE}/admin-action`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_vault_user', payload: { email, full_name, plan, plan_expires, send_invite } }),
+    });
+    data = await res.json().catch(()=>({}));
+    if (!res.ok) { showToast('Error: ' + (data.error||'Create failed'), true); return; }
+  } catch(e) {
+    showToast('Error: ' + (e.message||'Create failed'), true); return;
+  } finally {
+    btn.textContent = 'Create Vault User'; btn.disabled = false;
+  }
+  showToast(send_invite ? 'Vault user created — invite sent' : 'Vault user created');
+  closeNewWorker();
+  await Promise.all([loadWorkers(), loadStats()]);
+  if (data.worker_id) openWorkerPanel(data.worker_id);
+}
+
 // ── Payment log ───────────────────────────────────────────────────────────────
 function openLogPayment(type, entityId, refreshFn) {
   payCtx = { type, id: entityId, refreshFn };
@@ -1154,6 +1239,7 @@ function showToast(msg, isErr=false) {
 
 // Close modals on overlay click
 document.getElementById('newOrgModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewOrg(); });
+document.getElementById('newWorkerModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewWorker(); });
 document.getElementById('payModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePayModal(); });
 document.getElementById('emailModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEmailModal(); });
 

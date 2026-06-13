@@ -60,6 +60,99 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const { action, payload } = body
 
+    // ── create_vault_user ─────────────────────────────────────────────────────
+    // Creates (or reuses) an auth user and a worker_accounts row, so the super
+    // admin can add a vault worker manually. worker_accounts.id is FK to
+    // auth.users(id), so the auth user MUST exist first — service-role only.
+    if (action === 'create_vault_user') {
+      const { email, full_name, plan, plan_expires, send_invite } = payload || {}
+      if (!email) return json({ error: 'email required' }, 400)
+
+      let userId: string | null = null
+
+      // 1. Try to create the auth user (email pre-confirmed so a magic link works)
+      const createRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SERVICE_KEY}`, 'apikey': SERVICE_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, email_confirm: true, user_metadata: { full_name: full_name || null } }),
+      })
+      const createData = await createRes.json()
+      if (createRes.ok) {
+        userId = createData.id || createData.user?.id || null
+      } else {
+        // Likely already registered — resolve the existing user id via generate_link
+        const lookupRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SERVICE_KEY}`, 'apikey': SERVICE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'magiclink', email }),
+        })
+        const lookupData = await lookupRes.json()
+        if (!lookupRes.ok) {
+          throw new Error(createData?.msg || createData?.message || lookupData?.message || 'Failed to create user')
+        }
+        userId = lookupData.user?.id || lookupData.id || null
+      }
+      if (!userId) throw new Error('Could not resolve user id')
+
+      // 2. Upsert the worker_accounts row
+      const { error: upErr } = await sb.from('worker_accounts').upsert({
+        id: userId,
+        email,
+        full_name: full_name || null,
+        plan: plan || 'free',
+        plan_expires: plan_expires || null,
+      }, { onConflict: 'id' })
+      if (upErr) throw new Error(upErr.message)
+
+      // 3. Optionally email them a sign-in link to the vault
+      if (send_invite) {
+        const genRes = await fetch(`${SUPABASE_URL}/auth/v1/admin/generate_link`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${SERVICE_KEY}`, 'apikey': SERVICE_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ type: 'magiclink', email, options: { redirect_to: VAULT_URL } }),
+        })
+        const genData = await genRes.json()
+        const link = genData.action_link || genData.properties?.action_link
+        if (genRes.ok && link) {
+          const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<div style="max-width:560px;margin:32px auto;padding:0 16px;">
+  <div style="background:#1a2035;border-radius:10px 10px 0 0;padding:28px 32px;">
+    <div style="font-size:20px;font-weight:700;color:#fff;">Work Force</div>
+    <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Worker Vault</div>
+  </div>
+  <div style="background:#fff;padding:32px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+    <p style="font-size:15px;color:#1a2340;margin:0 0 8px;font-weight:600;">Hi${full_name ? ` ${esc(full_name)}` : ''},</p>
+    <p style="font-size:14px;color:#4a5568;margin:0 0 28px;line-height:1.6;">
+      A Worker Vault account has been created for you. Click below to sign in and access your portable compliance documents. This link expires in 1 hour.
+    </p>
+    <div style="text-align:center;margin-bottom:28px;">
+      <a href="${esc(link)}" style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:8px;">
+        Open your Worker Vault →
+      </a>
+    </div>
+    <p style="font-size:11px;color:#94a3b8;margin:0;text-align:center;word-break:break-all;">Or copy this link: ${esc(link)}</p>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:14px 24px;text-align:center;">
+    <span style="font-size:11px;color:#94a3b8;">Work Force · Do not reply to this email</span>
+  </div>
+</div></body></html>`
+          await sendEmail(email, 'Your Work Force Vault account', html)
+        }
+      }
+
+      return json({ ok: true, worker_id: userId })
+    }
+
     // ── send_magic_link ───────────────────────────────────────────────────────
     if (action === 'send_magic_link') {
       const { email, type, name } = payload || {}
