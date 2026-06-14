@@ -4609,7 +4609,7 @@ function renderTable(){
     return `<tr style="${!workerActive?'opacity:.58;background:#fafafa;':''}">
       <td><div class="worker-cell">
         <div class="avatar" style="background:${bg};color:${col};">${ini(w.name)}</div>
-        <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}</div></div>
+        <div><div class="worker-name">${w.name}</div><div class="worker-id">${[w.ref, w.nat, w.agency].filter(Boolean).join(' · ')}${w.uploadCode?` <span style="display:inline-block;padding:1px 5px;background:#ede9fe;color:#6d28d9;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:.03em;margin-left:2px;">${esc(w.uploadCode)}</span>`:''}</div></div>
       </div></td>
       <td><span class="type-badge ${w.type}">${workerTypeLabel(w.type)}</span></td>
       <td id="assigncell_${w.id}">${weekPAHtml}</td>
@@ -5601,6 +5601,24 @@ async function saveWorkerAgency(wid, agency){
     if(error){ console.warn('[TMC] saveWorkerAgency failed:', error.message); }
   }
 }
+async function saveWorkerUploadCode(wid, code){
+  if(!requireAction('workers','set upload code')) return;
+  const w=workers.find(x=>x.id===wid); if(!w) return;
+  const trimmed = (code||'').trim().toUpperCase();
+  if(w.uploadCode === trimmed) return;
+  w.uploadCode = trimmed;
+  sbScheduleSync();
+  if(sbClient && sbSession && sbCanWriteTable('workers')){
+    const {error}=await sbClient.from('workers').update({upload_code:trimmed||null, updated_at:new Date().toISOString()}).eq('id',wid);
+    if(error){ console.warn('[TMC] saveWorkerUploadCode failed:', error.message); }
+  }
+}
+function generateUploadCode(wid){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/1/0 ambiguous chars
+  let code=''; for(let i=0;i<6;i++) code+=chars[Math.floor(Math.random()*chars.length)];
+  const input=document.getElementById(`workerUploadCodeInput_${wid}`);
+  if(input){ input.value=code; saveWorkerUploadCode(wid, code); }
+}
 function setWorkerActiveStatus(wid, makeActive, sourceLabel){
   if(!requireAction('workers','change worker active/inactive status')) return;
   const w=workers.find(x=>x.id===wid); if(!w) return;
@@ -5801,6 +5819,14 @@ function rebuildModal(id){
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📞 Phone Number</div>
     <input id="workerPhoneInput_${id}" type="tel" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:inherit;" placeholder="e.g. +31 6 12345678" value="${esc(w.phone||'')}" onblur="saveWorkerPhone('${id}',this.value)"/>
+  </div>`;
+  html+=`<div style="margin-top:12px;">
+    <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">🔑 Upload code</div>
+    <div style="font-size:11px;color:var(--text-m);margin-bottom:6px;">Share with a compliance manager to let them upload documents on behalf of this worker. Give the same code to multiple workers for a shared team code.</div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <input id="workerUploadCodeInput_${id}" type="text" style="flex:1;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);font-family:inherit;font-family:monospace;" placeholder="e.g. NL8X2K" value="${esc(w.uploadCode||'')}" autocorrect="off" autocapitalize="characters" onblur="saveWorkerUploadCode('${id}',this.value)"/>
+      <button onclick="generateUploadCode('${id}')" style="padding:8px 12px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;color:var(--text-m);white-space:nowrap;min-height:36px;">Generate</button>
+    </div>
   </div>`;
   html+=`<div style="margin-top:12px;">
     <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">📝 Notes / Comments</div>
@@ -12296,7 +12322,7 @@ async function sbPersistAll(force=false){
     const recentlyChanged = sbWorkerActiveDirty[w.id] && (Date.now() - sbWorkerActiveDirty[w.id] < 120000);
     const activeVal = recentlyChanged ? (w.active!==false) : (Object.prototype.hasOwnProperty.call(remoteWorkerActive,w.id) ? remoteWorkerActive[w.id] : (w.active!==false));
     w.active = activeVal;
-    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString(),org_id:w.org_id||oid};
+    return {id:w.id,full_name:w.name,worker_type:w.type,reference:w.ref||'',nationality:w.nat||'',agency_name:w.agency||null,email:w.email||null,phone:w.phone||null,upload_code:w.uploadCode||null,document_set_id:w.docSetId||null,doc_req:docReqOverrides[w.id]||null,notes:w.notes||null,active:activeVal,updated_at:new Date().toISOString(),org_id:w.org_id||oid};
   }));
   const wdocs=[], wfiles=[];
   workers.forEach(w=>Object.keys(w.docs||{}).forEach(did=>{ const d=w.docs[did]||{}; const docId=`${w.id}__${did}`; wdocs.push({id:docId,worker_id:w.id,doc_key:did,status:d.status||'missing',issue_date:sbSafeDate(d.issueDate),expiry_date:sbSafeDate(d.date),active:true,org_id:oid}); (fileStore[w.id]?.[did]||[]).forEach((f,i)=>{ if(f.file_path||f.storagePath) wfiles.push({id:`${docId}__${sbSlug(f.file_path||f.storagePath).slice(-80)}`,worker_document_id:docId,worker_id:w.id,file_name:f.name||'file',file_path:f.file_path||f.storagePath,mime_type:f.type||'',size_bytes:f.size||0,superseded:!!f.superseded,active:true,org_id:oid}); }); }));
@@ -12670,7 +12696,7 @@ async function sbLoadAll(){
       workers=[];
       sbLastWorkerLoadProblem = loadErrors.find(x=>x.startsWith('workers:')) || 'The workers table could not be read. Check RLS SELECT policy, table name, and logged-in profile role.';
     } else {
-      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{},org_id:w.org_id}));
+      workers=(workerData||[]).map(w=>({id:w.id,name:w.full_name,type:w.worker_type,ref:w.reference||'',nat:w.nationality||'',agency:w.agency_name||'',email:w.email||'',phone:w.phone||'',uploadCode:w.upload_code||'',docSetId:w.document_set_id||undefined,notes:w.notes||'',active:w.active!==false,docs:{},org_id:w.org_id}));
       // An empty result is normal (new/empty org) — not an error. Genuine read
       // failures are handled by the workerData === null branch above.
       // Absorb per-worker doc requirement overrides from Supabase (if doc_req JSONB column exists)

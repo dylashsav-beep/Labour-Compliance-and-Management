@@ -192,10 +192,10 @@ body{display:flex;flex-direction:column;min-height:100vh;}
       </div>
     </div>
     <div class="login-title">My Documents</div>
-    <div class="login-sub">Enter your work email address to view your compliance documents and assignments.</div>
+    <div class="login-sub">Enter your work email address or upload code to view your compliance documents.</div>
     <div class="login-field">
-      <label for="wpEmailInput">Work email address</label>
-      <input type="email" id="wpEmailInput" placeholder="you@company.com" autocomplete="email"
+      <label for="wpEmailInput">Email / Upload code</label>
+      <input type="text" id="wpEmailInput" placeholder="Email address or upload code" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
         onkeydown="if(event.key==='Enter')wpDirectLogin()"/>
     </div>
     <button class="login-btn" id="wpLoginBtn" onclick="wpDirectLogin()">View My Documents</button>
@@ -242,6 +242,15 @@ body{display:flex;flex-direction:column;min-height:100vh;}
     <button class="wp-tab" id="wpTabAssign" onclick="wpSwitch('assign')">Projects</button>
     <button class="wp-tab" id="wpTabResources" onclick="wpSwitch('resources')">Resources</button>
     <button class="wp-tab" id="wpTabTraining" onclick="wpSwitch('training')">Training</button>
+  </div>
+  <!-- Vault CTA — shown for email-login workers, hidden for code (manager) logins -->
+  <div id="wpVaultCTA" style="display:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:11px 14px;align-items:center;gap:10px;">
+    <div style="flex:1;min-width:0;">
+      <div style="color:#fff;font-size:13px;font-weight:700;line-height:1.25;">Take your documents with you — forever.</div>
+      <div style="color:rgba(255,255,255,.85);font-size:11px;margin-top:2px;">Sign up to Work Force Vault · 7-day free trial</div>
+    </div>
+    <button onclick="wpOpenVault()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:36px;font-family:inherit;">Get Vault →</button>
+    <button onclick="wpDismissVaultCTA()" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1;padding:4px;min-height:36px;min-width:36px;font-family:inherit;" aria-label="Dismiss">✕</button>
   </div>
   <div class="wp-body">
     <div id="wpViewDocs"></div>
@@ -314,6 +323,7 @@ loadDocReq();
 
 // Worker portal state
 let wpWorkerId = null, wpWorkerObj = null, wpWorkerEmail = null;
+let wpLoginCode = null; // non-null when logged in via upload code (manager path); suppresses Vault CTA
 let wpSubmissions = [], wpActiveTab = 'docs', wpDocFilter = 'missing', wpAssignFilter = 'current';
 let wpDocSubmitOpen = {}, wpIssuedDocs = [];
 let wpAccomAssignments = [], wpVehAssignments = [], wpToolAssignments = [];
@@ -322,7 +332,7 @@ let wpCompetencies = [], wpCompRecords = []; // training tab data
 let wpProjectFiles = []; // project files for this worker's assigned projects
 let wpLang = 'en';
 // Multi-profile support: set when the email maps to >1 worker rows in this org
-let wpProfiles = [];          // [{id, full_name, reference, worker_type}]
+let wpProfiles = [];          // [{id, full_name, reference, worker_type, email?}]
 let wpSelectedWorkerId = null; // pinned worker ID when switcher is used (null = LIMIT 1)
 
 const wpLangMeta = { en:{flag:'🇬🇧',code:'EN'}, nl:{flag:'🇳🇱',code:'NL'}, ro:{flag:'🇷🇴',code:'RO'}, tr:{flag:'🇹🇷',code:'TR'}, es:{flag:'🇪🇸',code:'ES'}, fr:{flag:'🇫🇷',code:'FR'}, de:{flag:'🇩🇪',code:'DE'}, da:{flag:'🇩🇰',code:'DA'} };
@@ -916,58 +926,149 @@ async function wpAutoLoginFromEmail(){
 }
 
 // ── Login flow ─────────────────────────────────────────────────────────────
+function wpShowProfileList(profiles){
+  // Show profile selection cards on the login screen (code-login multi-match)
+  const card=document.getElementById('loginScreen')?.querySelector('.login-card');
+  if(!card) return;
+  const cards=profiles.map(p=>{
+    const initials=(p.full_name||'?').trim().split(/\s+/).reduce((a,w,i,arr)=>i===0||i===arr.length-1?a+(w[0]||''):a,'').toUpperCase().slice(0,2)||'?';
+    return `<button onclick="wpSelectCodeProfile('${p.id}')" style="display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;cursor:pointer;text-align:left;margin-bottom:8px;font-family:inherit;transition:border-color .15s;">
+      <div style="width:36px;height:36px;border-radius:50%;background:var(--accent,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;">${initials}</div>
+      <div style="min-width:0;flex:1;">
+        <div style="font-size:14px;font-weight:600;color:#1e293b;">${esc(p.full_name||'—')}</div>
+        ${p.reference?`<div style="font-size:12px;color:#64748b;margin-top:1px;">${esc(p.reference)}</div>`:''}
+      </div>
+    </button>`;
+  }).join('');
+  card.innerHTML=`<div style="font-size:16px;font-weight:700;color:#1e293b;margin-bottom:4px;">Select worker profile</div>
+    <div style="font-size:13px;color:#64748b;margin-bottom:18px;">Code matched ${profiles.length} workers. Select one to continue.</div>
+    ${cards}
+    <button onclick="wpResetLogin()" style="display:block;width:100%;padding:10px;background:none;border:none;color:#64748b;font-size:13px;cursor:pointer;margin-top:4px;font-family:inherit;">← Back</button>`;
+}
+function wpResetLogin(){
+  // Restore the login card to its original state
+  location.reload();
+}
+async function wpSelectCodeProfile(workerId){
+  if(!sbClient) return;
+  const prof=wpProfiles.find(p=>p.id===workerId);
+  if(!prof){ alert('Profile not found.'); return; }
+  const btn=document.querySelector('#loginScreen .login-btn');
+  try{
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:prof.email||'',p_org_id:resolvedOrgId,p_worker_id:workerId});
+    if(error) throw error;
+    if(!data?.worker){ alert('Could not load worker profile. Please try again.'); return; }
+    wpWorkerEmail=prof.email||'';
+    wpSelectedWorkerId=workerId;
+    // No session persistence for code logins (manager path, not worker self-service)
+    wpLoadPortalData(data);
+    await initWorkerPortal(data.worker.id);
+  }catch(e){
+    alert('Could not load profile: '+(e.message||e));
+  }
+}
+
 function loginMsg(text, isError){
   const el=document.getElementById('wpLoginMsg');
   el.textContent=text; el.className='login-msg '+(isError?'error':''); el.style.display=text?'block':'none';
 }
 
 async function wpDirectLogin(){
-  if(!sbClient){ loginMsg('Loading, please try again.',true); return; }
-  const email=(document.getElementById('wpEmailInput')?.value||'').trim().toLowerCase();
-  if(!email){ loginMsg('Please enter your email address.',true); return; }
-  loginMsg('');
-  const btn=document.getElementById('wpLoginBtn');
-  btn.disabled=true; btn.textContent='Signing in…';
+  if(!sbClient){ loginMsg(‘Loading, please try again.’,true); return; }
+  const raw=(document.getElementById(‘wpEmailInput’)?.value||’’).trim();
+  if(!raw){ loginMsg(‘Please enter your email address or upload code.’,true); return; }
+  loginMsg(‘’);
+  const btn=document.getElementById(‘wpLoginBtn’);
+  btn.disabled=true; btn.textContent=’Signing in…’;
   try{
     await resolveOrg();
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:resolvedOrgId});
+    // ── Code login (no @ = upload code entered by a manager) ──────────────
+    if(!raw.includes(‘@’)){
+      const {data:profiles,error:codeErr}=await sbClient.rpc(‘get_worker_profiles_by_code’,{p_code:raw,p_org_id:resolvedOrgId});
+      if(codeErr) throw codeErr;
+      const list=Array.isArray(profiles)?profiles:[];
+      if(list.length===0){
+        loginMsg(‘No workers found for that code. Try email instead.’,true);
+        return;
+      }
+      wpLoginCode=raw;
+      wpWorkerEmail=null;
+      wpSelectedWorkerId=null;
+      if(list.length===1){
+        // Single match — load directly
+        const prof=list[0];
+        const {data,error:pErr}=await sbClient.rpc(‘get_worker_portal’,{p_email:prof.email||’’,p_org_id:resolvedOrgId,p_worker_id:prof.id});
+        if(pErr) throw pErr;
+        if(!data?.worker){ loginMsg(‘Could not load worker profile. Please try again.’,true); return; }
+        wpWorkerEmail=prof.email||’’;
+        wpProfiles=list;
+        wpSelectedWorkerId=prof.id;
+        wpLoadPortalData(data);
+        await initWorkerPortal(data.worker.id);
+      }else{
+        // Multiple matches — show profile switcher cards
+        wpProfiles=list;
+        wpShowProfileList(list);
+      }
+      return;
+    }
+    // ── Email login ────────────────────────────────────────────────────────
+    const email=raw.toLowerCase();
+    wpLoginCode=null;
+    const {data,error}=await sbClient.rpc(‘get_worker_portal’,{p_email:email,p_org_id:resolvedOrgId});
     if(error) throw error;
     if(!data){
-      // No match in the resolved org. If the URL carried an unknown slug, or no
-      // slug at all (defaulted to TMC), the worker may be on the wrong portal —
-      // point them at their company-specific link rather than a flat dead-end.
       if(orgSlugProvided && !orgSlugResolved){
-        loginMsg('That company link wasn’t recognised. Please check the worker-portal link your employer gave you.',true);
+        loginMsg(‘That company link wasn’t recognised. Please check the worker-portal link your employer gave you.’,true);
       }else if(!orgSlugProvided){
-        loginMsg('No worker profile found for this email. If your employer gave you a company-specific portal link, please use that link to sign in. Otherwise, ask them to add your email to your worker profile.',true);
+        loginMsg(‘No worker profile found for this email. If your employer gave you a company-specific portal link, please use that link to sign in. Otherwise, ask them to add your email to your worker profile.’,true);
       }else{
-        loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);
+        loginMsg(‘No worker profile found for this email address. Ask your employer to add your email to your worker profile.’,true);
       }
       return;
     }
     wpWorkerEmail=email;
-    wpSelectedWorkerId=null; // fresh login always uses LIMIT 1 first
-    // Load all profiles for this email in this org (for switcher if >1)
-    try{ const {data:pl}=await sbClient.rpc('list_worker_profiles',{p_email:email,p_org_id:resolvedOrgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
+    wpSelectedWorkerId=null;
+    try{ const {data:pl}=await sbClient.rpc(‘list_worker_profiles’,{p_email:email,p_org_id:resolvedOrgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
     try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email, orgId:resolvedOrgId, expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
+    // Show Vault CTA for workers using email login (not code/manager path)
+    wpShowVaultCTA(email);
   }catch(e){
-    loginMsg('Could not sign in: '+(e.message||e),true);
+    loginMsg(‘Could not sign in: ‘+(e.message||e),true);
   }finally{
-    btn.disabled=false; btn.textContent='View My Documents';
+    btn.disabled=false; btn.textContent=’View My Documents’;
   }
 }
 
 function wpSignOut(){
   try{ localStorage.removeItem(WP_SESSION_KEY); }catch(_){}
-  wpWorkerId=null; wpWorkerObj=null; wpWorkerEmail=null;
+  wpWorkerId=null; wpWorkerObj=null; wpWorkerEmail=null; wpLoginCode=null;
   wpProfiles=[]; wpSelectedWorkerId=null;
   wpSubmissions=[]; wpIssuedDocs=[];
+  const cta=document.getElementById('wpVaultCTA'); if(cta) cta.style.display='none';
   document.getElementById('workerPortal').style.display='none';
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('wpEmailInput').value='';
   document.getElementById('wpEmailInput').focus();
+}
+
+// ── Vault CTA banner (email-login workers only) ────────────────────────────
+function wpShowVaultCTA(email){
+  try{ if(localStorage.getItem('wf_vault_cta_dismissed_'+email)==='1') return; }catch(_){}
+  const cta=document.getElementById('wpVaultCTA');
+  if(!cta) return;
+  cta.style.display='flex';cta.style.alignItems='center';
+}
+function wpDismissVaultCTA(){
+  const cta=document.getElementById('wpVaultCTA');
+  if(cta) cta.style.display='none';
+  try{ if(wpWorkerEmail) localStorage.setItem('wf_vault_cta_dismissed_'+wpWorkerEmail,'1'); }catch(_){}
+}
+function wpOpenVault(){
+  const url='vault.html'+(wpWorkerEmail?'?email='+encodeURIComponent(wpWorkerEmail):'');
+  window.open(url,'_blank');
 }
 
 async function wpTryAutoLogin(){
@@ -987,10 +1088,12 @@ async function wpTryAutoLogin(){
     // Refresh TTL on each successful auto-login
     try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:sess.email,orgId:sess.orgId,workerId:wpSelectedWorkerId||undefined,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpWorkerEmail=sess.email;
+    wpLoginCode=null; // auto-login is always from a stored email session
     // Load profile list for switcher (best-effort; non-fatal)
     try{ const {data:pl}=await sbClient.rpc('list_worker_profiles',{p_email:sess.email,p_org_id:sess.orgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
+    wpShowVaultCTA(sess.email);
     return true;
   }catch(e){ console.warn('[WP] auto-login failed:',e.message); localStorage.removeItem(WP_SESSION_KEY); return false; }
 }
@@ -1383,15 +1486,20 @@ function wpCloseProjDetail(){ document.getElementById('wpProjDetail').style.disp
 // ── Profile tab ────────────────────────────────────────────────────────────
 // Switch to a different worker profile (same email, different worker row in this org)
 async function switchWorkerProfile(newWorkerId){
-  if(!sbClient||!wpWorkerEmail||newWorkerId===wpWorkerId) return;
+  if(!sbClient||newWorkerId===wpWorkerId) return;
+  // For code logins each profile may have its own email — look it up from the list
+  const targetProf = wpProfiles.find(p=>p.id===newWorkerId);
+  const emailToUse = (targetProf?.email) || wpWorkerEmail || '';
+  if(!emailToUse && !newWorkerId) return;
   const el=document.getElementById('wpViewProfile');
   if(el) el.innerHTML=`<div style="text-align:center;padding:48px 20px;color:var(--text-l);font-size:14px;">Switching profile…</div>`;
   try{
-    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:wpWorkerEmail,p_org_id:resolvedOrgId,p_worker_id:newWorkerId});
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:emailToUse,p_org_id:resolvedOrgId,p_worker_id:newWorkerId});
     if(error) throw error;
     if(!data?.worker){ alert('Could not load that profile. Please try again.'); renderWPProfile(); return; }
     wpSelectedWorkerId=newWorkerId;
-    try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:wpWorkerEmail,orgId:resolvedOrgId,workerId:newWorkerId,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
+    wpWorkerEmail=emailToUse;
+    if(!wpLoginCode) try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email:emailToUse,orgId:resolvedOrgId,workerId:newWorkerId,expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
     // initWorkerPortal calls wpSwitch('docs') which hides Profile — switch back so user sees the result

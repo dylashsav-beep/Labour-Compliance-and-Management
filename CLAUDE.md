@@ -189,7 +189,7 @@ let resGanttProjectFilter = 'all'
 
 | Table | Notes |
 |---|---|
-| `workers` | `full_name, worker_type, reference, nationality, agency_name, document_set_id, doc_req (JSONB), notes, active` |
+| `workers` | `full_name, worker_type, reference, nationality, agency_name, document_set_id, doc_req (JSONB), notes, active, upload_code (text, nullable — not unique; same code shared by a team. Used by worker-portal code-login path via `get_worker_profiles_by_code`)` |
 | `worker_documents` | `id = ${wid}__${doc_key}`, `worker_id, doc_key, status, expiry_date, issue_date, active` |
 | `worker_document_files` | Files attached to worker documents |
 | `document_sets` | Built-in and custom document set definitions |
@@ -304,6 +304,7 @@ All files are in `migrations/`. These must be run manually in Supabase → Datab
 | `add_vault_reminders.sql` | ✅ Run (2026-06-14, via MCP) | **Worker Vault reminders.** Adds `reminder_enabled`/`reminder_days`/`reminder_missing` to `worker_accounts`; creates worker-scoped `vault_notification_log` throttle table; `save_vault_reminder_settings(p_enabled,p_days,p_missing)` SECURITY DEFINER RPC (worker self-service); extends `get_vault_portal()` account object with the 3 fields (FULL live def + fields, Lesson 31). **Also hardens a paywall hole:** `REVOKE UPDATE ON worker_accounts FROM authenticated` + re-`GRANT UPDATE (full_name, reminder_*)` so a worker can no longer flip their own `plan`/`stripe_*` (the broad `own account update` RLS policy previously allowed it, bypassing the Stripe paywall that get-vault-file trusts). Service-role + SECURITY DEFINER writes unaffected. |
 | `schedule_vault_reminders.sql` | ✅ Run (2026-06-14, via MCP) | pg_cron schedule `vault-reminders` daily 08:00 UTC → `net.http_post` to the edge function (anon-key bearer; the function self-authenticates with its own service-role env var, so no secret is stored). Idempotent. |
 | `fix_project_files_storage_write.sql` | ✅ Run (2026-06-13, via MCP) | **Storage fix (Lesson 32 recurrence).** Adds org-scoped INSERT/UPDATE/DELETE policies for the `project-files/{org_id}/{project_id}/…` prefix, keyed on `foldername[2]=current_org_id()`. `add_project_files.sql` only created the anon+auth SELECT policies, and `fix_storage_org_isolation.sql` had dropped the bucket-wide upload policy — so authenticated project-file uploads were RLS-blocked ("new row violates row-level security policy"). The two public/anon SELECT policies are untouched, so the worker portal + vault keep reading visible files. Safe to re-run. |
+| `add_worker_upload_code.sql` | ✅ Run (2026-06-14, via MCP) | Adds `upload_code text` column to `workers` + org+code partial index + `get_worker_profiles_by_code(p_code, p_org_id)` SECURITY DEFINER RPC (anon+authenticated). Case-insensitive match; returns `[{id, full_name, reference, worker_type, email}]` for all active workers in org with matching code. Used by the worker-portal code-login path. |
 
 ---
 
