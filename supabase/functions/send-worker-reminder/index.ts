@@ -21,6 +21,50 @@ function json(body: unknown, status = 200) {
 function esc(s: string) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
 }
+
+// Lucide icons (2px stroke) as inline SVG for email. Rendered by Apple Mail /
+// iOS Mail / most modern clients; Gmail strips inline SVG, in which case the
+// paired text label remains (graceful degradation). Single stroke colour.
+const ICON_PATHS: Record<string, string> = {
+  'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  'clock': '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  'file-text': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/>',
+  'folder': '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+  'check-circle': '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+  'shield-check': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/>',
+  'send': '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  'briefcase': '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/>',
+}
+function icon(name: string, colour = 'currentColor', size = 14): string {
+  const p = ICON_PATHS[name] || ''
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${colour}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;">${p}</svg>`
+}
+
+// Premium Worker Vault advert block (worker-facing reminder emails).
+function vaultAd(link: string): string {
+  const feat = (ic: string, text: string) => `
+    <tr>
+      <td style="padding:5px 10px 5px 0;vertical-align:top;width:22px;">${icon(ic, '#fff', 16)}</td>
+      <td style="padding:5px 0;font-size:13px;color:#ffffff;font-weight:600;">${text}</td>
+    </tr>`
+  return `
+  <div style="margin:4px 0 18px;border-radius:16px;overflow:hidden;background-color:#6d28d9;background:linear-gradient(135deg,#7c3aed 0%,#6d28d9 55%,#4c1d95 100%);">
+    <div style="padding:24px 26px;">
+      <span style="display:inline-block;background:rgba(255,255,255,0.16);color:#fff;font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:999px;">${icon('shield-check','#fff',12)} &nbsp;Worker Vault · Premium</span>
+      <div style="font-size:21px;font-weight:800;color:#fff;margin:15px 0 7px;letter-spacing:-.01em;line-height:1.2;">Your documents. Yours forever.</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.82);line-height:1.6;margin-bottom:16px;">Keep every compliance document in one secure place — then carry them to any employer and share them with anyone you choose, instantly, with a private link that expires when you say so.</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+        ${feat('lock', 'Store every document securely in one vault')}
+        ${feat('send', 'Share with anyone — a recruiter, an agency, an employer')}
+        ${feat('briefcase', 'Carry your compliance between every job')}
+      </table>
+      <a href="${esc(link)}" style="display:inline-block;background:#ffffff;color:#4c1d95;text-decoration:none;font-size:14px;font-weight:800;padding:13px 30px;border-radius:9px;">Upgrade to Vault &nbsp;${icon('arrow-right','#4c1d95',15)}</a>
+      <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:12px;">Already on Vault? Your documents are safe and ready to share.</div>
+    </div>
+  </div>`
+}
 function fmt(s: string) {
   return new Date(s).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
 }
@@ -48,6 +92,7 @@ function buildWorkerEmailHtml(
   expiring: DocIssue[],
   contracts: Contract[],
   isManual: boolean,
+  logoUrl?: string | null,
 ): string {
   const totalIssues = missing.length + expired.length + expiring.length
   const hasIssues   = totalIssues > 0
@@ -78,20 +123,23 @@ function buildWorkerEmailHtml(
   const sections: string[] = []
 
   if (expired.length) {
-    sections.push(docTable('#c53030', '⚠️', `Expired Documents (${expired.length})`,
+    sections.push(docTable('#c53030', icon('alert-triangle','#fff',14), `Expired Documents (${expired.length})`,
       expired.map(d => docRow(d.name, `<span style="color:#c53030;font-weight:600;">Expired · ${fmt(d.date!)}</span>`))
     ))
   }
   if (expiring.length) {
-    sections.push(docTable('#b45309', '⏰', `Expiring Soon (${expiring.length})`,
+    sections.push(docTable('#b45309', icon('clock','#fff',14), `Expiring Soon (${expiring.length})`,
       expiring.map(d => docRow(d.name, `<span style="color:#b45309;font-weight:600;">Expires in ${d.days} day${d.days!==1?'s':''} · ${fmt(d.date!)}</span>`))
     ))
   }
   if (missing.length) {
-    sections.push(docTable('#7c3aed', '📋', `Missing Documents (${missing.length})`,
+    sections.push(docTable('#7c3aed', icon('file-text','#fff',14), `Missing Documents (${missing.length})`,
       missing.map(n => docRow(n, `<span style="color:#c53030;font-weight:600;">Missing — please upload</span>`))
     ))
   }
+
+  // Premium Vault advert — placed below the document sections.
+  sections.push(vaultAd(link))
 
   if (contracts.length) {
     const contractRows = contracts.map(c => `<tr>
@@ -101,7 +149,7 @@ function buildWorkerEmailHtml(
     sections.push(`
     <div style="margin-bottom:16px;">
       <div style="background:#1d4ed8;border-radius:6px 6px 0 0;padding:10px 16px;">
-        <span style="font-size:13px;font-weight:700;color:#fff;">📁 Your Active Contracts (${contracts.length})</span>
+        <span style="font-size:13px;font-weight:700;color:#fff;">${icon('folder','#fff',14)} Your Active Contracts (${contracts.length})</span>
       </div>
       <table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 6px 6px;">
         <tr>
@@ -113,8 +161,10 @@ function buildWorkerEmailHtml(
     </div>`)
   }
 
-  if (!hasIssues && !sections.length) {
-    sections.push(`<div style="background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;color:#166534;font-size:14px;font-weight:600;margin-bottom:16px;">✅ All your compliance documents are up to date.</div>`)
+  // Reassuring green banner when there are no document issues — placed first,
+  // above the advert / contracts.
+  if (!hasIssues) {
+    sections.unshift(`<div style="background:#dcfce7;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;color:#166534;font-size:14px;font-weight:600;margin-bottom:16px;">${icon('check-circle','#166534',16)} &nbsp;All your compliance documents are up to date.</div>`)
   }
 
   const introText = hasIssues
@@ -131,6 +181,7 @@ function buildWorkerEmailHtml(
 <div style="max-width:600px;margin:24px auto;padding:0 12px;">
 
   <div style="background:#1a2035;border-radius:10px 10px 0 0;padding:24px;">
+    ${logoUrl ? `<img src="${esc(logoUrl)}" alt="${esc(orgName)}" height="40" style="height:40px;max-width:200px;width:auto;display:block;margin-bottom:12px;border:0;outline:none;text-decoration:none;"/>` : ''}
     <div style="font-size:18px;font-weight:700;color:#fff;">${esc(orgName)}</div>
     <div style="font-size:12px;color:#94a3b8;margin-top:3px;">Worker Compliance Portal</div>
   </div>
@@ -144,7 +195,7 @@ function buildWorkerEmailHtml(
     <div style="text-align:center;margin-top:28px;padding-top:20px;border-top:1px solid #f0f4f8;">
       <a href="${esc(link)}"
          style="display:inline-block;background:#1a2035;color:#fff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:8px;letter-spacing:.01em;">
-        Open My Portal →
+        Open My Portal &nbsp;${icon('arrow-right','#fff',15)}
       </a>
       <div style="font-size:11px;color:#94a3b8;margin-top:10px;word-break:break-all;">
         Or copy: ${esc(link)}
@@ -200,8 +251,8 @@ Deno.serve(async (req) => {
     if (!worker) return json({ error: 'Worker not found' }, 404)
     if (!worker.email) return json({ error: 'Worker has no email address on file' }, 400)
 
-    // Load org info (name + slug for portal link)
-    const { data: org } = await sb.from('organisations').select('id, name, slug').eq('id', callerOrgId).maybeSingle()
+    // Load org info (name + slug for portal link, logo for email header)
+    const { data: org } = await sb.from('organisations').select('id, name, slug, logo_url').eq('id', callerOrgId).maybeSingle()
 
     // Load document set items scoped to this worker's assigned set only.
     // Fetching all sets would show docs from other sets (e.g. ZZP docs for a Blue Card worker).
@@ -259,7 +310,8 @@ Deno.serve(async (req) => {
     const html = buildWorkerEmailHtml(
       worker.full_name, orgName, link,
       missing, expired, expiring, contracts,
-      true  // isManual = true
+      true,  // isManual = true
+      org?.logo_url || null
     )
 
     const totalIssues = missing.length + expired.length + expiring.length
