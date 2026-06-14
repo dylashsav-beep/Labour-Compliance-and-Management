@@ -303,7 +303,7 @@ td{padding:10px 14px;vertical-align:middle;}
 .export-opt-row input{margin-top:2px;flex-shrink:0;accent-color:var(--navy);}
 .export-opt-label{font-size:13px;font-weight:600;color:var(--text);}
 .export-opt-desc{font-size:11px;color:var(--text-l);margin-top:2px;line-height:1.4;}
-.modal{background:#fff;border-radius:8px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.16);animation:min .18s ease;}
+.modal{background:#fff;border-radius:8px;width:100%;max-width:720px;max-height:92vh;overflow-y:auto;overflow-x:hidden;box-shadow:0 8px 32px rgba(0,0,0,.16);animation:min .18s ease;}
 /* Worker-assignment modal: fixed full-bleed header + scrolling body.
    overflow:hidden on .modal clips children; body scrolls internally. */
 #paOverlay .modal{display:flex;flex-direction:column;overflow:hidden;}
@@ -323,11 +323,12 @@ td{padding:10px 14px;vertical-align:middle;}
 .fv-footer-dl:hover{background:#2563eb;}
 .fv-footer-close{padding:10px 16px;background:rgba(255,255,255,.1);border:none;border-radius:6px;font-size:14px;font-weight:600;color:#e2e8f0;cursor:pointer;}
 @keyframes min{from{transform:translateY(12px);opacity:0;}to{transform:translateY(0);opacity:1;}}
-.modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-d);border-radius:8px 8px 0 0;}
+.modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--navy-d);border-radius:8px 8px 0 0;min-width:0;}
+.modal-header > div:first-child{flex:1;min-width:0;overflow:hidden;}
 .modal-title{font-size:15px;font-weight:600;color:#fff;}
-.modal-title-input{font-size:15px;font-weight:600;color:#fff;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.3);outline:none;padding:1px 2px;width:260px;max-width:100%;}
-.modal-subtitle{font-size:12px;color:var(--sky-l);margin-top:2px;}
-.modal-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0;border-radius:3px;}
+.modal-title-input{font-size:15px;font-weight:600;color:#fff;background:transparent;border:none;border-bottom:1px solid rgba(255,255,255,0.3);outline:none;padding:1px 2px;width:100%;min-width:0;max-width:100%;box-sizing:border-box;}
+.modal-subtitle{font-size:12px;color:var(--sky-l);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.modal-close{background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0;border-radius:3px;min-width:28px;min-height:28px;}
 .modal-close:hover{color:#fff;background:rgba(255,255,255,.1);}
 .modal-body{padding:20px;}
 .modal-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--border);background:#fafafa;border-radius:0 0 8px 8px;}
@@ -697,6 +698,28 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   .worker-summary-grid{grid-template-columns:1fr;}
   /* Modal body less padding */
   .modal-body{padding:14px;}
+  /* ── Bottom-sheet modals on mobile ── */
+  /* All standard overlays become bottom-sheets; file viewer keeps its own rules */
+  .overlay:not(#fileViewerOverlay){padding:0!important;align-items:flex-end!important;}
+  .overlay:not(#fileViewerOverlay) .modal{
+    width:100%!important;max-width:100%!important;
+    border-radius:14px 14px 0 0!important;
+    max-height:88svh!important;
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  /* Worker modal header: stack buttons on a second row below the title */
+  #detailOverlay .modal-header{flex-wrap:wrap;padding:12px 16px;row-gap:8px;}
+  #detailOverlay .modal-header > div:first-child{width:100%;}
+  #detailOverlay .modal-header > div:last-child{flex-shrink:1;width:100%;justify-content:flex-start;}
+  /* Compact button text in header */
+  #mVaultInviteBtn{font-size:11px!important;padding:5px 10px!important;}
+  /* Overlay padding for add/edit worker form */
+  #addOverlay .modal{max-height:88svh!important;overflow-y:auto!important;}
+  /* PA overlay */
+  #paOverlay .modal-header{padding:12px 16px;}
+  /* Billing modal bottom sheet */
+  .billing-detail-overlay{padding:0!important;align-items:flex-end!important;}
+  .billing-detail-modal{border-radius:14px 14px 0 0!important;width:100%!important;max-width:100%!important;padding-bottom:env(safe-area-inset-bottom,0px);}
   /* Warning range slider fills available space */
   #warnRange{width:100%;max-width:200px;}
   /* Compliance report grid stacks */
