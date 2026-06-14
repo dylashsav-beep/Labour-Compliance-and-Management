@@ -1704,6 +1704,23 @@ function renderAccount(){
     +'<div id="acc_pw_msg" class="login-msg" style="display:none;margin-top:10px;"></div>'
     +'</div>';
 
+  // Document reminder settings (worker-owned, across all linked employers)
+  const remEnabled = acc.reminder_enabled !== false;            // default ON
+  const remDays    = parseInt(acc.reminder_days, 10) || 30;
+  const remMissing = acc.reminder_missing !== false;            // default ON
+  const dayOpts = [7,14,30,60,90].map(d=>'<option value="'+d+'"'+(d===remDays?' selected':'')+'>'+d+' days before</option>').join('');
+  html += '<div class="v-card"><h3>Document reminders</h3>'
+    +'<p style="margin-bottom:12px;">Get an email before a document expires — and again on the day it expires — so you\'re always work-ready. Reminders cover every linked employer plus your own files and certificates.</p>'
+    +'<label class="v-check-row" style="cursor:pointer;"><input type="checkbox" id="rem_enabled"'+(remEnabled?' checked':'')+'/>'
+      +'<div style="font-size:14px;font-weight:600;color:#1e293b;">Email me before my documents expire</div></label>'
+    +'<div class="v-profile-field" style="margin-top:10px;"><label>Remind me this far ahead</label>'
+      +'<select id="rem_days" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:16px;font-family:inherit;color:#1e293b;outline:none;min-height:42px;background:#fff;">'+dayOpts+'</select></div>'
+    +'<label class="v-check-row" style="cursor:pointer;margin-top:2px;"><input type="checkbox" id="rem_missing"'+(remMissing?' checked':'')+'/>'
+      +'<div style="font-size:14px;font-weight:600;color:#1e293b;">Also remind me about missing documents</div></label>'
+    +'<button class="wp-doc-btn" id="rem_btn" style="margin-top:6px;" onclick="saveReminderSettings()">Save reminder settings</button>'
+    +'<div id="rem_msg" class="login-msg" style="display:none;margin-top:10px;"></div>'
+    +'</div>';
+
   // Per-org profile editing
   for(const [orgIdx, m] of (vaultData.memberships||[]).entries()){
     const w = m.worker || {};
@@ -1759,6 +1776,27 @@ async function changeVaultPassword(){
     if($('acc_pw2')) $('acc_pw2').value='';
   }catch(e){ setMsg('Could not update password: '+(e.message||'unknown error'),'error'); }
   finally{ if(btn){ btn.disabled=false; btn.textContent='Update password'; } }
+}
+
+async function saveReminderSettings(){
+  const enabled = !!($('rem_enabled') && $('rem_enabled').checked);
+  const days    = parseInt(($('rem_days') && $('rem_days').value) || '30', 10) || 30;
+  const missing = !!($('rem_missing') && $('rem_missing').checked);
+  const btn = $('rem_btn'); const msg = $('rem_msg');
+  function setMsg(t,k){ if(!msg)return; msg.textContent=t; msg.className='login-msg '+k; msg.style.display=t?'block':'none'; }
+  setMsg('','');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
+  try{
+    const { error } = await sbClient.rpc('save_vault_reminder_settings', { p_enabled:enabled, p_days:days, p_missing:missing });
+    if(error) throw error;
+    if(vaultData && vaultData.account){
+      vaultData.account.reminder_enabled = enabled;
+      vaultData.account.reminder_days    = days;
+      vaultData.account.reminder_missing = missing;
+    }
+    setMsg('✓ Reminder settings saved.','ok');
+  }catch(e){ setMsg('Could not save: '+(e.message||'unknown error'),'error'); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent='Save reminder settings'; } }
 }
 
 async function saveProfile(orgIdx){
