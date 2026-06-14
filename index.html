@@ -474,6 +474,96 @@ body{font-family:'Inter',sans-serif;color:var(--text);background:#fff;-webkit-fo
 }
 .pricing-trust b{color:var(--navy);font-weight:700;}
 
+/* ── WORKER VAULT SECTION (purple, distinct product) ── */
+.vault-section{
+  --v:#7c3aed;--v-d:#6d28d9;--v-deep:#4c1d95;
+  position:relative;overflow:hidden;
+  background:radial-gradient(120% 120% at 80% 0%, #2a1259 0%, #1b0f3d 45%, #140a2e 100%);
+  padding:5.5rem 2rem;
+}
+.vault-section::before{
+  content:'';position:absolute;top:-30%;left:-10%;width:520px;height:520px;border-radius:50%;
+  background:radial-gradient(circle, rgba(124,58,237,.45), transparent 65%);pointer-events:none;
+}
+.vault-inner{position:relative;z-index:1;max-width:1080px;margin:0 auto;}
+.vault-section .section-kicker{color:#c4b5fd;}
+.vault-section .section-title{color:#fff;}
+.vault-section .section-sub{color:rgba(255,255,255,.7);}
+.vault-eyebrow-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(196,181,253,.3);
+  color:#ddd6fe;font-size:.74rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  padding:6px 13px;border-radius:999px;margin-bottom:1.1rem;
+}
+/* Tab pills */
+.vault-tabs{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;margin:2.5rem 0 1.75rem;}
+.vault-tab{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.72);font-size:.9rem;font-weight:600;font-family:inherit;
+  padding:.6rem 1.15rem;border-radius:999px;cursor:pointer;transition:all .18s;
+}
+.vault-tab:hover{background:rgba(255,255,255,.1);color:#fff;}
+.vault-tab.active{background:#fff;color:var(--v-deep);border-color:#fff;box-shadow:0 8px 24px rgba(124,58,237,.4);}
+.vault-tab svg{width:17px;height:17px;}
+/* Showcase */
+.vault-showcase{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:22px;padding:2.5rem;backdrop-filter:blur(8px);
+  display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;min-height:300px;
+}
+.vault-panel{display:none;}
+.vault-panel.active{display:contents;}
+.vault-panel-text .vp-icon{
+  width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--v),var(--v-deep));margin-bottom:1.1rem;
+}
+.vault-panel-text .vp-icon svg{width:26px;height:26px;color:#fff;}
+.vault-panel-text h3{font-size:1.5rem;font-weight:800;color:#fff;margin-bottom:.7rem;letter-spacing:-.01em;}
+.vault-panel-text p{font-size:.95rem;color:rgba(255,255,255,.72);line-height:1.7;margin-bottom:1.2rem;}
+.vault-feat-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:.6rem;}
+.vault-feat-list li{display:flex;align-items:flex-start;gap:.6rem;font-size:.88rem;color:rgba(255,255,255,.88);}
+.vault-feat-list svg{width:18px;height:18px;color:#a78bfa;flex-shrink:0;margin-top:1px;}
+/* Mock visual card */
+.vault-mock{
+  background:#fff;border-radius:16px;padding:1.25rem;box-shadow:0 24px 60px -15px rgba(0,0,0,.5);
+}
+.vm-head{display:flex;align-items:center;gap:.6rem;padding-bottom:.85rem;border-bottom:1px solid #eef1f6;margin-bottom:.85rem;}
+.vm-avatar{width:34px;height:34px;border-radius:9px;background:var(--v);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;}
+.vm-title{font-size:.85rem;font-weight:700;color:#1e293b;}
+.vm-subtitle{font-size:.72rem;color:#94a3b8;}
+.vm-row{display:flex;align-items:center;gap:.65rem;padding:.6rem 0;border-bottom:1px solid #f4f6fa;}
+.vm-row:last-child{border-bottom:none;}
+.vm-doticon{width:30px;height:30px;border-radius:8px;background:#f1edff;color:var(--v);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.vm-doticon svg{width:16px;height:16px;}
+.vm-rowmain{flex:1;min-width:0;}
+.vm-rowname{font-size:.82rem;font-weight:600;color:#1e293b;}
+.vm-rowmeta{font-size:.7rem;color:#94a3b8;}
+.vm-pill{font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+.vm-pill.ok{background:var(--green-bg);color:var(--green);}
+.vm-pill.warn{background:var(--amber-bg);color:var(--amber);}
+.vm-pill.sent{background:#ede9fe;color:var(--v-deep);}
+.vm-send-btn{margin-top:.4rem;width:100%;background:var(--v);color:#fff;border:none;border-radius:9px;padding:.7rem;font-size:.82rem;font-weight:700;display:flex;align-items:center;justify-content:center;gap:.4rem;}
+.vm-send-btn svg{width:15px;height:15px;}
+/* Vault pricing card */
+.vault-price{
+  margin-top:2.5rem;background:linear-gradient(135deg, rgba(255,255,255,.1), rgba(255,255,255,.04));
+  border:1px solid rgba(255,255,255,.14);border-radius:20px;padding:2rem 2.25rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;
+}
+.vault-price-left .vp-amount{display:flex;align-items:baseline;gap:.4rem;}
+.vault-price-left .vp-amount b{font-size:2.6rem;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1;}
+.vault-price-left .vp-amount span{font-size:1rem;color:rgba(255,255,255,.6);font-weight:600;}
+.vault-price-left .vp-note{font-size:.86rem;color:#c4b5fd;font-weight:600;margin-top:.5rem;}
+.vault-price-left .vp-sub{font-size:.78rem;color:rgba(255,255,255,.5);margin-top:.2rem;}
+.btn-vault{
+  background:#fff;color:var(--v-deep);border:none;border-radius:10px;padding:.9rem 1.9rem;
+  font-size:.95rem;font-weight:800;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;
+  transition:transform .15s,box-shadow .15s;white-space:nowrap;
+}
+.btn-vault:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(255,255,255,.2);}
+.btn-vault svg{width:18px;height:18px;}
+
 /* ── INTERACTIVE DEMO SECTION ── */
 .demo-section{
   background:var(--navy);padding:5.5rem 2rem;
@@ -766,6 +856,10 @@ footer{
   .pain-grid{grid-template-columns:1fr;}
   .pricing-grid{grid-template-columns:1fr;}
   .calc-card{grid-template-columns:1fr;gap:1.5rem;padding:1.75rem 1.5rem;}
+  .vault-section{padding:3.5rem 1.25rem;}
+  .vault-showcase{grid-template-columns:1fr;gap:1.75rem;padding:1.75rem;}
+  .vault-price{flex-direction:column;align-items:stretch;text-align:left;}
+  .vault-price .btn-vault{width:100%;justify-content:center;}
   .demo-section{padding:3.5rem 1.25rem;}
   .cta-section{padding:3.5rem 1.25rem;}
   footer{padding:2rem 1.25rem;}
@@ -1231,6 +1325,7 @@ footer{
     <div class="nav-links">
       <a class="nav-link" href="#features">Features</a>
       <a class="nav-link" href="#how-it-works">How It Works</a>
+      <a class="nav-link" href="#vault">Worker Vault</a>
       <a class="nav-link" href="#pricing">Pricing</a>
       <a class="nav-link" href="#contact">Contact</a>
     </div>
@@ -1252,6 +1347,7 @@ footer{
     <div class="mobile-menu-links">
       <a class="mobile-menu-link" href="#features" onclick="closeMobileMenu()">Features</a>
       <a class="mobile-menu-link" href="#how-it-works" onclick="closeMobileMenu()">How It Works</a>
+      <a class="mobile-menu-link" href="#vault" onclick="closeMobileMenu()">Worker Vault</a>
       <a class="mobile-menu-link" href="#pricing" onclick="closeMobileMenu()">Pricing</a>
       <a class="mobile-menu-link" href="#contact" onclick="closeMobileMenu()">Contact</a>
     </div>
@@ -2381,6 +2477,114 @@ footer{
 </section>
 
 <!-- ═══════════════════════════════════
+     WORKER VAULT
+═══════════════════════════════════ -->
+<section class="vault-section" id="vault">
+  <div class="vault-inner">
+    <div style="text-align:center;">
+      <span class="vault-eyebrow-badge fade-up">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg>
+        For your workforce · Worker Vault
+      </span>
+      <div class="section-title fade-up fade-up-d1">Their documents. Owned for life.<br>Ready for every employer.</div>
+      <div class="section-sub fade-up fade-up-d2" style="margin-left:auto;margin-right:auto;">The Worker Vault gives every operative a single, secure home for their passports, certificates and compliance documents — that travels with them between jobs, shares to any company in seconds, and reminds them before anything expires.</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="vault-tabs fade-up fade-up-d2">
+      <button class="vault-tab active" data-vt="store" onclick="vaultTab('store',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>
+        Store everything
+      </button>
+      <button class="vault-tab" data-vt="share" onclick="vaultTab('share',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>
+        Share with anyone
+      </button>
+      <button class="vault-tab" data-vt="remind" onclick="vaultTab('remind',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+        Never miss an expiry
+      </button>
+    </div>
+
+    <!-- Showcase -->
+    <div class="vault-showcase fade-up fade-up-d1">
+      <!-- STORE -->
+      <div class="vault-panel active" id="vt-store">
+        <div class="vault-panel-text">
+          <div class="vp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg></div>
+          <h3>One secure vault for every document</h3>
+          <p>Passport, VCA, A1, insurance, qualifications — uploaded once and kept safe forever. Approved documents from any employer flow in automatically, so nothing is ever lost between jobs.</p>
+          <ul class="vault-feat-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Bank-grade encrypted storage</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Org-approved docs verified &amp; badged</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Yours to keep, even if you change employer</li>
+          </ul>
+        </div>
+        <div class="vault-mock">
+          <div class="vm-head"><div class="vm-avatar">JV</div><div><div class="vm-title">My Vault</div><div class="vm-subtitle">8 documents · all current</div></div></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">Passport</div><div class="vm-rowmeta">Verified by TM Construction</div></div><span class="vm-pill ok">Valid</span></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">VCA Certificate</div><div class="vm-rowmeta">Uploaded by you</div></div><span class="vm-pill ok">Valid</span></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">A1 Declaration</div><div class="vm-rowmeta">Verified by BouwNL BV</div></div><span class="vm-pill ok">Valid</span></div>
+        </div>
+      </div>
+
+      <!-- SHARE -->
+      <div class="vault-panel" id="vt-share">
+        <div class="vault-panel-text">
+          <div class="vp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg></div>
+          <h3>Send to any company in seconds</h3>
+          <p>A new agency, a new site, a new employer — share a verified, up-to-date document pack with a secure link that expires when you choose. No more digging through WhatsApp or email for last year's certificate.</p>
+          <ul class="vault-feat-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Pick any documents, send to any email</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Verified docs clearly marked as approved</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Links expire — you stay in control</li>
+          </ul>
+        </div>
+        <div class="vault-mock">
+          <div class="vm-head"><div class="vm-avatar">→</div><div><div class="vm-title">Share documents</div><div class="vm-subtitle">to hr@newemployer.nl</div></div></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">Passport</div><div class="vm-rowmeta">Verified</div></div><span class="vm-pill sent">Selected</span></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">VCA Certificate</div><div class="vm-rowmeta">Verified</div></div><span class="vm-pill sent">Selected</span></div>
+          <button class="vm-send-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>Send 2 documents</button>
+        </div>
+      </div>
+
+      <!-- REMIND -->
+      <div class="vault-panel" id="vt-remind">
+        <div class="vault-panel-text">
+          <div class="vp-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg></div>
+          <h3>Stay ahead of every expiry</h3>
+          <p>The Vault watches every expiry date and reminds the worker well before a document lapses — so they're never turned away from a site for an out-of-date certificate again. Always work-ready, always compliant.</p>
+          <ul class="vault-feat-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Automatic reminders before expiry</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Clear green / amber / red status at a glance</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Never lose a day's work to paperwork</li>
+          </ul>
+        </div>
+        <div class="vault-mock">
+          <div class="vm-head"><div class="vm-avatar">!</div><div><div class="vm-title">Upcoming expiries</div><div class="vm-subtitle">2 need attention</div></div></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">VCA Certificate</div><div class="vm-rowmeta">Expires in 21 days</div></div><span class="vm-pill warn">Renew soon</span></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">First Aid</div><div class="vm-rowmeta">Expires in 9 days</div></div><span class="vm-pill warn">Renew soon</span></div>
+          <div class="vm-row"><div class="vm-doticon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div><div class="vm-rowmain"><div class="vm-rowname">Passport</div><div class="vm-rowmeta">Valid for 3 years</div></div><span class="vm-pill ok">Valid</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vault pricing -->
+    <div class="vault-price fade-up fade-up-d2">
+      <div class="vault-price-left">
+        <div class="vp-amount"><b>€8.99</b><span>/ month per worker</span></div>
+        <div class="vp-note">Start with a 7-day free trial — no card required</div>
+        <div class="vp-sub">Cancel anytime · documents stay free to view forever</div>
+      </div>
+      <a class="btn-vault" href="vault.html">
+        Start free trial
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════
      CTA SECTION
 ═══════════════════════════════════ -->
 <section class="cta-section" id="contact">
@@ -2544,6 +2748,15 @@ async function submitDemoGate(e) {
   btn.disabled = true; btn.textContent = 'Loading demo…';
   await captureLead({ name, company, email, source: 'demo', interest: 'Tried the live demo' });
   enterDemo();
+}
+
+// ── Worker Vault tabbed showcase ──
+function vaultTab(name, btn) {
+  document.querySelectorAll('.vault-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.vault-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = document.getElementById('vt-' + name);
+  if (panel) panel.classList.add('active');
 }
 
 // ── Navbar scroll effect ──
