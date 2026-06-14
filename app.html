@@ -126,10 +126,7 @@ body.demo-mode .logo-name{display:none!important;}
 /* TABLE */
 .table-card{background:#fff;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:24px;box-shadow:var(--sh);}
 .table-scroll{overflow-x:auto;}
-/* While a column-header filter dropdown is open, let it escape the scroll/clip
-   containers so it stays visible even when the table body is empty (0 results). */
-.table-scroll.panel-open{overflow:visible;}
-.table-card.panel-open{overflow:visible;}
+/* Panels are now position:fixed via JS, so no overflow tricks needed */
 .clear-all-filters{font-size:11px;color:#fff;background:rgba(255,255,255,.14);border:none;cursor:pointer;font-weight:600;padding:4px 10px;border-radius:4px;white-space:nowrap;line-height:1.4;}
 .clear-all-filters:hover{background:rgba(255,255,255,.26);}
 .table-scroll table{min-width:900px;}
@@ -253,8 +250,8 @@ td{padding:10px 14px;vertical-align:middle;}
   background:var(--navy);color:#fff;border-radius:10px;
   font-size:10px;font-weight:700;min-width:16px;height:16px;padding:0 4px;line-height:1;}
 .pf-panel{
-  position:absolute;top:calc(100% + 4px);left:0;z-index:400;
-  min-width:200px;max-width:min(280px,calc(100vw - 24px));
+  position:fixed;top:0;left:0;z-index:600;
+  min-width:200px;max-width:calc(100vw - 16px);
   background:#fff;border:1px solid var(--border);border-radius:6px;
   box-shadow:0 4px 16px rgba(0,0,0,.12);
   display:none;
@@ -3919,17 +3916,15 @@ function toggleDSFPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  if(!isOpen){
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closeDSFPanel(){
   const panel=document.getElementById('dsfPanel');
   const trigger=document.getElementById('dsfTrigger');
-  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 document.addEventListener('click',function(e){
   const wrap=document.getElementById('dsfWrap');
@@ -4022,9 +4017,27 @@ function renderWorkerTypeFilter(){
 // table body is empty (0 results), where the container would otherwise collapse
 // and hide the panel.
 function _panelOverflow(panel, open){
-  if(!panel) return;
-  const sc=panel.closest('.table-scroll'); if(sc) sc.classList.toggle('panel-open', open);
-  const tc=panel.closest('.table-card');   if(tc) tc.classList.toggle('panel-open', open);
+  // No-op on open (fixed-position panels don't need overflow tricks).
+  // On close: reset inline position styles set by _positionPanelFixed.
+  if(!panel || open) return;
+  panel.style.top=''; panel.style.left=''; panel.style.right='';
+}
+// Position a dropdown panel relative to the viewport using its trigger button.
+// Works correctly inside horizontally-scrolled containers on mobile — no more
+// "screen shoots left" caused by overflow:visible on the scroll container.
+function _positionPanelFixed(panel, triggerEl){
+  if(!panel || !triggerEl) return;
+  const tr = triggerEl.getBoundingClientRect();
+  // Measure rendered width (or fall back to minWidth inline style or 200px default)
+  const pw = Math.min(panel.offsetWidth || parseInt(panel.style.minWidth) || 200, window.innerWidth - 16);
+  let left = tr.left;
+  // Clamp: don't overflow right edge
+  if(left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+  // Clamp: don't overflow left edge
+  if(left < 8) left = 8;
+  panel.style.top  = (tr.bottom + 4) + 'px';
+  panel.style.left = left + 'px';
+  panel.style.right = 'auto';
 }
 function toggleWTFPanel(e){
   if(e) e.stopPropagation();
@@ -4034,17 +4047,13 @@ function toggleWTFPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  _panelOverflow(panel,!isOpen);
-  if(!isOpen){
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closeWTFPanel(){
   const panel=document.getElementById('wtfPanel');
   const trigger=document.getElementById('wtfTrigger');
-  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
   _panelOverflow(panel,false);
 }
@@ -4056,17 +4065,15 @@ function toggleWorkerStatusPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  if(!isOpen){
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closeWorkerStatusPanel(){
   const panel=document.getElementById('wsPanel');
   const trigger=document.getElementById('wsTrigger');
-  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 function toggleCompliancePanel(e){
   if(e) e.stopPropagation();
@@ -4076,17 +4083,15 @@ function toggleCompliancePanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  if(!isOpen){
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closeCompliancePanel(){
   const panel=document.getElementById('compPanel');
   const trigger=document.getElementById('compTrigger');
-  if(panel){panel.classList.remove('open');panel.style.left='';panel.style.right='';}
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 function toggleAssignHeaderPanel(e){
   if(e) e.stopPropagation();
@@ -4096,17 +4101,13 @@ function toggleAssignHeaderPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  _panelOverflow(panel,!isOpen);
-  if(!isOpen){
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closeAssignHeaderPanel(){
   const panel=document.getElementById('assignHdrPanel');
   const trigger=document.getElementById('assignHdrBtn');
-  if(panel){panel.classList.remove('open');}
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
   _panelOverflow(panel,false);
 }
@@ -4168,20 +4169,19 @@ function togglePFPanel(e){
   if(e) e.stopPropagation();
   const panel = document.getElementById('pfPanel');
   const trigger = document.getElementById('pfTrigger');
+  if(!panel) return;
   const isOpen = panel.classList.contains('open');
   panel.classList.toggle('open', !isOpen);
   trigger.classList.toggle('open', !isOpen);
-  if(!isOpen){
-    const pr = panel.getBoundingClientRect();
-    if(pr.right > window.innerWidth - 4){ panel.style.left='auto'; panel.style.right='0'; }
-    else { panel.style.left=''; panel.style.right=''; }
-  }
+  if(!isOpen) _positionPanelFixed(panel, trigger);
+  else _panelOverflow(panel,false);
 }
 function closePFPanel(){
   const panel = document.getElementById('pfPanel');
   const trigger = document.getElementById('pfTrigger');
-  if(panel){ panel.classList.remove('open'); panel.style.left=''; panel.style.right=''; }
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
+  _panelOverflow(panel,false);
 }
 document.addEventListener('click', function(e){
   const wrap = document.getElementById('pfWrap');
@@ -4247,18 +4247,13 @@ function toggleMDFPanel(e){
   const isOpen=panel.classList.contains('open');
   panel.classList.toggle('open',!isOpen);
   trigger.classList.toggle('open',!isOpen);
-  _panelOverflow(panel,!isOpen);
-  if(!isOpen){
-    renderMissingDocFilter();
-    const pr=panel.getBoundingClientRect();
-    if(pr.right>window.innerWidth-4){panel.style.left='auto';panel.style.right='0';}
-    else{panel.style.left='';panel.style.right='';}
-  }
+  if(!isOpen){ renderMissingDocFilter(); _positionPanelFixed(panel, trigger); }
+  else _panelOverflow(panel,false);
 }
 function closeMDFPanel(){
   const panel=document.getElementById('mdfPanel');
   const trigger=document.getElementById('mdfTrigger');
-  if(panel){ panel.classList.remove('open'); }
+  if(panel) panel.classList.remove('open');
   if(trigger) trigger.classList.remove('open');
   _panelOverflow(panel,false);
 }

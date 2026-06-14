@@ -1125,3 +1125,15 @@ Without this context, local fixes introduce side effects that only manifest seco
 2. Avoid contractions (`wasn't` → `was not`) or escape the apostrophe (`wasn\'t`) in single-quoted strings.
 **Detection**: `node --input-type=module < script.js` gives "Invalid or unexpected token" or "missing ) after argument list". `new Function(code)` is less reliable for detection because it wraps code in a function body, shifting error line numbers.
 **Rule**: After any large code-generation pass that produces JavaScript strings, scan for U+2018/U+2019 in the output: `python3 -c "open('f.html','rb').read().count(b'\xe2\x80\x99')"`. If non-zero, replace before committing. Never use curly/smart quotes as string delimiters in JavaScript. Also check for unescaped apostrophes inside single-quoted strings when contractions appear (`wasn't`, `don't`, `employer's`, etc.).
+
+---
+
+### 36. Dropdowns Inside Scrollable Containers Go Off-Screen on Mobile
+**Symptom**: Clicking a filter button in the workers table header on mobile caused the whole screen to "shoot left" and the dropdown appeared off-screen to the right.
+**Root cause**: Filter panels used `position:absolute` inside `.table-scroll` (a horizontally-scrollable container). To allow the panel to escape the scroll clip, `.table-scroll.panel-open{overflow:visible}` was toggled. On mobile, making a wide container `overflow:visible` exposes all its hidden content, triggering horizontal scroll and shifting the viewport. The `right:0` fallback then positioned the panel relative to its parent `.pf-wrap`, which was itself scrolled off-screen.
+**Fix**: Switch all `.pf-panel` elements to `position:fixed` and calculate their `top`/`left` from the trigger button's `getBoundingClientRect()`. Fixed elements are positioned relative to the viewport, not any scroll container — no overflow toggling needed, no horizontal scroll triggered. A `_positionPanelFixed(panel, triggerEl)` helper clamps the panel within the viewport on both edges.
+**Rule (mandatory for all future dropdowns/popovers)**:
+- **Never use `position:absolute` for a dropdown inside a horizontally-scrollable container.** Always use `position:fixed` with JS-calculated coordinates from `triggerEl.getBoundingClientRect()`.
+- The pattern: `panel.style.top = (tr.bottom+4)+'px'; panel.style.left = clampedLeft+'px';` where `clampedLeft = Math.min(Math.max(tr.left, 8), window.innerWidth - panelWidth - 8)`.
+- Use `_positionPanelFixed(panel, triggerEl)` — already implemented as a shared helper in app.html. Call it from every toggle function instead of the old `getBoundingClientRect` + `right:0` heuristic.
+- Do not use `overflow:visible` tricks on scroll containers to escape clipping — they always cause horizontal-scroll bugs on mobile. Use fixed positioning instead.
