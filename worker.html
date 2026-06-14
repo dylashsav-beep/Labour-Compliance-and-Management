@@ -974,21 +974,21 @@ function loginMsg(text, isError){
 }
 
 async function wpDirectLogin(){
-  if(!sbClient){ loginMsg(‘Loading, please try again.’,true); return; }
-  const raw=(document.getElementById(‘wpEmailInput’)?.value||’’).trim();
-  if(!raw){ loginMsg(‘Please enter your email address or upload code.’,true); return; }
-  loginMsg(‘’);
-  const btn=document.getElementById(‘wpLoginBtn’);
-  btn.disabled=true; btn.textContent=’Signing in…’;
+  if(!sbClient){ loginMsg('Loading, please try again.',true); return; }
+  const raw=(document.getElementById('wpEmailInput')?.value||'').trim();
+  if(!raw){ loginMsg('Please enter your email address or upload code.',true); return; }
+  loginMsg('');
+  const btn=document.getElementById('wpLoginBtn');
+  btn.disabled=true; btn.textContent='Signing in…';
   try{
     await resolveOrg();
     // ── Code login (no @ = upload code entered by a manager) ──────────────
-    if(!raw.includes(‘@’)){
-      const {data:profiles,error:codeErr}=await sbClient.rpc(‘get_worker_profiles_by_code’,{p_code:raw,p_org_id:resolvedOrgId});
+    if(!raw.includes('@')){
+      const {data:profiles,error:codeErr}=await sbClient.rpc('get_worker_profiles_by_code',{p_code:raw,p_org_id:resolvedOrgId});
       if(codeErr) throw codeErr;
       const list=Array.isArray(profiles)?profiles:[];
       if(list.length===0){
-        loginMsg(‘No workers found for that code. Try email instead.’,true);
+        loginMsg('No workers found for that code. Try email instead.',true);
         return;
       }
       wpLoginCode=raw;
@@ -997,10 +997,10 @@ async function wpDirectLogin(){
       if(list.length===1){
         // Single match — load directly
         const prof=list[0];
-        const {data,error:pErr}=await sbClient.rpc(‘get_worker_portal’,{p_email:prof.email||’’,p_org_id:resolvedOrgId,p_worker_id:prof.id});
+        const {data,error:pErr}=await sbClient.rpc('get_worker_portal',{p_email:prof.email||'',p_org_id:resolvedOrgId,p_worker_id:prof.id});
         if(pErr) throw pErr;
-        if(!data?.worker){ loginMsg(‘Could not load worker profile. Please try again.’,true); return; }
-        wpWorkerEmail=prof.email||’’;
+        if(!data?.worker){ loginMsg('Could not load worker profile. Please try again.',true); return; }
+        wpWorkerEmail=prof.email||'';
         wpProfiles=list;
         wpSelectedWorkerId=prof.id;
         wpLoadPortalData(data);
@@ -1015,30 +1015,30 @@ async function wpDirectLogin(){
     // ── Email login ────────────────────────────────────────────────────────
     const email=raw.toLowerCase();
     wpLoginCode=null;
-    const {data,error}=await sbClient.rpc(‘get_worker_portal’,{p_email:email,p_org_id:resolvedOrgId});
+    const {data,error}=await sbClient.rpc('get_worker_portal',{p_email:email,p_org_id:resolvedOrgId});
     if(error) throw error;
     if(!data){
       if(orgSlugProvided && !orgSlugResolved){
-        loginMsg(‘That company link wasn’t recognised. Please check the worker-portal link your employer gave you.’,true);
+        loginMsg('That company link was not recognised. Please check the worker-portal link your employer gave you.',true);
       }else if(!orgSlugProvided){
-        loginMsg(‘No worker profile found for this email. If your employer gave you a company-specific portal link, please use that link to sign in. Otherwise, ask them to add your email to your worker profile.’,true);
+        loginMsg('No worker profile found for this email. If your employer gave you a company-specific portal link, please use that link to sign in. Otherwise, ask them to add your email to your worker profile.',true);
       }else{
-        loginMsg(‘No worker profile found for this email address. Ask your employer to add your email to your worker profile.’,true);
+        loginMsg('No worker profile found for this email address. Ask your employer to add your email to your worker profile.',true);
       }
       return;
     }
     wpWorkerEmail=email;
     wpSelectedWorkerId=null;
-    try{ const {data:pl}=await sbClient.rpc(‘list_worker_profiles’,{p_email:email,p_org_id:resolvedOrgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
+    try{ const {data:pl}=await sbClient.rpc('list_worker_profiles',{p_email:email,p_org_id:resolvedOrgId}); wpProfiles=Array.isArray(pl)?pl:[]; }catch(_){ wpProfiles=[]; }
     try{ localStorage.setItem(WP_SESSION_KEY, JSON.stringify({email, orgId:resolvedOrgId, expires:Date.now()+WP_SESSION_TTL})); }catch(_){}
     wpLoadPortalData(data);
     await initWorkerPortal(data.worker.id);
     // Show Vault CTA for workers using email login (not code/manager path)
     wpShowVaultCTA(email);
   }catch(e){
-    loginMsg(‘Could not sign in: ‘+(e.message||e),true);
+    loginMsg('Could not sign in: '+(e.message||e),true);
   }finally{
-    btn.disabled=false; btn.textContent=’View My Documents’;
+    btn.disabled=false; btn.textContent='View My Documents';
   }
 }
 
