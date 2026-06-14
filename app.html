@@ -77,6 +77,21 @@ header{background:var(--navy-d);border-bottom:3px solid var(--sky);}
 .week-today-btn{font-family:'Inter',sans-serif;font-size:12px;font-weight:500;padding:6px 12px;border:none;background:transparent;color:var(--sky);cursor:pointer;transition:all .15s;}
 .week-today-btn:hover{background:var(--sky-xl);}
 .week-badge{display:inline-block;margin-left:5px;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:var(--navy);color:#fff;vertical-align:middle;}
+/* Mobile week picker button (hidden on desktop) */
+.week-nav-mob{display:none;align-items:center;gap:5px;border:1px solid var(--border);border-radius:6px;background:#fff;padding:5px 10px;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:600;color:var(--navy);white-space:nowrap;box-shadow:var(--sh);min-height:32px;line-height:1;}
+/* Week picker overlay + sheet */
+.week-picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:800;align-items:flex-end;}
+.week-picker-overlay.open{display:flex;}
+.week-picker-sheet{width:100%;background:#fff;border-radius:16px 16px 0 0;max-height:60vh;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+.week-picker-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.week-picker-title{font-size:15px;font-weight:700;color:var(--navy);}
+.week-picker-close{border:none;background:none;font-size:20px;color:var(--text-m);cursor:pointer;line-height:1;padding:4px;min-width:32px;min-height:32px;}
+.week-picker-list{overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;}
+.wpk-row{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer;min-height:44px;font-size:14px;color:var(--navy);font-weight:500;}
+.wpk-row.wpk-selected{background:var(--navy-bg,#eef2ff);font-weight:700;}
+.wpk-dates{font-size:11px;color:var(--text-l);font-weight:400;}
+.wpk-selected .wpk-dates{color:var(--navy);}
+.wpk-this{font-size:10px;font-weight:600;background:var(--navy);color:#fff;border-radius:3px;padding:1px 5px;margin-left:6px;}
 /* Main nav bar — full-width sticky strip under the header */
 .main-nav-bar{background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 4px rgba(0,0,0,.06);}
 .main-nav-inner{max-width:1480px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
@@ -664,11 +679,9 @@ footer{border-top:1px solid var(--border);padding:14px 0;}
   .view-tabs{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;width:100%;scrollbar-width:none;}
   .view-tabs::-webkit-scrollbar{display:none;}
   .vtab{flex-shrink:0;padding:10px 12px;font-size:12px;}
-  /* Week navigator compact */
-  .week-label{min-width:110px;padding:6px 8px;font-size:12px;}
-  .week-label .week-dates{display:none;}
-  .week-arrow{padding:6px 10px;}
-  .week-today-btn{padding:6px 8px;font-size:11px;}
+  /* Week navigator — hide desktop control, show mobile picker button */
+  .week-nav{display:none!important;}
+  .week-nav-mob{display:flex;}
   /* Stats — compact horizontal scroll strip (one row, no grid) */
   .stats-row{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding:10px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
   .stats-row::-webkit-scrollbar{display:none;}
@@ -1125,8 +1138,22 @@ body.wp-mode #headerSyncWrap{display:none!important;}
       <button class="week-arrow" onclick="shiftWeek(1)">&#8594;</button>
       <button class="week-today-btn" onclick="goToday()">Today</button>
     </div>
+    <button class="week-nav-mob" id="weekNavMob" onclick="openWeekPicker()">
+      <span id="weekNavMobLabel">Week —</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
   </div>
 </nav>
+<!-- Mobile week picker bottom sheet -->
+<div class="week-picker-overlay" id="weekPickerOverlay" onclick="if(event.target===this)closeWeekPicker()">
+  <div class="week-picker-sheet">
+    <div class="week-picker-hdr">
+      <span class="week-picker-title">Select week</span>
+      <button class="week-picker-close" onclick="closeWeekPicker()">&#x2715;</button>
+    </div>
+    <div class="week-picker-list" id="weekPickerList"></div>
+  </div>
+</div>
 </div><!-- /.sticky-chrome -->
 <script>window._orgDefaultLogoSrc=document.getElementById('headerLogoImg')?.src||'';</script>
 <div id="sbAuthBar" style="display:none;"><div class="sbAuthLeft"><span class="sbPill" id="sbStatus" onclick="sbOpenLogin()" style="cursor:pointer;">Supabase: offline</span> <span id="sbUser"></span></div><div class="sbAuthRight"><button class="btn btn-save" id="sbAuthLoginBtn" onclick="sbOpenLogin()">Sign in</button><button class="btn btn-cancel" id="sbAuthSyncBtn" onclick="sbForceSync()">Sync now</button><button class="btn btn-cancel" id="sbAuthLogoutBtn" onclick="sbLogout()">Log out</button></div></div>
@@ -3860,6 +3887,42 @@ function renderWeekLabel(){
   if(rl) rl.textContent=`Week ${wn} (${fmtDate(mon)} – ${fmtDate(sun)})`;
   const th=document.getElementById('thWeekAssign');
   if(th){ const lbl=document.getElementById('thWeekAssignLabel'); if(lbl) lbl.textContent=`W${wn} Worker Assignment`; else th.textContent=`W${wn} Worker Assignment`; }
+  // Sync mobile label
+  const mob=document.getElementById('weekNavMobLabel');
+  if(mob) mob.textContent=isCur?'This week':`Week ${wn}, ${mon.getFullYear()}`;
+}
+function openWeekPicker(){
+  const list=document.getElementById('weekPickerList');
+  const overlay=document.getElementById('weekPickerOverlay');
+  if(!list||!overlay) return;
+  const today=weekMonday(new Date());
+  const curKey=currentWeekKey();
+  let html='';
+  for(let i=-8;i<=16;i++){
+    const mon=addWeeks(today,i);
+    const sun=weekSunday(mon);
+    const key=isoWeekKey(mon);
+    const wn=key.split('-W')[1];
+    const isThis=(i===0);
+    const isSel=(key===curKey);
+    html+=`<div class="wpk-row${isSel?' wpk-selected':''}" onclick="selectWeekOffset(${i})">
+      <span>Week ${wn}, ${mon.getFullYear()}${isThis?'<span class="wpk-this">This week</span>':''}</span>
+      <span class="wpk-dates">${fmtDate(mon)} – ${fmtDate(sun)}</span>
+    </div>`;
+  }
+  list.innerHTML=html;
+  overlay.classList.add('open');
+  requestAnimationFrame(()=>{ const sel=list.querySelector('.wpk-selected'); if(sel) sel.scrollIntoView({block:'center'}); });
+}
+function closeWeekPicker(){
+  const ov=document.getElementById('weekPickerOverlay');
+  if(ov) ov.classList.remove('open');
+}
+function selectWeekOffset(offsetFromToday){
+  currentWeekMonday=addWeeks(weekMonday(new Date()),offsetFromToday);
+  renderWeekLabel();
+  renderTable();
+  closeWeekPicker();
 }
 
 // ─── View ─────────────────────────────────────────────────────────────────────
