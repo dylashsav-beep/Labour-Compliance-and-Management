@@ -291,7 +291,16 @@ let sbClient = null;
 (function(){
   const s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
-  s.onload = () => { sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON); wpBoot(); };
+  s.onload = () => {
+    // persistSession:false ensures the worker portal never inherits a vault.html
+    // auth session from localStorage (same origin). The portal is intentionally
+    // anon; picking up an authenticated vault session breaks storage RLS which
+    // expects anon for the worker-submissions/ competency upload path.
+    sbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    wpBoot();
+  };
   document.head.appendChild(s);
 })();
 
@@ -1665,7 +1674,9 @@ async function wpSubmitCompetency(competencyId, input){
     const ext = file.name.split('.').pop();
     const uuid = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36);
     const path = `worker-submissions/${resolvedOrgId}/competency/${uuid}.${ext}`;
-    const {error:upErr} = await sbClient.storage.from(SB_BUCKET).upload(path, file);
+    const {error:upErr} = await sbClient.storage.from(SB_BUCKET).upload(path, file, {
+      contentType: file.type || 'application/octet-stream', upsert: false,
+    });
     if(upErr) throw upErr;
     const {error:rpcErr} = await sbClient.rpc('submit_worker_competency',{
       p_org_id: resolvedOrgId, p_competency_id: competencyId,
