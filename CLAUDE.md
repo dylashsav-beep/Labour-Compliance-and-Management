@@ -1114,3 +1114,14 @@ Without this context, local fixes introduce side effects that only manifest seco
 - Injects `🎭 Demo` pill + `Contact us` link into `#headerSyncWrap`
 - Swaps `#headerLogoImg` src to WF SVG
 - Sets `#headerAppTitle` text to `'Work Force Compliance'`
+
+---
+
+### 35. Curly/Smart Quotes in JS String Literals Break the Entire Script Silently
+**Symptom**: Every button click and login on worker.html stopped working. No error was visible on screen — the page rendered, but nothing responded. Workers and managers who had been logging in successfully earlier in the day suddenly could not.
+**Root cause**: A code-generation pass wrote JavaScript string literals using Unicode "curly" or "smart" apostrophes (`'` U+2018 / `'` U+2019) instead of ASCII `'` (U+0027). JavaScript only accepts U+0027 as a string delimiter. U+2018/U+2019 are not recognised as delimiters and cause an "Invalid or unexpected token" syntax error — which aborts the entire inline `<script>` block silently (no visible error in the browser UI, just a non-functional page). Additionally, one string `'...wasn't...'` used a regular ASCII apostrophe inside a single-quoted string without escaping it, which closed the string early once the outer delimiters were also ASCII.
+**Fix**:
+1. Replace all U+2018/U+2019 occurrences in the JS section with ASCII `'`.
+2. Avoid contractions (`wasn't` → `was not`) or escape the apostrophe (`wasn\'t`) in single-quoted strings.
+**Detection**: `node --input-type=module < script.js` gives "Invalid or unexpected token" or "missing ) after argument list". `new Function(code)` is less reliable for detection because it wraps code in a function body, shifting error line numbers.
+**Rule**: After any large code-generation pass that produces JavaScript strings, scan for U+2018/U+2019 in the output: `python3 -c "open('f.html','rb').read().count(b'\xe2\x80\x99')"`. If non-zero, replace before committing. Never use curly/smart quotes as string delimiters in JavaScript. Also check for unescaped apostrophes inside single-quoted strings when contractions appear (`wasn't`, `don't`, `employer's`, etc.).
