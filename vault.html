@@ -54,8 +54,10 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 /* Sign-out inside account view */
 .v-signout-account-btn{display:block;width:100%;margin-top:20px;padding:13px 16px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;text-align:center;min-height:48px;transition:background .15s;font-family:inherit;}
 .v-signout-account-btn:active{background:#fee2e2;}
-.v-tabs{display:flex;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;}
-.v-tab{flex:1;min-width:80px;padding:14px 4px 12px;font-size:12px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
+.v-tabs{display:flex;border-bottom:2px solid #e2e8f0;background:#fff;position:sticky;top:57px;z-index:19;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative;}
+.v-tabs::-webkit-scrollbar{display:none;}
+.v-tabs::after{content:'';position:absolute;right:0;top:0;bottom:2px;width:28px;background:linear-gradient(to right,transparent,#fff);pointer-events:none;z-index:1;}
+.v-tab{flex:0 0 auto;min-width:0;padding:14px 14px 12px;font-size:12px;font-weight:500;color:#64748b;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;text-align:center;white-space:nowrap;min-height:50px;transition:color .15s,border-color .15s;}
 .v-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
 .v-tab:hover:not(.active){color:#334155;}
 .v-body{max-width:680px;margin:0 auto;padding:20px 16px 48px;width:100%;}
@@ -349,7 +351,9 @@ body{display:flex;flex-direction:column;min-height:100vh;}
 <div id="loginScreen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="login-logo-icon">🗂️</div>
+      <div class="login-logo-icon" style="display:flex;align-items:center;justify-content:center;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M12 9v-2"/><path d="M12 17v-2"/><path d="M9 12H7"/><path d="M17 12h-2"/></svg>
+      </div>
       <div>
         <div class="login-logo-text" id="brandName">Work Force Vault</div>
         <div class="login-logo-sub">Your documents, owned by you</div>
@@ -373,8 +377,8 @@ body{display:flex;flex-direction:column;min-height:100vh;}
   </div>
   <div class="v-tabs">
     <button class="v-tab active" data-tab="docs">Documents</button>
-    <button class="v-tab" data-tab="assignments">Work Orders / Contracts</button>
-    <button class="v-tab" data-tab="training">Training &amp; Certs</button>
+    <button class="v-tab" data-tab="assignments">Work Orders</button>
+    <button class="v-tab" data-tab="training">Training</button>
     <button class="v-tab" data-tab="resources">Resources</button>
     <button class="v-tab" data-tab="files">My Files</button>
   </div>
@@ -593,8 +597,8 @@ function renderLoginForm(prefillEmail, prefillMsg, prefillMsgKind){
     const fld = (id,type,label,ph,ac,val='')=>
       '<div class="login-field"><label for="lf_'+id+'">'+label+'</label>'
       +'<input id="lf_'+id+'" type="'+type+'" autocomplete="'+ac+'" placeholder="'+ph+'" value="'+esc(val)+'" style="font-size:16px!important;"/></div>';
-    const pwToggle = '<button type="button" onclick="toggleLoginPw(\'lf_pw\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password">👁</button>';
-    const pwToggle2 = '<button type="button" onclick="toggleLoginPw(\'lf_pw2\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password">👁</button>';
+    const pwToggle = '<button type="button" onclick="toggleLoginPw(\'lf_pw\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>';
+    const pwToggle2 = '<button type="button" onclick="toggleLoginPw(\'lf_pw2\')" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;padding:0;min-height:auto;" aria-label="Show/hide password"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>';
 
     if(mode==='signup') return ''
       +'<div class="login-title">Create your vault</div>'
@@ -644,7 +648,7 @@ function renderLoginForm(prefillEmail, prefillMsg, prefillMsgKind){
       +'<a href="#" style="color:var(--accent);font-weight:600;" onclick="switchLoginMode(\'forgot\');return false;">Forgot password?</a></div>'
       +'<div style="display:flex;align-items:center;gap:10px;margin:16px 0;"><div style="flex:1;height:1px;background:#e2e8f0;"></div><span style="font-size:11px;font-weight:600;color:#94a3b8;white-space:nowrap;">OR</span><div style="flex:1;height:1px;background:#e2e8f0;"></div></div>'
       +'<button id="lf_ml" onclick="sendMagicLink()" style="width:100%;padding:11px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;min-height:44px;">Send magic link</button>'
-      +'<div class="login-note" style="margin-top:14px;">🔒 Stay signed in for <b>30 days</b>. Avoid private/incognito if you want to stay logged in.</div>';
+      +'<div class="login-note" style="margin-top:14px;display:flex;align-items:center;gap:6px;"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="11" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Stay signed in for <b>30 days</b>. Avoid private/incognito if you want to stay logged in.</div>';
   }
 
   form.innerHTML = html(_loginMode);
@@ -784,7 +788,7 @@ async function enterVault(){
     handlePostCheckout();
     backfillVaultCopies();
   }catch(e){
-    $('vBody').innerHTML = '<div class="v-empty"><div class="v-empty-icon">⚠️</div>'
+    $('vBody').innerHTML = '<div class="v-empty"><div style="color:#ef4444;margin-bottom:12px;">'+icon('alert-triangle',40)+'</div>'
       +'We couldn\'t load your vault.<br><span style="font-size:12px;">'+esc(e.message||'')+'</span><br><br>'
       +'If you were just invited, your records may still be linking. Try signing out and back in, '
       +'or contact <a href="mailto:'+BRAND.supportEmail+'">'+BRAND.supportEmail+'</a>.</div>';
@@ -842,7 +846,7 @@ function setOrgFilter(orgIdx, f){
 function renderDocs(){
   const memberships = vaultData.memberships || [];
   if(!memberships.length){
-    $('vBody').innerHTML = planBanner()+'<div class="v-empty"><div class="v-empty-icon">📭</div>'
+    $('vBody').innerHTML = planBanner()+'<div class="v-empty"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('inbox',40)+'</div>'
       +'No linked organisations yet.<br><span style="font-size:12px;">When an employer invites you, your compliance documents appear here.</span></div>';
     return;
   }
@@ -907,19 +911,19 @@ function renderDocs(){
       let groups;
       if(f==='all'){
         groups = [
-          {label:'⚠ Required — not on file', cls:'cat-action',   items:reqMissing, variant:'urgent'},
-          {label:'✕ Expired',                cls:'cat-action',   items:expired,    variant:'urgent'},
-          {label:'🕐 Expiring soon',          cls:'cat-expiring', items:expiring,   variant:'expiring'},
-          {label:'✓ Valid',                   cls:'cat-valid',   items:valid,       variant:''},
-          {label:'○ Optional — not on file', cls:'cat-optional', items:optMissing,  variant:''},
+          {label:'Required — not on file', cls:'cat-action',   items:reqMissing, variant:'urgent'},
+          {label:'✕ Expired',              cls:'cat-action',   items:expired,    variant:'urgent'},
+          {label:'Expiring soon',          cls:'cat-expiring', items:expiring,   variant:'expiring'},
+          {label:'✓ Valid',                cls:'cat-valid',    items:valid,      variant:''},
+          {label:'○ Optional — not on file', cls:'cat-optional', items:optMissing, variant:''},
         ];
       } else if(f==='attention'){
         groups = [
-          {label:'⚠ Required — not on file', cls:'cat-action', items:reqMissing, variant:'urgent'},
-          {label:'✕ Expired',                cls:'cat-action', items:expired,    variant:'urgent'},
+          {label:'Required — not on file', cls:'cat-action', items:reqMissing, variant:'urgent'},
+          {label:'✕ Expired',              cls:'cat-action', items:expired,    variant:'urgent'},
         ];
       } else if(f==='expiring'){
-        groups = [{label:'🕐 Expiring soon', cls:'cat-expiring', items:expiring, variant:'expiring'}];
+        groups = [{label:'Expiring soon', cls:'cat-expiring', items:expiring, variant:'expiring'}];
       } else if(f==='valid'){
         groups = [{label:'✓ Valid', cls:'cat-valid', items:valid, variant:''}];
       } else if(f==='optional'){
@@ -953,7 +957,7 @@ function renderDocs(){
       });
       html += '<div style="border-top:2px solid #f1f5f9;margin-top:4px;">';
       html += '<div class="v-org-header" style="padding:10px 0 8px;cursor:pointer;" onclick="toggleCompOrg(\''+compOrgKey+'\')">'
-        +'<div style="width:28px;text-align:center;font-size:16px;flex-shrink:0;">🎓</div>'
+        +'<div style="width:28px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--accent);">'+icon('award',18)+'</div>'
         +'<div style="flex:1;min-width:0;">'
         +'<div style="font-size:13px;font-weight:700;color:#1e293b;">Required Training &amp; Certificates</div>'
         +'<div class="v-org-header-sub">'+reqComps.length+' required'
@@ -1011,15 +1015,15 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
       +icon('info',14)+'</button>';
   }
   if(hasFile && isPaid() && orgFile){
-    actionBtns += '<button class="wp-card-icon-btn" title="View document" onclick="event.stopPropagation();downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name)+'\',event)">'
-      +icon('download',14)+'</button>';
+    actionBtns += '<button class="wp-card-icon-btn v-view-doc-btn" title="View document" onclick="event.stopPropagation();downloadOrgFile(\''+esc(orgFile.file_path)+'\',\''+esc(orgFile.file_name||'document')+'\',event)" style="width:auto;padding:0 10px;gap:5px;display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--accent);background:#f5f3ff;border-color:#ddd6fe;">'
+      +icon('eye',13)+' View</button>';
   } else if(hasFile && !isPaid()){
-    actionBtns += '<button class="wp-card-icon-btn" title="Vault plan required" onclick="event.stopPropagation();onUpgrade()">'
-      +icon('lock',14)+'</button>';
+    actionBtns += '<button class="wp-card-icon-btn v-view-doc-btn" title="View document" onclick="event.stopPropagation();openDocViewer()" style="width:auto;padding:0 10px;gap:5px;display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:#64748b;background:#f8fafc;">'
+      +icon('eye',13)+' View</button>';
   }
   const cardActions = actionBtns ? '<div class="wp-card-actions">'+actionBtns+'</div>' : '';
   const btnCount = actionBtns ? (actionBtns.match(/wp-card-icon-btn/g)||[]).length : 0;
-  const topPadding = btnCount > 0 ? ' style="padding-right:'+(btnCount*34+12)+'px;"' : '';
+  const topPadding = btnCount > 0 ? ' style="padding-right:'+(btnCount*36+16)+'px;"' : '';
 
   // Top section: icon + name/status only
   let body = cardActions
@@ -1042,7 +1046,7 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   if(issued){
     if(issued.status==='pending_signature'||issued.status==='pending'){
       body += '<div class="wp-template-banner" style="background:#eff6ff;border-color:#93c5fd;margin-top:12px;">'
-        +'<div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#1d4ed8;">✉️ Sent for e-signature</div>'
+        +'<div class="wp-template-banner-text"><div class="wp-template-banner-label" style="color:#1d4ed8;display:flex;align-items:center;gap:6px;">'+icon('mail',13)+' Sent for e-signature</div>'
         +'<div class="wp-template-banner-sub" style="color:#1e40af;">Check your email for the signing link</div></div></div>';
     } else if(issued.status==='signed'||issued.status==='approved'){
       body += '<div class="v-issued-banner signed" style="margin-top:12px;">'+icon('check-circle-2',13)+' Signed document on file'
@@ -1057,10 +1061,10 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   // Submission state
   if(sub){
     if(sub.status==='pending'){
-      body += '<div class="wp-pending-badge" style="display:inline-flex;margin-top:10px;">⏳ Awaiting admin review</div>';
+      body += '<div class="wp-pending-badge" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;">'+icon('clock',12)+' Awaiting admin review</div>';
     } else if(sub.status==='rejected'){
       body += '<div class="wp-rejected-notice" style="margin-top:10px;">'
-        +'<div class="wp-rejected-notice-label">❌ Submission rejected</div>'
+        +'<div class="wp-rejected-notice-label" style="display:flex;align-items:center;gap:5px;">'+icon('x-circle',13)+' Submission rejected</div>'
         +'<div class="wp-rejected-notice-text">'+(sub.review_notes ? esc(sub.review_notes) : 'You can resubmit a corrected document below.')+'</div>'
         +'</div>';
     }
@@ -1069,9 +1073,9 @@ function docCard(item, variant, orgIdx, submByKey, issuedByKey, filesByKey){
   // Template download banner
   if(item.template_file_path){
     body += '<div class="wp-template-banner" style="margin-top:10px;">'
-      +'<div class="wp-template-banner-text"><div class="wp-template-banner-label">📎 Official form required</div>'
+      +'<div class="wp-template-banner-text"><div class="wp-template-banner-label" style="display:flex;align-items:center;gap:6px;">'+icon('paperclip',13)+' Official form required</div>'
       +'<div class="wp-template-banner-sub">Download, complete and submit the official form</div></div>'
-      +'<button class="wp-template-dl-btn" onclick="event.stopPropagation();downloadTemplate(\''+esc(item.template_file_path)+'\',\''+esc(item.template_file_name||'template')+'\')">📥 Download</button>'
+      +'<button class="wp-template-dl-btn" style="display:inline-flex;align-items:center;gap:5px;" onclick="event.stopPropagation();downloadTemplate(\''+esc(item.template_file_path)+'\',\''+esc(item.template_file_name||'template')+'\')">'+icon('download',12)+' Download</button>'
       +'</div>';
   }
 
@@ -1169,7 +1173,7 @@ async function submitDoc(orgIdx, docKey, sfId){
   if(file.size > 25*1024*1024){ alert('File is larger than 25 MB — please upload a smaller file.'); return; }
 
   const btn = $(sfId+'_btn');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Uploading…'; }
+  if(btn){ btn.disabled=true; btn.textContent='Uploading…'; }
   try{
     const { data:{ session } } = await sbClient.auth.getSession();
     if(!session) throw new Error('Session expired — please sign in again.');
@@ -1201,6 +1205,30 @@ async function submitDoc(orgIdx, docKey, sfId){
     alert('Submission failed: '+(e.message||'unknown error'));
     if(btn){ btn.disabled=false; btn.textContent='Submit →'; }
   }
+}
+
+// ── Upgrade-gate viewer (free plan) ─────────────────────────────────────────
+// Called when a free-plan user taps the "View" button on a card with a file.
+// Shows a blurred mock of a document with an upgrade prompt.
+function openDocViewer(){
+  const blurRows = Array.from({length:9},(_,i)=>`<div style="height:${12+Math.round(Math.sin(i+1)*4)}px;background:${['#e2e8f0','#f1f5f9','#dde3ec'][i%3]};border-radius:4px;width:${55+Math.round(Math.sin(i+2)*30)}%;margin-bottom:10px;"></div>`).join('');
+  const body = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">'
+    +'<div style="flex:1;font-size:15px;font-weight:800;color:#1e293b;display:flex;align-items:center;gap:8px;">'+icon('file-text',18)+' Document preview</div>'
+    +'<button style="background:none;border:none;color:#94a3b8;cursor:pointer;padding:4px;min-height:auto;" onclick="closeModal()">'+icon('x',18)+'</button>'
+    +'</div>'
+    +'<div style="position:relative;border-radius:12px;overflow:hidden;background:#f8fafc;margin-bottom:16px;">'
+    +'<div style="padding:20px;filter:blur(5px);pointer-events:none;user-select:none;">'+blurRows+'</div>'
+    +'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.35);backdrop-filter:blur(3px);">'
+    +'<div style="background:#fff;border-radius:14px;padding:20px 22px;text-align:center;max-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.15);">'
+    +'<div style="color:var(--accent);margin-bottom:8px;">'+icon('lock',24)+'</div>'
+    +'<div style="font-size:15px;font-weight:800;color:#1e293b;margin-bottom:6px;">Vault plan required</div>'
+    +'<div style="font-size:12px;color:#64748b;line-height:1.5;margin-bottom:14px;">Upgrade to view, download and share all your documents.</div>'
+    +'<button class="v-primary-btn" style="min-height:44px;font-size:14px;" onclick="closeModal();onUpgrade()">Upgrade to Vault</button>'
+    +'</div></div>'
+    +'</div>'
+    +'<button class="v-ghost-btn" onclick="closeModal()">Close</button>';
+  setModal(body);
+  $('vModalOverlay').classList.add('open');
 }
 
 // ── File preview modal ───────────────────────────────────────────────────────
@@ -1301,7 +1329,7 @@ function renderAssignments(){
 
   const standaloneVault = vaultAssigns.filter(va=>!va.assignment_id);
   if(!orgGroups.length && !standaloneVault.length){
-    html += '<div class="v-empty"><div class="v-empty-icon" style="font-size:36px;">📋</div>'
+    html += '<div class="v-empty"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('file-text',40)+'</div>'
       +'No work orders yet.<br><span style="font-size:12px;">When your employers add you to a project, it appears here.</span></div>';
     setBody(html);
     return;
@@ -1379,7 +1407,7 @@ function renderTraining(){
   const orgsWithComps = memberships.map((m,i)=>({m,i})).filter(({m})=>(m.competencies||[]).length>0);
 
   if(!orgsWithComps.length){
-    setBody(planBanner()+'<div class="v-empty"><div class="v-empty-icon" style="font-size:36px;">🎓</div>'
+    setBody(planBanner()+'<div class="v-empty"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('award',40)+'</div>'
       +'No training requirements yet.<br><span style="font-size:12px;">When an employer assigns training or certificates, they appear here.</span></div>');
     return;
   }
@@ -1466,7 +1494,7 @@ function openAssignmentDetail(a){
       const url = pu?.publicUrl||'';
       return '<a href="'+esc(url)+'" target="_blank" rel="noopener" class="v-proj-file-tile">'
         +(isImg?'<img src="'+esc(url)+'" class="v-proj-file-thumb" onerror="this.style.display=\'none\'"/>'
-                :'<div class="v-proj-file-icon">📄</div>')
+                :'<div class="v-proj-file-icon" style="color:#94a3b8;">'+icon('file-text',28)+'</div>')
         +'<div class="v-proj-file-name">'+esc(f.file_name)+'</div>'
         +(f.caption?'<div class="v-proj-file-caption">'+esc(f.caption)+'</div>':'')
         +'</a>';
@@ -1501,7 +1529,7 @@ function closeDetail(){
 function renderResources(){
   const memberships = vaultData.memberships || [];
   if(!memberships.length){
-    $('vBody').innerHTML = '<div class="v-empty"><div class="v-empty-icon">🏠</div>No linked organisations.<br>'
+    $('vBody').innerHTML = '<div class="v-empty"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('home',40)+'</div>No linked organisations.<br>'
       +'<span style="font-size:12px;">Accommodation, vehicle and tool assignments from your employers appear here.</span></div>';
     return;
   }
@@ -1522,7 +1550,7 @@ function renderResources(){
     for(const r of rets) retByAssignId[r.assignment_id] = r;
 
     html += '<div style="margin-bottom:28px;">'
-      +'<div class="v-org-header"><span style="font-size:22px;">🏢</span><div>'
+      +'<div class="v-org-header">'+orgAvatar(m.org_name,true)+'<div>'
       +'<div class="v-org-header-name">'+esc(m.org_name)+'</div>'
       +'</div></div>';
 
@@ -1537,13 +1565,13 @@ function renderResources(){
         const rfId   = 'rf_'+orgIdx+'_accom_'+aa.id.replace(/-/g,'');
         html += '<div class="v-resource-card">'
           +'<div class="v-resource-top">'
-          +'<div class="v-resource-icon">🏠</div>'
+          +'<div class="v-resource-icon" style="display:flex;align-items:center;justify-content:center;color:#64748b;">'+icon('home',22)+'</div>'
           +'<div class="v-resource-info">'
           +'<div class="v-resource-name">'+esc(aa.property_name||'Accommodation')+'</div>'
           +(aa.property_address ? '<div class="v-resource-meta">'+esc(aa.property_address)+'</div>' : '')
           +'<div class="v-resource-meta">'+esc(fmtDate(aa.start_date))+(aa.end_date?' – '+esc(fmtDate(aa.end_date)):'')+'</div>'
           +(active ? '<div class="v-resource-active">● Active</div>' : '<div class="v-resource-ended">Ended</div>')
-          +(retReq ? '<div class="v-return-pending">⏳ Return request pending</div>' : '')
+          +(retReq ? '<div class="v-return-pending">Return request pending</div>' : '')
           +(aa.notes ? '<div class="v-resource-meta" style="margin-top:4px;">'+esc(aa.notes)+'</div>' : '')
           +(active && !retReq
             ? '<div class="v-doc-actions" style="margin-top:8px;"><button class="v-mini-btn" onclick="toggleReturnForm(\''+rfId+'\')">↩ Request return</button></div>'
@@ -1563,13 +1591,13 @@ function renderResources(){
         const vname  = [va.vehicle_make, va.vehicle_model, va.vehicle_reg].filter(Boolean).join(' ') || va.vehicle_desc || 'Vehicle';
         html += '<div class="v-resource-card">'
           +'<div class="v-resource-top">'
-          +'<div class="v-resource-icon">🚗</div>'
+          +'<div class="v-resource-icon" style="display:flex;align-items:center;justify-content:center;color:#64748b;">'+icon('car',22)+'</div>'
           +'<div class="v-resource-info">'
           +'<div class="v-resource-name">'+esc(vname)+'</div>'
           +(va.vehicle_desc && va.vehicle_make ? '<div class="v-resource-meta">'+esc(va.vehicle_desc)+'</div>' : '')
           +'<div class="v-resource-meta">'+esc(fmtDate(va.start_date))+(va.end_date?' – '+esc(fmtDate(va.end_date)):'')+'</div>'
           +(active ? '<div class="v-resource-active">● Active</div>' : '<div class="v-resource-ended">Ended</div>')
-          +(retReq ? '<div class="v-return-pending">⏳ Return request pending</div>' : '')
+          +(retReq ? '<div class="v-return-pending">Return request pending</div>' : '')
           +(va.notes ? '<div class="v-resource-meta" style="margin-top:4px;">'+esc(va.notes)+'</div>' : '')
           +(active && !retReq
             ? '<div class="v-doc-actions" style="margin-top:8px;"><button class="v-mini-btn" onclick="toggleReturnForm(\''+rfId+'\')">↩ Request return</button></div>'
@@ -1588,14 +1616,14 @@ function renderResources(){
         const rfId   = 'rf_'+orgIdx+'_tool_'+ta.id.replace(/-/g,'');
         html += '<div class="v-resource-card">'
           +'<div class="v-resource-top">'
-          +'<div class="v-resource-icon">🔧</div>'
+          +'<div class="v-resource-icon" style="display:flex;align-items:center;justify-content:center;color:#64748b;">'+icon('wrench',22)+'</div>'
           +'<div class="v-resource-info">'
           +'<div class="v-resource-name">'+esc(ta.tool_name||'Tool')+'</div>'
           +(ta.tool_desc ? '<div class="v-resource-meta">'+esc(ta.tool_desc)+'</div>' : '')
           +(ta.tool_serial ? '<div class="v-resource-meta">Serial: '+esc(ta.tool_serial)+'</div>' : '')
           +'<div class="v-resource-meta">'+esc(fmtDate(ta.start_date))+(ta.end_date?' – '+esc(fmtDate(ta.end_date)):'')+'</div>'
           +(active ? '<div class="v-resource-active">● Active</div>' : '<div class="v-resource-ended">Ended</div>')
-          +(retReq ? '<div class="v-return-pending">⏳ Return request pending</div>' : '')
+          +(retReq ? '<div class="v-return-pending">Return request pending</div>' : '')
           +(ta.notes ? '<div class="v-resource-meta" style="margin-top:4px;">'+esc(ta.notes)+'</div>' : '')
           +(active && !retReq
             ? '<div class="v-doc-actions" style="margin-top:8px;"><button class="v-mini-btn" onclick="toggleReturnForm(\''+rfId+'\')">↩ Request return</button></div>'
@@ -1609,7 +1637,7 @@ function renderResources(){
   }
 
   if(!anything){
-    html = '<div class="v-empty"><div class="v-empty-icon">🏠</div>No resources assigned.<br>'
+    html = '<div class="v-empty"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('home',40)+'</div>No resources assigned.<br>'
       +'<span style="font-size:12px;">Accommodation, vehicle and tool assignments from your employers appear here.</span></div>';
   }
 
@@ -1643,7 +1671,7 @@ async function submitReturn(orgIdx, resType, assignId, rfId){
   const fileEl   = $(rfId+'_file');
   const file     = fileEl && fileEl.files && fileEl.files[0];
   const btn      = $(rfId+'_btn');
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Submitting…'; }
+  if(btn){ btn.disabled=true; btn.textContent='Submitting…'; }
 
   let filePath=null, fileName=null, fileSize=null, mimeType=null;
   try{
@@ -1739,9 +1767,9 @@ function renderAccount(){
 
   if(!isPaid()){
     html += '<div class="v-card"><h3>Upgrade to Vault</h3>'
-      +'<p>⬇ &nbsp;Download every approved document and contract</p>'
-      +'<p>📤 &nbsp;Send documents to a new employer in seconds</p>'
-      +'<p>🗂️ &nbsp;Add personal documents and track expiry dates</p>'
+      +'<p style="display:flex;align-items:center;gap:8px;">'+icon('download',14)+' Download every approved document and contract</p>'
+      +'<p style="display:flex;align-items:center;gap:8px;">'+icon('share-2',14)+' Send documents to a new employer in seconds</p>'
+      +'<p style="display:flex;align-items:center;gap:8px;">'+icon('folder-plus',14)+' Add personal documents and track expiry dates</p>'
       +'<button class="v-primary-btn" style="margin-top:10px;" onclick="onUpgrade()">Upgrade now</button>'
       +'</div>';
   } else {
@@ -1831,7 +1859,7 @@ async function saveProfile(orgIdx){
 function renderFiles(){
   let html = planBanner();
   if(!isPaid()){
-    html += '<div class="v-card"><h3>🗂️ Your personal document vault</h3>'
+    html += '<div class="v-card"><h3 style="display:flex;align-items:center;gap:8px;">'+icon('folder-plus',16)+' Your personal document vault</h3>'
       +'<p>With the Vault plan you can upload your own documents — passport, certificates, anything — '
       +'track their expiry dates, and share them in seconds.</p>'
       +'<button class="v-primary-btn" style="margin-top:6px;" onclick="onUpgrade()">Upgrade to add files</button></div>';
@@ -1854,7 +1882,7 @@ function renderFiles(){
   const personal = (vaultData.vault_docs||[]).filter(d=>d.source==='worker_upload' && d.active!==false);
   html += '<div class="v-section-title">My personal documents</div>';
   if(!personal.length){
-    html += '<div class="v-empty" style="padding:28px 16px;"><div class="v-empty-icon">📂</div>'
+    html += '<div class="v-empty" style="padding:28px 16px;"><div style="color:#cbd5e1;margin-bottom:12px;">'+icon('folder-open',40)+'</div>'
       +'No personal documents yet.<br><span style="font-size:12px;">Upload your first file above.</span></div>';
   } else {
     personal.sort((a,b)=> STATUS_RANK[fileStatusByExpiry(a.expiry_date)] - STATUS_RANK[fileStatusByExpiry(b.expiry_date)]);
@@ -1890,7 +1918,7 @@ async function uploadPersonalDoc(){
   const btn = $('puBtn');
   if(!file){ alert('Please choose a file to upload.'); return; }
   if(file.size > 25*1024*1024){ alert('That file is larger than 25 MB. Please upload a smaller file.'); return; }
-  btn.disabled=true; btn.textContent='⏳ Uploading…';
+  btn.disabled=true; btn.textContent='Uploading…';
   try{
     const { data:{ session } } = await sbClient.auth.getSession();
     const uid = session && session.user && session.user.id;
@@ -1910,7 +1938,7 @@ async function uploadPersonalDoc(){
     await refreshVault();
   }catch(e){
     alert('Upload failed: '+(e.message||'unknown error'));
-    btn.disabled=false; btn.textContent='⬆ Upload to my vault';
+    btn.disabled=false; btn.innerHTML=icon('upload',16)+' Upload to my vault';
   }
 }
 
@@ -1977,22 +2005,22 @@ function vaultCompCard(comp, rec, orgId, orgIdx){
     html += '<div style="font-size:12px;color:#64748b;padding:0 14px 6px;">Expires: '+esc(rec.expiry_date)+'</div>';
 
   if(rec && rec.file_name)
-    html += '<div style="font-size:12px;color:#64748b;padding:0 14px 4px;">📄 '+esc(rec.file_name)+'</div>';
+    html += '<div style="font-size:12px;color:#64748b;padding:0 14px 4px;display:inline-flex;align-items:center;gap:4px;">'+icon('file-text',13)+' '+esc(rec.file_name)+'</div>';
 
   if(rec && rec.review_notes)
     html += '<div class="wp-banner" style="background:#fee2e2;border-top:1px solid #fca5a5;color:#991b1b;font-size:12px;">'+esc(rec.review_notes)+'</div>';
 
   if(hasTmpl)
-    html += '<div class="wp-banner wp-banner-tmpl"><span>📋 Template</span>'
+    html += '<div class="wp-banner wp-banner-tmpl"><span style="display:inline-flex;align-items:center;gap:4px;">'+icon('file-text',12)+' Template</span>'
       +'<button class="wp-doc-btn" style="margin-left:auto;" onclick="downloadVaultCompTemplate(\''+esc(hasTmpl)+'\',\''+esc(comp.template_file_name||'template')+'\')">Download</button></div>';
 
   // Upload / pending section
   if(rec && rec.status==='pending'){
-    html += '<div class="wp-banner" style="background:#fef3c7;border-top:1px solid #fde68a;color:#92400e;font-size:12px;">⏳ Submission pending review by your employer.</div>';
+    html += '<div class="wp-banner" style="background:#fef3c7;border-top:1px solid #fde68a;color:#92400e;font-size:12px;">Submission pending review by your employer.</div>';
   } else {
     html += '<div style="padding:10px 14px;border-top:1px solid #f1f5f9;display:flex;flex-direction:column;gap:8px;">';
     html += '<label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#334155;cursor:pointer;min-height:44px;">'
-      +'<span>📤 Upload file</span>'
+      +'<span style="display:inline-flex;align-items:center;gap:6px;">'+icon('upload',13)+' Upload file</span>'
       +'<input type="file" accept="image/*,.pdf,.doc,.docx" style="flex:1;font-size:12px;" '
       +'onchange="vaultUploadCompetency(\''+comp.competency_id+'\',\''+orgId+'\',this)"/>'
       +'</label>';
@@ -2001,7 +2029,7 @@ function vaultCompCard(comp, rec, orgId, orgIdx){
     if(myFiles.length){
       html += '<button class="wp-doc-btn" style="background:#f8fafc;color:#334155;border:1px solid #e2e8f0;" '
         +'data-pick-vault-comp="'+comp.competency_id+'" data-org-id="'+orgId+'">'
-        +'📎 Use from My Files</button>';
+        +icon('paperclip',13)+' Use from My Files</button>';
     }
     html += '</div>';
   }
@@ -2335,7 +2363,7 @@ async function submitVaultToOrg(){
   const docKey  = $('submitDocKey').value;
   const vaultDocId = window._submitVaultDocId;
   if(!m||!docKey){ alert('Please choose an employer and a document type.'); return; }
-  const btn=$('submitOrgBtn'); btn.disabled=true; btn.textContent='⏳ Submitting…';
+  const btn=$('submitOrgBtn'); btn.disabled=true; btn.textContent='Submitting…';
   try{
     await callFn('submit-vault-to-org', { vault_doc_id:vaultDocId, org_id:m.org_id, doc_key:docKey });
     closeModal();
@@ -2398,7 +2426,7 @@ async function onManageSubscription(){
 // ── Downloads ────────────────────────────────────────────────────────────────
 async function brokerDownload(payload, btn){
   const orig = btn ? btn.textContent : null;
-  if(btn){ btn.disabled=true; btn.textContent='⏳ Preparing…'; }
+  if(btn){ btn.disabled=true; btn.textContent='Preparing…'; }
   try{
     const { url } = await callFn('get-vault-file', payload);
     if(url){ window.open(url,'_blank'); }
