@@ -1238,7 +1238,7 @@ footer{
   <div class="navbar-right">
     <a class="btn btn-ghost-nav" href="vault.html">Worker Vault</a>
     <a class="btn btn-ghost-nav" href="app.html">Log in</a>
-    <a class="btn btn-outline-nav" href="app.html?demo=1">Live Demo</a>
+    <a class="btn btn-outline-nav" href="app.html?demo=1" onclick="return openDemoGate(event)">Live Demo</a>
     <button class="btn btn-primary" onclick="openDemoModal()">Request Trial</button>
     <button class="hamburger" id="hamburgerBtn" aria-label="Open menu" onclick="toggleMobileMenu()">
       <span></span><span></span><span></span>
@@ -1259,7 +1259,7 @@ footer{
     <div class="mobile-menu-actions">
       <a class="btn btn-ghost-nav" href="vault.html">Worker Vault</a>
       <a class="btn btn-ghost-nav" href="app.html">Log in</a>
-      <a class="btn btn-outline-nav" href="app.html?demo=1">Try the Live Demo</a>
+      <a class="btn btn-outline-nav" href="app.html?demo=1" onclick="closeMobileMenu();return openDemoGate(event)">Try the Live Demo</a>
       <button class="btn btn-primary" onclick="openDemoModal();closeMobileMenu();">Request Trial</button>
     </div>
   </div>
@@ -1280,7 +1280,7 @@ footer{
       <p class="hero-lead">Stop chasing documents over WhatsApp. Work-Force gives construction teams real-time compliance tracking, project Gantt views, and automated alerts — for ZZP, employed, and subcontracted workers anywhere. Customizable document sets work for any country, with pre-built sets for the Netherlands, Belgium, Germany, and Denmark.</p>
       <div class="hero-ctas">
         <button class="btn btn-primary btn-lg" onclick="openDemoModal()">Request Trial</button>
-        <a class="btn btn-demo btn-lg" href="app.html?demo=1">Try the Live Demo</a>
+        <a class="btn btn-demo btn-lg" href="app.html?demo=1" onclick="return openDemoGate(event)">Try the Live Demo</a>
         <a class="btn btn-ghost-nav btn-lg" href="#features">See how it works</a>
       </div>
       <div class="hero-proof">
@@ -2467,9 +2467,85 @@ footer{
 </div>
 
 <!-- ═══════════════════════════════════
+     DEMO GATE MODAL
+═══════════════════════════════════ -->
+<div class="modal-overlay" id="demoGate" onclick="if(event.target===this)closeDemoGate()">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div class="modal-title">Try the live demo</div>
+      <button class="modal-close" onclick="closeDemoGate()">×</button>
+    </div>
+    <p class="modal-sub">A couple of quick details and we'll drop you straight into a fully interactive demo — no sign-up, no commitment.</p>
+    <form id="demoGateForm" onsubmit="submitDemoGate(event)">
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label" for="demoGateName">Your name</label>
+          <input class="form-input" type="text" id="demoGateName" placeholder="Jan de Vries">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="demoGateCompany">Company</label>
+          <input class="form-input" type="text" id="demoGateCompany" placeholder="Your company">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:0.85rem;">
+        <label class="form-label" for="demoGateEmail">Work email *</label>
+        <input class="form-input" type="email" id="demoGateEmail" required placeholder="jan@company.nl">
+      </div>
+      <button class="btn btn-primary modal-submit" id="demoGateBtn" type="submit" style="margin-top:1.1rem;">Enter the demo →</button>
+      <div style="text-align:center;margin-top:0.85rem;">
+        <a class="success-back" style="cursor:pointer;" onclick="enterDemo()">Skip and just explore →</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
      JAVASCRIPT
 ═══════════════════════════════════ -->
 <script>
+// ── Lead capture (Supabase anon RPC) ──
+const WF_SB_URL  = 'https://gmuyvostwcqorspgzvjv.supabase.co';
+const WF_SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdtdXl2b3N0d2Nxb3JzcGd6dmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTE5NjgsImV4cCI6MjA5NDQyNzk2OH0.XHzdr_9_MZXtv1UJW58y7qUq-_mhvWyb56KQi9RHfR8';
+// Fire-and-forget: records a potential customer. Never blocks the user flow.
+async function captureLead({ name, company, email, phone, source, interest }) {
+  try {
+    await fetch(`${WF_SB_URL}/rest/v1/rpc/capture_lead`, {
+      method: 'POST',
+      headers: { 'apikey': WF_SB_ANON, 'Authorization': `Bearer ${WF_SB_ANON}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        p_name: name || null, p_company: company || null, p_email: email || null,
+        p_phone: phone || null, p_source: source || 'trial_request', p_interest: interest || null,
+      }),
+    });
+  } catch (_) { /* never block the visitor on a capture failure */ }
+}
+
+// ── Demo gate: capture a few details before entering the live demo ──
+function openDemoGate(e) {
+  if (e) e.preventDefault();
+  document.getElementById('demoGateName').value = '';
+  document.getElementById('demoGateCompany').value = '';
+  document.getElementById('demoGateEmail').value = '';
+  document.getElementById('demoGate').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  return false;
+}
+function closeDemoGate() {
+  document.getElementById('demoGate').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function enterDemo() { window.location.href = 'app.html?demo=1'; }
+async function submitDemoGate(e) {
+  if (e) e.preventDefault();
+  const name    = document.getElementById('demoGateName').value.trim();
+  const company = document.getElementById('demoGateCompany').value.trim();
+  const email   = document.getElementById('demoGateEmail').value.trim();
+  const btn = document.getElementById('demoGateBtn');
+  btn.disabled = true; btn.textContent = 'Loading demo…';
+  await captureLead({ name, company, email, source: 'demo', interest: 'Tried the live demo' });
+  enterDemo();
+}
+
 // ── Navbar scroll effect ──
 const navbar = document.getElementById('navbar');
 window.addEventListener('scroll', () => {
@@ -2823,6 +2899,10 @@ async function submitDemoForm(e) {
   const btn = e.target.querySelector('button[type="submit"]');
   btn.disabled = true;
   btn.textContent = 'Sending…';
+
+  // Record the lead (interest tracking) — independent of the sales email.
+  const interest = [workers ? `${workers} workers` : '', message].filter(Boolean).join(' · ');
+  await captureLead({ name, company, email, source: 'trial_request', interest });
 
   try {
     await fetch(

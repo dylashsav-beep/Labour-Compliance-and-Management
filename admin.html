@@ -100,6 +100,21 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
 .badge-method{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.04em}
 .badge-manual-method{background:var(--amber-l);color:var(--amber)}
 .badge-stripe-method{background:var(--green-l);color:var(--green)}
+/* Lead status + source badges */
+.badge-lead-new{background:rgba(59,130,246,.12);color:#1d4ed8}
+.badge-lead-contacted{background:var(--amber-l);color:var(--amber)}
+.badge-lead-qualified{background:rgba(124,58,237,.12);color:var(--accent)}
+.badge-lead-trial{background:rgba(13,148,136,.14);color:#0f766e}
+.badge-lead-won{background:var(--green-l);color:var(--green)}
+.badge-lead-lost{background:var(--red-l);color:var(--red)}
+.badge-src{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.03em;text-transform:uppercase;background:rgba(0,0,0,.05);color:var(--text-m)}
+/* Correspondence timeline */
+.timeline{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.tl-item{border-left:2px solid var(--accent);padding:2px 0 2px 12px}
+.tl-body{font-size:13px;color:var(--text);line-height:1.5;white-space:pre-wrap}
+.tl-meta{font-size:11px;color:var(--text-l);margin-top:3px}
+.note-box{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:60px}
+.note-box:focus{border-color:var(--accent)}
 
 /* Side panel */
 .panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;backdrop-filter:blur(2px)}
@@ -245,6 +260,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="stat-pill"><div class="stat-pill-label">Suspended</div><div class="stat-pill-value" id="st-suspended">—</div></div>
     <div class="stat-pill"><div class="stat-pill-label">Vault Workers</div><div class="stat-pill-value" id="st-workers">—</div></div>
     <div class="stat-pill"><div class="stat-pill-label">Paid Workers</div><div class="stat-pill-value" id="st-paid-workers">—</div></div>
+    <div class="stat-pill"><div class="stat-pill-label">New Leads</div><div class="stat-pill-value" id="st-new-leads">—</div></div>
   </div>
 
   <!-- Content -->
@@ -253,6 +269,7 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
     <div class="adm-tabs">
       <button class="adm-tab active" onclick="switchTab('orgs',this)">Organisations</button>
       <button class="adm-tab" onclick="switchTab('workers',this)">Vault Workers</button>
+      <button class="adm-tab" onclick="switchTab('leads',this)">Leads</button>
     </div>
 
     <!-- ORGS TAB -->
@@ -303,6 +320,39 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
         </table>
       </div>
     </div>
+
+    <!-- LEADS TAB -->
+    <div class="adm-tabpanel" id="tab-leads">
+      <div class="tbl-toolbar">
+        <input class="tbl-search" id="leadSearch" type="search" placeholder="Search name, company, email…" oninput="renderLeads()"/>
+        <select class="field-input field-select" id="leadStatusFilter" style="max-width:170px;font-size:13px;padding:8px 28px 8px 12px;" onchange="renderLeads()">
+          <option value="">All statuses</option>
+          <option value="new">New</option>
+          <option value="contacted">Contacted</option>
+          <option value="qualified">Qualified</option>
+          <option value="trial">Trial</option>
+          <option value="won">Won</option>
+          <option value="lost">Lost</option>
+        </select>
+        <div class="tbl-spacer"></div>
+        <button class="btn-primary" onclick="openNewLead()">+ New Lead</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="data-table" id="leadTable">
+          <thead>
+            <tr>
+              <th onclick="sortLeads('name')">Name</th>
+              <th onclick="sortLeads('company')">Company</th>
+              <th onclick="sortLeads('email')">Email</th>
+              <th onclick="sortLeads('source')">Source</th>
+              <th onclick="sortLeads('status')">Status</th>
+              <th onclick="sortLeads('updated_at')">Last Activity</th>
+            </tr>
+          </thead>
+          <tbody id="leadTbody"><tr><td class="tbl-empty" colspan="6"><span class="loading-spinner"></span> Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -333,6 +383,61 @@ html,body{height:100%;background:var(--bg);font-family:-apple-system,BlinkMacSys
   </div>
   <div class="panel-body" id="wkPanelBody">
     <div class="empty-state"><span class="loading-spinner"></span></div>
+  </div>
+</div>
+
+<!-- ── Lead Detail Panel ── -->
+<div class="panel-overlay" id="leadOverlay" onclick="closeLeadPanel()"></div>
+<div class="side-panel" id="leadPanel">
+  <div class="panel-header">
+    <div class="panel-header-info">
+      <div class="panel-header-name" id="ldName">—</div>
+      <div class="panel-header-sub" id="ldSub">—</div>
+    </div>
+    <button class="panel-close" onclick="closeLeadPanel()">✕</button>
+  </div>
+  <div class="panel-body" id="leadPanelBody">
+    <div class="empty-state"><span class="loading-spinner"></span></div>
+  </div>
+</div>
+
+<!-- ── New Lead Modal ── -->
+<div class="modal-overlay" id="newLeadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Lead</div>
+      <button class="modal-close" onclick="closeNewLead()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Name</label>
+          <input class="field-input" id="nlName" type="text" placeholder="Jan de Vries"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Company</label>
+          <input class="field-input" id="nlCompany" type="text" placeholder="Acme BV"/>
+        </div>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group">
+          <label class="field-label">Email</label>
+          <input class="field-input" id="nlEmail" type="email" placeholder="jan@company.nl"/>
+        </div>
+        <div class="field-group">
+          <label class="field-label">Phone</label>
+          <input class="field-input" id="nlPhone" type="text" placeholder="+31 6 …"/>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Interest / notes</label>
+        <input class="field-input" id="nlInterest" type="text" placeholder="Where they came from, team size…"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeNewLead()">Cancel</button>
+      <button class="btn-primary" onclick="createLead()">Add Lead</button>
+    </div>
   </div>
 </div>
 
@@ -492,8 +597,8 @@ const EDGE_BASE     = SUPABASE_URL + '/functions/v1';
 const APP_URL       = 'https://work-force.nl/app.html';
 const VAULT_URL     = 'https://work-force.nl/vault.html';
 
-let sb, session, orgsData = [], workersData = [], orgSort = {key:'created_at', dir:-1}, workerSort = {key:'created_at', dir:-1};
-let currentOrgId = null, currentWorkerId = null;
+let sb, session, orgsData = [], workersData = [], leadsData = [], orgSort = {key:'created_at', dir:-1}, workerSort = {key:'created_at', dir:-1}, leadSort = {key:'updated_at', dir:-1};
+let currentOrgId = null, currentWorkerId = null, currentLeadId = null;
 let payCtx = null; // {type:'org'|'worker', id, refreshFn}
 let emailCtx = null;
 
@@ -527,7 +632,7 @@ async function handleSession(s) {
   const app = document.getElementById('mainApp');
   app.style.display = 'flex';
   document.getElementById('headerEmail').textContent = s.user.email;
-  await Promise.all([loadStats(), loadOrgs(), loadWorkers()]);
+  await Promise.all([loadStats(), loadOrgs(), loadWorkers(), loadLeads()]);
 }
 
 function showAuth() {
@@ -1014,6 +1119,200 @@ async function saveWorkerPlan(workerId) {
   openWorkerPanel(workerId);
 }
 
+// ── Leads ─────────────────────────────────────────────────────────────────────
+async function loadLeads() {
+  const { data, error } = await sb.rpc('admin_get_leads');
+  if (error) { leadsData = []; renderLeads(); return; }
+  leadsData = (data || []).map(r => typeof r === 'string' ? JSON.parse(r) : r);
+  const newCount = leadsData.filter(l => l.status === 'new').length;
+  const el = document.getElementById('st-new-leads'); if (el) el.textContent = newCount;
+  renderLeads();
+}
+function sortLeads(key) {
+  if (leadSort.key === key) leadSort.dir *= -1; else { leadSort.key = key; leadSort.dir = 1; }
+  renderLeads();
+}
+function renderLeads() {
+  const q = (document.getElementById('leadSearch').value || '').toLowerCase();
+  const statusF = document.getElementById('leadStatusFilter').value;
+  let rows = leadsData.filter(l =>
+    (!statusF || l.status === statusF) &&
+    (!q || (l.name||'').toLowerCase().includes(q) || (l.company||'').toLowerCase().includes(q) || (l.email||'').toLowerCase().includes(q))
+  );
+  const k = leadSort.key, d = leadSort.dir;
+  rows.sort((a,b) => {
+    const av = a[k] ?? '', bv = b[k] ?? '';
+    return d * String(av).localeCompare(String(bv));
+  });
+  const tbody = document.getElementById('leadTbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td class="tbl-empty" colspan="6">No leads found</td></tr>'; return; }
+  tbody.innerHTML = rows.map(l => `
+    <tr onclick="openLeadPanel('${esc(l.id)}')">
+      <td><strong>${esc(l.name||'—')}</strong></td>
+      <td style="font-size:12px;color:var(--text-m)">${esc(l.company||'—')}</td>
+      <td style="font-size:12px;color:var(--text-m)">${esc(l.email||'—')}</td>
+      <td>${leadSourceBadge(l.source)}</td>
+      <td>${leadStatusBadge(l.status)}</td>
+      <td style="font-size:12px;color:var(--text-l)">${fmtDate(l.updated_at)}${(l.note_count||0)>0?` · ${l.note_count} note${l.note_count!==1?'s':''}`:''}</td>
+    </tr>`).join('');
+}
+
+async function openLeadPanel(leadId) {
+  currentLeadId = leadId;
+  document.getElementById('ldName').textContent = '…';
+  document.getElementById('ldSub').textContent = '';
+  document.getElementById('leadPanelBody').innerHTML = '<div class="empty-state"><span class="loading-spinner"></span></div>';
+  document.getElementById('leadPanel').classList.add('open');
+  document.getElementById('leadOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  const { data, error } = await sb.rpc('admin_get_lead_detail', { p_lead_id: leadId });
+  if (error || !data) {
+    document.getElementById('leadPanelBody').innerHTML = `<div class="empty-state">Failed to load: ${esc(error?.message||'unknown')}</div>`;
+    return;
+  }
+  const result = typeof data === 'string' ? JSON.parse(data) : data;
+  const l = { ...(result.lead || result), notes: result.notes || [] };
+  document.getElementById('ldName').textContent = l.name || l.company || l.email || 'Lead';
+  document.getElementById('ldSub').innerHTML = `${leadSourceBadge(l.source)} · captured ${fmtDate(l.created_at)}`;
+  renderLeadPanelBody(l);
+}
+
+function renderLeadPanelBody(l) {
+  const statuses = ['new','contacted','qualified','trial','won','lost'];
+  document.getElementById('leadPanelBody').innerHTML = `
+    <div class="card">
+      <div class="card-title">Status</div>
+      <select class="field-input field-select" id="ldStatus" onchange="updateLeadStatus('${esc(l.id)}',this.value)">
+        ${statuses.map(s => `<option value="${s}"${l.status===s?' selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+      </select>
+      ${l.last_contacted_at ? `<div style="font-size:11px;color:var(--text-l);margin-top:8px">Last contacted ${fmtDate(l.last_contacted_at)}</div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="card-title">Contact</div>
+      <div class="fields-2col">
+        <div class="field-group"><label class="field-label">Name</label><input class="field-input" id="ldfName" value="${esc(l.name||'')}"/></div>
+        <div class="field-group"><label class="field-label">Company</label><input class="field-input" id="ldfCompany" value="${esc(l.company||'')}"/></div>
+      </div>
+      <div class="fields-2col">
+        <div class="field-group"><label class="field-label">Email</label><input class="field-input" id="ldfEmail" type="email" value="${esc(l.email||'')}"/></div>
+        <div class="field-group"><label class="field-label">Phone</label><input class="field-input" id="ldfPhone" value="${esc(l.phone||'')}"/></div>
+      </div>
+      ${l.interest ? `<div class="card-row"><span class="card-row-label">Interest</span><span class="card-row-value" style="text-align:right;max-width:60%">${esc(l.interest)}</span></div>` : ''}
+      <div class="card-actions">
+        <button class="btn-secondary btn-sm" onclick="saveLeadContact('${esc(l.id)}')">Save Contact</button>
+        ${l.email ? `<a class="btn-secondary btn-sm" style="text-decoration:none;display:inline-block" href="mailto:${esc(l.email)}">Email</a>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Working Note</div>
+      <textarea class="note-box" id="ldOwnerNote" placeholder="Private note about this lead…">${esc(l.owner_note||'')}</textarea>
+      <div class="card-actions" style="margin-top:8px"><button class="btn-secondary btn-sm" onclick="saveLeadOwnerNote('${esc(l.id)}')">Save Note</button></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Correspondence (${(l.notes||[]).length})</div>
+      <textarea class="note-box" id="ldNewNote" placeholder="Log a call, email or meeting…"></textarea>
+      <div class="card-actions" style="margin-top:8px"><button class="btn-primary btn-sm" onclick="addLeadNote('${esc(l.id)}')">Add to timeline</button></div>
+      ${(l.notes||[]).length ? `<div class="timeline" style="margin-top:14px">${l.notes.map(n => `
+        <div class="tl-item">
+          <div class="tl-body">${esc(n.body)}</div>
+          <div class="tl-meta">${fmtDate(n.created_at)}${n.author?` · ${esc(n.author)}`:''}</div>
+        </div>`).join('')}</div>` : '<div class="empty-state" style="padding:14px">No correspondence logged yet</div>'}
+    </div>
+
+    <div class="danger-zone" id="leadDanger">
+      <div class="danger-zone-toggle" onclick="this.closest('.danger-zone').classList.toggle('open')">
+        <span>Danger Zone</span><span style="color:var(--text-l);font-size:16px">›</span>
+      </div>
+      <div class="danger-zone-body">
+        <button class="btn-danger btn-sm" onclick="deleteLead('${esc(l.id)}')">Delete Lead</button>
+      </div>
+    </div>
+  `;
+}
+
+function closeLeadPanel() {
+  document.getElementById('leadPanel').classList.remove('open');
+  document.getElementById('leadOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  currentLeadId = null;
+}
+
+async function updateLeadStatus(leadId, status) {
+  const { error } = await sb.rpc('admin_update_lead', { p_lead_id: leadId, p_status: status });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Status updated');
+  await loadLeads();
+}
+async function saveLeadContact(leadId) {
+  const { error } = await sb.rpc('admin_update_lead', {
+    p_lead_id: leadId,
+    p_name: document.getElementById('ldfName').value.trim(),
+    p_company: document.getElementById('ldfCompany').value.trim(),
+    p_email: document.getElementById('ldfEmail').value.trim(),
+    p_phone: document.getElementById('ldfPhone').value.trim(),
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Contact saved');
+  await loadLeads();
+  openLeadPanel(leadId);
+}
+async function saveLeadOwnerNote(leadId) {
+  const { error } = await sb.rpc('admin_update_lead', { p_lead_id: leadId, p_owner_note: document.getElementById('ldOwnerNote').value });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Note saved');
+}
+async function addLeadNote(leadId) {
+  const body = document.getElementById('ldNewNote').value.trim();
+  if (!body) { showToast('Write something first', true); return; }
+  const { error } = await sb.rpc('admin_add_lead_note', { p_lead_id: leadId, p_body: body });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Logged to timeline');
+  await loadLeads();
+  openLeadPanel(leadId);
+}
+async function deleteLead(leadId) {
+  if (!confirm('Delete this lead and all its correspondence? This cannot be undone.')) return;
+  const { error } = await sb.rpc('admin_delete_lead', { p_lead_id: leadId });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Lead deleted');
+  closeLeadPanel();
+  await loadLeads();
+}
+
+function openNewLead() {
+  ['nlName','nlCompany','nlEmail','nlPhone','nlInterest'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('newLeadModal').classList.add('open');
+}
+function closeNewLead() { document.getElementById('newLeadModal').classList.remove('open'); }
+async function createLead() {
+  const name = document.getElementById('nlName').value.trim();
+  const company = document.getElementById('nlCompany').value.trim();
+  const email = document.getElementById('nlEmail').value.trim();
+  if (!name && !company && !email) { showToast('Enter a name, company or email', true); return; }
+  const { data, error } = await sb.rpc('admin_create_lead', {
+    p_name: name, p_company: company, p_email: email,
+    p_phone: document.getElementById('nlPhone').value.trim(),
+    p_interest: document.getElementById('nlInterest').value.trim(),
+  });
+  if (error) { showToast('Error: ' + error.message, true); return; }
+  showToast('Lead added');
+  closeNewLead();
+  await loadLeads();
+  if (data) openLeadPanel(data);
+}
+
+function leadStatusBadge(s) {
+  const cls = { new:'badge-lead-new', contacted:'badge-lead-contacted', qualified:'badge-lead-qualified', trial:'badge-lead-trial', won:'badge-lead-won', lost:'badge-lead-lost' }[s] || 'badge-free';
+  return `<span class="badge ${cls}">${esc(s||'—')}</span>`;
+}
+function leadSourceBadge(s) {
+  const lbl = { trial_request:'Trial', demo:'Demo', manual:'Manual', contact:'Contact' }[s] || (s||'—');
+  return `<span class="badge-src">${esc(lbl)}</span>`;
+}
+
 // ── New Org ───────────────────────────────────────────────────────────────────
 function openNewOrg() {
   document.getElementById('noName').value = '';
@@ -1240,6 +1539,7 @@ function showToast(msg, isErr=false) {
 // Close modals on overlay click
 document.getElementById('newOrgModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewOrg(); });
 document.getElementById('newWorkerModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewWorker(); });
+document.getElementById('newLeadModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeNewLead(); });
 document.getElementById('payModal').addEventListener('click', e => { if(e.target===e.currentTarget) closePayModal(); });
 document.getElementById('emailModal').addEventListener('click', e => { if(e.target===e.currentTarget) closeEmailModal(); });
 
